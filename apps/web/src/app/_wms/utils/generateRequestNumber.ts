@@ -1,31 +1,21 @@
-import { desc, like } from 'drizzle-orm';
-
-import db from '@/database/client';
-import { wmsPartnerRequests } from '@/database/schema';
+import nextDocumentNumber, { type DbExecutor } from './nextDocumentNumber';
 
 /**
- * Next request number for the year
+ * Generate the next partner request number (REQ-YYYY-NNNN)
+ *
+ * Pass the transaction the row is inserted in, so numbers taken earlier in the
+ * same transaction are seen. Collision-free via the wms_request_number_seq sequence.
  *
  * @example
- *   await generateRequestNumber(); // 'REQ-2026-0007'
- *
- * @returns A sequential, year-scoped request reference
+ *   const number = await generateRequestNumber(tx); // "REQ-2026-0042"
  */
-const generateRequestNumber = async () => {
-  const prefix = `REQ-${new Date().getFullYear()}-`;
-
-  const [latest] = await db
-    .select({ requestNumber: wmsPartnerRequests.requestNumber })
-    .from(wmsPartnerRequests)
-    .where(like(wmsPartnerRequests.requestNumber, `${prefix}%`))
-    .orderBy(desc(wmsPartnerRequests.requestNumber))
-    .limit(1);
-
-  const next = latest
-    ? parseInt(latest.requestNumber.replace(prefix, ''), 10) + 1
-    : 1;
-
-  return `${prefix}${String(next).padStart(4, '0')}`;
-};
+const generateRequestNumber = async (executor?: DbExecutor) =>
+  nextDocumentNumber({
+    executor,
+    code: 'REQ',
+    table: 'wms_partner_requests',
+    column: 'request_number',
+    sequence: 'wms_request_number_seq',
+  });
 
 export default generateRequestNumber;

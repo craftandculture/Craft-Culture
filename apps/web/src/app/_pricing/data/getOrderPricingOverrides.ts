@@ -40,34 +40,26 @@ const getOrderPCOVariables = cache(
     partnerId: string | null,
     globalVariables: PCOPricingVariables,
   ): Promise<PCOPricingVariables> => {
-    // 1. Check order-level override first (snapshots from approval)
+    /*
+      Field by field: a figure the order override leaves empty takes the
+      partner's rate before the global one. It used to fall straight to the
+      global rate, so a partner with its own rate lost it on any order that
+      had an override for some other figure.
+    */
     const orderOverride = await getOrderPricingOverrides(orderId);
+    const partnerOverride = partnerId ? await getPartnerPricingOverrides(partnerId) : null;
 
-    if (orderOverride) {
+    if (orderOverride || partnerOverride) {
+      const pick = (field: keyof PCOPricingVariables) =>
+        orderOverride?.[field] ?? partnerOverride?.[field] ?? globalVariables[field];
+
       return {
-        ccMarginPercent: orderOverride.ccMarginPercent ?? globalVariables.ccMarginPercent,
-        importDutyPercent: orderOverride.importDutyPercent ?? globalVariables.importDutyPercent,
-        transferCostPercent: orderOverride.transferCostPercent ?? globalVariables.transferCostPercent,
-        distributorMarginPercent:
-          orderOverride.distributorMarginPercent ?? globalVariables.distributorMarginPercent,
-        vatPercent: orderOverride.vatPercent ?? globalVariables.vatPercent,
+        ccMarginPercent: pick('ccMarginPercent'),
+        importDutyPercent: pick('importDutyPercent'),
+        transferCostPercent: pick('transferCostPercent'),
+        distributorMarginPercent: pick('distributorMarginPercent'),
+        vatPercent: pick('vatPercent'),
       };
-    }
-
-    // 2. Check partner-level override (within effective date range)
-    if (partnerId) {
-      const partnerOverride = await getPartnerPricingOverrides(partnerId);
-
-      if (partnerOverride) {
-        return {
-          ccMarginPercent: partnerOverride.ccMarginPercent ?? globalVariables.ccMarginPercent,
-          importDutyPercent: partnerOverride.importDutyPercent ?? globalVariables.importDutyPercent,
-          transferCostPercent: partnerOverride.transferCostPercent ?? globalVariables.transferCostPercent,
-          distributorMarginPercent:
-            partnerOverride.distributorMarginPercent ?? globalVariables.distributorMarginPercent,
-          vatPercent: partnerOverride.vatPercent ?? globalVariables.vatPercent,
-        };
-      }
     }
 
     // 3. Fall back to global defaults

@@ -25,7 +25,7 @@ import {
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 import inboundLineKey from '../utils/inboundLineKey';
@@ -42,7 +42,7 @@ import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
  * KPI cards (total products, avg margin, unpriced count, total values). Falls
  * back to shipment landed cost when no explicit import price exists.
  */
-const adminGetPricingProducts = wmsOperatorProcedure
+const adminGetPricingProducts = adminProcedure
   .input(getPricingProductsSchema)
   .query(async ({ input }) => {
     const {

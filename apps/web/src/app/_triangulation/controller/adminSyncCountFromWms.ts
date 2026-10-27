@@ -3,8 +3,8 @@ import { TRPCError } from '@trpc/server';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-import insertRows from '../data/insertRows';
-import mapImportLines from '../data/mapImportLines';
+import resolveWmsOwner from '../data/resolveWmsOwner';
+import swapFeedImport from '../data/swapFeedImport';
 import { syncCountFromWmsSchema } from '../schemas/triangulationSchemas';
 import normalizeCode from '../utils/normalizeCode';
 import resolveProgrammeId from '../utils/programmeId';
@@ -40,7 +40,9 @@ const adminSyncCountFromWms = adminProcedure
   .input(syncCountFromWmsSchema)
   .mutation(async ({ input, ctx }) => {
     const programmeId = resolveProgrammeId(input.programmeId);
-    const { ownerName, periodId } = input;
+    const { periodId } = input;
+    // The programme's configured owner, not whatever the browser sent
+    const ownerName = await resolveWmsOwner(programmeId, input.ownerName);
     const asOfDate = input.asOfDate ?? new Date().toISOString().slice(0, 10);
 
     // The owner is written differently in different places — "Crurated",
@@ -85,9 +87,8 @@ const adminSyncCountFromWms = adminProcedure
       FROM wms_stock s
       WHERE NOT EXISTS (
           SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
-          WHERE POSITION(
-            tok IN REGEXP_REPLACE(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]', '', 'g')
-          ) = 0
+          -- Whole words only: "CRU" must not match "CRURATED"
+          WHERE NOT (tok = ANY(REGEXP_SPLIT_TO_ARRAY(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]+')))
         )
       GROUP BY COALESCE(NULLIF(TRIM(s.supplier_sku), ''), s.lwin18)
       HAVING SUM(
@@ -124,9 +125,8 @@ const adminSyncCountFromWms = adminProcedure
       FROM wms_stock s
       WHERE NOT EXISTS (
         SELECT 1 FROM UNNEST(${tokens}::text[]) AS t(tok)
-        WHERE POSITION(
-          tok IN REGEXP_REPLACE(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]', '', 'g')
-        ) = 0
+        -- Whole words only: "CRU" must not match "CRURATED"
+        WHERE NOT (tok = ANY(REGEXP_SPLIT_TO_ARRAY(UPPER(COALESCE(s.owner_name, '')), '[^A-Z0-9]+')))
       )
       ORDER BY s.owner_name
     `;
@@ -142,42 +142,21 @@ const adminSyncCountFromWms = adminProcedure
         AND programme_id = ${programmeId}
     `;
 
-    await client`
-      DELETE FROM tri_imports
-      WHERE kind = 'cc_count'
-        AND as_of_date = ${asOfDate}
-        AND source_ref = 'wms-stock'
-      AND programme_id = ${programmeId}
-    `;
-
-    const [created] = await client<{ id: string }[]>`
-      INSERT INTO tri_imports (
-        programme_id, period_id, kind, status, file_name, source_ref, alias_source,
-        as_of_date, notes, uploaded_by, committed_at
-      )
-      VALUES (
-        ${programmeId},
-        ${periodId ?? null}, 'cc_count', 'committed',
-        ${`WMS stock — ${ownerName}`}, 'wms-stock', 'crurated',
-        ${asOfDate}, ${'Synced live from wms_stock. Bottles = sealed cases x pack size + loose bottles.'},
-        ${ctx.user.id}, NOW()
-      )
-      RETURNING id
-    `;
-
-    const importId = created?.id;
-
-    if (!importId) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to create the WMS snapshot',
-      });
-    }
-
-    await insertRows(
-      'tri_import_lines',
-      [
-        'import_id',
+    const { importId, totals } = await swapFeedImport({
+      programmeId,
+      replaces: { kind: 'cc_count', sourceRefs: ['wms-stock'], asOfDate },
+      create: {
+        periodId: periodId ?? null,
+        kind: 'cc_count',
+        fileName: `WMS stock — ${ownerName}`,
+        sourceRef: 'wms-stock',
+        aliasSource: 'crurated',
+        asOfDate,
+        notes:
+          'Synced live from wms_stock. Bottles = sealed cases x pack size + loose bottles.',
+        uploadedBy: ctx.user.id,
+      },
+      columns: [
         'raw_code',
         'normalized_code',
         'raw_description',
@@ -188,8 +167,7 @@ const adminSyncCountFromWms = adminProcedure
         'quantity_bottles',
         'status',
       ],
-      rows.map((row) => ({
-        import_id: importId,
+      rows: rows.map((row) => ({
         raw_code: row.code,
         normalized_code: normalizeCode(row.code),
         raw_description: row.productName,
@@ -202,9 +180,7 @@ const adminSyncCountFromWms = adminProcedure
         quantity_bottles: row.bottles,
         status: 'unmapped',
       })),
-    );
-
-    const totals = await mapImportLines(importId, 'crurated');
+    });
 
     return {
       importId,

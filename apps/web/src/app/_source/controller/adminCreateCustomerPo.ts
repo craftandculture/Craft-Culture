@@ -7,6 +7,7 @@ import logger from '@/utils/logger';
 
 import createCustomerPoSchema from '../schemas/createCustomerPoSchema';
 import generateCpoNumber from '../utils/generateCpoNumber';
+import insertWithNumberRetry from '../utils/insertWithNumberRetry';
 
 /**
  * Create a new Customer PO
@@ -22,9 +23,8 @@ const adminCreateCustomerPo = adminProcedure
   .input(createCustomerPoSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     try {
-      const ccPoNumber = await generateCpoNumber();
-
-      const [customerPo] = await db
+      const [customerPo] = await insertWithNumberRetry(generateCpoNumber, (ccPoNumber) =>
+        db
         .insert(sourceCustomerPos)
         .values({
           poNumber: input.poNumber,
@@ -37,7 +37,8 @@ const adminCreateCustomerPo = adminProcedure
           status: 'draft',
           createdBy: user.id,
         })
-        .returning();
+        .returning(),
+      );
 
       if (!customerPo) {
         throw new TRPCError({

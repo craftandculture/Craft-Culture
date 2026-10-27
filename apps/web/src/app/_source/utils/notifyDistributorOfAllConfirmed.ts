@@ -90,10 +90,10 @@ const notifyDistributorOfAllConfirmed = async ({
         },
       });
 
-      logger.dev(`Sent all confirmed notification to: ${customerPo.customerEmail}`);
+      logger.dev(`Sent all confirmed notification`);
     } catch (error) {
       logger.error(
-        `Failed to send all confirmed email to ${customerPo.customerEmail}:`,
+        `Failed to send all confirmed email:`,
         error
       );
     }

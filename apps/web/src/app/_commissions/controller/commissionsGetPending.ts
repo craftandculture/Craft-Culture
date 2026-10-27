@@ -5,6 +5,8 @@ import db from '@/database/client';
 import { quotes, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import computeQuoteCommissions from '../utils/computeQuoteCommissions';
+
 const commissionsGetPendingSchema = z.object({
   limit: z.number().min(1).max(100).default(50),
   cursor: z.number().min(0).default(0),
@@ -45,6 +47,7 @@ const commissionsGetPending = adminProcedure
           name: quotes.name,
           status: quotes.status,
           totalUsd: quotes.totalUsd,
+          lineItems: quotes.lineItems,
           quoteData: quotes.quoteData,
           createdAt: quotes.createdAt,
           paidAt: quotes.paidAt,
@@ -75,18 +78,23 @@ const commissionsGetPending = adminProcedure
 
     const hasMore = pendingQuotes.length > limit;
 
-    // Filter to B2C users only and calculate commission
-    const data = pendingQuotes
+    // Filter to B2C users only and calculate commission on the server
+    const b2cRows = pendingQuotes
       .slice(0, limit)
-      .filter((row) => row.user?.customerType === 'b2c')
+      .filter((row) => row.user?.customerType === 'b2c');
+    const commissions = await computeQuoteCommissions(b2cRows.map((row) => row.quote));
+
+    const data = b2cRows
       .map((row) => {
-        const quoteData = row.quote.quoteData as { totalCommissionUsd?: number } | null;
+        const commission = commissions.get(row.quote.id);
         return {
           quoteId: row.quote.id,
           quoteName: row.quote.name,
           status: row.quote.status,
           orderTotal: row.quote.totalUsd,
-          commissionAmount: quoteData?.totalCommissionUsd ?? 0,
+          commissionAmount: commission?.commissionUsd ?? 0,
+          // False when a line could not be priced, so the amount needs a check
+          commissionVerified: commission?.verified ?? false,
           createdAt: row.quote.createdAt,
           paidAt: row.quote.paidAt,
           user: row.user

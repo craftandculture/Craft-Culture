@@ -7,18 +7,18 @@ import {
   IconChevronRight,
   IconClock,
   IconInbox,
+  IconRefresh,
   IconSearch,
   IconX,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import Button from '@/app/_ui/components/Button/Button';
-import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -30,12 +30,18 @@ type StatusFilter = 'all' | 'pending' | 'submitted' | 'declined';
 const PartnerSourcePage = () => {
   const api = useTRPC();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
-  const { data, isLoading } = useQuery({
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     ...api.source.partner.getMany.queryOptions({
       limit: 50,
-      search: searchQuery || undefined,
+      search: debouncedSearch || undefined,
     }),
   });
 
@@ -59,35 +65,34 @@ const PartnerSourcePage = () => {
   const submittedCount = allRfqs.filter((r) => r.partnerStatus === 'submitted').length;
   const declinedCount = allRfqs.filter((r) => r.partnerStatus === 'declined').length;
 
-  const getPartnerStatusBadge = (status: string, quoteCount?: number) => {
+  const pill = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset';
+
+  const getPartnerStatusBadge = (status: string) => {
     switch (status) {
       case 'submitted':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">
+          <span className={`${pill} bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60`}>
             <IconCheck className="h-3 w-3" />
-            <span className="hidden xs:inline">Submitted</span>
-            {quoteCount !== undefined && quoteCount > 0 && (
-              <span className="xs:hidden">{quoteCount}</span>
-            )}
+            Submitted
           </span>
         );
       case 'viewed':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700">
+          <span className={`${pill} bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60`}>
             <IconClock className="h-3 w-3" />
-            <span className="hidden xs:inline">In Progress</span>
+            In progress
           </span>
         );
       case 'declined':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700">
+          <span className={`${pill} bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900/60`}>
             <IconX className="h-3 w-3" />
-            <span className="hidden xs:inline">Declined</span>
+            Declined
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 animate-pulse">
+          <span className={`${pill} bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60`}>
             New
           </span>
         );
@@ -102,25 +107,22 @@ const PartnerSourcePage = () => {
   ];
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-4 sm:py-8">
+    <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <Typography variant="headingLg" className="text-lg sm:text-xl">
-              Quote Requests
+            <Typography variant="headingLg">
+              Quote requests
             </Typography>
-            <Typography variant="bodySm" colorRole="muted" className="hidden sm:block">
+            <Typography variant="bodySm" colorRole="muted" className="mt-1">
               Respond to sourcing requests from Craft & Culture
             </Typography>
           </div>
           {pendingCount > 0 && (
             <div className="self-start sm:self-auto">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-medium">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
-                </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700 ring-1 ring-inset ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900/60">
+                <span className="h-2 w-2 rounded-full bg-blue-500" />
                 {pendingCount} pending
               </span>
             </div>
@@ -129,75 +131,66 @@ const PartnerSourcePage = () => {
 
         {/* Pending confirmations banner */}
         {pendingConfirmations > 0 && (
-          <Link href="/platform/partner/source/confirmations">
-            <Card className="border-amber-300 bg-amber-50 hover:border-amber-400 hover:bg-amber-100/80 transition-all cursor-pointer">
-              <CardContent className="p-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <IconAlertCircle className="h-6 w-6 text-amber-600" />
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white">
-                      {pendingConfirmations}
-                    </span>
-                  </div>
-                  <div>
-                    <Typography variant="bodyMd" className="font-semibold text-amber-900">
-                      {pendingConfirmations} quote{pendingConfirmations !== 1 ? 's' : ''} awaiting confirmation
-                    </Typography>
-                    <Typography variant="bodySm" className="text-amber-700">
-                      Your quotes were selected! Please confirm availability.
-                    </Typography>
-                  </div>
-                </div>
-                <Button variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700 flex-shrink-0">
-                  <ButtonContent iconRight={IconChevronRight}>
-                    Confirm Now
-                  </ButtonContent>
-                </Button>
-              </CardContent>
-            </Card>
-          </Link>
+          <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/60 dark:bg-amber-950/30">
+            <div className="flex items-start gap-3">
+              <IconAlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div>
+                <Typography variant="bodySm" className="font-semibold text-amber-900 dark:text-amber-200">
+                  {pendingConfirmations} {pendingConfirmations === 1 ? 'quote' : 'quotes'} awaiting confirmation
+                </Typography>
+                <Typography variant="bodySm" className="text-amber-800 dark:text-amber-300">
+                  C&amp;C has accepted {pendingConfirmations} of your quotes. Please confirm availability.
+                </Typography>
+              </div>
+            </div>
+            <Link
+              href="/platform/partner/source/confirmations"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 self-start rounded-lg bg-text-primary px-3 py-1.5 text-sm font-medium text-surface-primary transition-opacity hover:opacity-90 sm:self-auto"
+            >
+              Confirm now
+              <IconChevronRight size={14} />
+            </Link>
+          </div>
         )}
 
         {/* Status Filters + Search */}
         <div className="space-y-3">
           {/* Status filter tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {statusFilters.map((filter) => (
-              <Button
-                key={filter.value}
-                variant={statusFilter === filter.value ? 'default' : 'ghost'}
-                colorRole={statusFilter === filter.value ? 'brand' : 'primary'}
-                size="sm"
-                onClick={() => setStatusFilter(filter.value)}
-                className="flex-shrink-0"
-              >
-                <ButtonContent>
+            {statusFilters.map((filter) => {
+              const on = statusFilter === filter.value;
+              return (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => setStatusFilter(filter.value)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    on
+                      ? 'bg-text-primary text-surface-primary'
+                      : 'bg-surface-muted text-text-secondary hover:text-text-primary'
+                  }`}
+                >
                   {filter.label}
                   {filter.count > 0 && (
-                    <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                      statusFilter === filter.value
-                        ? 'bg-white/20 text-white'
-                        : 'bg-fill-muted text-text-muted'
-                    }`}>
+                    <span className={`rounded-full px-1.5 text-[10px] tabular-nums ${on ? 'bg-surface-primary/20' : 'bg-surface-primary text-text-muted'}`}>
                       {filter.count}
                     </span>
                   )}
-                </ButtonContent>
-              </Button>
-            ))}
+                </button>
+              );
+            })}
           </div>
 
           {/* Search */}
-          <div className="relative">
-            <IconSearch className="text-text-muted absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search by name or RFQ number..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-background-primary border-border-primary text-text-primary placeholder:text-text-muted w-full rounded-lg border px-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <Input
+            type="search"
+            placeholder="Search by name or RFQ number"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            iconLeft={IconSearch}
+            size="lg"
+            className="h-11 w-full rounded-xl"
+          />
         </div>
 
         {/* RFQ List */}
@@ -213,16 +206,34 @@ const PartnerSourcePage = () => {
               </Card>
             ))}
           </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-border-muted bg-surface-primary px-4 py-12 text-center shadow-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300">
+              <IconAlertCircle size={22} />
+            </div>
+            <Typography variant="bodySm" className="font-medium">
+              Quote requests could not be loaded
+            </Typography>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-text-primary px-3 py-1.5 text-sm font-medium text-surface-primary transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              <IconRefresh size={14} />
+              {isFetching ? 'Loading…' : 'Try again'}
+            </button>
+          </div>
         ) : rfqs.length === 0 ? (
-          <Card className="border-dashed border-2">
+          <Card className="border-2 border-dashed">
             <CardContent className="py-12 text-center">
               <IconInbox className="h-12 w-12 text-text-muted mx-auto mb-4" />
               <Typography variant="headingSm" className="mb-2">
-                {statusFilter !== 'all' ? 'No matching RFQs' : 'No quote requests yet'}
+                {statusFilter !== 'all' || debouncedSearch ? 'No matching quote requests' : 'No quote requests yet'}
               </Typography>
               <Typography variant="bodyMd" colorRole="muted" className="max-w-sm mx-auto">
-                {statusFilter !== 'all'
-                  ? 'Try selecting a different filter above.'
+                {statusFilter !== 'all' || debouncedSearch
+                  ? 'Try a different filter or search.'
                   : 'When Craft & Culture sends you a sourcing request, it will appear here.'}
               </Typography>
             </CardContent>
@@ -241,7 +252,7 @@ const PartnerSourcePage = () => {
                   href={`/platform/partner/source/${rfq.id}`}
                   className="block"
                 >
-                  <Card className={`hover:border-border-brand transition-all cursor-pointer active:scale-[0.99] ${
+                  <Card className={`cursor-pointer transition-all hover:-translate-y-px hover:shadow-md ${
                     rfq.partnerStatus === 'pending' ? 'border-l-4 border-l-blue-500' : ''
                   } ${isOverdue && rfq.partnerStatus !== 'submitted' ? 'opacity-60' : ''}`}>
                     <CardContent className="p-3 sm:p-4">
@@ -253,7 +264,7 @@ const PartnerSourcePage = () => {
                             <span className="font-mono text-xs text-text-muted">
                               {rfq.rfqNumber}
                             </span>
-                            {getPartnerStatusBadge(rfq.partnerStatus, rfq.quoteCount)}
+                            {getPartnerStatusBadge(rfq.partnerStatus)}
                           </div>
 
                           {/* Title */}
@@ -264,15 +275,15 @@ const PartnerSourcePage = () => {
                           {/* Meta row */}
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-text-muted">
                             <span className="font-medium text-text-primary">
-                              {rfq.itemCount} item{rfq.itemCount !== 1 ? 's' : ''}
+                              {rfq.itemCount} {rfq.itemCount === 1 ? 'item' : 'items'}
                             </span>
 
                             {rfq.responseDeadline && (
                               <span className={`flex items-center gap-1 ${
                                 isOverdue
-                                  ? 'text-red-600'
+                                  ? 'text-red-600 dark:text-red-400'
                                   : isUrgent
-                                    ? 'text-amber-600'
+                                    ? 'text-amber-600 dark:text-amber-400'
                                     : ''
                               }`}>
                                 <IconCalendar className="h-3.5 w-3.5" />
@@ -281,7 +292,7 @@ const PartnerSourcePage = () => {
                             )}
 
                             {rfq.partnerStatus === 'submitted' && rfq.quoteCount > 0 && (
-                              <span className="text-green-600 font-medium">
+                              <span className="font-medium text-emerald-700 dark:text-emerald-300">
                                 {rfq.quoteCount} quote{rfq.quoteCount !== 1 ? 's' : ''} sent
                               </span>
                             )}
@@ -300,9 +311,9 @@ const PartnerSourcePage = () => {
         )}
 
         {/* Count */}
-        {!isLoading && rfqs.length > 0 && (
+        {!isLoading && !isError && rfqs.length > 0 && (
           <Typography variant="bodyXs" colorRole="muted" className="text-center">
-            Showing {rfqs.length} of {allRfqs.length} RFQs
+            Showing {rfqs.length} of {allRfqs.length} quote requests
           </Typography>
         )}
       </div>

@@ -2,12 +2,16 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import CELLAR_CURRENCIES from '@/app/_cellar/constants/cellarCurrencies';
 import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
+import withNumberRetry from '@/app/_cellar/utils/withNumberRetry';
+import resolveFxToUsd from '@/app/_logistics/utils/resolveFxToUsd';
 import assertActivated from '@/app/_onboarding/data/assertActivated';
 import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+
 
 import generateMandateNumber from '../utils/generateMandateNumber';
 import notifyMandateUpdate from '../utils/notifyMandateUpdate';
@@ -31,7 +35,8 @@ import notifyMandateUpdate from '../utils/notifyMandateUpdate';
  * @example
  *   await trpcClient.consignment.member.offerForSale.mutate({
  *     lines: [{ stockId, bottles: 6 }],
- *     askPerBottleUsd: 210,
+ *     askPerBottle: 180,
+ *     askCurrency: 'EUR',
  *   });
  */
 const memberOfferForSale = stockOwnerProcedure
@@ -50,14 +55,39 @@ const memberOfferForSale = stockOwnerProcedure
           (lines) => new Set(lines.map((line) => line.stockId)).size === lines.length,
           'Each wine can appear only once. Combine the quantities on one line.',
         ),
-      /** What the member receives per bottle, before C&C's commission is added */
-      askPerBottleUsd: z.number().positive().max(1_000_000),
+      /**
+       * What the member receives per bottle, before C&C's commission is
+       * added, in askCurrency. USD unless they chose another.
+       */
+      askPerBottle: z.number().positive().max(1_000_000).optional(),
+      askCurrency: z.enum(CELLAR_CURRENCIES).default('USD'),
+      /** The older form, a USD price; kept for callers that still send it */
+      askPerBottleUsd: z.number().positive().max(1_000_000).optional(),
       expiresAt: z.string().nullable().optional(),
       ownerNotes: z.string().max(1000).optional(),
-    }),
+    }).refine(
+      (input) => input.askPerBottle != null || input.askPerBottleUsd != null,
+      'Set your price per bottle.',
+    ),
   )
   .mutation(async ({ ctx, input }) => {
     await assertActivated(ctx.partner.id);
+
+    /*
+      Converted now, at today's rate, and the rate kept. The offer is in USD
+      from this moment: if the euro moves before it sells, the member is still
+      owed the dollar figure they were shown when they listed.
+    */
+    const currency = input.askPerBottle != null ? input.askCurrency : 'USD';
+    const local = input.askPerBottle ?? input.askPerBottleUsd ?? 0;
+    const fx = await resolveFxToUsd(currency);
+    if (fx.source === 'unresolved') {
+      throw new TRPCError({
+        code: 'BAD_GATEWAY',
+        message: `We could not get today's ${currency} rate. Set your price in USD, or try again shortly.`,
+      });
+    }
+    const askPerBottleUsd = Math.round(local * fx.rate * 100) / 100;
 
     const stockIds = input.lines.map((line) => line.stockId);
 
@@ -142,38 +172,49 @@ const memberOfferForSale = stockOwnerProcedure
 
     const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
 
-    const mandateNumber = await generateMandateNumber();
-
-    const mandateId = await db.transaction(async (tx) => {
-      const [mandate] = await tx
-        .insert(saleMandates)
-        .values({
-          mandateNumber,
-          ownerId: ctx.partner.id,
-          ownerName: ctx.partner.businessName,
-          lwin18: first.lwin18,
-          lwinKey: lwinPakKeyOf(first.lwin18),
-          productName: first.productName,
-          producer: first.producer,
-          vintage: first.vintage,
-          bottleSize: first.bottleSize,
-          caseConfig: first.caseConfig,
-          bottlesOffered: totalBottles,
-          bottlesRemaining: totalBottles,
-          askPerBottleUsd: input.askPerBottleUsd,
-          /*
-            Offered, not listed. C&C reviews before anything reaches a price
-            list, and the hold flag stays on until it does — so an offer that is
-            never accepted never makes the wine sellable.
-          */
-          status: 'offered',
-          offeredAt: new Date(),
-          expiresAt:
-            expiresAt && !Number.isNaN(expiresAt.getTime()) ? expiresAt : null,
-          ownerNotes: input.ownerNotes,
-          createdBy: ctx.user.id,
-        })
-        .returning({ id: saleMandates.id });
+    const { mandateId, mandateNumber } = await db.transaction(async (tx) => {
+      // Numbered inside the transaction, and retried on a clash
+      const mandate = await withNumberRetry((attempt) =>
+        tx.transaction(async (savepoint) => {
+          const [row] = await savepoint
+            .insert(saleMandates)
+            .values({
+              mandateNumber: await generateMandateNumber(savepoint, attempt),
+              ownerId: ctx.partner.id,
+              ownerName: ctx.partner.businessName,
+              lwin18: first.lwin18,
+              lwinKey: lwinPakKeyOf(first.lwin18),
+              productName: first.productName,
+              producer: first.producer,
+              vintage: first.vintage,
+              bottleSize: first.bottleSize,
+              caseConfig: first.caseConfig,
+              bottlesOffered: totalBottles,
+              bottlesRemaining: totalBottles,
+              askPerBottleUsd,
+              askCurrency: currency,
+              askPerBottleLocal: local,
+              askFxRate: fx.rate,
+              askFxAt: new Date(),
+              /*
+                Offered, not listed. C&C reviews before anything reaches a price
+                list, and the hold flag stays on until it does — so an offer that is
+                never accepted never makes the wine sellable.
+              */
+              status: 'offered',
+              offeredAt: new Date(),
+              expiresAt:
+                expiresAt && !Number.isNaN(expiresAt.getTime()) ? expiresAt : null,
+              ownerNotes: input.ownerNotes,
+              createdBy: ctx.user.id,
+            })
+            .returning({
+              id: saleMandates.id,
+              mandateNumber: saleMandates.mandateNumber,
+            });
+          return row;
+        }),
+      );
 
       if (!mandate) {
         throw new TRPCError({
@@ -205,7 +246,7 @@ const memberOfferForSale = stockOwnerProcedure
         }),
       );
 
-      return mandate.id;
+      return { mandateId: mandate.id, mandateNumber: mandate.mandateNumber };
     });
 
     await notifyMandateUpdate({
@@ -218,7 +259,7 @@ const memberOfferForSale = stockOwnerProcedure
       bottles: totalBottles,
     });
 
-    return { mandateId, mandateNumber, bottles: totalBottles };
+    return { mandateId, mandateNumber, bottles: totalBottles, askPerBottleUsd };
   });
 
 export default memberOfferForSale;

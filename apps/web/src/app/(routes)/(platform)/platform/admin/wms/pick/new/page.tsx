@@ -24,6 +24,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ClientMark from '@/app/_wms/components/ClientMark';
 import PickOrderLines from '@/app/_wms/components/PickOrderLines';
 import WhereIsOrder from '@/app/_wms/components/WhereIsOrder';
 import isPickableZohoStatus from '@/app/_zohoSalesOrders/utils/isPickableZohoStatus';
@@ -158,38 +159,6 @@ const NewPickListPage = () => {
     });
   };
 
-  const handleCreate = async () => {
-    if (selectedOrderIds.size === 0) return;
-    setIsCreating(true);
-    setCreateError(null);
-
-    let succeeded = 0;
-    let failed = 0;
-
-    // Process sequentially to avoid pick list number race condition
-    for (const id of Array.from(selectedOrderIds)) {
-      try {
-        await releaseToPickMutation.mutateAsync({ salesOrderId: id });
-        succeeded++;
-      } catch {
-        failed++;
-      }
-    }
-
-    setIsCreating(false);
-    void queryClient.invalidateQueries();
-
-    if (failed === 0) {
-      toast.success(`${succeeded} pick list${succeeded === 1 ? '' : 's'} created`);
-      router.push('/platform/admin/wms/pick');
-    } else if (succeeded > 0) {
-      toast.warning(`${succeeded} created, ${failed} failed`);
-      router.push('/platform/admin/wms/pick');
-    } else {
-      setCreateError('Failed to create pick lists');
-    }
-  };
-
   // Filter by SO number, invoice number, customer or subject/reference, then by
   // how pickable the order is (repack needed / stock missing).
   const filteredOrders = zohoOrders?.filter((order) => {
@@ -232,6 +201,50 @@ const NewPickListPage = () => {
       currency: scope[0]?.currencyCode ?? 'USD',
     };
   }, [filteredOrders, selectedOrderIds]);
+
+  // Selected orders the current search and filter still show
+  const visibleSelectedCount = (filteredOrders ?? []).filter((o) =>
+    selectedOrderIds.has(o.id),
+  ).length;
+
+  const handleCreate = async () => {
+    /*
+      Only what is selected AND on screen. Ticking orders and then changing
+      the search or filter left the hidden ones selected, and they were
+      released with the rest.
+    */
+    const visibleIds = new Set((filteredOrders ?? []).map((order) => order.id));
+    const toRelease = Array.from(selectedOrderIds).filter((id) => visibleIds.has(id));
+    if (toRelease.length === 0) return;
+    setIsCreating(true);
+    setCreateError(null);
+
+    let succeeded = 0;
+    let failed = 0;
+
+    // Process sequentially to avoid pick list number race condition
+    for (const id of toRelease) {
+      try {
+        await releaseToPickMutation.mutateAsync({ salesOrderId: id });
+        succeeded++;
+      } catch {
+        failed++;
+      }
+    }
+
+    setIsCreating(false);
+    void queryClient.invalidateQueries();
+
+    if (failed === 0) {
+      toast.success(`${succeeded} pick list${succeeded === 1 ? '' : 's'} created`);
+      router.push('/platform/admin/wms/pick');
+    } else if (succeeded > 0) {
+      toast.warning(`${succeeded} created, ${failed} failed`);
+      router.push('/platform/admin/wms/pick');
+    } else {
+      setCreateError('Failed to create pick lists');
+    }
+  };
 
   const allSelected =
     filteredOrders &&
@@ -464,6 +477,8 @@ const NewPickListPage = () => {
                           {isSelected && <IconCheck className="h-4 w-4" />}
                         </div>
 
+                        <ClientMark logoUrl={order.customerLogoUrl} name={order.customerName} size="lg" />
+
                         {/* Order info */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-1.5">
@@ -625,7 +640,7 @@ const NewPickListPage = () => {
       </div>
 
       {/* Sticky bottom action bar */}
-      {selectedOrderIds.size > 0 && (
+      {visibleSelectedCount > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border-primary bg-fill-primary px-4 py-3 shadow-lg sm:static sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
           <button
             type="button"
@@ -640,7 +655,7 @@ const NewPickListPage = () => {
             )}
             {isCreating
               ? 'Releasing...'
-              : `Release ${selectedOrderIds.size} Order${selectedOrderIds.size === 1 ? '' : 's'} · ${totals.lines} line${totals.lines === 1 ? '' : 's'} · ${totals.cases} case${totals.cases === 1 ? '' : 's'} · ${totals.bottles} btl`}
+              : `Release ${visibleSelectedCount} Order${visibleSelectedCount === 1 ? '' : 's'} · ${totals.lines} line${totals.lines === 1 ? '' : 's'} · ${totals.cases} case${totals.cases === 1 ? '' : 's'} · ${totals.bottles} btl`}
           </button>
           {createError && (
             <p className="mt-2 text-center text-[13px] text-red-600">

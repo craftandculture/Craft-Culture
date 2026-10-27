@@ -7,6 +7,8 @@ import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
+import maskEmail from './maskEmail';
+
 /**
  * Loops template IDs for distributor notifications
  */
@@ -156,7 +158,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
           logger.info('PCO: Sending distributor email via Loops', {
             templateId: DISTRIBUTOR_TEMPLATE_IDS[type],
             type,
-            email: user.email,
+            email: maskEmail(user.email),
           });
 
           const result = await loops.sendTransactionalEmail({
@@ -178,13 +180,13 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
           });
 
           logger.info('PCO: Distributor email result', {
-            email: user.email,
+            email: maskEmail(user.email),
             result: JSON.stringify(result),
             success: result?.success,
           });
         } catch (error) {
           logger.error('PCO: Failed to send distributor email via Loops', {
-            email: user.email,
+            email: maskEmail(user.email),
             error: error instanceof Error ? error.message : String(error),
           });
         }
@@ -205,7 +207,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
           logger.info('PCO: Sending distributor business email via Loops', {
             templateId: DISTRIBUTOR_TEMPLATE_IDS[type],
             type,
-            email: distributor.businessEmail,
+            email: maskEmail(distributor.businessEmail),
           });
 
           const result = await loops.sendTransactionalEmail({
@@ -227,13 +229,13 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
           });
 
           logger.info('PCO: Distributor business email result', {
-            email: distributor.businessEmail,
+            email: maskEmail(distributor.businessEmail),
             result: JSON.stringify(result),
             success: result?.success,
           });
         } catch (error) {
           logger.error('PCO: Failed to send distributor business email via Loops', {
-            email: distributor.businessEmail,
+            email: maskEmail(distributor.businessEmail),
             error: error instanceof Error ? error.message : String(error),
           });
         }
@@ -245,7 +247,7 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
       try {
         logger.info('PCO: Sending proforma invoice notification to finance email', {
           templateId: FINANCE_PROFORMA_TEMPLATE_ID,
-          email: distributor.financeEmail,
+          email: maskEmail(distributor.financeEmail),
           pdfDownloadUrl,
         });
 
@@ -265,13 +267,13 @@ const notifyDistributorOfOrderUpdate = async (params: NotifyDistributorParams) =
         });
 
         logger.info('PCO: Finance email result', {
-          email: distributor.financeEmail,
+          email: maskEmail(distributor.financeEmail),
           result: JSON.stringify(result),
           success: result?.success,
         });
       } catch (error) {
         logger.error('PCO: Failed to send proforma invoice notification to finance email', {
-          email: distributor.financeEmail,
+          email: maskEmail(distributor.financeEmail),
           error: error instanceof Error ? error.message : String(error),
         });
       }

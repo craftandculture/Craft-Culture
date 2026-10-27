@@ -16,6 +16,7 @@
  *   });
  */
 
+import escapeZpl from './escapeZpl';
 import { CC_LOGO_GF } from './zplLogo';
 
 export interface LocationLabelData {
@@ -34,27 +35,6 @@ export interface LocationLabelData {
   /** Whether forklift is required to access */
   requiresForklift?: boolean | null;
 }
-
-/**
- * Normalize accented characters to ASCII equivalents
- */
-const normalizeAccents = (str: string) => {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/œ/g, 'oe')
-    .replace(/Œ/g, 'OE')
-    .replace(/æ/g, 'ae')
-    .replace(/Æ/g, 'AE')
-    .replace(/ß/g, 'ss');
-};
-
-/**
- * Escape special characters for ZPL
- */
-const escapeZpl = (str: string) => {
-  return normalizeAccents(str).replace(/\^/g, ' ').replace(/~/g, ' ');
-};
 
 /**
  * Get display text for location type
@@ -95,7 +75,7 @@ const generateLocationLabelZpl = (data: LocationLabelData) => {
 ^FX -- Large QR Code on left (magnification 10 for better scanning) --
 ^FO50,60
 ^BQN,2,10
-^FDMA,${data.barcode}^FS
+^FDMA,${escapeZpl(data.barcode)}^FS
 
 ^FX -- Vertical separator line --
 ^FO320,40
@@ -144,10 +124,12 @@ export const generateAreaLabelZpl = (data: LocationLabelData) => {
   const locationCode = escapeZpl(data.locationCode);
   const locationType = getLocationTypeDisplay(data.locationType);
 
+  // ^MTD (direct thermal) applies to this label. ^JUS, which wrote the
+  // printer's settings to flash on every print, is left to the test label.
   return `^XA
 ^PR3
 ~SD20
-^MTD^JUS
+^MTD
 
 ^FX -- Outer border --
 ^FO20,20
@@ -164,7 +146,7 @@ ${CC_LOGO_GF}^FS
 ^FX -- Large QR code (centred, mag 10) --
 ^FO230,240
 ^BQN,2,10
-^FDMA,${data.barcode}^FS
+^FDMA,${escapeZpl(data.barcode)}^FS
 
 ^FX -- Location name (huge, centred) --
 ^FO40,620

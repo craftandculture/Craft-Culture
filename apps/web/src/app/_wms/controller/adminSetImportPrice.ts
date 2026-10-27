@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsProductPricing } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { setImportPriceSchema } from '../schemas/pricingSchema';
 import lwinPakKey from '../utils/lwinPakKey';
@@ -28,7 +28,7 @@ import writeProductPricing from '../utils/writeProductPricing';
  * @param shipmentItemId - Optional reference to the source shipment item
  * @param notes - Optional notes about the price
  */
-const adminSetImportPrice = wmsOperatorProcedure
+const adminSetImportPrice = adminProcedure
   .input(setImportPriceSchema)
   .mutation(async ({ input, ctx }) => {
     const { lwin18, importPricePerBottle, source, shipmentItemId, notes } =

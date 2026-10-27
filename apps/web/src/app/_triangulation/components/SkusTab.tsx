@@ -224,7 +224,7 @@ const SkusTab = ({ programmeId }: SkusTabProps) => {
             colorRole="muted"
             variant="outline"
             isDisabled={seedFromWms.isPending}
-            onClick={() => seedFromWms.mutate({ ownerName: 'Crurated' })}
+            onClick={() => seedFromWms.mutate({ programmeId })}
           >
             <IconDatabaseImport className="mr-1 size-4" />
             {seedFromWms.isPending ? 'Importing…' : 'Import W codes from WMS'}

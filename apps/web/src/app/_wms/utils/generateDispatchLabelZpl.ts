@@ -1,3 +1,5 @@
+import escapeZpl from './escapeZpl';
+
 /**
  * Generate ZPL code for a dispatch pallet label
  *
@@ -31,27 +33,6 @@ export interface DispatchLabelData {
   /** Optional notes (e.g. truck number) */
   notes?: string | null;
 }
-
-/**
- * Normalize accented characters to ASCII equivalents for thermal printers
- */
-const normalizeAccents = (str: string) => {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/œ/g, 'oe')
-    .replace(/Œ/g, 'OE')
-    .replace(/æ/g, 'ae')
-    .replace(/Æ/g, 'AE')
-    .replace(/ß/g, 'ss');
-};
-
-/**
- * Escape special characters for ZPL
- */
-const escapeZpl = (str: string) => {
-  return normalizeAccents(str).replace(/\^/g, ' ').replace(/~/g, ' ');
-};
 
 /**
  * Truncate string to max length with ellipsis

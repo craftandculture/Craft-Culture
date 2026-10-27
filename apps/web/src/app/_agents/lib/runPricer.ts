@@ -3,6 +3,7 @@ import { generateObject } from 'ai';
 import { and, desc, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { getPricingConfig } from '@/app/_pricing/data/getPricingConfig';
 import db from '@/database/client';
 import {
   agentOutputs,
@@ -15,13 +16,12 @@ import {
   wmsStock,
   wmsStockMovements,
 } from '@/database/schema';
+import { DEFAULT_EXCHANGE_RATES } from '@/lib/pricing/defaults';
 
 import toDutyPaidPrice from '../utils/toDutyPaidPrice';
 
 const AIR_FREIGHT_USD = 20;
 const SEA_FREIGHT_USD = 5;
-const GBP_TO_USD = 1.27;
-const EUR_TO_USD = 1.09;
 const USD_TO_AED = 3.6725;
 
 /**
@@ -36,16 +36,19 @@ const parseCaseMultiplier = (bottleSize?: string | null) => {
 /**
  * Normalize supplier cost to per-bottle USD
  */
-const toCostPerBottleUsd = (row: {
-  costPriceUsd?: number | null;
-  costPriceGbp?: number | null;
-  costPriceEur?: number | null;
-  bottleSize?: string | null;
-}) => {
+const toCostPerBottleUsd = (
+  row: {
+    costPriceUsd?: number | null;
+    costPriceGbp?: number | null;
+    costPriceEur?: number | null;
+    bottleSize?: string | null;
+  },
+  fx: { gbpToUsd: number; eurToUsd: number },
+) => {
   const multiplier = parseCaseMultiplier(row.bottleSize);
   if (row.costPriceUsd) return row.costPriceUsd / multiplier;
-  if (row.costPriceGbp) return (row.costPriceGbp * GBP_TO_USD) / multiplier;
-  if (row.costPriceEur) return (row.costPriceEur * EUR_TO_USD) / multiplier;
+  if (row.costPriceGbp) return (row.costPriceGbp * fx.gbpToUsd) / multiplier;
+  if (row.costPriceEur) return (row.costPriceEur * fx.eurToUsd) / multiplier;
   return null;
 };
 
@@ -93,21 +96,23 @@ const pricerOutputSchema = z.object({
       rationale: z.string(),
     }),
   ),
-  ibPricing: z.array(
-    z.object({
-      productName: z.string(),
-      vintage: z.string().optional(),
-      supplierName: z.string(),
-      costPerBottleUsd: z.number(),
-      ibAirUsd: z.number(),
-      ibSeaUsd: z.number(),
-      ibAirAed: z.number(),
-      ibSeaAed: z.number(),
-    }),
-  ),
 });
 
-const buildMarkdown = (data: z.infer<typeof pricerOutputSchema>) => {
+interface IbPricingRow {
+  productName: string;
+  vintage?: string;
+  supplierName: string;
+  costPerBottleUsd: number;
+  ibAirUsd: number;
+  ibSeaUsd: number;
+  ibAirAed: number;
+  ibSeaAed: number;
+}
+
+/** The model's analysis plus the IB price table, which is computed here */
+type PricerBrief = z.infer<typeof pricerOutputSchema> & { ibPricing: IbPricingRow[] };
+
+const buildMarkdown = (data: PricerBrief) => {
   const lines: string[] = [];
   lines.push('## Executive Summary\n');
   lines.push(data.executiveSummary, '');
@@ -275,7 +280,11 @@ const runPricer = async () => {
       .select({
         lwin18: wmsStockMovements.lwin18,
         productName: wmsStockMovements.productName,
-        totalCasesMoved: sql<number>`SUM(${wmsStockMovements.quantityCases})`,
+        // Picked then dispatched is one case, not two: take the larger total
+        totalCasesMoved: sql<number>`GREATEST(
+          COALESCE(SUM(ABS(${wmsStockMovements.quantityCases})) FILTER (WHERE ${wmsStockMovements.movementType} = 'pick'), 0),
+          COALESCE(SUM(ABS(${wmsStockMovements.quantityCases})) FILTER (WHERE ${wmsStockMovements.movementType} = 'dispatch'), 0)
+        )`,
       })
       .from(wmsStockMovements)
       .where(
@@ -318,10 +327,17 @@ const runPricer = async () => {
       .orderBy(desc(supplierWines.createdAt))
       .limit(300);
 
-    // Pre-compute IB prices for supplier wines
+    // Pre-compute IB prices for supplier wines, at the rates in Pricing
+    // Settings (the same rates the rest of the pricing uses)
+    const exConfig = await getPricingConfig('exchange_rates');
+    const fx = {
+      gbpToUsd: exConfig.gbp_to_usd ?? DEFAULT_EXCHANGE_RATES.gbpToUsd,
+      eurToUsd: exConfig.eur_to_usd ?? DEFAULT_EXCHANGE_RATES.eurToUsd,
+    };
+
     const ibRows = suppliers
       .map((s) => {
-        const costUsd = toCostPerBottleUsd(s);
+        const costUsd = toCostPerBottleUsd(s, fx);
         if (!costUsd) return null;
         return {
           productName: s.productName,
@@ -340,7 +356,7 @@ const runPricer = async () => {
     const competitorCtx = competitors
       .map(
         (c) =>
-          `${c.competitorName}: ${c.productName} (${c.vintage ?? 'NV'}) — ${c.sellingPriceAed ? `${c.sellingPriceAed} AED` : `${c.sellingPriceUsd} USD`}${c.lwin18Match ? ` [LWIN: ${c.lwin18Match}]` : ''}`,
+          `${c.competitorName}: ${c.productName} (${c.vintage ?? 'NV'}) — ${c.sellingPriceAed ? `${c.sellingPriceAed} AED` : c.sellingPriceUsd ? `${(c.sellingPriceUsd * USD_TO_AED).toFixed(0)} AED (${c.sellingPriceUsd} USD)` : 'price unknown'}${c.lwin18Match ? ` [LWIN: ${c.lwin18Match}]` : ''}`,
       )
       .join('\n');
 
@@ -450,12 +466,15 @@ Generate a daily Pricer brief with:
 3. Margin alerts — products where current margin is outside target range
 4. Competitive gaps — where our duty-paid equivalent (duty free + 15%) vs the competitor's duty-paid price has a significant gap (>10%). ourPriceAed is our duty-paid equivalent, never our duty-free price
 5. Prioritized action items — specific pricing actions to take today
-6. ibPricing — return the full list of supplier wines with their pre-calculated IB prices. Use EXACTLY the cost/IB values provided above (do not recalculate). Include all ${ibRows.length} products`,
+
+(The supplier IB price table is attached to the brief separately; do not repeat it.)`,
         },
       ],
     });
 
-    const data = result.object;
+    // The IB table is merged here rather than asked back of the model: copying
+    // hundreds of figures through an LLM is how prices change on the way.
+    const data: PricerBrief = { ...result.object, ibPricing: ibRows };
     const markdown = buildMarkdown(data);
 
     await db.insert(agentOutputs).values({

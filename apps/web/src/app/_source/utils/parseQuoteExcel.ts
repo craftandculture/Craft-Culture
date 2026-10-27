@@ -60,6 +60,55 @@ const parseCSVLine = (line: string): string[] => {
 };
 
 /**
+ * Parse a price cell, accepting UK/US ("1,234.56") and European ("1.234,56",
+ * "150,00") separators
+ *
+ * @example
+ *   parsePrice('$1,234.50'); // 1234.5
+ *   parsePrice('1.234,50 EUR'); // 1234.5
+ *   parsePrice('150,00'); // 150
+ */
+const parsePrice = (raw: string): number | undefined => {
+  let str = raw.replace(/[^0-9.,]/g, '');
+  if (!str) return undefined;
+
+  const lastComma = str.lastIndexOf(',');
+  const lastDot = str.lastIndexOf('.');
+
+  if (lastComma !== -1 && lastDot !== -1) {
+    // Both present: whichever comes last is the decimal separator
+    str =
+      lastComma > lastDot
+        ? str.replace(/\./g, '').replace(',', '.')
+        : str.replace(/,/g, '');
+  } else if (lastComma !== -1) {
+    // Only commas: "150,5" / "150,00" is a decimal, "1,500" is thousands
+    str = /,\d{1,2}$/.test(str) && (str.match(/,/g) ?? []).length === 1
+      ? str.replace(',', '.')
+      : str.replace(/,/g, '');
+  } else if (/^\d{1,3}(\.\d{3}){2,}$/.test(str)) {
+    // Only dots in thousands groups ("1.234.567"): European thousands
+    str = str.replace(/\./g, '');
+  }
+
+  const parsed = parseFloat(str);
+  return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+};
+
+/**
+ * Find the RFQ item a row's product name refers to. An empty name never
+ * matches (an empty string is contained in every name).
+ */
+const findItemByName = (rfqItems: RfqItem[], name: string) => {
+  const needle = name.trim().toLowerCase();
+  if (!needle) return undefined;
+  return rfqItems.find((item) => {
+    const hay = item.productName.toLowerCase();
+    return hay.includes(needle) || needle.includes(hay);
+  });
+};
+
+/**
  * Try to parse structured quote CSV directly
  */
 const tryParseStructuredQuoteCSV = (
@@ -74,93 +123,70 @@ const tryParseStructuredQuoteCSV = (
 
   const headers = parseCSVLine(headerLine).map((h) => h.toLowerCase().trim());
 
-  // Map common column names to quote fields
+  // Map column names to quote fields. Rules are checked in order and the
+  // first matching rule wins; a field keeps the first column that claimed it.
+  // Alternative columns are tested first so "Alt Product" never takes the
+  // product column, and "Stock Location" is tested before stock quantity.
+  const columnRules: Array<[string, (h: string) => boolean]> = [
+    ['lineNumber', (h) => ['#', 'line', 'row', 'no', 'item'].includes(h)],
+    ['altProduct', (h) => h.includes('alt') && (h.includes('product') || h.includes('wine'))],
+    ['altVintage', (h) => h.includes('alt') && h.includes('vintage')],
+    ['altReason', (h) => h.includes('alt') && h.includes('reason')],
+    ['altCaseConfig', (h) => h.includes('alt') && (h.includes('case') || h.includes('config'))],
+    ['stockLocation', (h) => h.includes('location') || h.includes('warehouse')],
+    [
+      'price',
+      (h) =>
+        h.includes('price') ||
+        h.includes('cost') ||
+        h.includes('usd') ||
+        h.includes('$') ||
+        h.includes('per case'),
+    ],
+    [
+      'availableQuantity',
+      (h) =>
+        (h.includes('available') && h.includes('qty')) ||
+        h.includes('avail qty') ||
+        h.includes('stock'),
+    ],
+    ['leadTimeDays', (h) => h.includes('lead') || h.includes('days') || h.includes('delivery')],
+    ['notes', (h) => h.includes('note') || h.includes('comment') || h.includes('remark')],
+    ['status', (h) => h.includes('status') || h.includes('available') || h === 'avail'],
+    [
+      'quotedVintage',
+      (h) =>
+        (h.includes('quoted') && h.includes('vintage')) ||
+        h === 'vintage quoted' ||
+        h === 'vintage offered' ||
+        h === 'your vintage' ||
+        h === 'vintage',
+    ],
+    [
+      'caseConfig',
+      (h) =>
+        h.includes('case config') ||
+        h.includes('caseconfig') ||
+        h.includes('case size') ||
+        h.includes('pack size') ||
+        h.includes('bottles per case'),
+    ],
+    [
+      'productName',
+      (h) =>
+        h.includes('product') ||
+        h.includes('wine') ||
+        h.includes('name') ||
+        h.includes('description'),
+    ],
+  ];
+
   const columnMap: Record<string, number> = {};
   headers.forEach((header, index) => {
     const h = header.replace(/[:\s]+/g, ' ').trim();
-
-    // Line number / row number
-    if (h === '#' || h === 'line' || h === 'row' || h === 'no' || h === 'item') {
-      columnMap['lineNumber'] = index;
-    }
-    // Product name for verification
-    else if (
-      h.includes('product') ||
-      h.includes('wine') ||
-      h.includes('name') ||
-      h.includes('description')
-    ) {
-      columnMap['productName'] = index;
-    }
-    // Price columns
-    else if (
-      h.includes('price') ||
-      h.includes('cost') ||
-      h.includes('usd') ||
-      h.includes('$') ||
-      h.includes('per case')
-    ) {
-      columnMap['price'] = index;
-    }
-    // Available quantity
-    else if (
-      (h.includes('available') && h.includes('qty')) ||
-      h.includes('avail qty') ||
-      h.includes('stock')
-    ) {
-      columnMap['availableQuantity'] = index;
-    }
-    // Lead time
-    else if (h.includes('lead') || h.includes('days') || h.includes('delivery')) {
-      columnMap['leadTimeDays'] = index;
-    }
-    // Stock location
-    else if (h.includes('location') || h.includes('warehouse')) {
-      columnMap['stockLocation'] = index;
-    }
-    // Notes
-    else if (h.includes('note') || h.includes('comment') || h.includes('remark')) {
-      columnMap['notes'] = index;
-    }
-    // Status
-    else if (h.includes('status') || h.includes('available') || h === 'avail') {
-      columnMap['status'] = index;
-    }
-    // Alternative product
-    else if (h.includes('alt') && h.includes('product')) {
-      columnMap['altProduct'] = index;
-    }
-    // Quoted vintage (which vintage they're actually providing)
-    else if (
-      (h.includes('quoted') && h.includes('vintage')) ||
-      h === 'vintage quoted' ||
-      h === 'vintage offered' ||
-      h === 'your vintage' ||
-      (h === 'vintage' && !h.includes('alt'))
-    ) {
-      columnMap['quotedVintage'] = index;
-    }
-    // Alternative vintage
-    else if (h.includes('alt') && h.includes('vintage')) {
-      columnMap['altVintage'] = index;
-    }
-    // Alternative reason
-    else if (h.includes('alt') && h.includes('reason')) {
-      columnMap['altReason'] = index;
-    }
-    // Case config (bottles per case)
-    else if (
-      h.includes('case config') ||
-      h.includes('caseconfig') ||
-      h.includes('case size') ||
-      h.includes('pack size') ||
-      h.includes('bottles per case')
-    ) {
-      columnMap['caseConfig'] = index;
-    }
-    // Alternative case config
-    else if (h.includes('alt') && (h.includes('case') || h.includes('config'))) {
-      columnMap['altCaseConfig'] = index;
+    const rule = columnRules.find(([, test]) => test(h));
+    if (rule && columnMap[rule[0]] === undefined) {
+      columnMap[rule[0]] = index;
     }
   });
 
@@ -185,35 +211,24 @@ const tryParseStructuredQuoteCSV = (
       if (!isNaN(parsed)) lineNumber = parsed;
     }
 
-    // Find matching RFQ item
-    const matchingItem = rfqItems.find((item) => item.sortOrder + 1 === lineNumber);
-    if (!matchingItem) {
-      // Try matching by product name if line number doesn't match
-      const productName =
-        columnMap['productName'] !== undefined
-          ? values[columnMap['productName']]?.trim()
-          : '';
-      const fuzzyMatch = rfqItems.find(
-        (item) =>
-          item.productName.toLowerCase().includes(productName?.toLowerCase() ?? '') ||
-          productName?.toLowerCase().includes(item.productName.toLowerCase())
-      );
-      if (!fuzzyMatch) continue;
-    }
-
-    const itemId = matchingItem?.id ?? rfqItems[0]?.id ?? '';
-    const productName =
+    // Find matching RFQ item: by line number, else by product name. A row
+    // that matches neither is skipped (never assigned to the first item).
+    const rowProductName =
       columnMap['productName'] !== undefined
         ? values[columnMap['productName']]?.trim() ?? ''
-        : matchingItem?.productName ?? '';
+        : '';
+    const matchingItem =
+      rfqItems.find((item) => item.sortOrder + 1 === lineNumber) ??
+      findItemByName(rfqItems, rowProductName);
+    if (!matchingItem) continue;
 
-    // Parse price (handle various formats like "$150.00", "150", "150.00 USD")
+    const itemId = matchingItem.id;
+    const productName = rowProductName || matchingItem.productName;
+
+    // Parse price (handles "$150.00", "150", "150.00 USD", "1.234,56 EUR")
     let price: number | undefined;
     if (columnMap['price'] !== undefined) {
-      const priceStr = values[columnMap['price']] ?? '';
-      const cleaned = priceStr.replace(/[^0-9.]/g, '');
-      const parsed = parseFloat(cleaned);
-      if (!isNaN(parsed) && parsed > 0) price = parsed;
+      price = parsePrice(values[columnMap['price']] ?? '');
     }
 
     // Parse status
@@ -225,7 +240,8 @@ const tryParseStructuredQuoteCSV = (
       if (
         statusStr.includes('n/a') ||
         statusStr.includes('not available') ||
-        statusStr.includes('no') ||
+        statusStr.includes('unavailable') ||
+        /\bno\b/.test(statusStr) ||
         statusStr === 'na' ||
         statusStr === 'x'
       ) {
@@ -419,6 +435,14 @@ const parseQuoteExcel = async (
 
   logger.dev('Direct CSV parsing failed, falling back to AI');
 
+  // AI parsing is paid per token: refuse very large free-form responses
+  const MAX_AI_CHARS = 200_000;
+  if (content.length > MAX_AI_CHARS) {
+    throw new Error(
+      'This file is too large to read automatically. Please use the quote template, or split the response into smaller files.',
+    );
+  }
+
   // Fall back to AI parsing
   const openaiKey = process.env.OPENAI_API_KEY;
 
@@ -483,18 +507,10 @@ ${content}`;
       (item) => item.sortOrder + 1 === quote.lineNumber
     );
 
-    // Fallback to fuzzy product name matching
+    // Fallback to fuzzy product name matching; unmatched quotes are dropped
+    // below rather than pinned to the first item
     const itemId =
-      matchingItem?.id ??
-      rfqItems.find(
-        (item) =>
-          item.productName
-            .toLowerCase()
-            .includes(quote.productName.toLowerCase()) ||
-          quote.productName.toLowerCase().includes(item.productName.toLowerCase())
-      )?.id ??
-      rfqItems[0]?.id ??
-      '';
+      matchingItem?.id ?? findItemByName(rfqItems, quote.productName)?.id ?? '';
 
     return {
       itemId,
@@ -518,9 +534,15 @@ ${content}`;
     };
   });
 
+  const usable = matchedQuotes.filter((q) => q.itemId);
+  const skipped = matchedQuotes.length - usable.length;
+
   return {
-    quotes: matchedQuotes,
-    message: `AI parsed ${matchedQuotes.length} quotes`,
+    quotes: usable,
+    message:
+      skipped > 0
+        ? `AI parsed ${usable.length} quotes (${skipped} could not be matched to an RFQ line and were skipped)`
+        : `AI parsed ${usable.length} quotes`,
   };
 };
 

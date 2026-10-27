@@ -202,7 +202,6 @@ const getHillebrandShipments = async (options: GetShipmentsOptions = {}) => {
       pageSize: response.pageSize ?? response.size,
       shipmentsCount: shipments.length,
       responseKeys: Object.keys(response),
-      rawResponse: JSON.stringify(response).slice(0, 2000),
     });
   }
 
@@ -275,7 +274,6 @@ const getHillebrandShipment = async (shipmentId: number) => {
     etd: response.etd || response.estimatedDepartureDate,
     eta: response.eta || response.estimatedArrivalDate,
     responseKeys: Object.keys(response),
-    rawResponse: JSON.stringify(response).slice(0, 3000),
   });
 
   return response;

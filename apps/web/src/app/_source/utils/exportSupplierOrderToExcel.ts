@@ -17,8 +17,6 @@ interface SupplierOrderItem {
 interface SupplierOrderData {
   orderNumber: string;
   partnerName: string;
-  customerPoNumber?: string | null;
-  customerCompany?: string | null;
   createdAt?: Date | string | null;
   items: SupplierOrderItem[];
   totalAmountUsd: number | null;
@@ -52,12 +50,8 @@ const exportSupplierOrderToExcel = (order: SupplierOrderData) => {
     [`Supplier: ${order.partnerName}`],
   ];
 
-  if (order.customerPoNumber) {
-    headerRows.push([`Customer PO: ${order.customerPoNumber}`]);
-  }
-  if (order.customerCompany) {
-    headerRows.push([`Customer: ${order.customerCompany}`]);
-  }
+  // Never include the C&C end customer or their PO: this file goes to the
+  // supplier.
   if (order.createdAt) {
     headerRows.push([
       `Date: ${new Date(order.createdAt).toLocaleDateString()}`,

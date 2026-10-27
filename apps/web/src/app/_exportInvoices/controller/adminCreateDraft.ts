@@ -40,10 +40,16 @@ const adminCreateDraft = adminProcedure
         zohoInvoiceIds: input.zohoInvoiceIds,
       });
     } catch (error) {
-      logger.error('Export draft build failed', { error, input });
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('Export draft build failed', {
+        error: message,
+        zohoCustomerId: input.zohoCustomerId,
+        invoiceCount: input.zohoInvoiceIds.length,
+      });
+      // The build names the step that failed; the text is kept short so no Zoho response is passed on whole
       throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `Could not build the draft. ${error instanceof Error ? error.message : String(error)}`,
+        code: 'BAD_REQUEST',
+        message: `Could not build the draft. ${message.slice(0, 300)}`,
       });
     }
 

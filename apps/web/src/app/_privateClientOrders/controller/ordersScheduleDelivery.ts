@@ -6,7 +6,9 @@ import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import distributorOrderView from '../utils/distributorOrderView';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
+
 
 const scheduleDeliverySchema = z.object({
   orderId: z.string().uuid(),
@@ -96,7 +98,8 @@ const ordersScheduleDelivery = distributorProcedure
       });
     }
 
-    return updatedOrder;
+    // Without C&C's own notes and its payment to the partner
+    return updatedOrder ? distributorOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersScheduleDelivery;

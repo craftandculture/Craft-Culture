@@ -111,8 +111,8 @@ const adminAddCaseToPallet = wmsOperatorProcedure
       quantityCases: 1,
       quantityBottles: 0,
       toLocationId: pallet.locationId,
-      ownerId: pallet.ownerId,
-      ownerName: pallet.ownerName,
+      // Whose pallet: the ledger has no owner_id/owner_name columns
+      fromOwnerId: pallet.ownerId,
       performedBy: ctx.user.id,
       notes: `Added to pallet ${pallet.palletCode}`,
       scannedBarcodes: [caseBarcode],

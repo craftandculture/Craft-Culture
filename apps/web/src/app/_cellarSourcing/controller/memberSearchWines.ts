@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { lwinWines } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { collectorProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Find a wine by name or producer, for asking us to source it
@@ -14,7 +14,7 @@ import { stockOwnerProcedure } from '@/lib/trpc/procedures';
  * @example
  *   await trpcClient.cellarSourcing.member.searchWines.query({ query: 'rousseau chambertin' });
  */
-const memberSearchWines = stockOwnerProcedure
+const memberSearchWines = collectorProcedure
   .input(z.object({ query: z.string().trim().min(2).max(100) }))
   .query(async ({ input }) => {
     const terms = input.query

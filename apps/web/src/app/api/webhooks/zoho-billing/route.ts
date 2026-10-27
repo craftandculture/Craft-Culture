@@ -1,5 +1,3 @@
-import { timingSafeEqual } from 'node:crypto';
-
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
@@ -10,25 +8,25 @@ import { cellarMemberships } from '@/database/schema';
 import { getSubscription } from '@/lib/zoho/billing';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
+import matchesSecret from '@/utils/matchesSecret';
 
 /**
  * Zoho Billing webhook: a payment succeeded or failed, or a subscription
  * changed state
  *
- * Authenticated by a shared secret Zoho sends as `?secret=` (set on the
- * webhook in Zoho). The payload only says which subscription to look at;
+ * Authenticated by a shared secret. Preferred: an `x-cc-webhook-secret`
+ * header, which Zoho Billing can add under the webhook's custom headers and
+ * which stays out of access logs. `?secret=` is still accepted so the webhook
+ * keeps working until Zoho is switched to the header. The payload only says which subscription to look at;
  * its status is read back from Zoho, so a forged body cannot activate
  * anyone. Unknown subscriptions are acknowledged and ignored.
  */
 export const POST = async (request: Request) => {
   const expected = serverConfig.zohoBillingWebhookSecret;
-  const given = new URL(request.url).searchParams.get('secret') ?? request.headers.get('x-cc-webhook-secret') ?? '';
+  const given =
+    request.headers.get('x-cc-webhook-secret') ?? new URL(request.url).searchParams.get('secret');
 
-  if (
-    !expected ||
-    given.length !== expected.length ||
-    !timingSafeEqual(Buffer.from(given), Buffer.from(expected))
-  ) {
+  if (!matchesSecret(given, expected)) {
     return NextResponse.json({ error: 'unauthorised' }, { status: 401 });
   }
 

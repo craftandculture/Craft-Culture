@@ -18,8 +18,9 @@ type ExportZohoLine = ZohoLineItem & { line_item_id?: string; hsn_or_sac?: strin
  *
  * An invoice deleted in Zoho can linger in the synced list until the prune
  * catches it, and a re-raised invoice keeps its number under a new id. So a
- * 404 is retried by number; if the number is gone too, the stale row is
- * removed and the operator is told which invoice to untick.
+ * 404 is retried by number; if the number is gone too, the operator is told
+ * which invoice to untick. The stale synced row is left for the Zoho sync to
+ * prune: this runs inside read-only screens, which must not delete anything.
  *
  * @param zohoInvoiceId - The id from the synced list
  * @returns The invoice as it stands in Zoho now
@@ -41,7 +42,6 @@ const getCurrentInvoice = async (zohoInvoiceId: string) => {
     const replacement = matches.find((m) => m.invoice_number === number && m.status !== 'void');
     if (replacement) return await getInvoice(replacement.invoice_id);
 
-    await db.delete(zohoInvoices).where(eq(zohoInvoices.zohoInvoiceId, zohoInvoiceId));
     throw new Error(`${number} no longer exists in Zoho (deleted or replaced). Untick it and choose its replacement.`, {
       cause: error,
     });
@@ -57,13 +57,26 @@ const getCurrentInvoice = async (zohoInvoiceId: string) => {
  * shared across the lines, so the lines always add up to what the invoice
  * bills — which is the figure the export invoice must meet.
  *
+ * With `zohoCustomerId`, every invoice must be billed to that customer, so an
+ * export invoice cannot mix in another client's invoice.
+ *
  * @param zohoInvoiceIds - Zoho invoice ids, in print order
+ * @param options - `zohoCustomerId`: the consignee every invoice must belong to
  * @returns The invoices, reduced to what the export needs
  */
-const fetchInvoicesForExport = async (zohoInvoiceIds: string[]) => {
+const fetchInvoicesForExport = async (zohoInvoiceIds: string[], options: { zohoCustomerId?: string } = {}) => {
   const invoices = [];
   for (const id of zohoInvoiceIds) {
     invoices.push(await getCurrentInvoice(id));
+  }
+
+  if (options.zohoCustomerId) {
+    const foreign = invoices.filter((i) => i.customer_id !== options.zohoCustomerId);
+    if (foreign.length > 0) {
+      throw new Error(
+        `${foreign.map((i) => i.invoice_number).join(', ')} ${foreign.length === 1 ? 'is' : 'are'} billed to a different customer. Untick ${foreign.length === 1 ? 'it' : 'them'}.`,
+      );
+    }
   }
 
   // The invoice's reference holds its sales order; a reissued invoice is not

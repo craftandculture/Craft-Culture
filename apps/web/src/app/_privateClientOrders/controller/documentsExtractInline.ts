@@ -61,11 +61,9 @@ const documentsExtractInline = winePartnerProcedure.input(extractInlineSchema).m
   // because env vars may not be available during build/module initialization
   const openaiKey = process.env.OPENAI_API_KEY;
 
-  // Debug logging - will show in Vercel function logs
+  // Whether the key is set, never any part of it
   logger.info('[DocumentExtraction] Runtime env check:', {
     hasKey: !!openaiKey,
-    keyLength: openaiKey?.length ?? 0,
-    keyPrefix: openaiKey?.substring(0, 7) ?? 'none',
     nodeEnv: process.env.NODE_ENV,
   });
 

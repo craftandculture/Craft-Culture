@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import assertActivated from '@/app/_onboarding/data/assertActivated';
@@ -8,7 +8,7 @@ import {
   cellarAllocationInterests,
   cellarAllocations,
 } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { collectorProcedure } from '@/lib/trpc/procedures';
 
 import fulfilAgreedWine from '../data/fulfilAgreedWine';
 import notifyAllocationUpdate from '../data/notifyAllocationUpdate';
@@ -23,16 +23,50 @@ import notifyAllocationUpdate from '../data/notifyAllocationUpdate';
  * @example
  *   await trpcClient.cellarSourcing.member.respondAllocation.mutate({ interestId, response: 'confirm' });
  */
-const memberRespondAllocation = stockOwnerProcedure
+const memberRespondAllocation = collectorProcedure
   .input(
     z.object({
       interestId: z.string().uuid(),
       response: z.enum(['confirm', 'decline']),
+      /** The price per bottle the member saw; confirming holds them to it */
+      pricePerBottleUsd: z.number().nonnegative().optional(),
     }),
   )
   .mutation(async ({ ctx, input }) => {
     if (input.response === 'confirm') {
       await assertActivated(ctx.partner.id);
+
+      /*
+        Confirmed only at the price the member was shown. If the team has
+        changed it since the page loaded, the member sees the new figure
+        before anything is reserved in their name.
+      */
+      const [shown] = await db
+        .select({ pricePerBottleUsd: cellarAllocations.pricePerBottleUsd })
+        .from(cellarAllocationInterests)
+        .innerJoin(
+          cellarAllocations,
+          eq(cellarAllocations.id, cellarAllocationInterests.allocationId),
+        )
+        .where(
+          and(
+            eq(cellarAllocationInterests.id, input.interestId),
+            eq(cellarAllocationInterests.partnerId, ctx.partner.id),
+          ),
+        )
+        .limit(1);
+
+      if (
+        !shown ||
+        input.pricePerBottleUsd === undefined ||
+        shown.pricePerBottleUsd !== input.pricePerBottleUsd
+      ) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'This offer has changed since you opened the page. Please refresh to see the latest.',
+        });
+      }
     }
 
     const now = new Date();
@@ -87,6 +121,19 @@ const memberRespondAllocation = stockOwnerProcedure
         holdAt: allocation.holdAt,
         fromStock: allocation.fromStock,
         linkUrl: '/platform/admin/cellar-members?tab=requests',
+      }).catch(async (error: unknown) => {
+        // Undone, so the member can confirm again: never confirmed with nothing behind it
+        await db
+          .update(cellarAllocationInterests)
+          .set({ status: 'allocated', respondedAt: null, updatedAt: new Date() })
+          .where(
+            and(
+              eq(cellarAllocationInterests.id, interest.id),
+              eq(cellarAllocationInterests.status, 'confirmed'),
+              isNull(cellarAllocationInterests.purchaseId),
+            ),
+          );
+        throw error;
       });
 
       purchaseNumber = result.purchase?.purchaseNumber ?? null;

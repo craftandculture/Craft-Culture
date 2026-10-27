@@ -314,6 +314,11 @@ const PrivateOrderDetailPage = () => {
 
   const handleSaveItem = () => {
     if (!editingItem) return;
+    // A cleared price field reads as 0; never save a line at no price by accident
+    if (!Number.isFinite(editingItem.pricePerCaseUsd) || editingItem.pricePerCaseUsd <= 0) {
+      toast.error('Price must be greater than 0');
+      return;
+    }
     updateItem({
       itemId: editingItem.id,
       quantity: editingItem.quantity,

@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { cellarSourcingRequests } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { collectorProcedure } from '@/lib/trpc/procedures';
 
 import notifySourcingUpdate from '../data/notifySourcingUpdate';
 
@@ -17,7 +17,7 @@ import notifySourcingUpdate from '../data/notifySourcingUpdate';
  * @example
  *   await trpcClient.cellarSourcing.member.withdrawRequest.mutate({ requestId });
  */
-const memberWithdrawSourcingRequest = stockOwnerProcedure
+const memberWithdrawSourcingRequest = collectorProcedure
   .input(z.object({ requestId: z.string().uuid() }))
   .mutation(async ({ ctx, input }) => {
     const [row] = await db

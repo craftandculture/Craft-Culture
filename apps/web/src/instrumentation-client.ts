@@ -7,7 +7,11 @@ import * as Sentry from '@sentry/nextjs';
 import sentryPrivacyOptions from '@/lib/sentry/sentryPrivacyOptions';
 
 Sentry.init({
-  dsn: 'https://55c873ccc3be9ca5a263cfc9c13984f9@o964095.ingest.us.sentry.io/4510169801883648',
+  /*
+    Unset means Sentry is off. Events must only go to a Sentry org that
+    Craft & Culture owns, so the DSN comes from the environment.
+  */
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Adjust this value in production, or use tracesSampler for greater control
   tracesSampleRate: 0.1,

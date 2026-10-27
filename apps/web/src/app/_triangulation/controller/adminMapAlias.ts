@@ -71,12 +71,15 @@ const adminMapAlias = adminProcedure
       return { skuId, normalizedCode, remappedImports: 0 };
     }
 
+    // Only the SKU's own client's imports: the alias lives in that
+    // programme's namespace and means nothing to anyone else's lines.
     const affected = await client<{ id: string }[]>`
       SELECT DISTINCT i.id
       FROM tri_imports i
       JOIN tri_import_lines l ON l.import_id = i.id
       WHERE l.normalized_code = ${normalizedCode}
         AND i.alias_source = ${source}
+        AND i.programme_id = ${sku.programmeId}
     `;
 
     for (const record of affected) {

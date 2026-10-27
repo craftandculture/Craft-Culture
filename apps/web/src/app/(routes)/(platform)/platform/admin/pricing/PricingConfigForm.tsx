@@ -31,21 +31,21 @@ const EXCHANGE_RATE_VARIABLES: PricingVariable[] = [
     label: 'GBP → USD',
     description: 'British Pound to US Dollar exchange rate',
     suffix: '',
-    step: '0.01',
+    step: 'any',
   },
   {
     key: 'eur_to_usd',
     label: 'EUR → USD',
     description: 'Euro to US Dollar exchange rate',
     suffix: '',
-    step: '0.01',
+    step: 'any',
   },
   {
     key: 'usd_to_aed',
     label: 'USD → AED',
     description: 'US Dollar to UAE Dirham exchange rate',
     suffix: '',
-    step: '0.01',
+    step: 'any',
   },
 ];
 
@@ -55,7 +55,7 @@ const B2B_VARIABLES: PricingVariable[] = [
     label: 'C&C Margin',
     description: 'Craft & Culture margin applied to supplier price',
     suffix: '%',
-    step: '0.1',
+    step: 'any',
   },
 ];
 
@@ -65,35 +65,35 @@ const PCO_VARIABLES: PricingVariable[] = [
     label: 'C&C Margin',
     description: 'Craft & Culture margin applied to supplier price',
     suffix: '%',
-    step: '0.1',
+    step: 'any',
   },
   {
     key: 'import_duty_percent',
     label: 'Import Duty',
     description: 'UAE import duty applied to landed duty free',
     suffix: '%',
-    step: '0.1',
+    step: 'any',
   },
   {
     key: 'transfer_cost_percent',
     label: 'Transfer Cost',
     description: 'Transfer/handling fee applied to landed duty free',
     suffix: '%',
-    step: '0.01',
+    step: 'any',
   },
   {
     key: 'distributor_margin_percent',
     label: 'Distributor Margin',
     description: 'Distributor margin applied to duty paid landed',
     suffix: '%',
-    step: '0.1',
+    step: 'any',
   },
   {
     key: 'vat_percent',
     label: 'VAT',
     description: 'UAE VAT applied to final price',
     suffix: '%',
-    step: '0.1',
+    step: 'any',
   },
 ];
 
@@ -103,7 +103,7 @@ const POCKET_CELLAR_VARIABLES: PricingVariable[] = [
     label: 'C&C Margin',
     description: 'Craft & Culture margin applied to supplier price',
     suffix: '%',
-    step: '0.1',
+    step: 'any',
   },
   {
     key: 'logistics_air_per_bottle',
@@ -124,35 +124,35 @@ const POCKET_CELLAR_VARIABLES: PricingVariable[] = [
     label: 'Import Duty',
     description: 'UAE import duty applied to landed duty free',
     suffix: '%',
-    step: '0.1',
+    step: 'any',
   },
   {
     key: 'transfer_cost_percent',
     label: 'Transfer Cost',
     description: 'Transfer/handling fee applied to landed duty free',
     suffix: '%',
-    step: '0.01',
+    step: 'any',
   },
   {
     key: 'distributor_margin_percent',
     label: 'Distributor Margin',
     description: 'Distributor margin applied to duty paid landed',
     suffix: '%',
-    step: '0.1',
+    step: 'any',
   },
   {
     key: 'sales_commission_percent',
     label: 'Sales Commission',
     description: 'Sales advisor commission applied after distributor margin',
     suffix: '%',
-    step: '0.1',
+    step: 'any',
   },
   {
     key: 'vat_percent',
     label: 'VAT',
     description: 'UAE VAT applied to final price',
     suffix: '%',
-    step: '0.1',
+    step: 'any',
   },
 ];
 
@@ -180,7 +180,20 @@ const PricingConfigForm = () => {
     pco: {},
     pocket_cellar: {},
   });
-  const [hasChanges, setHasChanges] = useState(false);
+  // Keys edited since the last save, per tab, so Save writes every tab the
+  // user touched (it used to save only the tab on screen)
+  const [dirty, setDirty] = useState<Record<TabType, string[]>>({
+    exchange_rates: [],
+    b2b: [],
+    pco: [],
+    pocket_cellar: [],
+  });
+  const hasChanges = Object.values(dirty).some((keys) => keys.length > 0);
+  const markDirty = (module: TabType, keys: string[]) =>
+    setDirty((prev) => ({
+      ...prev,
+      [module]: [...new Set([...prev[module], ...keys])],
+    }));
   const [isFetchingRates, setIsFetchingRates] = useState(false);
 
   // Fetch current pricing config
@@ -246,9 +259,6 @@ const PricingConfigForm = () => {
     mutationFn: async (params: { module: TabType; key: string; value: number }) => {
       return trpcClient.pricing.updateConfig.mutate(params);
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['pricing'] });
-    },
   });
 
   const handleValueChange = (module: TabType, key: string, value: number) => {
@@ -259,7 +269,7 @@ const PricingConfigForm = () => {
         [key]: value,
       },
     }));
-    setHasChanges(true);
+    markDirty(module, [key]);
   };
 
   // Fetch latest exchange rates from ECB
@@ -275,7 +285,7 @@ const PricingConfigForm = () => {
           usd_to_aed: result.usdToAed,
         },
       }));
-      setHasChanges(true);
+      markDirty('exchange_rates', ['gbp_to_usd', 'eur_to_usd', 'usd_to_aed']);
       toast.success('Exchange rates fetched from ECB');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to fetch exchange rates');
@@ -285,33 +295,57 @@ const PricingConfigForm = () => {
   };
 
   const handleSave = async () => {
-    try {
-      const updates: Promise<unknown>[] = [];
+    const changes = (Object.keys(dirty) as TabType[]).flatMap((module) =>
+      dirty[module].map((key) => ({ module, key, value: formValues[module]?.[key] })),
+    );
 
-      // Save all changed values for current tab
-      const currentTab = activeTab;
-      const variables = TAB_CONFIG[currentTab].variables;
-      const currentValues = formValues[currentTab] ?? {};
+    const invalid = changes.filter(
+      (change) => change.value === undefined || !Number.isFinite(change.value),
+    );
 
-      for (const variable of variables) {
-        const value = currentValues[variable.key];
-        if (value !== undefined) {
-          updates.push(
-            updateConfig({
-              module: currentTab,
-              key: variable.key,
-              value,
-            }),
-          );
-        }
-      }
-
-      await Promise.all(updates);
-      setHasChanges(false);
-      toast.success('Pricing configuration saved');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save pricing configuration');
+    if (invalid.length > 0) {
+      const labels = invalid.map(
+        (change) =>
+          `${TAB_CONFIG[change.module].label}: ${
+            TAB_CONFIG[change.module].variables.find((v) => v.key === change.key)?.label ??
+            change.key
+          }`,
+      );
+      toast.error(`Enter a number for ${labels.join(', ')}`);
+      return;
     }
+
+    const results = await Promise.allSettled(
+      changes.map((change) =>
+        updateConfig({ module: change.module, key: change.key, value: change.value! }),
+      ),
+    );
+
+    // Keep anything that failed marked as unsaved
+    const failed = changes.filter((_, index) => results[index]?.status === 'rejected');
+    setDirty({
+      exchange_rates: failed.filter((c) => c.module === 'exchange_rates').map((c) => c.key),
+      b2b: failed.filter((c) => c.module === 'b2b').map((c) => c.key),
+      pco: failed.filter((c) => c.module === 'pco').map((c) => c.key),
+      pocket_cellar: failed.filter((c) => c.module === 'pocket_cellar').map((c) => c.key),
+    });
+
+    void queryClient.invalidateQueries({ queryKey: api.pricing.getConfig.queryKey() });
+    void queryClient.invalidateQueries({ queryKey: api.pricing.getSharedDefaults.queryKey() });
+
+    if (failed.length > 0) {
+      const firstError = results.find((r) => r.status === 'rejected') as
+        | PromiseRejectedResult
+        | undefined;
+      toast.error(
+        `${failed.length} of ${changes.length} changes were not saved: ${
+          firstError?.reason instanceof Error ? firstError.reason.message : 'unknown error'
+        }`,
+      );
+      return;
+    }
+
+    toast.success('Pricing configuration saved');
   };
 
   if (isLoading) {

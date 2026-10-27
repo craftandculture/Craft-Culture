@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import quoteExtrasSchema from './quoteExtrasSchema';
+
 /**
  * Schema for saving a new quote
  *
@@ -19,22 +21,27 @@ import { z } from 'zod';
  */
 const saveQuoteSchema = z.object({
   name: z.string().min(1).max(255),
-  lineItems: z.array(
-    z.object({
-      productId: z.string().uuid(),
-      offerId: z.string().uuid(),
-      quantity: z.number().int().min(1),
-      vintage: z.string().optional(),
-      alternativeVintages: z.array(z.string()).optional(),
-    }),
-  ),
-  quoteData: z.any(),
+  lineItems: z
+    .array(
+      z.object({
+        productId: z.string().uuid(),
+        offerId: z.string().uuid(),
+        quantity: z.number().int().min(1),
+        vintage: z.string().optional(),
+        alternativeVintages: z.array(z.string()).optional(),
+      }),
+    )
+    .max(200),
+  /** Customer-chosen extras only; prices are recomputed on the server */
+  quoteData: quoteExtrasSchema,
   clientName: z.string().min(1).max(255).optional(),
   clientEmail: z.string().email().max(255).optional(),
   clientCompany: z.string().min(1).max(255).optional(),
   notes: z.string().max(5000).optional(),
   currency: z.enum(['USD', 'AED']).default('USD'),
-  totalUsd: z.number(),
+  /** Ignored: the server prices the quote itself */
+  totalUsd: z.number().optional(),
+  /** Ignored: the server prices the quote itself */
   totalAed: z.number().optional(),
   expiresAt: z.date().optional(),
 });

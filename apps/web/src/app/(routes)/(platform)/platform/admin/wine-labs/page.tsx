@@ -4,11 +4,14 @@ import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
 import isStaff from '@/app/_distribution/utils/isStaff';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import RunBatchForm from '@/app/_winelabs/components/RunBatchForm';
+import RunInBondForm from '@/app/_winelabs/components/RunInBondForm';
 import getCoverageSummary from '@/app/_winelabs/data/getCoverageSummary';
 import type { CoverageSummary } from '@/app/_winelabs/data/getCoverageSummary';
+import getInBondSummary from '@/app/_winelabs/data/getInBondSummary';
+import type { InBondSummary } from '@/app/_winelabs/data/getInBondSummary';
 
 export const dynamic = 'force-dynamic';
-// A batch of 25 wines is up to 75 calls
+// A batch of 25 wines is up to 75 calls; 50 wines priced in London up to 100
 export const maxDuration = 300;
 
 const STATUS = {
@@ -91,6 +94,56 @@ const Rows = ({ rows }: { rows: CoverageSummary['exceptions'] }) => (
   </div>
 );
 
+const VENUES: Record<string, string> = {
+  bordeaux_index: 'Bordeaux Index',
+  bbx: 'BBX',
+  wine_collector: 'Wine Collector',
+  cult_wines: 'Cult Wines',
+  cultx: 'CultX',
+};
+
+/** The London in-bond prices, largest holdings first */
+const InBondRows = ({ rows }: { rows: InBondSummary['rows'] }) => (
+  <div className="overflow-x-auto rounded-xl border border-border-muted">
+    <table className="w-full text-sm">
+      <thead className="border-b border-border-muted text-left text-xs uppercase tracking-wide text-text-muted">
+        <tr>
+          <th className="px-3 py-2">Our wine</th>
+          <th className="px-3 py-2 text-right">Bottles</th>
+          <th className="px-3 py-2 text-right">Best bid</th>
+          <th className="px-3 py-2 text-right">Best ask</th>
+          <th className="px-3 py-2 text-right">Last trade</th>
+          <th className="px-3 py-2">Where</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-border-muted">
+        {rows.map((row) => (
+          <tr key={row.lwin11}>
+            <td className="px-3 py-2">
+              <span className="font-medium">{row.name}</span>
+              <span className="text-text-muted"> {row.vintage === '1000' ? 'NV' : row.vintage}</span>
+            </td>
+            <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{row.bottles}</td>
+            <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{usd(row.bidUsd)}</td>
+            <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{usd(row.askUsd)}</td>
+            <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
+              {usd(row.lastUsd)}
+              {row.lastTradedAt && (
+                <span className="block text-xs text-text-muted">
+                  {row.lastTradedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              )}
+            </td>
+            <td className="px-3 py-2 text-xs text-text-muted">
+              {row.venues.map((venue) => VENUES[venue] ?? venue).join(', ')}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
 /**
  * Wine Labs check — how well Wine Labs knows the wines we hold
  *
@@ -103,7 +156,7 @@ const WineLabsPage = async () => {
   const user = await getUserOrRedirect();
   if (!isStaff(user)) redirect('/platform');
 
-  const summary = await getCoverageSummary();
+  const [summary, inBond] = await Promise.all([getCoverageSummary(), getInBondSummary()]);
   const capReached = summary.credits >= summary.cap;
   const pct = (n: number) => (summary.checked ? `${Math.round((n / summary.checked) * 100)}%` : '—');
 
@@ -165,6 +218,25 @@ const WineLabsPage = async () => {
           {summary.lastError.at.toLocaleString('en-GB', { timeZone: 'Asia/Dubai' })}): {summary.lastError.error}
         </p>
       )}
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold">
+            London in-bond prices
+            <span className="ml-2 font-normal text-text-muted">
+              {inBond.priced} priced · {inBond.unlisted} not listed · {inBond.inStock - inBond.checked} still to
+              ask
+            </span>
+          </h2>
+          <p className="mt-1 max-w-3xl text-xs text-text-muted">
+            What a 75cl bottle bids, asks and last traded for in bond on the London exchanges Wine Labs reads
+            (Bordeaux Index, BBX and others; not Liv-ex), in USD. Our UAE in-bond price carries freight to Dubai,
+            so expect it above London. These prices also show beside In Bond in the Pricing Manager.
+          </p>
+        </div>
+        <RunInBondForm defaultSize={10} disabled={!summary.configured || capReached} />
+        {inBond.rows.length > 0 && <InBondRows rows={inBond.rows.slice(0, 50)} />}
+      </section>
 
       {summary.calls.length > 0 && (
         <section className="space-y-2">

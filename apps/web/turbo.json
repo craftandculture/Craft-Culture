@@ -7,6 +7,9 @@
       "env": [
         "CI",
         "SENTRY_AUTH_TOKEN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT",
+        "NEXT_PUBLIC_SENTRY_DSN",
         "NEXT_RUNTIME",
         "NODE_ENV",
         "DB_URL",

@@ -8,8 +8,9 @@
  */
 
 import { IconBottle, IconCheck, IconKeyboard, IconLoader2, IconSearch } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -125,6 +126,13 @@ const LwinLookup = ({
       productName: manualDisplayName || productName,
     }),
     enabled: manualMode,
+  });
+
+  // A new code is reserved on click, so two people cannot take the same one
+  const { mutate: reserveInternal, isPending: isReserving } = useMutation({
+    ...api.lwin.reserveInternal.mutationOptions(),
+    onSuccess: ({ lwin7 }) => setManualLwin7(lwin7),
+    onError: (error) => toast.error(error.message),
   });
 
   // Search query
@@ -279,10 +287,12 @@ const LwinLookup = ({
                   ))}
                   <button
                     type="button"
-                    onClick={() => setManualLwin7(internal.next)}
-                    className="rounded-md border border-brand-500 px-2 py-1 text-xs text-brand-700 hover:bg-brand-50 dark:text-brand-400"
+                    onClick={() => reserveInternal()}
+                    disabled={isReserving}
+                    className="rounded-md border border-brand-500 px-2 py-1 text-xs text-brand-700 hover:bg-brand-50 disabled:opacity-50 dark:text-brand-400"
+                    title="Reserves the next free C&C code for this wine"
                   >
-                    New C&amp;C code: <span className="font-mono">{internal.next}</span>
+                    {isReserving ? 'Reserving…' : 'New C&C code'}
                   </button>
                 </div>
               </div>

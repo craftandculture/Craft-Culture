@@ -109,6 +109,8 @@ const adminUpdate = wmsOperatorProcedure
         .where(
           and(
             eq(privateClientOrders.clientId, id),
+            // Only the orders of the partner this client belongs to
+            eq(privateClientOrders.partnerId, existing.partnerId),
             inArray(privateClientOrders.status, OPEN_ORDER_STATUSES),
           ),
         )

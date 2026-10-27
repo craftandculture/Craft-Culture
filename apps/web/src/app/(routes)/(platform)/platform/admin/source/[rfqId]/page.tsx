@@ -1333,10 +1333,20 @@ const RfqDetailPage = () => {
                       $
                       {rfq.items
                         .reduce((sum, item) => {
-                          const selected = item.quotes.find((q) => q.quote.isSelected);
+                          // Same rule as the final quote: the primary
+                          // selection, priced per bottle when the line was
+                          // requested in bottles
+                          const selected =
+                            item.quotes.find((q) => q.quote.id === item.selectedQuoteId) ??
+                            item.quotes.find((q) => q.quote.isSelected);
                           if (!selected || selected.quote.costPricePerCaseUsd === null) return sum;
                           const price =
                             item.finalPriceUsd || selected.quote.costPricePerCaseUsd;
+                          const caseSize =
+                            Number(selected.quote.caseConfig) || item.caseConfig || 0;
+                          if (item.quantityUnit === 'bottles' && caseSize > 0) {
+                            return sum + (price / caseSize) * (item.quantity || 1);
+                          }
                           return sum + price * (item.quantity || 1);
                         }, 0)
                         .toLocaleString(undefined, {

@@ -82,11 +82,11 @@ const notifyDistributorOfOrdersGenerated = async ({
       });
 
       logger.dev(
-        `Sent orders generated notification to: ${customerPo.customerEmail}`
+        `Sent orders generated notification`
       );
     } catch (error) {
       logger.error(
-        `Failed to send orders generated email to ${customerPo.customerEmail}:`,
+        `Failed to send orders generated email:`,
         error
       );
     }

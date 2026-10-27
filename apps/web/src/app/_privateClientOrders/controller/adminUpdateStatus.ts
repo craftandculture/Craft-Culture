@@ -1,23 +1,27 @@
-import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
 import db from '@/database/client';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
-import type { zohoCreateInvoiceJob } from '@/trigger/jobs/zoho-sync';
+import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import { privateClientOrderStatusEnum } from '../schemas/getOrdersSchema';
 import assertDistributorSku from '../utils/assertDistributorSku';
 import ensureClientVerified from '../utils/ensureClientVerified';
 import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
+import isRoutinePcoTransition from '../utils/pcoStatusTransitions';
 
 const updateStatusSchema = z.object({
   orderId: z.string().uuid(),
   status: privateClientOrderStatusEnum,
+  /**
+   * Set once the admin has confirmed a change outside the normal steps
+   * (backwards, several stages at once, reopening a closed order)
+   */
+  override: z.boolean().optional(),
 });
 
 /**
@@ -42,10 +46,10 @@ const getPartnerNotificationType = (status: string) => {
  * Admins can update the status of any order.
  * Triggers appropriate notifications based on the new status.
  */
-const adminUpdateStatus = wmsOperatorProcedure
+const adminUpdateStatus = adminProcedure
   .input(updateStatusSchema)
   .mutation(async ({ input, ctx }) => {
-    const { orderId, status } = input;
+    const { orderId, status, override } = input;
     const { user } = ctx;
 
     // Fetch full order details
@@ -61,21 +65,41 @@ const adminUpdateStatus = wmsOperatorProcedure
     }
 
     const previousStatus = order.status;
+    const isRoutine = isRoutinePcoTransition(previousStatus, status);
 
-    // Checked before the update: client_paid also triggers the Zoho invoice
+    /*
+      A one-click move to any status used to be possible, from delivered back
+      to draft or straight past payment. Normal next steps go through; anything
+      else has to be confirmed as a correction first.
+    */
+    if (!isRoutine && !override) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: `Moving this order from "${previousStatus}" to "${status}" skips or reverses the normal steps. Confirm the change to make it anyway.`,
+      });
+    }
+
+    // Checked before the update: the distributor SKU must exist once paid
     if (status === 'client_paid' && previousStatus !== 'client_paid') {
       await assertDistributorSku(orderId);
     }
 
-    // Update the order status
+    // Update the order status, unless someone else moved it a moment ago
     const [updated] = await db
       .update(privateClientOrders)
       .set({
         status,
         updatedAt: new Date(),
       })
-      .where(eq(privateClientOrders.id, orderId))
+      .where(and(eq(privateClientOrders.id, orderId), eq(privateClientOrders.status, previousStatus)))
       .returning();
+
+    if (!updated) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'The order changed while you were updating it. Refresh and try again.',
+      });
+    }
 
     /*
      * LEGACY CLEANUP. Approving a PCO no longer reserves WMS stock — the PCO
@@ -127,7 +151,8 @@ const adminUpdateStatus = wmsOperatorProcedure
       action: 'status_changed',
       previousStatus,
       newStatus: status,
-      notes: `Admin changed status from ${previousStatus} to ${status}`,
+      notes: `Admin changed status from ${previousStatus} to ${status}${isRoutine ? '' : ' (confirmed as a correction)'}`,
+      ...(!isRoutine && { metadata: { correction: true } }),
     });
 
     // Send partner notification if applicable
@@ -176,12 +201,11 @@ const adminUpdateStatus = wmsOperatorProcedure
       });
     }
 
-    // Trigger Zoho invoice creation when client pays
-    if (status === 'client_paid') {
-      await tasks.trigger<typeof zohoCreateInvoiceJob>('zoho-create-invoice', {
-        orderId,
-      });
-    }
+    /*
+      No Zoho invoice is raised here. PCOs are invoiced by hand, line by line,
+      once delivered (Manual invoicing), and the zoho-create-invoice job never
+      produced a valid invoice, so switching it on would now double-invoice.
+    */
 
     return updated;
   });

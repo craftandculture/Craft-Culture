@@ -268,7 +268,8 @@ const ShipmentsList = () => {
                 const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
                 const origin = shipment.originCity ?? shipment.originCountry ?? 'Origin';
                 const destination = shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination';
-                const href = shipment.jobNumber
+                // Only export jobs have the exports screen; an import job opens as a shipment
+                const href = shipment.jobKind === 'export'
                   ? `/platform/admin/logistics/exports/${shipment.id}`
                   : `/platform/admin/logistics/shipments/${shipment.id}`;
                 return (

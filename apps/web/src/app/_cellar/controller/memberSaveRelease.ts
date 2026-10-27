@@ -20,6 +20,7 @@ import earliestDeliveryDate, {
 import EDITABLE_STATUSES from '../utils/editableStatuses';
 import generateReleaseNumber from '../utils/generateReleaseNumber';
 import notifyReleaseUpdate from '../utils/notifyReleaseUpdate';
+import withNumberRetry from '../utils/withNumberRetry';
 
 /**
  * Create or amend a release request
@@ -352,97 +353,141 @@ const memberSaveRelease = stockOwnerProcedure
       }
     }
 
-    if (requestId) {
-      const [existing] = await db
-        .select({
-          id: cellarReleaseRequests.id,
-          status: cellarReleaseRequests.status,
-        })
-        .from(cellarReleaseRequests)
-        .where(
-          and(
-            eq(cellarReleaseRequests.id, requestId),
-            eq(cellarReleaseRequests.partnerId, ctx.partner.id),
-          ),
-        )
-        .limit(1);
+    /*
+      One transaction, and the status re-checked as it is written. Staff can
+      quote a request between the member opening their basket and pressing
+      save; without this the member's lines replaced the list that had just
+      been quoted, and accepting then raised the bigger order at the smaller
+      figure. The row is locked, the status must still be the one read, and
+      the lines are replaced in the same transaction — all or nothing.
+    */
+    const MERGEABLE_STATUSES = ['draft', 'submitted', 'revision_requested'];
 
-      if (!existing) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Request not found' });
+    requestId = await db.transaction(async (tx) => {
+      let savedId = requestId;
+
+      if (savedId) {
+        const [existing] = await tx
+          .select({
+            id: cellarReleaseRequests.id,
+            status: cellarReleaseRequests.status,
+          })
+          .from(cellarReleaseRequests)
+          .where(
+            and(
+              eq(cellarReleaseRequests.id, savedId),
+              eq(cellarReleaseRequests.partnerId, ctx.partner.id),
+            ),
+          )
+          .for('update')
+          .limit(1);
+
+        if (!existing) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Request not found' });
+        }
+
+        /*
+          A member adding to their own un-quoted request is not "changing a
+          request under review" — it is still the same delivery being
+          assembled. The guard stands for anything they reached by id. A
+          merge must still find the request in the status it was read in.
+        */
+        const stillOpen = merged
+          ? existing.status === openRequest?.status &&
+            MERGEABLE_STATUSES.includes(existing.status)
+          : EDITABLE_STATUSES.includes(
+              existing.status as (typeof EDITABLE_STATUSES)[number],
+            );
+
+        if (!stillOpen) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: merged
+              ? 'Your earlier request has just been updated by our team. Please refresh and try again.'
+              : 'This request is with us for review and can no longer be changed.',
+          });
+        }
+
+        const [updated] = await tx
+          .update(cellarReleaseRequests)
+          .set({
+            ...(input.deliveryAddress
+              ? { deliveryAddress: input.deliveryAddress }
+              : {}),
+            ...(input.memberNotes ? { memberNotes: input.memberNotes } : {}),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(cellarReleaseRequests.id, savedId),
+              eq(cellarReleaseRequests.status, existing.status),
+            ),
+          )
+          .returning({ id: cellarReleaseRequests.id });
+
+        if (!updated) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              'This request has just been updated by our team. Please refresh and try again.',
+          });
+        }
+
+        await tx
+          .delete(cellarReleaseRequestItems)
+          .where(eq(cellarReleaseRequestItems.requestId, savedId));
+      } else {
+        // The number is taken inside the transaction, and retried on a clash
+        const created = await withNumberRetry((attempt) =>
+          tx.transaction(async (savepoint) => {
+            const [row] = await savepoint
+              .insert(cellarReleaseRequests)
+              .values({
+                requestNumber: await generateReleaseNumber(savepoint, attempt),
+                partnerId: ctx.partner.id,
+                requestedBy: ctx.user.id,
+                status: 'draft',
+                deliveryAddress: input.deliveryAddress,
+                memberNotes: input.memberNotes,
+              })
+              .returning({ id: cellarReleaseRequests.id });
+
+            return row;
+          }),
+        );
+
+        savedId = created?.id;
       }
 
-      /*
-        A member adding to their own un-quoted request is not "changing a
-        request under review" — it is still the same delivery being assembled.
-        The guard stands for anything they reached by id.
-      */
-      if (
-        !merged &&
-        !EDITABLE_STATUSES.includes(
-          existing.status as (typeof EDITABLE_STATUSES)[number],
-        )
-      ) {
+      if (!savedId) {
         throw new TRPCError({
-          code: 'CONFLICT',
-          message:
-            'This request is with us for review and can no longer be changed.',
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Could not save that request',
         });
       }
 
-      await db
-        .update(cellarReleaseRequests)
-        .set({
-          ...(input.deliveryAddress
-            ? { deliveryAddress: input.deliveryAddress }
-            : {}),
-          ...(input.memberNotes ? { memberNotes: input.memberNotes } : {}),
-          updatedAt: new Date(),
-        })
-        .where(eq(cellarReleaseRequests.id, requestId));
+      const itemsRequestId = savedId;
 
-      await db
-        .delete(cellarReleaseRequestItems)
-        .where(eq(cellarReleaseRequestItems.requestId, requestId));
-    } else {
-      const [created] = await db
-        .insert(cellarReleaseRequests)
-        .values({
-          requestNumber: await generateReleaseNumber(),
-          partnerId: ctx.partner.id,
-          requestedBy: ctx.user.id,
-          status: 'draft',
-          deliveryAddress: input.deliveryAddress,
-          memberNotes: input.memberNotes,
-        })
-        .returning({ id: cellarReleaseRequests.id });
+      await tx.insert(cellarReleaseRequestItems).values(
+        input.lines.map((line) => {
+          const stock = ownedById.get(line.stockId);
 
-      requestId = created?.id;
-    }
+          return {
+            requestId: itemsRequestId,
+            stockId: line.stockId,
+            lotNumber: stock?.lotNumber ?? null,
+            lwin18: stock?.lwin18 ?? '',
+            productName: stock?.productName ?? '',
+            vintage: stock?.vintage ?? null,
+            bottleSize: stock?.bottleSize ?? null,
+            caseConfig: stock?.caseConfig ?? null,
+            bottles: line.bottles,
+          };
+        }),
+      );
 
-    if (!requestId) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Could not save that request',
-      });
-    }
-
-    await db.insert(cellarReleaseRequestItems).values(
-      input.lines.map((line) => {
-        const stock = ownedById.get(line.stockId);
-
-        return {
-          requestId,
-          stockId: line.stockId,
-          lotNumber: stock?.lotNumber ?? null,
-          lwin18: stock?.lwin18 ?? '',
-          productName: stock?.productName ?? '',
-          vintage: stock?.vintage ?? null,
-          bottleSize: stock?.bottleSize ?? null,
-          caseConfig: stock?.caseConfig ?? null,
-          bottles: line.bottles,
-        };
-      }),
-    );
+      return savedId;
+    });
 
     if (input.delivery) {
       const gift = input.delivery.gift;

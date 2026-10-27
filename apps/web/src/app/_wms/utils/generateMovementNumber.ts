@@ -1,37 +1,21 @@
-import { desc, like } from 'drizzle-orm';
-
-import db from '@/database/client';
-import { wmsStockMovements } from '@/database/schema';
+import nextDocumentNumber, { type DbExecutor } from './nextDocumentNumber';
 
 /**
- * Generate a unique movement number for WMS stock movements
+ * Generate the next stock movement number (MOV-YYYY-NNNN)
+ *
+ * Pass the transaction the row is inserted in, so numbers taken earlier in the
+ * same transaction are seen. Collision-free via the wms_movement_number_seq sequence.
  *
  * @example
- *   await generateMovementNumber(); // returns 'MOV-2026-0001'
- *
- * @returns The generated movement number in format MOV-YYYY-NNNN
+ *   const number = await generateMovementNumber(tx); // "MOV-2026-0042"
  */
-const generateMovementNumber = async (offset = 0) => {
-  const year = new Date().getFullYear();
-  const prefix = `MOV-${year}-`;
-
-  // Get the highest sequence number for this year
-  const result = await db
-    .select({ movementNumber: wmsStockMovements.movementNumber })
-    .from(wmsStockMovements)
-    .where(like(wmsStockMovements.movementNumber, `${prefix}%`))
-    .orderBy(desc(wmsStockMovements.movementNumber))
-    .limit(1);
-
-  let nextSequence = 1;
-
-  if (result.length > 0 && result[0]) {
-    const lastNumber = result[0].movementNumber;
-    const lastSequence = parseInt(lastNumber.replace(prefix, ''), 10);
-    nextSequence = lastSequence + 1;
-  }
-
-  return `${prefix}${(nextSequence + offset).toString().padStart(4, '0')}`;
-};
+const generateMovementNumber = async (executor?: DbExecutor) =>
+  nextDocumentNumber({
+    executor,
+    code: 'MOV',
+    table: 'wms_stock_movements',
+    column: 'movement_number',
+    sequence: 'wms_movement_number_seq',
+  });
 
 export default generateMovementNumber;

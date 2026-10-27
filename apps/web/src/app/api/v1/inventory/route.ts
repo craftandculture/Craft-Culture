@@ -1,8 +1,7 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, asc, eq, exists, gt, inArray, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { PARTNER_FEED_PERMISSION } from '@/app/_partners/schemas/createApiKeySchema';
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
 import logger from '@/utils/logger';
@@ -11,6 +10,7 @@ import type { InventoryItem, InventoryListResponse } from './schema';
 import { inventoryQuerySchema } from './schema';
 import checkRateLimit from '../_middleware/checkRateLimit';
 import validateApiKey from '../_middleware/validateApiKey';
+import isPartnerFeed from '../_utils/isPartnerFeed';
 import logApiRequest from '../_utils/logApiRequest';
 import toInventoryOffer from '../_utils/toInventoryOffer';
 
@@ -112,76 +112,65 @@ export const GET = async (request: NextRequest) => {
       neither the offer source nor a filter on it (which would disclose the
       source through the results) is available to it.
     */
-    const partnerFeed = permissions.includes(PARTNER_FEED_PERMISSION);
+    const partnerFeed = isPartnerFeed(permissions);
     const source = partnerFeed ? undefined : queryResult.data.source;
 
-    // Get products with offers
-    const productsWithOffers = await db.query.products.findMany({
-      with: {
-        productOffers: {
-          orderBy: (po, { asc }) => [asc(po.price)],
-        },
-      },
-      limit: limit + 1,
-      offset: cursor,
-      orderBy: (table, { asc }) => [asc(table.name)],
-    });
+    /*
+      Filter in the database, then paginate. Filtering a page after LIMIT
+      returned short or empty pages while later products still matched.
+    */
+    const offerConditions = [
+      source ? eq(productOffers.source, source) : undefined,
+      inStock === true ? gt(productOffers.availableQuantity, 0) : undefined,
+    ].filter((condition) => condition !== undefined);
 
-    // Filter offers based on query params
-    const filterOffer = (offer: typeof productOffers.$inferSelect) => {
-      if (source && offer.source !== source) return false;
-      if (inStock === true && offer.availableQuantity <= 0) return false;
-      return true;
-    };
+    const productWhere = offerConditions.length
+      ? exists(
+          db
+            .select({ one: sql`1` })
+            .from(productOffers)
+            .where(and(eq(productOffers.productId, products.id), ...offerConditions)),
+        )
+      : undefined;
 
-    // Filter products and their offers
-    const filteredProducts = productsWithOffers
+    const [pageRows, [countResult]] = await Promise.all([
+      db
+        .select({ id: products.id })
+        .from(products)
+        .where(productWhere)
+        .orderBy(asc(products.name), asc(products.id))
+        .limit(limit + 1)
+        .offset(cursor),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(products)
+        .where(productWhere),
+    ]);
+    const totalCount = countResult?.count ?? 0;
+
+    const pageIds = pageRows.slice(0, limit).map((row) => row.id);
+    const [pageProducts, pageOffers] = pageIds.length
+      ? await Promise.all([
+          db.select().from(products).where(inArray(products.id, pageIds)),
+          db
+            .select()
+            .from(productOffers)
+            .where(and(inArray(productOffers.productId, pageIds), ...offerConditions))
+            .orderBy(asc(productOffers.price)),
+        ])
+      : [[], []];
+
+    const productById = new Map(pageProducts.map((product) => [product.id, product]));
+    const paginatedProducts = pageIds
+      .map((id) => productById.get(id))
+      .filter((product) => product !== undefined)
       .map((product) => ({
         ...product,
-        productOffers: product.productOffers.filter(filterOffer),
-      }))
-      .filter((product) => {
-        // If filters are applied, only include products with matching offers
-        if (source || inStock) {
-          return product.productOffers.length > 0;
-        }
-        return true;
-      });
+        productOffers: pageOffers.filter((offer) => offer.productId === product.id),
+      }));
 
-    // Get total count
-    let totalCount: number;
-    if (source || inStock) {
-      // Count products with matching offers using a subquery
-      const sourceCondition = source
-        ? eq(productOffers.source, source)
-        : undefined;
-      const stockCondition =
-        inStock === true
-          ? sql`${productOffers.availableQuantity} > 0`
-          : undefined;
-
-      const conditions = [sourceCondition, stockCondition].filter(Boolean);
-      const whereClause =
-        conditions.length > 0
-          ? sql`${sql.join(conditions, sql` AND `)}`
-          : undefined;
-
-      const [countResult] = await db
-        .select({ count: sql<number>`count(distinct ${products.id})::int` })
-        .from(products)
-        .innerJoin(productOffers, eq(products.id, productOffers.productId))
-        .where(whereClause);
-      totalCount = countResult?.count ?? 0;
-    } else {
-      const [countResult] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(products);
-      totalCount = countResult?.count ?? 0;
-    }
-
-    const hasMore = filteredProducts.length > limit;
+    const hasMore = pageRows.length > limit;
     const nextCursor = hasMore ? cursor + limit : null;
-    const paginatedProducts = filteredProducts.slice(0, limit);
 
     // Transform to response format
     const inventoryItems: InventoryItem[] = paginatedProducts.map((product) => ({

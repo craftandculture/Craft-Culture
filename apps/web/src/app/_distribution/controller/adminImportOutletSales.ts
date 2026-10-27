@@ -21,6 +21,8 @@ interface CodeRow {
   ownerId: string | null;
   arrangementId: string | null;
   productName: string | null;
+  /** How many different owners have sent this wine to the outlet */
+  ownerCount: number;
 }
 
 /**
@@ -49,7 +51,7 @@ const adminImportOutletSales = adminProcedure
     z.object({
       outletId: z.string().uuid(),
       year: z.number().int().min(2000).max(2100),
-      file: z.string().min(1),
+      file: z.string().min(1).max(14_000_000, 'File is too large (10 MB limit)'),
       fileName: z.string().max(300).optional(),
     }),
   )
@@ -63,6 +65,33 @@ const adminImportOutletSales = adminProcedure
         code: 'BAD_REQUEST',
         message:
           'Nothing in that sheet sold anything. Check the month column is the one you meant.',
+      });
+    }
+
+    /*
+      Sales derived from the outlet's stock positions and this report describe
+      the same bottles. Taking both would pay the owner twice, so the report is
+      refused while any derived window touches this month. (Deriving refuses
+      the other way round.)
+    */
+    const [derived] = await client<{ windows: string | null }[]>`
+      SELECT STRING_AGG(DISTINCT m.doc_ref, ', ') AS windows
+      FROM cons_movements m
+      JOIN cons_arrangements a ON a.id = m.arrangement_id
+      WHERE a.outlet_id = ${input.outletId}
+        AND m.kind = 'sold'
+        AND m.source = 'cd-api-derived'
+        AND COALESCE(
+              SUBSTRING(m.doc_ref FROM 'Derived (\\d{4}-\\d{2}-\\d{2})')::date,
+              m.doc_date
+            ) < (${`${parsed.month}-01`}::date + INTERVAL '1 month')
+        AND m.doc_date >= ${`${parsed.month}-01`}::date
+    `;
+
+    if (derived?.windows) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: `Sales for ${parsed.monthLabel} have already been worked out from the stock positions (${derived.windows}). Delete those first so the same bottles are not counted twice.`,
       });
     }
 
@@ -99,8 +128,18 @@ ${codeBridgeCtes(input.outletId, hasLinks)},
           AND s.taken_at = latest.taken_at
           AND ${resolvedSnapshotCode()} IS NOT NULL
       ),
-            sent AS (
-        SELECT DISTINCT ON (code) code, lwin18, owner_id, arrangement_id, product_name
+      /*
+        One row per wine, but counting its owners. Taking the latest sender
+        (DISTINCT ON code) handed every sale of a wine two owners both send
+        to whichever invoiced last; such a line is flagged instead.
+      */
+      sent AS (
+        SELECT code,
+          (ARRAY_AGG(lwin18 ORDER BY doc_date DESC NULLS LAST))[1] AS lwin18,
+          (ARRAY_AGG(owner_id ORDER BY doc_date DESC NULLS LAST))[1] AS owner_id,
+          (ARRAY_AGG(arrangement_id ORDER BY doc_date DESC NULLS LAST))[1] AS arrangement_id,
+          (ARRAY_AGG(product_name ORDER BY doc_date DESC NULLS LAST))[1] AS product_name,
+          COUNT(DISTINCT owner_id)::int AS owner_count
         FROM (
           SELECT UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g')) AS code,
                  m.lwin18, a.owner_id, m.arrangement_id, m.product_name, m.doc_date
@@ -108,11 +147,12 @@ ${codeBridgeCtes(input.outletId, hasLinks)},
           JOIN cons_arrangements a ON a.id = m.arrangement_id
           WHERE a.outlet_id = ${input.outletId} AND m.kind = 'out'
         ) lines
-        ORDER BY code, doc_date DESC NULLS LAST
+        GROUP BY code
       )
       SELECT o.outlet_code AS "outletCode", s.lwin18,
              s.owner_id AS "ownerId", s.arrangement_id AS "arrangementId",
-             s.product_name AS "productName"
+             s.product_name AS "productName",
+             COALESCE(s.owner_count, 0) AS "ownerCount"
       FROM ours o
       LEFT JOIN sent s ON s.code = o.code
     `;
@@ -127,6 +167,26 @@ ${codeBridgeCtes(input.outletId, hasLinks)},
 
     for (const line of parsed.lines) {
       const known = byOutletCode.get(line.outletCode);
+
+      if (known && known.ownerCount > 1) {
+        // Two owners have sent this wine and the report names neither.
+        // Guessing would pay one for the other's bottles.
+        const why = 'sent by more than one owner, so the sale needs attributing by hand';
+
+        unattributed.push(
+          `${line.outletCode} · ${line.productName} — ${line.bottles} btl · ${why}`,
+        );
+        unmatchedRows.push({
+          outlet_id: input.outletId,
+          month: parsed.month,
+          outlet_code: line.outletCode,
+          product_name: line.productName,
+          bottles: line.bottles,
+          reason: why,
+        });
+        unattributedBottles += line.bottles;
+        continue;
+      }
 
       if (!known?.arrangementId) {
         /*
@@ -172,34 +232,40 @@ ${codeBridgeCtes(input.outletId, hasLinks)},
       });
     }
 
-    await client`
-      DELETE FROM cons_movements m
-      USING cons_arrangements a
-      WHERE m.arrangement_id = a.id
-        AND a.outlet_id = ${input.outletId}
-        AND m.kind = 'sold'
-        AND m.source = 'outlet-sales-report'
-        AND TO_CHAR(m.doc_date, 'YYYY-MM') = ${parsed.month}
-    `;
+    const keepsUnmatched = await unmatchedReady();
 
-    if (rows.length > 0) {
-      await client`INSERT INTO cons_movements ${client(rows)}`;
-    }
-
-    /*
-      Replaced wholesale for the month, so re-importing a corrected sheet does
-      not leave yesterday's unanswered lines beside today's.
-    */
-    if (await unmatchedReady()) {
-      await client`
-        DELETE FROM cons_import_unmatched
-        WHERE outlet_id = ${input.outletId} AND month = ${parsed.month}
+    // The month is replaced in one transaction: a failure part-way keeps the
+    // previous import rather than leaving the month empty
+    await client.begin(async (sql) => {
+      await sql`
+        DELETE FROM cons_movements m
+        USING cons_arrangements a
+        WHERE m.arrangement_id = a.id
+          AND a.outlet_id = ${input.outletId}
+          AND m.kind = 'sold'
+          AND m.source = 'outlet-sales-report'
+          AND TO_CHAR(m.doc_date, 'YYYY-MM') = ${parsed.month}
       `;
 
-      if (unmatchedRows.length > 0) {
-        await client`INSERT INTO cons_import_unmatched ${client(unmatchedRows)}`;
+      if (rows.length > 0) {
+        await sql`INSERT INTO cons_movements ${sql(rows)}`;
       }
-    }
+
+      /*
+        Replaced wholesale for the month, so re-importing a corrected sheet does
+        not leave yesterday's unanswered lines beside today's.
+      */
+      if (keepsUnmatched) {
+        await sql`
+          DELETE FROM cons_import_unmatched
+          WHERE outlet_id = ${input.outletId} AND month = ${parsed.month}
+        `;
+
+        if (unmatchedRows.length > 0) {
+          await sql`INSERT INTO cons_import_unmatched ${sql(unmatchedRows)}`;
+        }
+      }
+    });
 
     return {
       month: parsed.month,

@@ -160,8 +160,9 @@ export const logisticsDocumentExtractionJob = task({
     logger.info('Starting logistics document extraction', { documentId });
 
     // Get document from database
+    // Relational queries take the object filter form; eq() here throws "Unknown relational filter field"
     const document = await triggerDb.query.logisticsDocuments.findFirst({
-      where: eq(logisticsDocuments.id, documentId),
+      where: { id: documentId },
     });
 
     if (!document) {

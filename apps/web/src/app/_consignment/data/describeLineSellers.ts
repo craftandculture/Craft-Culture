@@ -1,6 +1,6 @@
 import { inArray } from 'drizzle-orm';
 
-import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
+import getCraftCultureOwnerIds from '@/app/_partners/data/getCraftCultureOwnerIds';
 import db from '@/database/client';
 import { partners, wmsStock } from '@/database/schema';
 
@@ -72,6 +72,8 @@ const describeLineSellers = async (
   ]);
 
   const nameOf = new Map(names.map((row) => [row.id, row.name]));
+  // C&C by id, never by name: a member's cellar can carry any name
+  const houseIds = await getCraftCultureOwnerIds();
   const arrangementOf = new Map(
     arrangements.map((row) => [row.id, row.salesArrangement]),
   );
@@ -91,7 +93,7 @@ const describeLineSellers = async (
 
       const ours =
         !line.sellerPartnerId ||
-        isCraftCultureOwner(name) ||
+        houseIds.has(line.sellerPartnerId) ||
         arrangementOf.get(line.stockId) === 'purchased';
 
       return [

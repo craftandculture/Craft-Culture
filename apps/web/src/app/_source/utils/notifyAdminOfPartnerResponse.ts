@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { partners, sourceRfqPartners, sourceRfqs, users } from '@/database/schema';
 import loops from '@/lib/loops/client';
@@ -92,13 +93,16 @@ const notifyAdminOfPartnerResponse = async ({
     }
 
     // Get all admin users for email notifications
-    const adminUsers = await db
-      .select({
-        email: users.email,
-        name: users.name,
-      })
-      .from(users)
-      .where(eq(users.role, 'admin'));
+    const adminUsers = (
+      await db
+        .select({
+          email: users.email,
+          name: users.name,
+          role: users.role,
+        })
+        .from(users)
+        .where(eq(users.role, 'admin'))
+    ).filter((u) => isTeamMember(u));
 
     if (adminUsers.length === 0) {
       logger.warn('No admin users found for email notification');
@@ -124,9 +128,9 @@ const notifyAdminOfPartnerResponse = async ({
           },
         });
 
-        logger.dev(`Sent RFQ response notification to admin: ${admin.email}`);
+        logger.dev(`Sent RFQ response notification to an admin`);
       } catch (error) {
-        logger.error(`Failed to send notification to admin ${admin.email}:`, error);
+        logger.error(`Failed to send notification to an admin:`, error);
       }
     });
 

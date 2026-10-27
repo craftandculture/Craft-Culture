@@ -11,7 +11,7 @@ const ACTIONS: Record<string, string> = {
   saveDeliveryAddress: 'updated the delivery address',
   offerForSale: 'offered wine for sale',
   withdrawMandate: 'withdrew an offer to sell',
-  createPurchase: 'reserved wine from The Cellar List',
+  createPurchase: 'reserved wine from the C&C Cellar List',
   markPurchasePaid: 'reported a payment for a purchase',
   cancelPurchase: 'cancelled a reservation',
   addIntake: 'added wine to bring into the cellar',

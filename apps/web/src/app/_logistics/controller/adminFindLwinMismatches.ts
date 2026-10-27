@@ -41,7 +41,7 @@ const adminFindLwinMismatches = adminProcedure.query(async () => {
     SELECT
       i.id AS "itemId",
       i.shipment_id AS "shipmentId",
-      s.reference_number AS "shipmentReference",
+      s.shipment_number AS "shipmentReference",
       i.product_name AS "productName",
       i.lwin,
       i.bottles_per_case AS "bottlesPerCase",

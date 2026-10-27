@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import buildOrderClientPatch, { OPEN_ORDER_STATUSES } from './clientDetailCascade';
+import buildOrderClientPatch, {
+  OPEN_ORDER_STATUSES,
+  PRE_APPROVAL_ORDER_STATUSES,
+} from './clientDetailCascade';
 
 describe('buildOrderClientPatch', () => {
   it('carries a corrected phone number onto the order', () => {
@@ -69,5 +72,11 @@ describe('buildOrderClientPatch', () => {
     ]) {
       expect(OPEN_ORDER_STATUSES).toContain(status);
     }
+  });
+
+  it('lets a partner edit reach only orders C&C has not yet approved', () => {
+    expect(PRE_APPROVAL_ORDER_STATUSES).toContain('draft');
+    expect(PRE_APPROVAL_ORDER_STATUSES).not.toContain('cc_approved');
+    expect(PRE_APPROVAL_ORDER_STATUSES).not.toContain('awaiting_client_payment');
   });
 });

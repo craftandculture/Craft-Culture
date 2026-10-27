@@ -13,7 +13,6 @@ import {
   IconFileText,
   IconPlane,
   IconPlus,
-  IconReceipt,
   IconRefresh,
   IconShip,
   IconTruck,
@@ -118,13 +117,13 @@ const LogisticsDashboardPage = () => {
   // Where shipments are on the way in, read left to right
   const tiles = [
     { label: 'Active', value: shipments?.active ?? 0, tone: 'bg-surface-secondary text-text-primary' },
-    { label: 'In transit', value: shipments?.inTransit ?? 0, tone: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' },
+    { label: 'On the way', value: shipments?.onTheWay ?? 0, tone: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' },
     {
       label: 'At port or customs',
-      value: (shipments?.arrivedPort ?? 0) + (shipments?.customsClearance ?? 0),
+      value: shipments?.portCustoms ?? 0,
       tone: 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300',
     },
-    { label: 'At warehouse', value: shipments?.atWarehouse ?? 0, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
+    { label: 'At warehouse', value: shipments?.warehouse ?? 0, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
     { label: 'Opened, last 30 days', value: shipments?.recentActivityCount ?? 0, tone: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300' },
   ];
 
@@ -160,7 +159,6 @@ const LogisticsDashboardPage = () => {
     { label: 'All shipments', href: '/platform/admin/logistics/shipments', icon: IconShip },
     { label: 'Export jobs', href: '/platform/admin/logistics/exports', icon: IconTruckDelivery },
     { label: 'Freight Quotes', href: '/platform/admin/logistics/quotes', icon: IconFileInvoice },
-    { label: 'Freight Bills', href: '/platform/admin/logistics/invoices', icon: IconReceipt },
     { label: 'Export Invoices', href: '/platform/admin/logistics/export-invoices', icon: IconClipboardList },
     { label: 'Reports', href: '/platform/admin/logistics/reports', icon: IconChartBar },
     { label: 'PDF tool', href: '/platform/admin/logistics/tools/pdf-extract', icon: IconFileText },

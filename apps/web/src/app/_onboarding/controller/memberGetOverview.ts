@@ -18,6 +18,7 @@ import logger from '@/utils/logger';
 import getIntakeShipments from '../data/getIntakeShipments';
 import getMembershipTerms from '../data/getMembershipTerms';
 import intakeRouteOf from '../utils/intakeRouteOf';
+import isUnconfirmedIntake from '../utils/isUnconfirmedIntake';
 import laterIntakeStage from '../utils/laterIntakeStage';
 import missingProfileItems from '../utils/missingProfileItems';
 
@@ -62,7 +63,7 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
       .where(and(eq(cellarIntakes.partnerId, partnerId), ne(cellarIntakes.stage, 'closed'))),
     db.select().from(cellarMemberships).where(eq(cellarMemberships.partnerId, partnerId)).limit(1),
     getMembershipTerms(partnerId),
-    ensureClientCode(partnerId),
+    ensureClientCode(partnerId, { issue: ctx.cellarRole !== 'viewer' }),
   ]);
 
   const cases = countChargeableCases(stock);
@@ -103,7 +104,9 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
   const wines = new Set(
     stock.filter((row) => row.quantityCases > 0 || row.openBottles > 0).map((row) => row.lwin18),
   ).size;
-  const shown = intakes.filter((intake) => intake.source !== 'starting_fresh');
+  const shown = intakes.filter(
+    (intake) => intake.source !== 'starting_fresh' && !isUnconfirmedIntake(intake),
+  );
   const shipments = await getIntakeShipments(shown);
 
   return {

@@ -406,13 +406,34 @@ const MorningViewContent = () => {
 
               {data?.agentBriefs && data.agentBriefs.length > 0 ? (
                 <div className="flex flex-col">
+                  {(() => {
+                    /*
+                      The agents run on a schedule, and when the schedule stops
+                      their last briefs stay on this card reading like today's
+                      news — Market Scout's July price gaps were still here in
+                      October. Say so rather than present old findings as new.
+                    */
+                    const newest = Math.max(
+                      ...data.agentBriefs.map((b) => (b?.createdAt ? new Date(b.createdAt).getTime() : 0)),
+                    );
+                    const days = newest ? Math.floor((Date.now() - newest) / 86_400_000) : null;
+                    if (days === null || days < 3) return null;
+                    return (
+                      <div className="border-t border-amber-200 bg-amber-50 px-6 py-2.5 text-[12px] text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-300">
+                        No new briefings for {days} days — the scheduled agents are not running. These are the last findings, not today&apos;s.
+                      </div>
+                    );
+                  })()}
                   {data.agentBriefs.map((brief) => {
                     const config = agentConfig[brief.agentId] ?? agentConfig.scout;
+                    const isOld =
+                      !!brief?.createdAt &&
+                      Date.now() - new Date(brief.createdAt).getTime() > 7 * 86_400_000;
                     return (
                       <Link
                         key={brief.agentId}
                         href="/platform/admin/agents"
-                        className="group flex items-start gap-3.5 border-t border-border-muted px-6 py-4 transition-colors hover:bg-surface-secondary/50"
+                        className={`group flex items-start gap-3.5 border-t border-border-muted px-6 py-4 transition-colors hover:bg-surface-secondary/50 ${isOld ? 'opacity-60' : ''}`}
                       >
                         <div
                           className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${config.bgColor}`}

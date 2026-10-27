@@ -8,7 +8,9 @@ import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
 import { PCO_NOTE_EMAIL_TEMPLATE_ID } from '../constants';
+import maskEmail from './maskEmail';
 import getPartnerUsers from '../data/getPartnerUsers';
+
 
 export type NoteParty = 'partner' | 'distributor' | 'admin';
 
@@ -125,7 +127,7 @@ const notifyOrderNote = async (params: NotifyOrderNoteParams) => {
       } catch (error) {
         logger.error('PCO note: email failed', {
           orderId: params.orderId,
-          email: recipient.email,
+          email: maskEmail(recipient.email),
           error: error instanceof Error ? error.message : String(error),
         });
       }

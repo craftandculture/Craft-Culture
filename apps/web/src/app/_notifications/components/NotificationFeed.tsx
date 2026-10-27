@@ -60,7 +60,10 @@ const NotificationFeed = ({
   const { data: counts } = useQuery({
     queryKey: ['notifications-unread-count'],
     queryFn: () => trpcClient.notifications.getUnreadCount.query(),
-    refetchInterval: 10000,
+    // Every 30s while the tab is visible; paused in a background tab and
+    // refreshed on return
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
   });
 
   const [chosenView, setView] = useState<View | null>(null);
@@ -81,7 +84,8 @@ const NotificationFeed = ({
         }),
       initialPageParam: 0,
       getNextPageParam: (last) => last.nextCursor ?? undefined,
-      refetchInterval: 30000,
+      refetchInterval: 60000,
+      refetchIntervalInBackground: false,
     });
 
   const items = useMemo(

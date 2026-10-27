@@ -1,6 +1,6 @@
 'use server';
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
@@ -37,6 +37,20 @@ const runCoverageBatch = async (
   }
 
   const size = Math.min(25, Math.max(1, Math.round(Number(formData.get('size')) || 1)));
+
+  /*
+    A claim left at 'checking' for longer than any check can take belongs to a
+    run that died (a timeout kills the function before its catch runs). It
+    used to block that wine forever; it is now cleared and the wine retried.
+  */
+  await db
+    .delete(winelabsWines)
+    .where(
+      and(
+        eq(winelabsWines.matchStatus, 'checking'),
+        sql`${winelabsWines.matchedAt} < NOW() - INTERVAL '15 minutes'`,
+      ),
+    );
 
   const [wines, done] = await Promise.all([
     getStockWines(),

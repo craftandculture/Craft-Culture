@@ -471,7 +471,10 @@ const QuoteApprovalsList = () => {
       )}
 
       {/* Quote Approval Dialog */}
+      {/* Keyed by quote so review state (adjustments, partner, payment)
+          never carries over from the previous quote */}
       <QuoteApprovalDialog
+        key={selectedQuote?.id ?? 'none'}
         quote={selectedQuote}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}

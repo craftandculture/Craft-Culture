@@ -9,6 +9,13 @@ import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import notifyMandateUpdate from '../utils/notifyMandateUpdate';
 
+const changedMeanwhile = () =>
+  new TRPCError({
+    code: 'CONFLICT',
+    message:
+      'This offer changed while you were deciding (the member may have withdrawn it). Refresh and look again.',
+  });
+
 /**
  * Accept a member's offer and list it, or send it back
  *
@@ -61,14 +68,20 @@ const adminDecideMandate = staffAdminProcedure
         });
       }
 
-      await db
+      // Only while it is still awaiting a decision: the member may withdraw it
+      const [decided] = await db
         .update(saleMandates)
         .set({
           status: input.outcome === 'decline' ? 'withdrawn' : 'draft',
           adminNotes: input.adminNotes,
           updatedAt: new Date(),
         })
-        .where(eq(saleMandates.id, mandate.id));
+        .where(
+          and(eq(saleMandates.id, mandate.id), eq(saleMandates.status, 'offered')),
+        )
+        .returning({ id: saleMandates.id });
+
+      if (!decided) throw changedMeanwhile();
 
       if (input.outcome === 'send_back') {
         await notifyMandateUpdate({
@@ -156,6 +169,27 @@ const adminDecideMandate = staffAdminProcedure
     }
 
     await db.transaction(async (tx) => {
+      /*
+        The status first, and only from offered. A member withdrawing in the
+        same moment would otherwise have their wine put on sale after they
+        took it back.
+      */
+      const [listed] = await tx
+        .update(saleMandates)
+        .set({
+          status: 'listed',
+          listedAt: new Date(),
+          listedBy: ctx.user.id,
+          adminNotes: input.adminNotes,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(saleMandates.id, mandate.id), eq(saleMandates.status, 'offered')),
+        )
+        .returning({ id: saleMandates.id });
+
+      if (!listed) throw changedMeanwhile();
+
       await tx
         .update(wmsStock)
         .set({ notForSale: false, updatedAt: new Date() })
@@ -165,17 +199,6 @@ const adminDecideMandate = staffAdminProcedure
             eq(wmsStock.ownerId, mandate.ownerId),
           ),
         );
-
-      await tx
-        .update(saleMandates)
-        .set({
-          status: 'listed',
-          listedAt: new Date(),
-          listedBy: ctx.user.id,
-          adminNotes: input.adminNotes,
-          updatedAt: new Date(),
-        })
-        .where(eq(saleMandates.id, mandate.id));
     });
 
     await notifyMandateUpdate({

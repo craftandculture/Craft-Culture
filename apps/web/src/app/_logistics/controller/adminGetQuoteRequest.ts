@@ -18,11 +18,13 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getSuggestedClientPrice from '../data/getSuggestedClientPrice';
+import getUaeArrivalRateCard from '../data/getUaeArrivalRateCard';
 import logisticsEmailTemplateId from '../utils/logisticsEmailTemplateId';
+import quoteAllInPrices from '../utils/quoteAllInPrices';
 import quoteRequestNextStep from '../utils/quoteRequestNextStep';
 import quoteTotalUsd from '../utils/quoteTotalUsd';
-import quoteUnitPrices from '../utils/quoteUnitPrices';
 import requestUnitCounts from '../utils/requestUnitCounts';
+import uaeArrivalCharge from '../utils/uaeArrivalCharge';
 
 /**
  * Get a single quote request with full details
@@ -138,26 +140,27 @@ const adminGetQuoteRequest = adminProcedure
       : [];
 
     const counts = requestUnitCounts(request, job?.totalBottles);
+    const rateCard = await getUaeArrivalRateCard();
 
     const now = Date.now();
     const quotes = quoteRows
       .map((q) => {
-        const usd = quoteTotalUsd(q);
+        const categories = [
+          ...new Set(
+            lines.filter((l) => l.quoteId === q.id).map((l) => l.category),
+          ),
+        ];
+        const arrival = uaeArrivalCharge(rateCard, request, categories);
 
         return {
           ...q,
-          totalUsd: usd,
-          ...quoteUnitPrices(usd, counts.bottles, counts.equivalents),
+          ...quoteAllInPrices(quoteTotalUsd(q), arrival, counts),
           isExpired:
             q.status === 'expired' ||
             (q.status === 'pending' &&
               !!q.validUntil &&
               q.validUntil.getTime() < now),
-          categories: [
-            ...new Set(
-              lines.filter((l) => l.quoteId === q.id).map((l) => l.category),
-            ),
-          ],
+          categories,
           attachments: quoteFiles.filter((f) => f.quoteId === q.id),
         };
       })

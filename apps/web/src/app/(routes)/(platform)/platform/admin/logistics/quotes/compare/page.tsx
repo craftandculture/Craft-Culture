@@ -23,12 +23,17 @@ import useTRPC from '@/lib/trpc/browser';
 
 const formatCurrency = (amount: number | null, currency = 'USD') => {
   if (amount === null) return '-';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  // A code Intl does not know would throw and blank the page
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${currency} ${Math.round(amount).toLocaleString('en-US')}`;
+  }
 };
 
 const formatDate = (date: Date | null | undefined) => {
@@ -349,7 +354,8 @@ const QuoteComparePage = () => {
                   </thead>
                   <tbody className="divide-y divide-border-primary">
                     {Object.entries(categoryComparison).map(([category, values]) => {
-                      const amounts = values.map((v) => v.amount).filter((a): a is number => a !== null);
+                      // Ranked in USD, so a quote in euros is not "cheapest" just for its smaller number
+                      const amounts = values.map((v) => v.amountUsd).filter((a): a is number => a !== null);
                       const lowestAmount = amounts.length > 0 ? Math.min(...amounts) : null;
 
                       return (
@@ -359,13 +365,13 @@ const QuoteComparePage = () => {
                             <td
                               key={value.quoteId}
                               className={`px-4 py-3 text-sm text-right ${
-                                value.amount !== null && value.amount === lowestAmount
+                                value.amountUsd !== null && value.amountUsd === lowestAmount
                                   ? 'text-green-600 font-medium'
                                   : ''
                               }`}
                             >
-                              {value.amount !== null ? formatCurrency(value.amount) : '-'}
-                              {value.amount !== null && value.amount === lowestAmount && (
+                              {value.amount !== null ? formatCurrency(value.amount, value.currency) : '-'}
+                              {value.amountUsd !== null && value.amountUsd === lowestAmount && (
                                 <IconCheck className="inline-block h-4 w-4 ml-1" />
                               )}
                             </td>

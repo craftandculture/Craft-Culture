@@ -54,6 +54,16 @@ const adminSubmitQuotesOnBehalf = adminProcedure
       });
     }
 
+    // Same window as partner submissions: once the RFQ reaches client review
+    // or beyond, quotes are frozen
+    const quotableStatuses = ['sent', 'collecting', 'comparing', 'selecting'];
+    if (!quotableStatuses.includes(rfq.status)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'RFQ is no longer accepting quotes',
+      });
+    }
+
     // Verify partner exists and is a wine partner
     const [partner] = await db
       .select()
@@ -92,8 +102,9 @@ const adminSubmitQuotesOnBehalf = adminProcedure
       });
     }
 
-    // Verify all item IDs belong to this RFQ
-    const itemIds = quotes.map((q) => q.itemId);
+    // Verify all item IDs belong to this RFQ (several quotes per item are
+    // allowed, e.g. different vintages, so compare unique ids)
+    const itemIds = [...new Set(quotes.map((q) => q.itemId))];
     const validItems = await db
       .select({ id: sourceRfqItems.id })
       .from(sourceRfqItems)
@@ -124,6 +135,7 @@ const adminSubmitQuotesOnBehalf = adminProcedure
         quote.quoteType === 'not_available' ? null : quote.costPricePerCaseUsd,
       currency: quote.currency || 'USD',
       caseConfig: quote.caseConfig,
+      bottleSize: quote.bottleSize,
       availableQuantity: quote.availableQuantity,
       leadTimeDays: quote.leadTimeDays,
       stockLocation: quote.stockLocation,
@@ -148,6 +160,27 @@ const adminSubmitQuotesOnBehalf = adminProcedure
 
     // Use transaction to ensure atomicity
     await db.transaction(async (tx) => {
+      // Refuse to overwrite once one of this partner's quotes is selected:
+      // deleting it would silently wipe the selection
+      const existingQuotes = await tx
+        .select({ id: sourceRfqQuotes.id, isSelected: sourceRfqQuotes.isSelected })
+        .from(sourceRfqQuotes)
+        .where(
+          and(
+            eq(sourceRfqQuotes.rfqId, rfqId),
+            eq(sourceRfqQuotes.partnerId, partnerId),
+          ),
+        )
+        .for('update');
+
+      if (existingQuotes.some((q) => q.isSelected)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'One of this supplier\'s quotes is already selected. Unselect it first, then re-enter their quotes.',
+        });
+      }
+
       // Delete any existing quotes from this partner for this RFQ
       await tx
         .delete(sourceRfqQuotes)
@@ -182,9 +215,14 @@ const adminSubmitQuotesOnBehalf = adminProcedure
           .update(sourceRfqs)
           .set({
             responseCount: sql`${sourceRfqs.responseCount} + 1`,
-            status: 'collecting',
           })
           .where(eq(sourceRfqs.id, rfqId));
+
+        // Only move forward from 'sent'; never pull a later stage back
+        await tx
+          .update(sourceRfqs)
+          .set({ status: 'collecting' })
+          .where(and(eq(sourceRfqs.id, rfqId), eq(sourceRfqs.status, 'sent')));
       }
 
       // Update item statuses to quoted
@@ -194,7 +232,8 @@ const adminSubmitQuotesOnBehalf = adminProcedure
         .where(
           and(
             eq(sourceRfqItems.rfqId, rfqId),
-            inArray(sourceRfqItems.id, itemIds)
+            inArray(sourceRfqItems.id, itemIds),
+            inArray(sourceRfqItems.status, ['pending', 'no_response']),
           )
         );
     });

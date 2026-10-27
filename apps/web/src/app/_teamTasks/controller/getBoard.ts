@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gte, inArray, ne, or, sql } from 'drizzle-orm';
 import db from '@/database/client';
 import { partners, teamTaskAreas, teamTaskAttachments, teamTaskNotes, teamTaskParts, teamTasks } from '@/database/schema';
 import { teamProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import getPartnerPeople, { SHARE_PARTNER_TYPES } from '../data/getPartnerPeople';
 import getTeam from '../data/getTeam';
@@ -62,7 +63,10 @@ const getBoard = teamProcedure.query(async ({ ctx }) => {
         .from(teamTaskAttachments)
         .where(inArray(teamTaskAttachments.taskId, ids))
         .groupBy(teamTaskAttachments.taskId)
-        .catch(() => [])
+        .catch((error: unknown) => {
+          logger.error('Team Tasks: could not count job files', { error });
+          return [];
+        })
     : [];
   const filesByTask = new Map(fileCounts.map((f) => [f.taskId, f.count]));
 

@@ -52,7 +52,7 @@ const pill = (on: boolean) =>
 const NewShipmentPage = () => {
   const router = useRouter();
   const api = useTRPC();
-  const { data: partners } = useQuery(api.partners.getMany.queryOptions({ limit: 100 }));
+  const { data: partners } = useQuery(api.partners.getMany.queryOptions({ limit: 1000 }));
 
   const [type, setType] = useState<ShipmentType>('inbound');
   const [transportMode, setTransportMode] = useState<TransportMode>('air');

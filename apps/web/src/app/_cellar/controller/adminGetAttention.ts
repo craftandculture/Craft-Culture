@@ -21,6 +21,8 @@ import {
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
+import getDeliveryLinkExceptions from '../data/getDeliveryLinkExceptions';
+
 const DAY = 24 * 60 * 60 * 1000;
 
 /** Rows shown under each heading before the queue sends you to its screen */
@@ -87,6 +89,7 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
     wineRequestsToAnswer,
     agreedWinesToBuy,
     allocationsToShare,
+    deliveryLinks,
   ] = await Promise.all([
     safely('payments', async () =>
       (
@@ -549,6 +552,8 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
         since: row.since ? new Date(row.since) : null,
       })),
     ),
+    /* Release → PCO → Zoho order links that do not join up */
+    safely('delivery-links', getDeliveryLinkExceptions),
   ]);
 
   const group = (
@@ -573,6 +578,7 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
     group('reservations', 'Reservations ending', 'Unpaid holds lapsing within 12 hours', 'chase', '/platform/admin/cellar-purchases', reservationsEnding),
     group('to-quote', 'Deliveries to quote', 'Price the delivery and send the quote', 'urgent', '/platform/admin/cellar-releases', deliveriesToQuote),
     group('stalled', 'Deliveries not moving', 'Accepted, but the order has not been delivered', 'chase', '/platform/admin/cellar-releases', deliveriesStalled),
+    group('delivery-links', 'Delivery paperwork to fix', 'A release, its order and its Zoho sales order do not join up', 'urgent', '/platform/admin/cellar-releases', deliveryLinks),
     group('sent-back', 'Deliveries sent back', 'The member has not replied in a week', 'chase', '/platform/admin/cellar-releases', deliveriesSentBack),
     group('offers', 'Offers to decide', 'Accept, send back or decline', 'action', '/platform/admin/consignment', offersToDecide),
     group('applications', 'Applications to decide', 'Approve or decline', 'action', '/platform/admin/cellar-members?tab=applications', applicationsToDecide),

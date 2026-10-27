@@ -6,7 +6,7 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import announcePickList from '@/app/_wms/data/announcePickList';
@@ -82,20 +82,68 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
       });
     }
 
-    // Generate pick list number
-    const pickListNumber = await generatePickListNumber();
+    /*
+      Claim the order before building anything. Two presses of the button
+      used to both see "no pick list yet" and each create one, sending two
+      people to the same bay for the same cases. Only the press that moves the
+      order from approved to picking goes on; the other is told it is done.
+    */
+    const [claimed] = await db
+      .update(zohoSalesOrders)
+      .set({ status: 'picking', updatedAt: new Date() })
+      .where(
+        and(
+          eq(zohoSalesOrders.id, salesOrderId),
+          eq(zohoSalesOrders.status, 'approved'),
+          isNull(zohoSalesOrders.pickListId),
+        ),
+      )
+      .returning({ id: zohoSalesOrders.id });
 
-    // Create pick list
-    const [pickList] = await db
-      .insert(wmsPickLists)
-      .values({
-        pickListNumber,
-        orderId: salesOrderId,
-        orderNumber: order.salesOrderNumber,
-        totalItems: orderItems.length,
-        pickedItems: 0,
-      })
-      .returning();
+    if (!claimed) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'A pick list is already being created for this order',
+      });
+    }
+
+    let pickList: typeof wmsPickLists.$inferSelect | undefined;
+    let pickListNumber: string;
+
+    try {
+      // Generate pick list number
+      pickListNumber = await generatePickListNumber();
+
+      // Create pick list
+      [pickList] = await db
+        .insert(wmsPickLists)
+        .values({
+          pickListNumber,
+          orderId: salesOrderId,
+          orderNumber: order.salesOrderNumber,
+          totalItems: orderItems.length,
+          pickedItems: 0,
+        })
+        .returning();
+    } catch (error) {
+      // Hand the order back so it can be released again
+      await db
+        .update(zohoSalesOrders)
+        .set({ status: 'approved', updatedAt: new Date() })
+        .where(and(eq(zohoSalesOrders.id, salesOrderId), isNull(zohoSalesOrders.pickListId)));
+      throw error;
+    }
+
+    if (!pickList) {
+      await db
+        .update(zohoSalesOrders)
+        .set({ status: 'approved', updatedAt: new Date() })
+        .where(and(eq(zohoSalesOrders.id, salesOrderId), isNull(zohoSalesOrders.pickListId)));
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'The pick list could not be created. Try again.',
+      });
+    }
 
     // Create pick list items with suggested locations
     const pickListItems = [];

@@ -1,11 +1,14 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddUkRates from './controller/adminAddUkRates';
+import adminAmendReleaseItems from './controller/adminAmendReleaseItems';
 import adminAssignUkRotation from './controller/adminAssignUkRotation';
 import adminAssignUkRotations from './controller/adminAssignUkRotations';
+import adminConfirmRelease from './controller/adminConfirmRelease';
 import adminEncryptIdentityDocuments from './controller/adminEncryptIdentityDocuments';
 import adminGetAttention from './controller/adminGetAttention';
 import adminGetCellarAccess from './controller/adminGetCellarAccess';
+import adminGetMemberEmails from './controller/adminGetMemberEmails';
 import adminGetMemberIdentity from './controller/adminGetMemberIdentity';
 import adminGetMembers from './controller/adminGetMembers';
 import adminGetPaymentDetails from './controller/adminGetPaymentDetails';
@@ -20,6 +23,7 @@ import adminQuoteRelease from './controller/adminQuoteRelease';
 import adminQuoteUkMove from './controller/adminQuoteUkMove';
 import adminRemoveUkRates from './controller/adminRemoveUkRates';
 import adminRevokeCellarAccess from './controller/adminRevokeCellarAccess';
+import adminSetMemberEmailMode from './controller/adminSetMemberEmailMode';
 import adminSetPaymentDetails from './controller/adminSetPaymentDetails';
 import adminSetReleaseRates from './controller/adminSetReleaseRates';
 import adminShipUkMove from './controller/adminShipUkMove';
@@ -33,6 +37,7 @@ import memberDeleteAddress from './controller/memberDeleteAddress';
 import memberDeleteIdentityDocument from './controller/memberDeleteIdentityDocument';
 import memberEstimateRelease from './controller/memberEstimateRelease';
 import memberGetAccess from './controller/memberGetAccess';
+import memberGetActivity from './controller/memberGetActivity';
 import memberGetAddresses from './controller/memberGetAddresses';
 import memberGetInvoicePdf from './controller/memberGetInvoicePdf';
 import memberGetInvoices from './controller/memberGetInvoices';
@@ -66,6 +71,7 @@ const memberRouter = createTRPCRouter({
   getReleases: memberGetReleases,
   getUkHoldings: memberGetUkHoldings,
   getStatement: memberGetStatement,
+  getActivity: memberGetActivity,
   getInvoices: memberGetInvoices,
   getInvoicePdf: memberGetInvoicePdf,
   getUkMoves: memberGetUkMoves,
@@ -83,6 +89,8 @@ const adminRouter = createTRPCRouter({
   getAttention: adminGetAttention,
   getReleases: adminGetReleases,
   quoteRelease: adminQuoteRelease,
+  amendReleaseItems: adminAmendReleaseItems,
+  confirmRelease: adminConfirmRelease,
   getMembers: adminGetMembers,
   getUkStock: adminGetUkStock,
   importUkStock: adminImportUkStock,
@@ -101,6 +109,9 @@ const adminRouter = createTRPCRouter({
   setPaymentDetails: adminSetPaymentDetails,
   getReleaseRates: adminGetReleaseRates,
   setReleaseRates: adminSetReleaseRates,
+  // Member emails: the off/shadow/live switch and the outbox
+  getMemberEmails: adminGetMemberEmails,
+  setMemberEmailMode: adminSetMemberEmailMode,
 });
 
 /*

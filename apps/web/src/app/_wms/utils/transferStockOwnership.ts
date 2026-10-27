@@ -76,7 +76,10 @@ const transferStockOwnership = async ({
     .select()
     .from(wmsStock)
     .where(eq(wmsStock.id, stockId))
-    .limit(1);
+    .limit(1)
+    // Held until the transaction ends, so two transfers of the same row
+    // queue instead of both passing the availability check.
+    .for('update');
 
   if (!sourceStock) {
     throw new TRPCError({
@@ -147,7 +150,7 @@ const transferStockOwnership = async ({
     });
   }
 
-  const movementNumber = await generateMovementNumber();
+  const movementNumber = await generateMovementNumber(tx);
 
   /*
     A row carrying reserved cases cannot take the full-transfer branch even when
@@ -182,14 +185,30 @@ const transferStockOwnership = async ({
       })
       .where(eq(wmsStock.id, stockId));
   } else {
-    await tx
+    const decremented = await tx
       .update(wmsStock)
       .set({
         quantityCases: sql`${wmsStock.quantityCases} - ${quantityCases}`,
         availableCases: sql`${wmsStock.availableCases} - ${quantityCases}`,
         updatedAt: new Date(),
       })
-      .where(eq(wmsStock.id, stockId));
+      .where(
+        and(
+          eq(wmsStock.id, stockId),
+          sql`${wmsStock.availableCases} >= ${quantityCases}`,
+        ),
+      )
+      .returning({ id: wmsStock.id });
+
+    if (decremented.length === 0) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This stock changed while the transfer was being made. Refresh and try again.',
+      });
+    }
+
+    /* Whether the cases the new owner receives are on the list or held */
+    const destinationNotForSale = boughtForCellar ? true : sourceStock.notForSale;
 
     /*
       Keyed the way receiving keys it — wine, place, owner. The previous lookup
@@ -206,9 +225,16 @@ const transferStockOwnership = async ({
           eq(wmsStock.locationId, sourceStock.locationId),
           eq(wmsStock.lwin18, sourceStock.lwin18),
           eq(wmsStock.ownerId, newOwnerId),
+          /*
+            Only merge into a row held the same way. A pool purchase merged
+            into the buyer's listed row would put the bought wine on sale; a
+            listed parcel merged into a held one would take it off.
+          */
+          eq(wmsStock.notForSale, destinationNotForSale),
         ),
       )
-      .limit(1);
+      .limit(1)
+      .for('update');
 
     if (existingStock) {
       await tx
@@ -222,6 +248,35 @@ const transferStockOwnership = async ({
 
       destinationStockId = existingStock.id;
     } else {
+      /*
+        The new owner already holds this shipment's wine in this bay, but held
+        the other way (for sale vs held). One row per shipment/bay/owner is
+        enforced, so say so plainly instead of failing on the index.
+      */
+      if (sourceStock.shipmentId) {
+        const [clash] = await tx
+          .select({ id: wmsStock.id })
+          .from(wmsStock)
+          .where(
+            and(
+              eq(wmsStock.locationId, sourceStock.locationId),
+              eq(wmsStock.lwin18, sourceStock.lwin18),
+              eq(wmsStock.ownerId, newOwnerId),
+              eq(wmsStock.shipmentId, sourceStock.shipmentId),
+            ),
+          )
+          .limit(1);
+
+        if (clash) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: destinationNotForSale
+              ? 'The new owner already has this wine from the same shipment in this bay listed for sale. Hold that row first, then transfer.'
+              : 'The new owner already has this wine from the same shipment in this bay held off sale. Put that row on sale first, then transfer.',
+          });
+        }
+      }
+
       const [created] = await tx
         .insert(wmsStock)
         .values({
@@ -257,7 +312,7 @@ const transferStockOwnership = async ({
             time it moved between owners. A pool sale goes the other way:
             the buyer's wine comes off the list.
           */
-          notForSale: boughtForCellar ? true : sourceStock.notForSale,
+          notForSale: destinationNotForSale,
           consignmentCommissionPercent:
             consignmentCommissionPercent ??
             sourceStock.consignmentCommissionPercent,

@@ -1,3 +1,5 @@
+import escapeZpl from './escapeZpl';
+
 /**
  * Generate ZPL (Zebra Programming Language) code for a case label
  *
@@ -69,30 +71,6 @@ const splitToTwoLines = (str: string, maxCharsPerLine: number): [string, string]
   }
 
   return [line1, line2];
-};
-
-/**
- * Normalize accented characters to ASCII equivalents
- * Handles common wine-related accents (French, Italian, Spanish, German)
- */
-const normalizeAccents = (str: string) => {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
-    .replace(/œ/g, 'oe')
-    .replace(/Œ/g, 'OE')
-    .replace(/æ/g, 'ae')
-    .replace(/Æ/g, 'AE')
-    .replace(/ß/g, 'ss');
-};
-
-/**
- * Escape special characters for ZPL
- * ZPL uses ^ as command prefix, so we need to escape it
- * Also normalizes accented characters to ASCII for printer compatibility
- */
-const escapeZpl = (str: string) => {
-  return normalizeAccents(str).replace(/\^/g, ' ').replace(/~/g, ' ');
 };
 
 /**

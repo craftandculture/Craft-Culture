@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -16,6 +16,13 @@ import generateMovementNumber from '../utils/generateMovementNumber';
 import generateRepackNumber from '../utils/generateRepackNumber';
 
 type Tx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** The source row changed between the check and the write (a second tap) */
+const repackRaced = () =>
+  new TRPCError({
+    code: 'CONFLICT',
+    message: 'This stock changed while the repack was being made. Refresh and try again.',
+  });
 
 /**
  * Build an LWIN18 by replacing the case config portion
@@ -68,6 +75,8 @@ const findOrCreateStock = async (
         eq(wmsStock.locationId, targetLocationId),
         eq(wmsStock.lwin18, targetLwin18),
         eq(wmsStock.ownerId, sourceStock.ownerId),
+        // Held wine never merges into a listed row
+        eq(wmsStock.notForSale, sourceStock.notForSale),
         sourceStock.lotNumber === null
           ? isNull(wmsStock.lotNumber)
           : eq(wmsStock.lotNumber, sourceStock.lotNumber),
@@ -78,8 +87,8 @@ const findOrCreateStock = async (
     await tx
       .update(wmsStock)
       .set({
-        quantityCases: existing.quantityCases + targetQuantityCases,
-        availableCases: existing.availableCases + targetQuantityCases,
+        quantityCases: sql`${wmsStock.quantityCases} + ${targetQuantityCases}`,
+        availableCases: sql`${wmsStock.availableCases} + ${targetQuantityCases}`,
         // Carry the Re-Export BOE across the repack; keep the existing one if set.
         reExportBoeNumber:
           existing.reExportBoeNumber ?? sourceStock.reExportBoeNumber,
@@ -240,22 +249,33 @@ const adminRepack = wmsOperatorProcedure
       // Pre-generate numbers BEFORE transaction (avoids connection pool deadlock)
       // Use offsets so concurrent calls don't get the same sequence number
       const repackNumber = await generateRepackNumber();
-      const movementNumberOut = await generateMovementNumber(0);
-      const movementNumberIn = await generateMovementNumber(1);
+      const movementNumberOut = await generateMovementNumber();
+      const movementNumberIn = await generateMovementNumber();
 
       return await db.transaction(async (tx) => {
         // Decrease source stock
-        const newSourceQuantity = sourceStock.quantityCases - sourceQuantityCases;
-        const newSourceAvailable = sourceStock.availableCases - sourceQuantityCases;
 
         await tx
           .update(wmsStock)
           .set({
-            quantityCases: newSourceQuantity,
-            availableCases: newSourceAvailable,
+            // Relative, and only if the cases are still there: a double tap
+            // used to write the same absolute figure twice and create the
+            // target cases twice.
+            quantityCases: sql`${wmsStock.quantityCases} - ${sourceQuantityCases}`,
+            availableCases: sql`${wmsStock.availableCases} - ${sourceQuantityCases}`,
             updatedAt: new Date(),
           })
-          .where(eq(wmsStock.id, stockId));
+          .where(
+            and(
+              eq(wmsStock.id, stockId),
+              sql`${wmsStock.availableCases} >= ${sourceQuantityCases}`,
+            ),
+          )
+          .returning({ id: wmsStock.id })
+          .then((rows) => {
+            if (rows.length === 0) throw repackRaced();
+            return rows;
+          });
 
         // Create or update target stock
         const targetStockId = await findOrCreateStock(
@@ -437,9 +457,9 @@ const adminRepack = wmsOperatorProcedure
     // Pre-generate all numbers BEFORE transaction (avoids connection pool deadlock)
     // Use offsets so concurrent calls don't get the same sequence number
     const repackNumber = await generateRepackNumber();
-    const movementNumberOut = await generateMovementNumber(0);
-    const movementNumberIn1 = await generateMovementNumber(1);
-    const movementNumberIn2 = await generateMovementNumber(2);
+    const movementNumberOut = await generateMovementNumber();
+    const movementNumberIn1 = await generateMovementNumber();
+    const movementNumberIn2 = await generateMovementNumber();
 
     /*
       The case being split has to be one nobody has already been promised.
@@ -461,17 +481,20 @@ const adminRepack = wmsOperatorProcedure
 
     return await db.transaction(async (tx) => {
       // Decrease source stock by 1
-      const newSourceQuantity = sourceStock.quantityCases - 1;
-      const newSourceAvailable = sourceStock.availableCases - 1;
 
       await tx
         .update(wmsStock)
         .set({
-          quantityCases: newSourceQuantity,
-          availableCases: newSourceAvailable,
+          quantityCases: sql`${wmsStock.quantityCases} - 1`,
+          availableCases: sql`${wmsStock.availableCases} - 1`,
           updatedAt: new Date(),
         })
-        .where(eq(wmsStock.id, stockId));
+        .where(and(eq(wmsStock.id, stockId), sql`${wmsStock.availableCases} >= 1`))
+        .returning({ id: wmsStock.id })
+        .then((rows) => {
+          if (rows.length === 0) throw repackRaced();
+          return rows;
+        });
 
       // Create/update stock for removed portion (target 1)
       const removedStockId = await findOrCreateStock(

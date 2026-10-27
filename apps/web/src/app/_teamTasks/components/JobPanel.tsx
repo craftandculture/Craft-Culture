@@ -165,6 +165,12 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
 
             <div>
               <p className="mb-1 text-xs font-medium text-text-muted">Notes</p>
+              {task.partnerId && (
+                <p className="mb-1.5 text-[11px] text-amber-700 dark:text-amber-400">
+                  {board.partners.find((p) => p.id === task.partnerId)?.name ?? 'The partner'} can read every
+                  note on this job. Keep internal matters off it.
+                </p>
+              )}
               <div className="space-y-2">
                 {detail?.notes.map((n) => (
                   <div key={n.id} className="rounded-lg bg-fill-secondary px-3 py-2">
@@ -179,7 +185,7 @@ const JobPanel = ({ task, board, today, onClose, onEdit }: JobPanelProps) => {
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     rows={2}
-                    placeholder="Add a note for the team"
+                    placeholder={task.partnerId ? 'Add a note (the partner sees it)' : 'Add a note for the team'}
                     className="flex-1 rounded-lg border border-border-primary bg-surface-primary px-2.5 py-1.5 text-sm text-text-primary"
                   />
                   <button

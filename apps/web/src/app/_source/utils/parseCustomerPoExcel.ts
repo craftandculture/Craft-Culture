@@ -54,46 +54,34 @@ const tryParseStructuredPoCSV = (content: string): ParsedPoItem[] | null => {
 
   const headers = parseCSVLine(headerLine).map((h) => h.toLowerCase().trim());
 
-  // Map common column names to PO fields
+  // Map common column names to PO fields. Rules are checked in order, the
+  // first matching rule wins, and a field keeps the first column that
+  // claimed it. A "Total" column is a line total, never a per-case price.
+  const columnRules: Array<[string, (h: string) => boolean]> = [
+    ['lineNumber', (h) => ['#', 'line', 'row', 'no', 'item'].includes(h)],
+    ['lwin', (h) => h.includes('lwin') || h.includes('liv-ex')],
+    [
+      'lineTotal',
+      (h) =>
+        (h.includes('total') || h.includes('line value') || h.includes('extended')) &&
+        !h.includes('per case') &&
+        !h.includes('unit'),
+    ],
+    ['producer', (h) => h.includes('producer') || h.includes('winery') || h.includes('domaine') || h.includes('chateau')],
+    ['vintage', (h) => h.includes('vintage') || h.includes('year')],
+    ['region', (h) => h.includes('region') || h.includes('appellation') || h.includes('country')],
+    ['sellPrice', (h) => h.includes('price') || h.includes('sell') || h.includes('usd') || h.includes('$')],
+    ['quantity', (h) => h.includes('qty') || h.includes('quantity') || h.includes('cases') || h.includes('amount')],
+    ['productName', (h) => h.includes('product') || h.includes('wine') || h.includes('name') || h.includes('description')],
+    ['caseConfig', (h) => h.includes('config') || h.includes('pack') || h.includes('format') || h.includes('size')],
+  ];
+
   const columnMap: Record<string, number> = {};
   headers.forEach((header, index) => {
     const h = header.replace(/[:\s]+/g, ' ').trim();
-
-    // Line number
-    if (h === '#' || h === 'line' || h === 'row' || h === 'no' || h === 'item') {
-      columnMap['lineNumber'] = index;
-    }
-    // Product name
-    else if (h.includes('product') || h.includes('wine') || h.includes('name') || h.includes('description')) {
-      columnMap['productName'] = index;
-    }
-    // Producer
-    else if (h.includes('producer') || h.includes('winery') || h.includes('domaine') || h.includes('chateau')) {
-      columnMap['producer'] = index;
-    }
-    // Vintage
-    else if (h.includes('vintage') || h.includes('year')) {
-      columnMap['vintage'] = index;
-    }
-    // Region
-    else if (h.includes('region') || h.includes('appellation') || h.includes('country')) {
-      columnMap['region'] = index;
-    }
-    // Quantity
-    else if (h.includes('qty') || h.includes('quantity') || h.includes('cases') || h.includes('amount')) {
-      columnMap['quantity'] = index;
-    }
-    // Sell price
-    else if (h.includes('price') || h.includes('sell') || h.includes('usd') || h.includes('$') || h.includes('total')) {
-      columnMap['sellPrice'] = index;
-    }
-    // LWIN
-    else if (h.includes('lwin') || h.includes('liv-ex')) {
-      columnMap['lwin'] = index;
-    }
-    // Case config
-    else if (h.includes('config') || h.includes('pack') || h.includes('format') || h.includes('size')) {
-      columnMap['caseConfig'] = index;
+    const rule = columnRules.find(([, test]) => test(h));
+    if (rule && columnMap[rule[0]] === undefined) {
+      columnMap[rule[0]] = index;
     }
   });
 
@@ -119,13 +107,20 @@ const tryParseStructuredPoCSV = (content: string): ParsedPoItem[] | null => {
 
     if (quantity <= 0) continue;
 
-    // Parse sell price
-    let sellPricePerCaseUsd: number | undefined;
-    if (columnMap['sellPrice'] !== undefined) {
-      const priceStr = cells[columnMap['sellPrice']]?.trim() || '';
-      const priceMatch = priceStr.match(/[\d,]+\.?\d*/);
-      if (priceMatch) {
-        sellPricePerCaseUsd = parseFloat(priceMatch[0].replace(',', ''));
+    // Parse sell price (per case). With only a line total, divide it by the
+    // quantity.
+    const readMoney = (idx: number | undefined) => {
+      if (idx === undefined) return undefined;
+      const priceMatch = (cells[idx]?.trim() || '').match(/[\d,]+\.?\d*/);
+      if (!priceMatch) return undefined;
+      const value = parseFloat(priceMatch[0].replace(/,/g, ''));
+      return Number.isFinite(value) ? value : undefined;
+    };
+    let sellPricePerCaseUsd = readMoney(columnMap['sellPrice']);
+    if (sellPricePerCaseUsd === undefined) {
+      const lineTotal = readMoney(columnMap['lineTotal']);
+      if (lineTotal !== undefined) {
+        sellPricePerCaseUsd = Math.round((lineTotal / quantity) * 100) / 100;
       }
     }
 
@@ -210,7 +205,7 @@ Parse the document to extract each line item with:
 - vintage: Year (e.g., "2018", "2019")
 - region: Wine region (e.g., "Margaux", "Napa Valley")
 - quantity: Number of cases ordered (must be > 0)
-- sellPricePerCaseUsd: Price per case in USD (extract number from "$150", "150 USD", "150.00/case")
+- sellPricePerCaseUsd: Price per case in USD (extract number from "$150", "150 USD", "150.00/case"). A "Total" / line total column is NOT a per-case price: if only a line total is given, divide it by the quantity
 - bottleSize: Bottle size (e.g., "75cl", "750ml", "1.5L")
 - caseConfig: Case configuration (e.g., "6x75cl", "12", "6-pack")
 - lwin: LWIN code if present (7-18 digit wine identifier)

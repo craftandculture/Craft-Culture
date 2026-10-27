@@ -59,6 +59,16 @@ describe('parseCell', () => {
     expect(cells.date(1)).toBe('2026-07-31');
     expect(cells.date(2)).toBeNull();
   });
+
+  it('reads day-first text dates and never shifts a local-midnight cell', () => {
+    const localMidnight = new Date(2026, 6, 31);
+    const cells = parseCell(['31/07/2026', '01/07/26', localMidnight, '13/13/2026']);
+
+    expect(cells.date(0)).toBe('2026-07-31');
+    expect(cells.date(1)).toBe('2026-07-01');
+    expect(cells.date(2)).toBe('2026-07-31');
+    expect(cells.date(3)).toBeNull();
+  });
 });
 
 describe('detectHeaderRow', () => {

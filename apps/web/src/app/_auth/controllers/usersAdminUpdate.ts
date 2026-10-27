@@ -3,7 +3,7 @@ import { and, count, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { users } from '@/database/schema';
+import { sessions, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
@@ -115,6 +115,11 @@ const usersAdminUpdate = adminProcedure
         role: users.role,
         approvalStatus: users.approvalStatus,
       });
+
+    /* New access applies now, not when their old sessions expire. */
+    if (roleChanges || statusChanges) {
+      await db.delete(sessions).where(eq(sessions.userId, userId));
+    }
 
     return { success: true, user: updatedUser };
   });
