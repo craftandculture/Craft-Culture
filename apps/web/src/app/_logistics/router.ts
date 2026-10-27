@@ -26,7 +26,6 @@ import adminDeleteGroupDocument from './controller/adminDeleteGroupDocument';
 import adminDeleteShipment from './controller/adminDeleteShipment';
 import adminDeleteShipmentCostLine from './controller/adminDeleteShipmentCostLine';
 import adminDeleteShipmentGroup from './controller/adminDeleteShipmentGroup';
-import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
 import adminExtractDocument from './controller/adminExtractDocument';
 import adminExtractQuote from './controller/adminExtractQuote';
@@ -177,7 +176,6 @@ const adminRouter = createTRPCRouter({
 
   // Exports
   exportLandedCostExcel: adminExportLandedCostExcel,
-  exportCompliancePdf: adminExportCompliancePdf,
 
   // Tools
   extractDocument: adminExtractDocument,

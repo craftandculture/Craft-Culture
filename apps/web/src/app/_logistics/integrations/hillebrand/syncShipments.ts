@@ -36,7 +36,6 @@ const calculateCargoTotals = (shipment: HillebrandShipment) => {
   const cargoItems = shipment.cargo || shipment.cargoItems || shipment.items || [];
 
   let totalCases = 0;
-  let totalBottles = 0;
   let totalWeightKg = 0;
   let totalVolumeM3 = 0;
 
@@ -45,11 +44,9 @@ const calculateCargoTotals = (shipment: HillebrandShipment) => {
     const packages = item.numberOfPackages || item.quantity || 0;
     totalCases += packages;
 
-    // Estimate bottles (assuming 6 or 12 per case typically)
-    // This is rough - will be refined when syncing items
-    if (packages > 0) {
-      totalBottles += packages * 6; // Default assumption
-    }
+    // Hillebrand reports packages, not bottles. A pack size is not guessed
+    // (6 or 12 to a case, or one magnum), so the bottle count stays empty until
+    // the lines are added.
 
     // Weight in kg
     if (item.grossWeight) {
@@ -91,7 +88,7 @@ const calculateCargoTotals = (shipment: HillebrandShipment) => {
 
   return {
     totalCases: totalCases > 0 ? totalCases : null,
-    totalBottles: totalBottles > 0 ? totalBottles : null,
+    totalBottles: null as number | null,
     totalWeightKg: totalWeightKg > 0 ? Math.round(totalWeightKg * 100) / 100 : null,
     totalVolumeM3: totalVolumeM3 > 0 ? Math.round(totalVolumeM3 * 1000) / 1000 : null,
   };
@@ -408,7 +405,9 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
               ...(!existing.destinationCity && { destinationCity }),
               ...(!existing.destinationWarehouse && { destinationWarehouse }),
               ...(!existing.partnerNotes && { partnerNotes }),
-              ...(!hasItems && { totalCases, totalBottles }),
+              ...(!hasItems && { totalCases }),
+              // Never overwrite a bottle count someone entered with an empty one
+              ...(!hasItems && totalBottles != null && { totalBottles }),
               updatedAt: new Date(),
             })
             .where(eq(logisticsShipments.id, existing.id));
@@ -433,7 +432,7 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
                     originCity: shipmentData.originCity ?? existing.originCity,
                     destinationCity: existing.destinationCity ?? destinationCity,
                     totalCases: hasItems ? existing.totalCases : totalCases,
-                    totalBottles: hasItems ? existing.totalBottles : totalBottles,
+                    totalBottles: hasItems ? existing.totalBottles : (totalBottles ?? existing.totalBottles),
                     eta: shipmentData.eta ?? null,
                   },
                   status,
