@@ -1,3 +1,9 @@
+## [2.0.591](https://github.com/craftandculture/Craft-Culture/compare/v2.0.590...v2.0.591) (2026-10-27)
+
+### Bug Fixes
+
+* the order tracker keeps every step on one row on a desktop screen ([c662497](https://github.com/craftandculture/Craft-Culture/commit/c662497794e5dd7664a07b75dcb4eeb9c92125e1))
+
 ## [2.0.590](https://github.com/craftandculture/Craft-Culture/compare/v2.0.589...v2.0.590) (2026-10-27)
 
 ### Features
