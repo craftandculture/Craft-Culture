@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -51,10 +51,24 @@ const adminApplyOps = adminProcedure
 
     const version = row.version + 1;
     await db.transaction(async (tx) => {
-      await tx
+      // The version and status are checked again in the write itself, so two edits at once cannot both land
+      const updated = await tx
         .update(exportInvoices)
         .set({ document: next, version, updatedAt: new Date() })
-        .where(eq(exportInvoices.id, row.id));
+        .where(
+          and(
+            eq(exportInvoices.id, row.id),
+            eq(exportInvoices.version, input.expectedVersion),
+            eq(exportInvoices.status, 'draft'),
+          ),
+        )
+        .returning({ id: exportInvoices.id });
+      if (updated.length === 0) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Someone else changed this document. Reload to see their changes, then try again.',
+        });
+      }
       await tx.insert(exportInvoiceVersions).values({
         exportInvoiceId: row.id,
         version,

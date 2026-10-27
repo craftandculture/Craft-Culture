@@ -70,7 +70,9 @@ const buildExportDraft = async (input: { zohoCustomerId: string; zohoInvoiceIds:
     }
   };
 
-  const invoices = await step('Reading invoices from Zoho', () => fetchInvoicesForExport(input.zohoInvoiceIds));
+  const invoices = await step('Reading invoices from Zoho', () =>
+    fetchInvoicesForExport(input.zohoInvoiceIds, { zohoCustomerId: input.zohoCustomerId }),
+  );
   const lwins = invoices.flatMap((i) => i.lines.map((l) => l.lwin18).filter((l): l is string => Boolean(l)));
   const originByLwin = await step('Looking up origins', () => lookupOrigins(lwins));
   const boeByKey = await step('Finding BOEs in stock', () => resolveExportBoes(invoices));
