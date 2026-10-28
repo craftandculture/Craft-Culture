@@ -57,7 +57,10 @@ import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import type { MovementTypeBadgeProps } from '@/app/_wms/components/MovementTypeBadge';
-import CONDITION_REPORT_FEE_AED from '@/app/_wms/constants/conditionReportFee';
+import CONDITION_REPORT_FEE_AED, {
+  CONDITION_REPORT_FEE_PER_BOTTLE_AED,
+  conditionReportFee,
+} from '@/app/_wms/constants/conditionReportFee';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -2450,14 +2453,14 @@ const CellarPage = () => {
                                                 level, label, capsule and
                                                 closure, and report with
                                                 photographs and written notes.
-                                                AED {CONDITION_REPORT_FEE_AED}{' '}
-                                                {bottleWording && (wine.caseConfig ?? 1) === 1 ? 'per bottle' : 'per case'}, so AED{' '}
-                                                {(
-                                                  CONDITION_REPORT_FEE_AED *
-                                                  parcel.quantityCases
-                                                ).toLocaleString('en-US')}{' '}
+                                                AED {conditionReportFee({ caseConfig: wine.caseConfig, quantityCases: parcel.quantityCases }).rateAed}{' '}
+                                                per {conditionReportFee({ caseConfig: wine.caseConfig, quantityCases: parcel.quantityCases }).unit}, so AED{' '}
+                                                {conditionReportFee({
+                                                  caseConfig: wine.caseConfig,
+                                                  quantityCases: parcel.quantityCases,
+                                                }).totalAed.toLocaleString('en-US')}{' '}
                                                 for{' '}
-                                                {bottleWording && (wine.caseConfig ?? 1) === 1
+                                                {(wine.caseConfig ?? 1) === 1
                                                   ? parcel.quantityCases === 1
                                                     ? 'this bottle'
                                                     : `these ${parcel.quantityCases} bottles`
@@ -2509,8 +2512,9 @@ const CellarPage = () => {
                                             >
                                               <Typography variant="bodyXs">
                                                 <strong>
-                                                  AED {CONDITION_REPORT_FEE_AED}{' '}
-                                                  per case
+                                                  {(wine.caseConfig ?? 1) === 1
+                                                    ? `AED ${CONDITION_REPORT_FEE_PER_BOTTLE_AED} per bottle`
+                                                    : `AED ${CONDITION_REPORT_FEE_AED} per case`}
                                                 </strong>
                                                 . We inspect every bottle for
                                                 fill level, label, capsule and
