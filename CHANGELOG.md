@@ -1,3 +1,9 @@
+## [2.1.14](https://github.com/craftandculture/Craft-Culture/compare/v2.1.13...v2.1.14) (2026-10-28)
+
+### Bug Fixes
+
+* the Pricing Manager export now shows the same prices as the screen, including margins changed on a single row ([a46f298](https://github.com/craftandculture/Craft-Culture/commit/a46f298d0ef6408afd31d44d55f18f6c4dd530b3))
+
 ## [2.1.13](https://github.com/craftandculture/Craft-Culture/compare/v2.1.12...v2.1.13) (2026-10-28)
 
 ### Features
