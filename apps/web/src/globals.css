@@ -73,12 +73,20 @@ html {
     A soft stone canvas rather than near-white, so white cards, tables and
     panels read as surfaces on it. It matches the cellar's theme colour.
   */
-  --color-background-primary: #f2f3f0;
-  --color-background-muted: #eceee9;
+  --color-background-primary: #eff0ec;
+  --color-background-muted: #e9ebe6;
   /* Cards are a soft white, not paper white: pure white on the canvas glared */
-  --color-surface-soft: #fcfcfa;
+  --color-surface-soft: #f7f8f4;
   /* Summary panels (KPI tiles, folded bars): between the canvas and a card */
-  --color-surface-quiet: #f7f8f5;
+  --color-surface-quiet: #f4f5f1;
+
+  /*
+    Shadows barely there: on the stone canvas a card is defined by its tone
+    and edge, and Tailwind's defaults made every card float like a tile
+  */
+  --shadow-xs: 0 1px 1px 0 rgb(24 32 24 / 0.03);
+  --shadow-sm: 0 1px 2px 0 rgb(24 32 24 / 0.04);
+  --shadow-md: 0 2px 6px -1px rgb(24 32 24 / 0.06);
 
   --color-fill-primary: var(--color-surface-soft);
   --color-fill-primary-hover: color-mix(in oklch, var(--color-gray-50) 97%, black);
@@ -196,7 +204,7 @@ html {
   --color-surface-info-active: color-mix(in oklch, var(--color-riptide-50) 95%, black);
   --color-surface-info-selected: color-mix(in oklch, var(--color-riptide-50) 95%, black);
 
-  --color-surface-muted: var(--color-gray-50);
+  --color-surface-muted: #eef0eb;
   --color-surface-muted-hover: color-mix(in oklch, var(--color-gray-100) 97%, black);
   --color-surface-muted-active: color-mix(in oklch, var(--color-gray-100) 95%, black);
   --color-surface-muted-selected: color-mix(in oklch, var(--color-gray-100) 95%, black);

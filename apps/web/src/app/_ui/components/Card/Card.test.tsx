@@ -86,7 +86,7 @@ describe('Card', () => {
       expect(card).toBeInTheDocument();
     });
 
-    it('should render with sm shadow (default)', () => {
+    it('should render with sm shadow', () => {
       render(<Card shadow="sm">Small Shadow</Card>);
       const card = screen.getByText('Small Shadow');
       expect(card).toBeInTheDocument();

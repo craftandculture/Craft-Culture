@@ -27,7 +27,8 @@ export const cardStyles = tv({
   defaultVariants: {
     colorRole: 'primary',
     variant: 'outline',
-    shadow: 'sm',
+    // Tone and edge define a card on the stone canvas; a shadow made each one float
+    shadow: 'none',
   },
 });
 
