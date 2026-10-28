@@ -47,13 +47,13 @@ import Input from '@/app/_ui/components/Input/Input';
 import MobileCard from '@/app/_ui/components/MobileCard/MobileCard';
 import MobileCardList from '@/app/_ui/components/MobileCard/MobileCardList';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import fileHref from '@/utils/fileHref';
 
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 /** Statuses where partner can edit items */
 const EDITABLE_STATUSES = ['draft', 'revision_requested'];
@@ -402,9 +402,8 @@ const PrivateOrderDetailPage = () => {
   }
 
   // Calculate exchange rate for AED conversion (use actual rate if available, otherwise default)
-  const totalAed = Number(order.totalAed) || 0;
-  const totalUsd = Number(order.totalUsd) || 1;
-  const usdToAedRate = totalAed > 0 ? totalAed / totalUsd : DEFAULT_EXCHANGE_RATE;
+  // At the fixed peg; the stored ratio carried 3.67 on orders totalled before 28 Oct 2026
+  const usdToAedRate = USD_TO_AED;
 
   /**
    * Convert amount to selected currency
@@ -507,7 +506,7 @@ const PrivateOrderDetailPage = () => {
             tier={order.subscriptionTier}
             caseSize={order.subscriptionCaseSize}
             variant={order.subscriptionVariant}
-            clientTotalAed={order.totalAed}
+            clientTotalAed={order.totalUsd != null ? Number(order.totalUsd) * USD_TO_AED : null}
           />
         )}
 

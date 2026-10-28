@@ -17,6 +17,7 @@ import Popover from '@/app/_ui/components/Popover/Popover';
 import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
 import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
@@ -102,7 +103,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
   }, [pricingDefaults?.importDutyPercent]);
 
   // Get exchange rate from pricing defaults or use fallback
-  const usdToAedRate = pricingDefaults?.usdToAed ?? 3.67;
+  const usdToAedRate = pricingDefaults?.usdToAed ?? USD_TO_AED;
 
   // Lead time from settings or defaults
   const leadTimeMin = leadTimeMinData ? Number(leadTimeMinData) : 14;

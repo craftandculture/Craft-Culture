@@ -22,6 +22,7 @@ import TableCell from '@/app/_ui/components/Table/TableCell';
 import TableHead from '@/app/_ui/components/Table/TableHead';
 import TableHeader from '@/app/_ui/components/Table/TableHeader';
 import TableRow from '@/app/_ui/components/Table/TableRow';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC from '@/lib/trpc/browser';
 
 interface MarketSignal {
@@ -207,7 +208,7 @@ const ScoutBrief = () => {
     (sum, g) => sum + Math.max(0, (g.competitorRetailAed ?? g.competitorPriceAed ?? 0) - (g.ourCostAed ?? g.ourPriceAed ?? 0)),
     0,
   );
-  const revenueUsd = Math.round(revenueAed / 3.67);
+  const revenueUsd = Math.round(revenueAed / USD_TO_AED);
 
   // KPI deltas vs previous brief
   const prevPriceGaps = prevD?.priceGaps ?? [];

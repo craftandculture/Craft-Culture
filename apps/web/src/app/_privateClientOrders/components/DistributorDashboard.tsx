@@ -24,6 +24,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
@@ -32,7 +33,6 @@ import { DISTRIBUTOR_QUEUES } from '../constants';
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 const ORDERS = '/platform/distributor/orders';
 
@@ -56,13 +56,11 @@ const DistributorDashboard = () => {
     refetchOnWindowFocus: true,
   });
 
-  const formatCurrency = (amountUsd: number, amountAed: number) => {
+  const formatCurrency = (amountUsd: number, _amountAed?: number) => {
     const amount =
       currency === 'USD'
         ? amountUsd
-        : amountAed > 0
-          ? amountAed
-          : amountUsd * DEFAULT_EXCHANGE_RATE;
+        : amountUsd * USD_TO_AED;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,

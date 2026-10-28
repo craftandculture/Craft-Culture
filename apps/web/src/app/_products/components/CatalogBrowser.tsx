@@ -12,6 +12,7 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
@@ -418,11 +419,11 @@ const CatalogBrowser = ({
 
                   const price = offer?.inBondPriceUsd ?? offer?.price ?? 0;
                   const displayPrice =
-                    displayCurrency === 'AED' ? price * 3.67 : price;
+                    displayCurrency === 'AED' ? price * USD_TO_AED : price;
                   const displayLocalPrice =
-                    displayCurrency === 'AED' ? localPrice * 3.67 : localPrice;
+                    displayCurrency === 'AED' ? localPrice * USD_TO_AED : localPrice;
                   const displayCultxPrice =
-                    displayCurrency === 'AED' ? cultxPrice * 3.67 : cultxPrice;
+                    displayCurrency === 'AED' ? cultxPrice * USD_TO_AED : cultxPrice;
                   const hasBothPrices =
                     displayLocalPrice > 0 && displayCultxPrice > 0;
 

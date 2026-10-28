@@ -45,12 +45,12 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 /**
  * Format a price value with currency
@@ -399,9 +399,8 @@ const DistributorOrderDetailPage = () => {
   const nextAction = getNextAction();
 
   // Calculate exchange rate for AED conversion (use actual rate if available, otherwise default)
-  const totalAed = Number(order.totalAed) || 0;
-  const totalUsd = Number(order.totalUsd) || 1;
-  const usdToAedRate = totalAed > 0 ? totalAed / totalUsd : DEFAULT_EXCHANGE_RATE;
+  // At the fixed peg; the stored ratio carried 3.67 on orders totalled before 28 Oct 2026
+  const usdToAedRate = USD_TO_AED;
 
   /**
    * Convert amount to selected currency

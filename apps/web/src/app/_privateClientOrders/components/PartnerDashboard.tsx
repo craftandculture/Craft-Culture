@@ -19,6 +19,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
@@ -26,7 +27,6 @@ import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 /**
  * PartnerDashboard displays an overview of orders for wine partners
@@ -48,12 +48,12 @@ const PartnerDashboard = () => {
   /**
    * Format currency value, calculating AED from USD if AED is not available
    */
-  const formatCurrency = (amountUsd: number, amountAed: number) => {
+  const formatCurrency = (amountUsd: number, _amountAed?: number) => {
     let amount: number;
     if (currency === 'USD') {
       amount = amountUsd;
     } else {
-      amount = amountAed > 0 ? amountAed : amountUsd * DEFAULT_EXCHANGE_RATE;
+      amount = amountUsd * USD_TO_AED;
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -71,12 +71,11 @@ const PartnerDashboard = () => {
     totalAed?: number | null;
   }) => {
     const usdAmount = order.totalUsd ?? 0;
-    const aedAmount = order.totalAed ?? 0;
     let amount: number;
     if (currency === 'USD') {
       amount = usdAmount;
     } else {
-      amount = aedAmount > 0 ? aedAmount : usdAmount * DEFAULT_EXCHANGE_RATE;
+      amount = usdAmount * USD_TO_AED;
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',

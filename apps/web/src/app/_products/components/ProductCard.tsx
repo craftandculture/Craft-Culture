@@ -9,6 +9,7 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 import LeadTimeBadge from './LeadTimeBadge';
@@ -62,11 +63,11 @@ const ProductCard = ({
 
   // Use In-Bond UAE price from pricing model (falls back to raw price if not available)
   const price = offer?.inBondPriceUsd ?? offer?.price ?? 0;
-  const displayPrice = displayCurrency === 'AED' ? price * 3.67 : price;
+  const displayPrice = displayCurrency === 'AED' ? price * USD_TO_AED : price;
   const displayLocalPrice =
-    displayCurrency === 'AED' ? localPrice * 3.67 : localPrice;
+    displayCurrency === 'AED' ? localPrice * USD_TO_AED : localPrice;
   const displayCultxPrice =
-    displayCurrency === 'AED' ? cultxPrice * 3.67 : cultxPrice;
+    displayCurrency === 'AED' ? cultxPrice * USD_TO_AED : cultxPrice;
 
   // Handle external success state
   useEffect(() => {

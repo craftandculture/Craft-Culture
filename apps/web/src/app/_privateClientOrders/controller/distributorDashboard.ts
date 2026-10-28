@@ -7,6 +7,7 @@ import {
   privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
 import {
@@ -47,7 +48,7 @@ const distributorDashboard = distributorProcedure.query(
             status: privateClientOrders.status,
             count: sql<number>`count(*)`,
             valueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-            valueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+            valueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
             oldestUpdatedAt: sql<string | null>`min(${privateClientOrders.updatedAt})`,
             idle: sql<number>`count(*) filter (where ${privateClientOrders.updatedAt} < now() - interval '7 days')`,
             lastWeek: sql<number>`count(*) filter (where ${privateClientOrders.updatedAt} >= now() - interval '7 days')`,
@@ -60,7 +61,7 @@ const distributorDashboard = distributorProcedure.query(
           .select({
             totalOrders: sql<number>`count(*)`,
             totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
           })
           .from(privateClientOrders)
           .where(mine),
@@ -69,7 +70,7 @@ const distributorDashboard = distributorProcedure.query(
           .select({
             totalOrders: sql<number>`count(*)`,
             totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
           })
           .from(privateClientOrders)
           .where(and(mine, gte(privateClientOrders.distributorAssignedAt, thirtyDaysAgo))),
@@ -106,7 +107,7 @@ const distributorDashboard = distributorProcedure.query(
             orderCount: sql<number>`count(*)`,
             activeCount: sql<number>`count(*) filter (where ${privateClientOrders.status} <> 'delivered')`,
             totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
           })
           .from(privateClientOrders)
           .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))

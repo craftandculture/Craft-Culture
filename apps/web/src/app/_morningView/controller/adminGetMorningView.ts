@@ -394,7 +394,7 @@ const adminGetMorningView = adminProcedure.query(async () => {
       source: 'pco' as const,
       customerName: o.customerName ?? '',
       totalUsd: o.totalUsd,
-      totalAed: o.totalAed ?? o.totalUsd * USD_TO_AED,
+      totalAed: o.totalUsd * USD_TO_AED,
       status: o.status ?? '',
       createdAt: o.createdAt,
     })),

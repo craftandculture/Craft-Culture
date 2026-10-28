@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import formatPrice from '@/utils/formatPrice';
 
 interface FloatingQuoteSummaryProps {
@@ -51,7 +52,7 @@ const FloatingQuoteSummary = ({
   }, [itemCount]);
 
   const displayTotal =
-    displayCurrency === 'AED' ? totalUsd * 3.67 : totalUsd;
+    displayCurrency === 'AED' ? totalUsd * USD_TO_AED : totalUsd;
 
   return (
     <div

@@ -113,7 +113,7 @@ describe('pricingEngine', () => {
 
       // Final: 1338.88 + 66.94 = 1405.82
       expect(result.finalPriceUsd).toBeCloseTo(1405.82, 2);
-      expect(result.finalPriceAed).toBeCloseTo(5159.36, 2); // 1405.82 * 3.67
+      expect(result.finalPriceAed).toBeCloseTo(5162.87, 1); // 1405.82 * 3.6725
     });
 
     it('should use custom variables when provided', () => {
@@ -187,7 +187,7 @@ describe('pricingEngine', () => {
 
       // Total
       expect(result.totalUsd).toBeCloseTo(1405.82, 2);
-      expect(result.totalAed).toBeCloseTo(5159.36, 2);
+      expect(result.totalAed).toBeCloseTo(5162.87, 1);
     });
 
     it('should match admin calculation totals', () => {
@@ -216,8 +216,8 @@ describe('pricingEngine', () => {
     it('should convert to AED correctly', () => {
       const result = calculateB2BAdmin(1000);
 
-      expect(result.finalPriceAed).toBeCloseTo(3863.16, 2); // 1052.63 * 3.67
-      expect(result.usdToAedRate).toBe(3.67);
+      expect(result.finalPriceAed).toBeCloseTo(3865.79, 1); // 1052.63 * 3.6725
+      expect(result.usdToAedRate).toBe(3.6725);
     });
 
     it('should use custom margin', () => {

@@ -25,6 +25,7 @@ import DropdownMenuTrigger from '@/app/_ui/components/DropdownMenu/DropdownMenuT
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
@@ -91,7 +92,7 @@ const PrivateOrdersList = () => {
   const orders = filterByStatus(allOrders, statusFilter);
 
   const formatCurrencyValue = (order: OrderWithDistributor) => {
-    const amount = currency === 'USD' ? (order.totalUsd ?? 0) : (order.totalAed ?? 0);
+    const amount = currency === 'USD' ? (order.totalUsd ?? 0) : (order.totalUsd ?? 0) * USD_TO_AED;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,

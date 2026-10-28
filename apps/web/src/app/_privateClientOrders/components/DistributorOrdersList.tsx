@@ -30,6 +30,7 @@ import DropdownMenuTrigger from '@/app/_ui/components/DropdownMenu/DropdownMenuT
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import type { DistributorQueue, DistributorStage } from '../constants';
@@ -44,7 +45,6 @@ import type { DistributorOrder } from '../utils/distributorOrderView';
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 type OrderWithPartner = DistributorOrder & {
   bottleCount: number;
@@ -236,13 +236,12 @@ const DistributorOrdersList = () => {
 
   const formatCurrencyValue = (order: OrderWithPartner) => {
     const usdAmount = order.totalUsd ?? 0;
-    const aedAmount = order.totalAed ?? 0;
     let amount: number;
     if (currency === 'USD') {
       amount = usdAmount;
     } else {
-      // Use AED if available, otherwise calculate from USD
-      amount = aedAmount > 0 ? aedAmount : usdAmount * DEFAULT_EXCHANGE_RATE;
+      // At the fixed peg; stored AED totals before 28 Oct 2026 used 3.67
+      amount = usdAmount * USD_TO_AED;
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
