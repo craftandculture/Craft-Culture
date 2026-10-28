@@ -129,9 +129,9 @@ const changeLine = (current: number, previous: number, against: string) => {
   }
   const pct = Math.round(((current - previous) / previous) * 100);
   return (
-    <span className="inline-flex items-center gap-1">
+    <span className="flex flex-col items-center gap-0.5">
       <span
-        className={`rounded-full px-1.5 py-px tabular-nums ${
+        className={`whitespace-nowrap rounded-full px-1.5 py-px tabular-nums ${
           pct >= 0
             ? 'bg-emerald-100/70 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
             : 'bg-red-100/70 text-red-700 dark:bg-red-500/20 dark:text-red-400'
@@ -208,16 +208,18 @@ const MorningViewContent = () => {
   const firstName = user?.firstName ?? user?.name?.split(' ')[0] ?? '';
 
   /*
-    The intelligence agents run on Trigger.dev, which is switched off. Their
-    last briefs read like today's news, so while nothing new has come in for
-    two days the home page leads with what is waiting on the team instead,
-    and drops the agent alerts tile.
+    Most intelligence agents ran on Trigger.dev, which is switched off, and
+    their last briefs read like today's news. Each agent is judged on its own:
+    only briefs from the last week show, the home page always leads with what
+    is waiting on the team, and the agent alerts tile (Market Scout's action
+    items) shows only while Scout is running.
   */
-  const newestBrief = Math.max(
-    0,
-    ...(data?.agentBriefs ?? []).map((b) => (b?.createdAt ? new Date(b.createdAt).getTime() : 0)),
+  const isFresh = (createdAt: Date | string | null | undefined) =>
+    !!createdAt && Date.now() - new Date(createdAt).getTime() < 7 * 86_400_000;
+  const freshBriefs = (data?.agentBriefs ?? []).filter(
+    (b): b is NonNullable<typeof b> => !!b && isFresh(b.createdAt),
   );
-  const briefsStale = Date.now() - newestBrief > 2 * 86_400_000;
+  const scoutRunning = freshBriefs.some((b) => b.agentId === 'scout');
 
   // Loading skeleton matching layout
   if (isLoading) {
@@ -403,7 +405,7 @@ const MorningViewContent = () => {
             tone: k.overdueInvoices > 0 ? 'red' : 'emerald',
           },
         ];
-        const shown = briefsStale ? tiles.filter((tile) => tile.label !== 'Agent alerts') : tiles;
+        const shown = scoutRunning ? tiles : tiles.filter((tile) => tile.label !== 'Agent alerts');
 
         return (
           <div
@@ -454,53 +456,31 @@ const MorningViewContent = () => {
 
       {/* ── Two-column layout ────────────────────── */}
       <div className="grid gap-5 lg:grid-cols-5">
-        {/* Left 3 cols: the agents' briefing while they run, otherwise what is waiting */}
-        <div className="min-w-0 lg:col-span-3">
-          {briefsStale ? (
-            <HomeAttentionCard overdueInvoices={data?.kpis?.overdueInvoices ?? 0} />
-          ) : (
-          <Card>
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between px-6 py-4">
-                <p className="text-[15px] font-bold">Intelligence Briefing</p>
-                <Link
-                  href="/platform/admin/agents"
-                  className="text-[12px] font-medium text-text-muted transition-colors hover:text-text-primary"
-                >
-                  View all &rarr;
-                </Link>
-              </div>
+        {/* Left 3 cols: what is waiting, then any agent briefs from the last week */}
+        <div className="min-w-0 space-y-5 lg:col-span-3">
+          <HomeAttentionCard overdueInvoices={data?.kpis?.overdueInvoices ?? 0} />
 
-              {data?.agentBriefs && data.agentBriefs.length > 0 ? (
+          {freshBriefs.length > 0 && (
+            <Card>
+              <CardContent className="p-0">
+                <div className="flex items-center justify-between px-6 py-4">
+                  <p className="text-[15px] font-bold">Intelligence Briefing</p>
+                  <Link
+                    href="/platform/admin/agents"
+                    className="text-[12px] font-medium text-text-muted transition-colors hover:text-text-primary"
+                  >
+                    View all &rarr;
+                  </Link>
+                </div>
+
                 <div className="flex flex-col">
-                  {(() => {
-                    /*
-                      The agents run on a schedule, and when the schedule stops
-                      their last briefs stay on this card reading like today's
-                      news — Market Scout's July price gaps were still here in
-                      October. Say so rather than present old findings as new.
-                    */
-                    const newest = Math.max(
-                      ...data.agentBriefs.map((b) => (b?.createdAt ? new Date(b.createdAt).getTime() : 0)),
-                    );
-                    const days = newest ? Math.floor((Date.now() - newest) / 86_400_000) : null;
-                    if (days === null || days < 3) return null;
-                    return (
-                      <div className="border-t border-amber-200 bg-amber-50 px-6 py-2.5 text-[12px] text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-300">
-                        No new briefings for {days} days — the scheduled agents are not running. These are the last findings, not today&apos;s.
-                      </div>
-                    );
-                  })()}
-                  {data.agentBriefs.map((brief) => {
-                    const config = agentConfig[brief.agentId] ?? agentConfig.scout;
-                    const isOld =
-                      !!brief?.createdAt &&
-                      Date.now() - new Date(brief.createdAt).getTime() > 7 * 86_400_000;
+                  {freshBriefs.map((brief) => {
+                    const config = agentConfig[brief.agentId] ?? agentConfig.scout!;
                     return (
                       <Link
                         key={brief.agentId}
                         href="/platform/admin/agents"
-                        className={`group flex items-start gap-3.5 border-t border-border-muted px-6 py-4 transition-colors hover:bg-surface-secondary/50 ${isOld ? 'opacity-60' : ''}`}
+                        className="group flex items-start gap-3.5 border-t border-border-muted px-6 py-4 transition-colors hover:bg-surface-secondary/50"
                       >
                         <div
                           className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${config.bgColor}`}
@@ -532,15 +512,8 @@ const MorningViewContent = () => {
                     );
                   })}
                 </div>
-              ) : (
-                <div className="border-t border-border-muted px-6 py-10 text-center">
-                  <p className="text-sm text-text-muted">
-                    No briefs yet. Intelligence runs daily &mdash; check back soon.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
           )}
         </div>
 
