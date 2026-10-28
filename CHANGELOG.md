@@ -1,3 +1,9 @@
+## [2.1.17](https://github.com/craftandculture/Craft-Culture/compare/v2.1.16...v2.1.17) (2026-10-28)
+
+### Features
+
+* **winelabs:** London price on every quote line, live refresh, cheaper monthly sweep ([5f86dd0](https://github.com/craftandculture/Craft-Culture/commit/5f86dd08cc36b0036911bdf7f7ab2685a5b83f7f))
+
 ## [2.1.16](https://github.com/craftandculture/Craft-Culture/compare/v2.1.15...v2.1.16) (2026-10-28)
 
 ### Features
