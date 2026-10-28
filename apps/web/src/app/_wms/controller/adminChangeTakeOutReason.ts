@@ -61,6 +61,7 @@ const adminChangeTakeOutReason = wmsOperatorProcedure
         reasonCode: wmsStockMovements.reasonCode,
         notes: wmsStockMovements.notes,
         performedAt: wmsStockMovements.performedAt,
+        createdAt: wmsStockMovements.createdAt,
       })
       .from(wmsStockMovements)
       .where(eq(wmsStockMovements.id, input.movementId));
@@ -68,7 +69,13 @@ const adminChangeTakeOutReason = wmsOperatorProcedure
     if (!movement?.reasonCode?.startsWith('stock_out:')) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only a take-out can have its reason changed.' });
     }
-    if (Date.now() - movement.performedAt.getTime() > CORRECTABLE_DAYS * 24 * 60 * 60 * 1000) {
+    /*
+      Counted from when the take-out was recorded, not the day it is dated.
+      Catching up on old home deliveries records bottles that left in
+      September today; dated by when they left, every one was already too
+      old to correct a typo in.
+    */
+    if (Date.now() - movement.createdAt.getTime() > CORRECTABLE_DAYS * 24 * 60 * 60 * 1000) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: `This take-out is more than ${CORRECTABLE_DAYS} days old and may already be on a statement. Ask the office to correct it.`,
