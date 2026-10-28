@@ -1,10 +1,14 @@
 import { and, desc, eq, gte, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import db from '@/database/client';
-import { logisticsJobs, logisticsShipmentItems, logisticsShipments } from '@/database/schema';
+import { logisticsJobs, logisticsShipmentItems, logisticsShipments, users } from '@/database/schema';
 
 import getBondClaimsDue from '../notifications/getBondClaimsDue';
+import { lastNewsSql, noNewsWhere } from '../utils/noNews';
 import NOT_ARRIVED from '../utils/notArrivedStatuses';
+
+const actionOwner = alias(users, 'action_owner');
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -19,6 +23,8 @@ const DAY = 24 * 60 * 60 * 1000;
  * - ETA passed: due, but not yet at the warehouse or delivered
  * - Export job with no invoice: no Zoho number and no C&C export invoice linked
  * - Draft for over 7 days: opened and never moved on
+ * - No news for 48 hours: on its way, pipeline drafts included, and nobody
+ *   has logged an update or moved its status, oldest news first
  * - Bond claims due or missed: bonded export jobs whose movement bond claim
  *   is due within 14 days or past its deadline, with the days left on each
  *
@@ -49,17 +55,21 @@ const getAttentionGroups = async (now = new Date()) => {
     eta: logisticsShipments.eta,
     jobNumber: logisticsJobs.jobNumber,
     clientName: logisticsJobs.clientName,
+    nextAction: logisticsShipments.nextAction,
+    actionOwnerName: actionOwner.name,
+    lastNewsAt: lastNewsSql,
   };
 
   const base = () =>
     db
       .select(columns)
       .from(logisticsShipments)
-      .leftJoin(logisticsJobs, eq(logisticsJobs.shipmentId, logisticsShipments.id));
+      .leftJoin(logisticsJobs, eq(logisticsJobs.shipmentId, logisticsShipments.id))
+      .leftJoin(actionOwner, eq(logisticsShipments.nextActionOwnerId, actionOwner.id));
 
   const live = and(gte(logisticsShipments.createdAt, since), ne(logisticsShipments.status, 'cancelled'));
 
-  const [noQuantities, overdue, noInvoice, staleDrafts, bondsDue] = await Promise.all([
+  const [noQuantities, overdue, noInvoice, staleDrafts, bondsDue, noNews] = await Promise.all([
     base()
       .where(and(live, sql`${cases} = 0`))
       .orderBy(desc(logisticsShipments.createdAt))
@@ -90,6 +100,7 @@ const getAttentionGroups = async (now = new Date()) => {
       .orderBy(logisticsShipments.createdAt)
       .limit(25),
     getBondClaimsDue(now),
+    base().where(and(live, noNewsWhere(now))).orderBy(lastNewsSql).limit(25),
   ]);
 
   return [
@@ -98,6 +109,7 @@ const getAttentionGroups = async (now = new Date()) => {
     { key: 'no_invoice', label: 'Export jobs with no invoice', shipments: noInvoice },
     { key: 'stale_draft', label: 'Draft for over 7 days', shipments: staleDrafts },
     { key: 'bond_claims', label: 'Bond claims due or missed', shipments: bondsDue.slice(0, 25) },
+    { key: 'no_news', label: 'No news for 48 hours', shipments: noNews },
   ];
 };
 

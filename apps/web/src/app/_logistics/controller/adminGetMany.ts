@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import db from '@/database/client';
 import {
@@ -11,7 +12,11 @@ import {
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getShipmentsSchema, { SHIPMENT_STAGE_GROUPS, type ShipmentStageGroup } from '../schemas/getShipmentsSchema';
+import { lastNewsSql, noNewsWhere } from '../utils/noNews';
 import { partyLogoSql, partyNameSql } from '../utils/shipmentPartySql';
+
+/** The person who owns the next action, apart from the shipment's creator */
+const actionOwner = alias(users, 'action_owner');
 
 /**
  * Get list of shipments with pagination and filters
@@ -24,8 +29,8 @@ import { partyLogoSql, partyNameSql } from '../utils/shipmentPartySql';
  *     type: "inbound"
  *   });
  */
-const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ input }) => {
-  const { limit, cursor, search, status, stage, type, transportMode, partnerId, sort } = input;
+const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ input, ctx }) => {
+  const { limit, cursor, search, status, stage, type, transportMode, partnerId, sort, owner, noNews } = input;
 
   // Every filter but the status ones; the tile counts are taken over these, so
   // each tile says how many it would show when pressed
@@ -41,6 +46,14 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
 
   if (partnerId) {
     conditions.push(eq(logisticsShipments.partnerId, partnerId));
+  }
+
+  if (owner === 'me') {
+    conditions.push(eq(logisticsShipments.nextActionOwnerId, ctx.user.id));
+  }
+
+  if (noNews) {
+    conditions.push(noNewsWhere()!);
   }
 
   if (search) {
@@ -137,6 +150,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
         name: users.name,
         email: users.email,
       },
+      actionOwnerName: actionOwner.name,
       jobNumber: logisticsJobs.jobNumber,
       jobKind: logisticsJobs.kind,
       partyName: partyNameSql,
@@ -145,9 +159,12 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     .from(logisticsShipments)
     .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
     .leftJoin(users, eq(logisticsShipments.createdBy, users.id))
+    .leftJoin(actionOwner, eq(logisticsShipments.nextActionOwnerId, actionOwner.id))
     .leftJoin(logisticsJobs, eq(logisticsJobs.shipmentId, logisticsShipments.id))
     .where(whereClause)
     .orderBy(
+      // An owner's own list leads with what has gone quietest
+      ...(owner === 'me' ? [asc(lastNewsSql)] : []),
       ...(sort === 'eta'
         ? [sql`${logisticsShipments.eta} IS NULL`, asc(logisticsShipments.eta)]
         : [desc(logisticsShipments.createdAt)]),
@@ -162,6 +179,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     totalBottles: Number(row.itemBottles),
     partner: row.partner,
     createdByUser: row.createdByUser,
+    actionOwnerName: row.actionOwnerName,
     jobNumber: row.jobNumber,
     jobKind: row.jobKind,
     partyName: row.partyName,

@@ -3130,6 +3130,22 @@ export const logisticsShipments = pgTable(
     internalNotes: text('internal_notes'),
     partnerNotes: text('partner_notes'),
 
+    /**
+     * The one thing that moves this shipment on next, and who does it.
+     *
+     * Kept on the shipment so the board, an owner's own list and the morning
+     * #logistics post read the same line; it used to live in a Word tracker
+     * and in whoever was asked that day.
+     */
+    nextAction: text('next_action'),
+    nextActionOwnerId: uuid('next_action_owner_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    /** The carrier has confirmed the ETA; false while it is an estimate */
+    etaConfirmed: boolean('eta_confirmed').notNull().default(false),
+    /** When someone last logged news on it; the "no news" clock runs from here */
+    lastUpdateAt: timestamp('last_update_at', { mode: 'date' }),
+
     // Audit
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,

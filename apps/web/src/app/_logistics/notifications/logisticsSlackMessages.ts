@@ -135,18 +135,30 @@ export { shortDate };
  *
  * @param sections - The sections, in the order to show them
  * @param mention - Slack mention text such as `<@U123>`, or empty
+ * @param health - How many shipments on their way had news in the last day
  * @returns Slack mrkdwn text, or null when there is nothing to say
  */
-export const logisticsDigestMessage = (sections: DigestSection[], mention = '') => {
+export const logisticsDigestMessage = (sections: DigestSection[], mention = '', health?: DigestHealth) => {
   const live = sections.filter((s) => s.items.length > 0);
   if (!live.length) return null;
 
   const toAct = live.filter((s) => s.action).reduce((n, s) => n + s.items.length, 0);
   const head = `*Logistics this morning*${mention && toAct ? ` · ${mention} ${toAct} to action` : ''}`;
   const lines = live.map((s) => `• *${s.title} (${s.items.length}):* ${list(s.items)}`);
+  // How well the board is being kept, so a quiet board is not mistaken for a quiet week
+  const kept = health?.active
+    ? [`Board health: *${health.updated} of ${health.active}* shipments on their way have news from the last 24 hours`]
+    : [];
 
-  return [head, ...lines, `<${LOGISTICS_BOARD_URL}|Open the logistics board>`].join('\n');
+  return [head, ...kept, ...lines, `<${LOGISTICS_BOARD_URL}|Open the logistics board>`].join('\n');
 };
+
+export interface DigestHealth {
+  /** Shipments not yet at the warehouse, pipeline drafts included */
+  active: number;
+  /** Of those, how many had news logged in the last 24 hours */
+  updated: number;
+}
 
 export interface WeeklySummary {
   from: Date;

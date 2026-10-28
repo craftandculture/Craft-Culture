@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 
 import ActivityLog from '@/app/_logistics/components/ActivityLog';
 import LogisticsDocumentUpload from '@/app/_logistics/components/DocumentUpload';
+import LogUpdateSheet from '@/app/_logistics/components/LogUpdateSheet';
 import EditableField from '@/app/_logistics/components/shipment/EditableField';
 import InlineConfirm from '@/app/_logistics/components/shipment/InlineConfirm';
 import ShipmentReconciliation from '@/app/_logistics/components/ShipmentReconciliation';
@@ -353,6 +354,8 @@ const ShipmentDetailPage = () => {
     notForSale: null as boolean | null,
   });
 
+  const [isLoggingUpdate, setIsLoggingUpdate] = useState(false);
+  const { data: teamData } = useQuery(api.logistics.admin.getTeam.queryOptions());
   const { data: shipment, isLoading, isError, error, refetch } = useQuery({
     ...api.logistics.admin.getOne.queryOptions({ id: shipmentId }),
   });
@@ -1045,6 +1048,13 @@ const ShipmentDetailPage = () => {
                 Get freight quotes
               </Link>
             )}
+            <button
+              type="button"
+              onClick={() => setIsLoggingUpdate(true)}
+              className="inline-flex h-8 items-center rounded-lg border border-border-primary px-3 text-sm font-semibold text-text-primary transition-colors hover:bg-fill-primary-hover"
+            >
+              Update
+            </button>
             <Button variant="outline" size="sm" onClick={() => void refetch()}>
               <Icon icon={IconRefresh} size="sm" />
             </Button>
@@ -1081,6 +1091,46 @@ const ShipmentDetailPage = () => {
             )}
           </div>
         </div>
+
+        {/* What moves it on next, and how fresh the news is: the line the board and the morning post read */}
+        {(shipment.nextAction || shipment.lastUpdateAt || shipment.eta) && (
+          <button
+            type="button"
+            onClick={() => setIsLoggingUpdate(true)}
+            className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-border-muted bg-surface-primary px-4 py-3 text-left text-sm transition-colors hover:bg-fill-primary-hover"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold uppercase tracking-wider text-text-muted">Next action</span>
+              <span className="text-text-primary">
+                {shipment.nextAction ?? 'None set'}
+                {shipment.nextActionOwnerId && (
+                  <span className="text-text-muted">
+                    {' · '}
+                    {teamData?.team.find((m) => m.id === shipment.nextActionOwnerId)?.name ?? 'Owner'}
+                  </span>
+                )}
+              </span>
+            </span>
+            {shipment.eta && (
+              <span className="text-text-muted">
+                ETA {new Date(shipment.eta).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                {', '}
+                <span className={shipment.etaConfirmed ? 'font-semibold text-emerald-700 dark:text-emerald-400' : ''}>
+                  {shipment.etaConfirmed ? 'confirmed' : 'estimate'}
+                </span>
+              </span>
+            )}
+            <span className="text-text-muted">
+              Last news{' '}
+              {new Date(shipment.lastUpdateAt ?? shipment.createdAt).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+              })}
+            </span>
+          </button>
+        )}
+
+        <LogUpdateSheet shipment={isLoggingUpdate ? shipment : null} onClose={() => setIsLoggingUpdate(false)} />
 
         {/* Status Stepper */}
         <Card>

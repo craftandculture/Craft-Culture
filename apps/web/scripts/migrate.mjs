@@ -4130,6 +4130,24 @@ const runMigrations = async () => {
     `),
     );
 
+    /*
+      Shipment next actions (28 Oct 2026). Who moves each shipment on next,
+      whether its ETA is confirmed, and when news was last logged, so the
+      board, an owner's own list and the morning digest replace the daily
+      Word tracker.
+    */
+    for (const [column, type] of [
+      ['next_action', 'text'],
+      ['next_action_owner_id', 'uuid REFERENCES "users"("id") ON DELETE SET NULL'],
+      ['eta_confirmed', 'boolean NOT NULL DEFAULT false'],
+      ['last_update_at', 'timestamp'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+    console.log('✅ Shipment next actions ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
