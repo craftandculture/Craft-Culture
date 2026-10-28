@@ -11,6 +11,24 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 
 import PrinterSettings from './PrinterSettings';
 
+/* Route segments under WMS that have no page of their own */
+const SEGMENTS_WITHOUT_PAGE = new Set(['/platform/admin/wms/ownership']);
+
+/**
+ * The parent route of a WMS sub-page, so back from a pick list goes to the
+ * pick lists rather than all the way to the dashboard
+ *
+ * @example
+ *   parentRouteOf('/platform/admin/wms/pick/abc'); // '/platform/admin/wms/pick'
+ */
+const parentRouteOf = (pathname: string) => {
+  let parent = pathname.replace(/\/+$/, '');
+  do {
+    parent = parent.slice(0, parent.lastIndexOf('/'));
+  } while (SEGMENTS_WITHOUT_PAGE.has(parent));
+  return parent.startsWith('/platform/admin/wms') ? parent : '/platform/admin/wms';
+};
+
 interface WMSHeaderProps {
   userName: string;
 }
@@ -26,6 +44,8 @@ const WMSHeader = ({ userName }: WMSHeaderProps) => {
 
   // Determine if we're on the WMS dashboard or a sub-page
   const isWMSDashboard = pathname === '/platform/admin/wms';
+  const backHref = isWMSDashboard ? '/platform/admin/home' : parentRouteOf(pathname);
+  const backLabel = isWMSDashboard ? 'Admin' : 'Back';
 
   return (
     <>
@@ -33,25 +53,14 @@ const WMSHeader = ({ userName }: WMSHeaderProps) => {
         <div className="flex h-14 items-center justify-between px-4">
           {/* Left side - Back button or Menu */}
           <div className="flex items-center gap-3">
-            {isWMSDashboard ? (
-              // On dashboard, show link back to admin home
-              <Link
-                href="/platform/admin/home"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
-              >
-                <IconArrowLeft className="h-5 w-5" />
-                <span className="hidden text-sm font-medium sm:inline">Admin</span>
-              </Link>
-            ) : (
-              // On sub-pages, show link back to WMS dashboard
-              <Link
-                href="/platform/admin/wms"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
-              >
-                <IconArrowLeft className="h-5 w-5" />
-                <span className="hidden text-sm font-medium sm:inline">WMS</span>
-              </Link>
-            )}
+            <Link
+              href={backHref}
+              aria-label={isWMSDashboard ? 'Back to Admin' : 'Back'}
+              className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
+            >
+              <IconArrowLeft className="h-5 w-5" />
+              <span className="hidden text-sm font-medium sm:inline">{backLabel}</span>
+            </Link>
 
             {/* Title */}
             <div className="flex items-center gap-2">
@@ -77,7 +86,7 @@ const WMSHeader = ({ userName }: WMSHeaderProps) => {
             <div className="relative">
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
+                className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
               >
                 <Icon icon={IconUser} size="sm" />
                 <span className="hidden text-sm font-medium sm:inline">{userName}</span>

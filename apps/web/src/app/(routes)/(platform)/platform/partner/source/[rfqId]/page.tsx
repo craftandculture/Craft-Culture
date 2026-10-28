@@ -1274,8 +1274,8 @@ const PartnerRfqDetailPage = () => {
                               </div>
                             </div>
 
-                            {/* Pricing & Stock Grid */}
-                            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                            {/* Pricing & Stock Grid: stacked on phones */}
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-7">
                               <div>
                                 <label className="block text-[10px] font-medium text-text-muted mb-0.5">Price/cs *</label>
                                 <div className="relative">

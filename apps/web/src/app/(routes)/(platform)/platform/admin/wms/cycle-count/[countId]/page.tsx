@@ -11,7 +11,7 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -20,6 +20,8 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ScanInput from '@/app/_wms/components/ScanInput';
+import caseScanMatchesLwin from '@/app/_wms/utils/caseScanMatchesLwin';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 /**
@@ -42,6 +44,9 @@ const CycleCountDetailPage = () => {
   const [approvals, setApprovals] = useState<Record<string, boolean>>({});
   /* The line being corrected at review, and the count being typed for it */
   const [correcting, setCorrecting] = useState<{ itemId: string; value: string } | null>(null);
+  /* The quantity input of each line, so a scan can jump straight to it */
+  const qtyInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     ...api.wms.admin.cycleCounts.getOne.queryOptions({ countId }),
@@ -143,6 +148,28 @@ const CycleCountDetailPage = () => {
     }
   }, [correcting, countId, trpcClient, refetch]);
 
+  /*
+    A scanned case or stock label takes the operator to its line. Uncounted
+    lines win, so scanning the same wine twice moves on rather than back.
+    Matched pack-agnostically, as on the pick screen.
+  */
+  const handleScan = useCallback(
+    (barcode: string) => {
+      if (!data) return;
+      setScanError(null);
+      const matches = data.items.filter((i) => caseScanMatchesLwin(barcode, i.lwin18));
+      const target = matches.find((i) => i.countedQuantity === null) ?? matches[0];
+      if (!target) {
+        setScanError(`Not expected at this location: ${barcode}`);
+        return;
+      }
+      const input = qtyInputRefs.current[target.id];
+      input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      input?.focus();
+    },
+    [data],
+  );
+
   const { mutate: completeCount } = completeMutation;
   const handleCompleteCount = useCallback(() => {
     completeCount({ countId });
@@ -209,7 +236,10 @@ const CycleCountDetailPage = () => {
     return parts.length > 0 ? parts.join('') : null;
   };
 
-  const renderCorrection = (item: { id: string; countedQuantity: number | null }) =>
+  /* Stock is held in cases, except single-bottle rows (caseConfig 1) */
+  const unitOf = (item: { caseConfig?: number | null }) => (item.caseConfig === 1 ? 'bottles' : 'cases');
+
+  const renderCorrection = (item: { id: string; countedQuantity: number | null; caseConfig?: number | null }) =>
     correcting?.itemId === item.id ? (
       <div className="mt-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <input
@@ -224,10 +254,13 @@ const CycleCountDetailPage = () => {
           }}
           className="h-12 w-24 rounded-lg border border-border-muted bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
         />
-        <Button size="sm" onClick={() => void handleCorrect()} disabled={savingItemId === item.id}>
+        <Typography variant="bodySm" colorRole="muted">
+          {unitOf(item)}
+        </Typography>
+        <Button size="xl" className="h-12" onClick={() => void handleCorrect()} disabled={savingItemId === item.id}>
           <ButtonContent iconLeft={savingItemId === item.id ? IconLoader2 : IconCheck}>Save</ButtonContent>
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => setCorrecting(null)}>
+        <Button size="xl" variant="ghost" className="h-12" onClick={() => setCorrecting(null)}>
           Cancel
         </Button>
       </div>
@@ -298,7 +331,8 @@ const CycleCountDetailPage = () => {
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-lg bg-fill-secondary p-3 text-center">
-            <Typography variant="h4">{data.expectedItems ?? 0}</Typography>
+            {/* Blind count: the total is not shown while counting */}
+            <Typography variant="h4">{status === 'in_progress' ? 'Hidden' : (data.expectedItems ?? 0)}</Typography>
             <Typography variant="bodySm" colorRole="muted">Expected</Typography>
           </div>
           <div className="rounded-lg bg-fill-secondary p-3 text-center">
@@ -352,7 +386,7 @@ const CycleCountDetailPage = () => {
                           </div>
                         </div>
                         <Typography variant="bodySm" className="font-semibold">
-                          {item.expectedQuantity} cases
+                          {item.expectedQuantity} {unitOf(item)}
                         </Typography>
                       </div>
                     ))}
@@ -391,6 +425,13 @@ const CycleCountDetailPage = () => {
               </div>
             </div>
 
+            {/* Scan a case to jump to its line */}
+            <ScanInput
+              onScan={handleScan}
+              placeholder="Scan case barcode..."
+              error={scanError ?? undefined}
+            />
+
             {/* Item list with inputs */}
             <div className="space-y-3">
               {data.items.map((item) => {
@@ -422,10 +463,10 @@ const CycleCountDetailPage = () => {
                         </div>
                       </div>
                       <div className="mt-3 flex items-center gap-3">
-                        <Typography variant="bodySm" colorRole="muted" className="whitespace-nowrap">
-                          Expected: {item.expectedQuantity}
-                        </Typography>
                         <input
+                          ref={(el) => {
+                            qtyInputRefs.current[item.id] = el;
+                          }}
                           type="number"
                           min={0}
                           inputMode="numeric"
@@ -436,9 +477,15 @@ const CycleCountDetailPage = () => {
                               [item.id]: e.target.value,
                             }))
                           }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') void handleSaveItem(item.id);
+                          }}
                           placeholder="Qty"
                           className="h-12 w-24 rounded-lg border border-border-muted bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
                         />
+                        <Typography variant="bodySm" colorRole="muted">
+                          {unitOf(item)}
+                        </Typography>
                         <button
                           onClick={() => handleSaveItem(item.id)}
                           disabled={isSaving || currentValue === ''}
@@ -454,6 +501,12 @@ const CycleCountDetailPage = () => {
                             <Icon icon={IconCheck} size="md" />
                           )}
                         </button>
+                        {/* Blind count: expected shows only once a count is saved */}
+                        {hasBeenCounted && (
+                          <Typography variant="bodySm" colorRole="muted" className="ml-auto whitespace-nowrap">
+                            Expected: {item.expectedQuantity}
+                          </Typography>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -571,7 +624,7 @@ const CycleCountDetailPage = () => {
                         <div key={item.id} className="border-b border-border-muted/50 py-1 last:border-0">
                           <div className="flex items-center justify-between text-xs text-text-muted">
                             <span>{item.productName}</span>
-                            <span>{item.expectedQuantity} cases</span>
+                            <span>{item.expectedQuantity} {unitOf(item)}</span>
                           </div>
                           {renderCorrection(item)}
                         </div>
@@ -649,7 +702,7 @@ const CycleCountDetailPage = () => {
                         </div>
                         <div className="text-right">
                           <Typography variant="bodySm" className="font-semibold">
-                            {item.countedQuantity} cases
+                            {item.countedQuantity} {unitOf(item)}
                           </Typography>
                           {disc !== 0 && (
                             <Typography

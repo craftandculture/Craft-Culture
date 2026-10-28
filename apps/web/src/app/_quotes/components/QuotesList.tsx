@@ -172,7 +172,7 @@ const QuotesList = () => {
     }
   };
 
-  const columns: ColumnDef<Quote & { createdBy?: { id: string; name: string | null; email: string } | null }>[] = [
+  const columns: ColumnDef<Quote>[] = [
     {
       accessorKey: 'name',
       header: 'Quote Name',
@@ -181,30 +181,6 @@ const QuotesList = () => {
           {row.original.name}
         </Typography>
       ),
-    },
-    {
-      accessorKey: 'createdBy',
-      header: () => <span className="hidden lg:inline">Created By</span>,
-      cell: ({ row }) => {
-        const createdBy = row.original.createdBy;
-        return (
-          <div className="hidden flex-col gap-0.5 lg:flex">
-            {createdBy?.name && (
-              <Typography variant="bodySm">{createdBy.name}</Typography>
-            )}
-            {createdBy?.email && (
-              <Typography variant="bodyXs" colorRole="muted">
-                {createdBy.email}
-              </Typography>
-            )}
-            {!createdBy?.name && (
-              <Typography variant="bodySm" colorRole="muted">
-                -
-              </Typography>
-            )}
-          </div>
-        );
-      },
     },
     {
       accessorKey: 'clientName',

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertCircle,
   IconChevronRight,
   IconCurrencyDollar,
   IconInbox,
@@ -29,7 +30,7 @@ const PartnerSupplierOrdersPage = () => {
   const api = useTRPC();
   const [statusFilter, setStatusFilter] = useState<SupplierOrderStatus | 'all'>('all');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     ...api.source.partner.supplierOrders.getMany.queryOptions({
       limit: 50,
       status: statusFilter === 'all' ? undefined : statusFilter,
@@ -113,6 +114,21 @@ const PartnerSupplierOrdersPage = () => {
               </Card>
             ))}
           </div>
+        ) : isError ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <IconAlertCircle className="h-12 w-12 text-text-muted mx-auto mb-4" />
+              <Typography variant="headingSm" className="mb-2">
+                Orders could not be loaded
+              </Typography>
+              <Typography variant="bodyMd" colorRole="muted" className="max-w-sm mx-auto mb-4">
+                Please try again in a moment.
+              </Typography>
+              <Button variant="outline" size="sm" onClick={() => void refetch()}>
+                <ButtonContent>Try again</ButtonContent>
+              </Button>
+            </CardContent>
+          </Card>
         ) : orders.length === 0 ? (
           <Card className="border-dashed border-2">
             <CardContent className="py-12 text-center">

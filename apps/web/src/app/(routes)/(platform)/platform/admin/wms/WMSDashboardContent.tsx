@@ -34,6 +34,8 @@ import ConnectionStatus from '@/app/_wms/components/ConnectionStatus';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import useTRPC from '@/lib/trpc/browser';
 
+import WMSDashboardSkeleton from './WMSDashboardSkeleton';
+
 // Quick action configuration
 interface QuickAction {
   id: string;
@@ -165,7 +167,7 @@ const WMSDashboardContent = () => {
   })();
 
   // Fetch comprehensive overview (will use prefetched data)
-  const { data: overview } = useQuery({
+  const { data: overview, isLoading: isOverviewLoading } = useQuery({
     ...api.wms.admin.stock.getOverview.queryOptions({}),
   });
 
@@ -195,6 +197,8 @@ const WMSDashboardContent = () => {
 
   const pendingRequestCount = partnerRequests?.summary?.pendingCount ?? 0;
   const hasReconcileIssues = reconcileData?.summary && !reconcileData.summary.isReconciled;
+
+  if (isOverviewLoading) return <WMSDashboardSkeleton />;
 
   return (
     <>
