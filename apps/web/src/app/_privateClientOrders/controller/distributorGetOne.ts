@@ -2,10 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
 
-import {
-  STAFF_ONLY_ACTIVITY_ACTIONS,
-  partnerSafeActivity,
-} from '@/app/_privateClientOrders/utils/staffOnlyActivity';
+import counterpartySafeActivity from '@/app/_privateClientOrders/utils/counterpartySafeActivity';
+import { STAFF_ONLY_ACTIVITY_ACTIONS } from '@/app/_privateClientOrders/utils/staffOnlyActivity';
 import db from '@/database/client';
 import {
   partners,
@@ -20,6 +18,8 @@ import { distributorProcedure } from '@/lib/trpc/procedures';
 import { DISTRIBUTOR_VISIBLE_STATUSES } from '../constants';
 import distributorItemView from '../utils/distributorItemView';
 import distributorOrderView from '../utils/distributorOrderView';
+import distributorPartnerView from '../utils/distributorPartnerView';
+import getCraftCulturePartnerId from '../utils/getCraftCulturePartnerId';
 
 /**
  * Get a single private client order by ID for distributor
@@ -35,11 +35,6 @@ const distributorGetOne = distributorProcedure
     const [orderResult] = await db
       .select({
         order: privateClientOrders,
-        partner: {
-          id: partners.id,
-          businessName: partners.businessName,
-          logoUrl: partners.logoUrl,
-        },
         client: {
           id: privateClientContacts.id,
           name: privateClientContacts.name,
@@ -49,7 +44,6 @@ const distributorGetOne = distributorProcedure
         },
       })
       .from(privateClientOrders)
-      .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
       .leftJoin(privateClientContacts, eq(privateClientOrders.clientId, privateClientContacts.id))
       .where(
         and(
@@ -102,6 +96,11 @@ const distributorGetOne = distributorProcedure
       )
       .orderBy(privateClientOrderActivityLogs.createdAt);
 
+    // C&C's own orders (Private Cellar deliveries) may say so; nobody else is named
+    const craftCulturePartnerId = await getCraftCulturePartnerId();
+    const placedByCraftCulture =
+      !!orderResult.order.partnerId && orderResult.order.partnerId === craftCulturePartnerId;
+
     // Get distributor details (the current user's partner) for finance email
     const [distributor] = await db
       .select({
@@ -116,7 +115,8 @@ const distributorGetOne = distributorProcedure
 
     return {
       ...distributorOrderView(orderResult.order),
-      partner: orderResult.partner,
+      // The wine partner behind the order is never named to the distributor
+      partner: distributorPartnerView(orderResult.order.partnerId, craftCulturePartnerId),
       /*
         The City Drinks account details on a client are City Drinks' own
         record, so only a distributor that verifies clients is sent them.
@@ -135,11 +135,13 @@ const distributorGetOne = distributorProcedure
       distributor,
       // Without the partner's own prices, which would show C&C's margin
       items: distributorItemView(items, orderResult.order),
-      activityLogs: activityLogs.map((row) => ({
-        ...partnerSafeActivity(row.log),
-        user: row.user,
-        partner: row.partner,
-      })),
+      activityLogs: activityLogs.map((row) =>
+        counterpartySafeActivity(
+          row,
+          placedByCraftCulture ? null : orderResult.order.partnerId,
+          'Trade partner',
+        ),
+      ),
     };
   });
 

@@ -168,14 +168,7 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
       notes: 'Partner confirmed client payment received. Awaiting distributor verification.',
     });
 
-    // Get partner name for notification
-    const partner = order.partnerId
-      ? await db.query.partners.findFirst({
-          where: { id: order.partnerId },
-          columns: { businessName: true },
-        })
-      : null;
-
+    // The distributor is never told which trade partner placed the order
     // Notify distributor members to verify the payment
     if (order.distributorId) {
       const distributorMembers = await db
@@ -189,7 +182,7 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
           partnerId: order.distributorId,
           type: 'action_required',
           title: 'Payment Verification Required',
-          message: `${partner?.businessName ?? 'Partner'} confirmed client payment for order ${updatedOrder.orderNumber}. Please verify and schedule delivery.`,
+          message: `Client payment confirmed for order ${updatedOrder.orderNumber}. Please verify and schedule delivery.`,
           entityType: 'private_client_order',
           entityId: orderId,
           actionUrl: `/platform/distributor/orders/${orderId}`,

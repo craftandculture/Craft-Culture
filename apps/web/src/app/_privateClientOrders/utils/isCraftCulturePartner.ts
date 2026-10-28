@@ -1,7 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
-
-import db from '@/database/client';
-import { partners } from '@/database/schema';
+import getCraftCulturePartnerId from './getCraftCulturePartnerId';
 
 /**
  * Whether an order's partner record is Craft & Culture itself
@@ -20,21 +17,7 @@ import { partners } from '@/database/schema';
 const isCraftCulturePartner = async (partnerId: string | null) => {
   if (!partnerId) return false;
 
-  const [craftCulture] = await db
-    .select({ id: partners.id, type: partners.type })
-    .from(partners)
-    .where(
-      and(
-        sql`lower(trim(${partners.businessName})) = 'craft & culture'`,
-        eq(partners.status, 'active'),
-      ),
-    )
-    .orderBy(asc(partners.createdAt))
-    .limit(1);
-
-  return (
-    craftCulture?.id === partnerId && craftCulture.type !== 'private_collector'
-  );
+  return (await getCraftCulturePartnerId()) === partnerId;
 };
 
 export default isCraftCulturePartner;

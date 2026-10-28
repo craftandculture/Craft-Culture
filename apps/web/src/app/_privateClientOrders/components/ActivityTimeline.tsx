@@ -24,7 +24,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrderActivityLog } from '@/database/schema';
 
 interface ActivityWithUser extends PrivateClientOrderActivityLog {
-  user?: { id: string; name: string; email: string } | null;
+  user?: { id: string; name: string; email?: string } | null;
   partner?: { id: string; businessName: string } | null;
 }
 

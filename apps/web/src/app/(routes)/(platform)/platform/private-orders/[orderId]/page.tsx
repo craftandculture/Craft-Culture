@@ -3,7 +3,6 @@
 import {
   IconAlertCircle,
   IconArrowLeft,
-  IconBuilding,
   IconCalendar,
   IconCheck,
   IconChevronDown,
@@ -603,7 +602,7 @@ const PrivateOrderDetailPage = () => {
                       Invoice Received - Acknowledgment Required
                     </Typography>
                     <Typography variant="bodySm" colorRole="muted">
-                      <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> has uploaded an invoice.
+                      The distributor has uploaded an invoice.
                       Please review and forward it to your client for payment.
                     </Typography>
                   </div>
@@ -749,7 +748,7 @@ const PrivateOrderDetailPage = () => {
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
                     Client payment has been confirmed.{' '}
-                    <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> will contact your client to arrange delivery.
+                    The distributor will contact your client to arrange delivery.
                   </Typography>
                   {order.clientPaidAt && (
                     <Typography variant="bodyXs" colorRole="muted" className="mt-1">
@@ -780,7 +779,7 @@ const PrivateOrderDetailPage = () => {
                     Delivery Being Scheduled
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> is contacting your client to arrange delivery.
+                    The distributor is contacting your client to arrange delivery.
                   </Typography>
                   {/* Show contact attempts if any */}
                   {order.deliveryContactAttempts && (order.deliveryContactAttempts as Array<{ attemptedAt: string; notes: string }>).length > 0 && (
@@ -858,8 +857,7 @@ const PrivateOrderDetailPage = () => {
                     Out for Delivery
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    Your client&apos;s order is currently being delivered by{' '}
-                    <strong>{order.distributor?.businessName ?? 'the distributor'}</strong>.
+                    Your client&apos;s order is currently being delivered by the distributor.
                   </Typography>
                   {order.outForDeliveryAt && (
                     <Typography variant="bodyXs" colorRole="muted" className="mt-1">
@@ -1330,47 +1328,6 @@ const PrivateOrderDetailPage = () => {
             </CardContent>
           </Card>
 
-          {/* Distributor Info */}
-          <Card>
-            <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-3">
-                Distributor
-              </Typography>
-              {order.distributor ? (
-                <div className="flex items-center gap-3">
-                  {order.distributor.logoUrl ? (
-                    <Image
-                      src={order.distributor.logoUrl}
-                      alt={order.distributor.businessName}
-                      width={44}
-                      height={44}
-                      className="rounded-lg object-contain"
-                    />
-                  ) : (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-fill-muted">
-                      <Icon icon={IconBuilding} size="md" colorRole="muted" />
-                    </div>
-                  )}
-                  <div>
-                    <Typography variant="bodySm" className="font-semibold">
-                      {order.distributor.businessName}
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted">
-                      Assigned Distributor
-                    </Typography>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 text-text-muted">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg border-2 border-dashed border-border-muted">
-                    <Icon icon={IconBuilding} size="md" colorRole="muted" />
-                  </div>
-                  <Typography variant="bodySm">Not yet assigned</Typography>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Key Dates */}
           <Card>
             <CardContent className="p-4">
@@ -1471,7 +1428,7 @@ const PrivateOrderDetailPage = () => {
             <OrderNoteComposer
               audience="partner"
               orderId={order.id}
-              distributorName={order.distributor?.businessName}
+              distributorName={order.distributor ? 'Distributor' : null}
             />
             <ActivityTimeline activities={order.activityLogs ?? []} />
           </CardContent>

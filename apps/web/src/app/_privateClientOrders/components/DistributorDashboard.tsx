@@ -4,7 +4,6 @@ import {
   IconArrowRight,
   IconBarcode,
   IconBook,
-  IconBuilding,
   IconCash,
   IconChevronRight,
   IconPackage,
@@ -15,7 +14,6 @@ import {
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -88,7 +86,7 @@ const DistributorDashboard = () => {
     );
   }
 
-  const { kpis, queues, stages: stageData, recentOrders, ordersByPartner } = data;
+  const { kpis, queues, stages: stageData, recentOrders } = data;
 
   const tasks = [
     { key: 'verify', icon: IconShieldCheck },
@@ -128,7 +126,6 @@ const DistributorDashboard = () => {
   ] as const;
   const inFlight = stages.reduce((sum, st) => sum + stageData[st.key].count, 0);
 
-  const totalPartnerValue = ordersByPartner.reduce((sum, p) => sum + p.totalValueUsd, 0);
 
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
@@ -335,8 +332,8 @@ const DistributorDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Recent orders and partners */}
-      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
+      {/* Recent orders. The wine partner behind each is never shown to a distributor */}
+      <div className="grid gap-4">
         <Card>
           <CardContent className="p-4 sm:p-5">
             <div className="mb-2 flex items-center justify-between">
@@ -374,21 +371,6 @@ const DistributorDashboard = () => {
                       </div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-text-muted">
                         <Typography variant="bodyXs">{order.clientName}</Typography>
-                        <span className="hidden sm:inline">·</span>
-                        <div className="hidden items-center gap-1 sm:flex">
-                          {order.partner?.logoUrl ? (
-                            <Image
-                              src={order.partner.logoUrl}
-                              alt={order.partner?.businessName ?? 'Partner'}
-                              width={16}
-                              height={16}
-                              className="h-4 w-4 rounded object-contain"
-                            />
-                          ) : null}
-                          <Typography variant="bodyXs">
-                            {order.partner?.businessName ?? 'Unknown'}
-                          </Typography>
-                        </div>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
@@ -406,76 +388,6 @@ const DistributorDashboard = () => {
                     />
                   </Link>
                 ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 sm:p-5">
-            <div className="mb-2">
-              <Typography variant="headingSm" className="font-semibold">
-                Orders by Partner
-              </Typography>
-              <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                Share of value, all time
-              </Typography>
-            </div>
-
-            {ordersByPartner.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-8">
-                <Icon icon={IconBuilding} size="lg" className="text-text-muted" />
-                <Typography variant="bodySm" colorRole="muted">
-                  No partner orders yet
-                </Typography>
-              </div>
-            ) : (
-              <div className="flex flex-col divide-y divide-border-muted">
-                {ordersByPartner.map((p) => {
-                  // Share of the book by value, so the bar and the figure agree
-                  const percentage =
-                    totalPartnerValue > 0
-                      ? Math.round((p.totalValueUsd / totalPartnerValue) * 100)
-                      : 0;
-                  return (
-                    <div key={p.partnerId ?? p.partnerName} className="py-3">
-                      <div className="mb-2 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {p.partnerLogoUrl ? (
-                            <Image
-                              src={p.partnerLogoUrl}
-                              alt={p.partnerName}
-                              width={32}
-                              height={32}
-                              className="h-8 w-8 rounded-lg object-contain"
-                            />
-                          ) : (
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
-                              <Icon icon={IconBuilding} size="sm" className="text-text-muted" />
-                            </div>
-                          )}
-                          <div>
-                            <Typography variant="bodySm" className="font-medium">
-                              {p.partnerName}
-                            </Typography>
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {p.orderCount} orders · {p.activeCount} active
-                            </Typography>
-                          </div>
-                        </div>
-                        <Typography variant="bodySm" className="whitespace-nowrap font-medium">
-                          {formatCurrency(p.totalValueUsd, p.totalValueAed)}
-                        </Typography>
-                      </div>
-                      <div className="relative h-2 overflow-hidden rounded-full bg-surface-secondary">
-                        <div
-                          className="absolute left-0 top-0 h-full rounded-full bg-fill-brand transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             )}
           </CardContent>

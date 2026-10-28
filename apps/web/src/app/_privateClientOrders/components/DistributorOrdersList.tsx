@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  IconBuilding,
   IconCheck,
   IconDots,
   IconDownload,
@@ -14,7 +13,6 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -344,30 +342,6 @@ const DistributorOrdersList = () => {
       ),
     },
     {
-      accessorKey: 'partner.businessName',
-      header: 'Partner',
-      cell: ({ row }) => (
-        <div className="flex flex-col items-center gap-1.5">
-          {row.original.partner?.logoUrl ? (
-            <Image
-              src={row.original.partner.logoUrl}
-              alt={row.original.partner?.businessName ?? 'Partner'}
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded-lg object-contain"
-            />
-          ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-secondary">
-              <Icon icon={IconBuilding} size="md" colorRole="muted" />
-            </div>
-          )}
-          <Typography variant="bodyXs" className="text-center">
-            {row.original.partner?.businessName ?? '-'}
-          </Typography>
-        </div>
-      ),
-    },
-    {
       accessorKey: 'clientName',
       header: 'Client',
       cell: ({ row }) => (
@@ -666,25 +640,9 @@ const DistributorOrdersList = () => {
                 >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    {order.partner?.logoUrl ? (
-                      <Image
-                        src={order.partner.logoUrl}
-                        alt={order.partner?.businessName ?? 'Partner'}
-                        width={32}
-                        height={32}
-                        className="h-8 w-8 rounded-lg object-contain"
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
-                        <Icon icon={IconBuilding} size="sm" colorRole="muted" />
-                      </div>
-                    )}
                     <div>
                       <Typography variant="bodySm" className="font-mono font-medium">
                         {order.orderNumber}
-                      </Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {order.partner?.businessName ?? '-'}
                       </Typography>
                       {needsSku(order) && (
                         <span className="mt-0.5 inline-block rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">

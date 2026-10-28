@@ -1194,7 +1194,7 @@ const DistributorOrderDetailPage = () => {
                       {order.partner.businessName}
                     </Typography>
                     <Typography variant="bodyXs" colorRole="muted">
-                      Wine Partner
+                      Placed by
                     </Typography>
                   </div>
                 </div>
@@ -1325,7 +1325,7 @@ const DistributorOrderDetailPage = () => {
             <OrderNoteComposer
               audience="distributor"
               orderId={order.id}
-              partnerName={order.partner?.businessName}
+              partnerName={order.partner ? order.partner.businessName : null}
               distributorName={order.distributor?.businessName}
             />
             <ActivityTimeline activities={order.activityLogs ?? []} />

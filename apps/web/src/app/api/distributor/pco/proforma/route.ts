@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import distributorItemView from '@/app/_privateClientOrders/utils/distributorItemView';
+import getCraftCulturePartnerId from '@/app/_privateClientOrders/utils/getCraftCulturePartnerId';
 import renderProformaInvoicePDF from '@/app/_privateClientOrders/utils/renderProformaInvoicePDF';
 import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
@@ -65,17 +66,13 @@ export async function GET(request: NextRequest) {
       .where(eq(privateClientOrderItems.orderId, order.id));
 
     /*
-      The wine partner is named, as on the order page, but their email and
-      phone are not printed: the distributor deals with C&C, not the partner.
+      The wine partner is never named to the distributor, on the order page or
+      here. C&C's own orders (Private Cellar deliveries) may say they are C&C's.
     */
-    let partner: { businessName: string } | null = null;
-    if (order.partnerId) {
-      const [partnerResult] = await db
-        .select({ businessName: partners.businessName })
-        .from(partners)
-        .where(eq(partners.id, order.partnerId));
-      partner = partnerResult ?? null;
-    }
+    const partner: { businessName: string } | null =
+      order.partnerId && order.partnerId === (await getCraftCulturePartnerId())
+        ? { businessName: 'Craft & Culture' }
+        : null;
 
     // Fetch distributor details
     let distributor: { businessName: string } = { businessName: 'Distributor' };
