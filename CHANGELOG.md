@@ -1,3 +1,9 @@
+## [2.1.10](https://github.com/craftandculture/Craft-Culture/compare/v2.1.9...v2.1.10) (2026-10-28)
+
+### Features
+
+* a condition report on loose bottles costs AED 50 per bottle ([3bf09f5](https://github.com/craftandculture/Craft-Culture/commit/3bf09f55bbbdcfdf9da3f8fd3db06f20ab2bc851))
+
 ## [2.1.9](https://github.com/craftandculture/Craft-Culture/compare/v2.1.8...v2.1.9) (2026-10-28)
 
 ### Features
