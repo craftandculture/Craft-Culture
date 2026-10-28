@@ -1,3 +1,9 @@
+## [2.1.4](https://github.com/craftandculture/Craft-Culture/compare/v2.1.3...v2.1.4) (2026-10-28)
+
+### Bug Fixes
+
+* a stock correction that is undone the same day no longer appears in an owner's activity ([34bdd48](https://github.com/craftandculture/Craft-Culture/commit/34bdd487b6ee985a1a86b48207eaeb6197bb147c))
+
 ## [2.1.3](https://github.com/craftandculture/Craft-Culture/compare/v2.1.2...v2.1.3) (2026-10-28)
 
 ### Features
