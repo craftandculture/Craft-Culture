@@ -1,3 +1,13 @@
+## [2.1.25](https://github.com/craftandculture/Craft-Culture/compare/v2.1.24...v2.1.25) (2026-10-28)
+
+### Features
+
+* friendlier error and loading screens, warehouse back button goes one step up, blind cycle counts ([63bf0d5](https://github.com/craftandculture/Craft-Culture/commit/63bf0d5959643c77ad776eba28de718544bb5990))
+
+### Bug Fixes
+
+* trade partners and distributors no longer see each other on private client orders ([7b7134a](https://github.com/craftandculture/Craft-Culture/commit/7b7134a71b707bf7d6ec334f014794f9f68573e7))
+
 ## [2.1.24](https://github.com/craftandculture/Craft-Culture/compare/v2.1.23...v2.1.24) (2026-10-28)
 
 ### Bug Fixes
