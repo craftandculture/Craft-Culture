@@ -58,6 +58,8 @@ import memberSubmitRelease from './controller/memberSubmitRelease';
 import memberUploadIdentityDocument from './controller/memberUploadIdentityDocument';
 import memberWithdrawRelease from './controller/memberWithdrawRelease';
 import memberWithdrawUkMove from './controller/memberWithdrawUkMove';
+import memberGetDisplayOptions from './controller/memberGetDisplayOptions';
+import adminSetBottleWordingMode, { adminGetBottleWordingMode } from './controller/adminSetBottleWordingMode';
 
 const memberRouter = createTRPCRouter({
   getProfile: memberGetProfile,
@@ -84,6 +86,7 @@ const memberRouter = createTRPCRouter({
   saveRelease: memberSaveRelease,
   submitRelease: memberSubmitRelease,
   acceptRelease: memberAcceptRelease,
+  getDisplayOptions: memberGetDisplayOptions,
 });
 
 const adminRouter = createTRPCRouter({
@@ -114,6 +117,8 @@ const adminRouter = createTRPCRouter({
   // Member emails: the off/shadow/live switch and the outbox
   getMemberEmails: adminGetMemberEmails,
   setMemberEmailMode: adminSetMemberEmailMode,
+  getBottleWordingMode: adminGetBottleWordingMode,
+  setBottleWordingMode: adminSetBottleWordingMode,
 });
 
 /*

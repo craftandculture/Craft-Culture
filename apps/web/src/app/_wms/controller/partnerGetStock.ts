@@ -193,10 +193,45 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     stockByLocation.map((stock) => stock.stockId),
   );
 
+  /*
+    Single bottles left when a case was opened, and the case they came from.
+    The singles row carries no link to its case; the movement that created it
+    names the pack, at the same code, bay and lot. Lets the cellar say "from an
+    opened 3-bottle case" instead of a bare row that appeared from nowhere.
+  */
+  const singles = stockByLocation.filter((stock) => stock.lwin18.split('-')[2] === '01');
+  const openedFrom = singles.length
+    ? await db
+        .select({
+          lwin18: wmsStockMovements.lwin18,
+          locationId: wmsStockMovements.toLocationId,
+          lotNumber: wmsStockMovements.lotNumber,
+          notes: wmsStockMovements.notes,
+        })
+        .from(wmsStockMovements)
+        .where(
+          and(
+            eq(wmsStockMovements.movementType, 'repack_in'),
+            eq(wmsStockMovements.reasonCode, 'split_case'),
+            inArray(
+              wmsStockMovements.lwin18,
+              [...new Set(singles.map((stock) => stock.lwin18))],
+            ),
+          ),
+        )
+    : [];
+  const openedPackByParcel = new Map<string, number>();
+  for (const row of openedFrom) {
+    const pack = Number(row.notes?.match(/cracked (\d+)-pack/)?.[1]);
+    if (pack > 1) openedPackByParcel.set([row.lwin18, row.locationId, row.lotNumber ?? ''].join('|'), pack);
+  }
+
   const stockWithSaleState = stockByLocation.map((stock) => ({
     ...stock,
     mandate: mandateByStock.get(stock.stockId) ?? null,
     claimedBottles: claimedByStock.get(stock.stockId) ?? 0,
+    openedFromPack:
+      openedPackByParcel.get([stock.lwin18, stock.locationId, stock.lotNumber ?? ''].join('|')) ?? null,
   }));
 
   // Group locations by LWIN
