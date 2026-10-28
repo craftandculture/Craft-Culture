@@ -1,3 +1,9 @@
+## [2.1.28](https://github.com/craftandculture/Craft-Culture/compare/v2.1.27...v2.1.28) (2026-10-28)
+
+### Features
+
+* home shows revenue by month and clearer KPI numbers ([96bb39d](https://github.com/craftandculture/Craft-Culture/commit/96bb39ddb657fce1d0019aebc682b615030cb59f))
+
 ## [2.1.27](https://github.com/craftandculture/Craft-Culture/compare/v2.1.26...v2.1.27) (2026-10-28)
 
 ### Features
