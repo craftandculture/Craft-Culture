@@ -2,7 +2,6 @@
 
 import {
   IconAlertCircle,
-  IconArrowLeft,
   IconBuilding,
   IconBuildingWarehouse,
   IconCheck,
@@ -28,6 +27,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Fragment, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import LwinLookup from '@/app/_lwin/components/LwinLookup';
 import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
 import OrderClientCard from '@/app/_privateClientContacts/components/OrderClientCard';
@@ -621,15 +621,25 @@ const AdminPrivateOrderDetailPage = () => {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-4">
-        {/* Header - compact */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/platform/admin/private-orders">
-                <Icon icon={IconArrowLeft} size="sm" />
+        <AdminPageHeader
+          title={order.orderNumber}
+          crumbs={[{ label: 'Private Client Orders', href: '/platform/admin/private-orders' }]}
+          description={
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <PrivateOrderStatusBadge status={order.status} />
+            {order.cellarRelease && (
+              <Link
+                href={`/platform/admin/cellar-releases?open=${order.cellarRelease.id}`}
+                className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900"
+                title={`Member's own wine — bill only the delivery quote of $${order.cellarRelease.totalCostUsd?.toLocaleString() ?? 0}`}
+              >
+                From cellar release {order.cellarRelease.requestNumber}
               </Link>
-            </Button>
-            <Typography variant="headingLg">{order.orderNumber}</Typography>
+            )}
+            </span>
+          }
+          actions={
+            <>
             {neighbours && neighbours.total > 1 && (
               <div className="flex items-center gap-0.5">
                 <Button
@@ -657,20 +667,6 @@ const AdminPrivateOrderDetailPage = () => {
                 </Button>
               </div>
             )}
-            <PrivateOrderStatusBadge status={order.status} />
-            {order.cellarRelease && (
-              <Link
-                href={`/platform/admin/cellar-releases?open=${order.cellarRelease.id}`}
-                className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900"
-                title={`Member's own wine — bill only the delivery quote of $${order.cellarRelease.totalCostUsd?.toLocaleString() ?? 0}`}
-              >
-                From cellar release {order.cellarRelease.requestNumber}
-              </Link>
-            )}
-          </div>
-
-          {/* Quick actions bar */}
-          <div className="flex flex-wrap items-center gap-2">
             {/* Currency Toggle */}
             <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
               <button
@@ -753,8 +749,9 @@ const AdminPrivateOrderDetailPage = () => {
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </Button>
             )}
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {/*
           One tracker: the paperwork chain, with the two milestones only the

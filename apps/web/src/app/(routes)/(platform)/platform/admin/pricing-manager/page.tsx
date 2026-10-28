@@ -24,7 +24,6 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 import {
   Fragment,
   createContext,
@@ -37,13 +36,13 @@ import {
 } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
-import Typography from '@/app/_ui/components/Typography/Typography';
 import PricingBandsEditor from '@/app/_wms/components/PricingBandsEditor';
 import pricePricingManagerRow, {
   type PricingManagerRowInput,
@@ -1924,20 +1923,10 @@ const PricingManagerPage = () => {
   return (
     <CurrencyContext.Provider value={currency}>
     <div className="mx-auto max-w-[1400px] space-y-6 p-6">
-      {/* Breadcrumb + Header */}
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-sm text-text-muted">
-          <Link href="/platform/admin/home" className="hover:text-text-primary">
-            <Typography variant="bodySm">Admin</Typography>
-          </Link>
-          <IconChevronRight className="h-4 w-4 text-text-muted" />
-          <Typography variant="bodySm">Pricing Manager</Typography>
-        </div>
-        <Typography variant="h2">Pricing Manager</Typography>
-        <Typography variant="bodySm" className="text-text-muted">
-          Import, in bond (B2B), and private client pricing
-        </Typography>
-      </div>
+      <AdminPageHeader
+        title="Pricing Manager"
+        description="Import, in bond (B2B), and private client pricing"
+      />
 
       {/*
         These read landed stock only, and say so when that is not what is on

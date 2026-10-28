@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
 import isStaff from '@/app/_distribution/utils/isStaff';
-import Typography from '@/app/_ui/components/Typography/Typography';
 import LwinReviewList from '@/app/_winelabs/components/LwinReviewList';
 import RunBatchForm from '@/app/_winelabs/components/RunBatchForm';
 import RunInBondForm from '@/app/_winelabs/components/RunInBondForm';
@@ -167,19 +167,14 @@ const WineLabsPage = async () => {
 
   return (
     <main className="container space-y-8 py-8">
-      <div>
-        <Typography variant="headingLg" asChild>
-          <h1>Wine Labs check</h1>
-        </Typography>
-        <Typography variant="bodySm" colorRole="muted" asChild>
-          <p className="mt-1 max-w-3xl">
-            Our stock checked against Wine Labs: whether a search by name finds the LWIN we hold, and whether
-            Wine Labs has a drinking window and a market price for it. Prices are retail, mostly duty-paid, in
-            USD, worldwide; they are not our in-bond prices. Nothing on this page changes our records. C&amp;C
-            staff only.
-          </p>
-        </Typography>
-      </div>
+      <AdminPageHeader
+        title="Wine Labs check"
+        description={
+          <>
+            Our stock checked against Wine Labs: whether a search by name finds the LWIN we hold, and whether Wine Labs has a drinking window and a market price for it. Prices are retail, mostly duty-paid, in USD, worldwide; they are not our in-bond prices. Nothing on this page changes our records. C&amp;C staff only.
+          </>
+        }
+      />
 
       {!summary.configured && (
         <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">

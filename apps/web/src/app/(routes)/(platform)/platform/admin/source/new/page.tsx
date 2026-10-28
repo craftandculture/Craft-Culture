@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -176,22 +177,17 @@ const NewRfqPage = () => {
   return (
     <div className="container mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link href="/platform/admin/source">
-            <Button variant="ghost" size="sm">
-              <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
-            </Button>
-          </Link>
-          <div>
-            <Typography variant="headingLg">Create New RFQ</Typography>
-            <Typography variant="bodySm" colorRole="muted">
+        <AdminPageHeader
+          title="Create New RFQ"
+          crumbs={[{ label: 'Source', href: '/platform/admin/source' }]}
+          description={
+            <>
               {step === 'input' && 'Step 1: Enter client request data'}
               {step === 'details' && 'Step 2: Add RFQ details'}
               {step === 'review' && 'Step 3: Review parsed items'}
-            </Typography>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {/* Step 1: Input */}
         {step === 'input' && (

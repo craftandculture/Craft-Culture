@@ -1,5 +1,5 @@
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import TriangulationClient from '@/app/_triangulation/components/TriangulationClient';
-import Typography from '@/app/_ui/components/Typography/Typography';
 
 /**
  * Stock triangulation
@@ -10,17 +10,14 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 const TriangulationPage = () => {
   return (
     <main className="container space-y-6 py-8">
-      <div>
-        <Typography variant="headingLg" asChild>
-          <h1>Stock triangulation</h1>
-        </Typography>
-        <Typography variant="bodySm" colorRole="muted" asChild>
-          <p className="mt-1">
-            Consignment stock reconciled between C&amp;C and the outlet holding
-            it, one client at a time, in bottles.
-          </p>
-        </Typography>
-      </div>
+      <AdminPageHeader
+        title="Stock triangulation"
+        description={
+          <>
+            Consignment stock reconciled between C&amp;C and the outlet holding it, one client at a time, in bottles.
+          </>
+        }
+      />
       <TriangulationClient />
     </main>
   );

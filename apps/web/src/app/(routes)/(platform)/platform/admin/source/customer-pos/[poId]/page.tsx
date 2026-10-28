@@ -2,7 +2,6 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import {
-  IconArrowLeft,
   IconCheck,
   IconCloudUpload,
   IconDownload,
@@ -16,12 +15,12 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import CustomerPoStatusBadge from '@/app/_source/components/CustomerPoStatusBadge';
 import ProfitIndicator from '@/app/_source/components/ProfitIndicator';
 import Button from '@/app/_ui/components/Button/Button';
@@ -285,28 +284,25 @@ const CustomerPoDetailPage = () => {
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <Link
-              href="/platform/admin/source/customer-pos"
-              className="inline-flex items-center gap-1 text-text-muted hover:text-text-primary mb-4"
-            >
-              <IconArrowLeft className="h-4 w-4" />
-              <Typography variant="bodySm">Back to Customer POs</Typography>
-            </Link>
-            <div className="flex items-center gap-3 mb-2">
-              <Typography variant="headingLg">{customerPo.ccPoNumber}</Typography>
+        <AdminPageHeader
+          title={customerPo.ccPoNumber}
+          crumbs={[
+            { label: 'Source', href: '/platform/admin/source' },
+            { label: 'Customer POs', href: '/platform/admin/source/customer-pos' },
+          ]}
+          description={
+            <span className="inline-flex flex-wrap items-center gap-2">
               <CustomerPoStatusBadge status={customerPo.status} />
-            </div>
-            <Typography variant="bodyMd" colorRole="muted">
-              {customerPo.customerCompany || customerPo.customerName}
-              {' • Customer PO: '}
-              {customerPo.poNumber}
-              {customerPo.rfq?.rfqNumber && ` • Linked RFQ: ${customerPo.rfq.rfqNumber}`}
-            </Typography>
-          </div>
-          <div className="flex items-center gap-2">
+              <span>
+                {customerPo.customerCompany || customerPo.customerName}
+                {' • Customer PO: '}
+                {customerPo.poNumber}
+                {customerPo.rfq?.rfqNumber && ` • Linked RFQ: ${customerPo.rfq.rfqNumber}`}
+              </span>
+            </span>
+          }
+          actions={
+            <>
             {canAutoMatch && (
               <Button
                 variant="outline"
@@ -331,8 +327,9 @@ const CustomerPoDetailPage = () => {
                 </ButtonContent>
               </Button>
             )}
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {/* Upload Section - Show when no items */}
         {showUploadSection && (

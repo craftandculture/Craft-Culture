@@ -3,7 +3,6 @@
 import {
   IconAlertTriangle,
   IconArrowBackUp,
-  IconArrowLeft,
   IconArrowRight,
   IconBan,
   IconCheck,
@@ -26,6 +25,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import AddItemModal from '@/app/_source/components/AddItemModal';
 import ItemEditorModal from '@/app/_source/components/ItemEditorModal';
 import type { ItemData } from '@/app/_source/components/ItemEditorModal';
@@ -349,32 +349,23 @@ const RfqDetailPage = () => {
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <Link href="/platform/admin/source">
-              <Button variant="ghost" size="sm" aria-label="Back to RFQ list">
-                <ButtonContent iconLeft={IconArrowLeft} />
-              </Button>
-            </Link>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <Typography variant="bodyXs" className="font-mono text-text-muted">
-                  {rfq.rfqNumber}
-                </Typography>
-                <RfqStatusBadge status={rfq.status} />
-              </div>
-              <Typography variant="headingLg">{rfq.name}</Typography>
+        <AdminPageHeader
+          title={rfq.name}
+          crumbs={[{ label: 'Source', href: '/platform/admin/source' }]}
+          description={
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <span className="font-mono">{rfq.rfqNumber}</span>
+              <RfqStatusBadge status={rfq.status} />
               {rfq.distributorCompany && (
-                <Typography variant="bodySm" colorRole="muted">
+                <span>
                   {rfq.distributorCompany}
                   {rfq.distributorName && ` - ${rfq.distributorName}`}
-                </Typography>
+                </span>
               )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
+            </span>
+          }
+          actions={
+            <>
             {canAddItems && (
               <Button
                 variant="outline"
@@ -439,8 +430,9 @@ const RfqDetailPage = () => {
                 <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
               </Button>
             )}
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

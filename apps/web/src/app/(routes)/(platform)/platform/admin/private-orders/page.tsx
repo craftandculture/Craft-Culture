@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import type { PcoStage } from '@/app/_privateClientOrders/constants';
 import formatSubscriptionBox from '@/app/_privateClientOrders/utils/formatSubscriptionBox';
@@ -285,17 +286,11 @@ const AdminPrivateOrdersPage = () => {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Typography variant="headingLg" className="mb-2">
-              Private Client Orders
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Manage orders from wine partners for their private clients
-            </Typography>
-          </div>
-          <div className="flex items-center gap-2">
+        <AdminPageHeader
+          title="Private Client Orders"
+          description="Manage orders from wine partners for their private clients"
+          actions={
+            <>
             <Button
               variant="outline"
               size="sm"
@@ -313,8 +308,9 @@ const AdminPrivateOrdersPage = () => {
                 <ButtonContent iconLeft={IconPlus}>New Order</ButtonContent>
               </Link>
             </Button>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {/* Quick filters with counts */}
         <div className="flex flex-wrap gap-2">
