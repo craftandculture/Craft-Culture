@@ -1,3 +1,9 @@
+## [2.1.15](https://github.com/craftandculture/Craft-Culture/compare/v2.1.14...v2.1.15) (2026-10-28)
+
+### Bug Fixes
+
+* private client orders convert USD to AED at the 3.6725 peg instead of 3.67 ([ba9f3bb](https://github.com/craftandculture/Craft-Culture/commit/ba9f3bb9b103f1934fb361822887dce261c100e4))
+
 ## [2.1.14](https://github.com/craftandculture/Craft-Culture/compare/v2.1.13...v2.1.14) (2026-10-28)
 
 ### Bug Fixes
