@@ -45,7 +45,7 @@ const InvitesList = () => {
     try {
       const result = await invite.mutateAsync(form);
       setSent({ name: form.name, phone: form.phone || null, ...result });
-      if (result.existingAccount) toast.info('They already had an account — it has been kept.');
+      if (result.existingAccount) toast.info('They already had an account; it has been kept.');
       setForm({ name: '', email: '', phone: '' });
       void refetch();
     } catch (error) {

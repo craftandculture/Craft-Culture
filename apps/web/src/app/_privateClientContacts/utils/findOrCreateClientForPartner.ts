@@ -1,7 +1,9 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { privateClientContacts } from '@/database/schema';
+
+import { matchesClientIdentity } from './clientIdentity';
 
 export interface ClientDetails {
   name: string;
@@ -23,6 +25,9 @@ export interface ClientDetails {
  * partners: two partners may each hold a client of the same name, and they are
  * not the same relationship.
  *
+ * A verified client is matched only when the typed phone and email agree with
+ * the record; otherwise a new, unverified record is created.
+ *
  * Details are only used when creating. An existing record is never overwritten
  * from an order — the record is the better source, and a half-filled order form
  * would otherwise blank a phone number somebody had carefully corrected.
@@ -38,8 +43,14 @@ const findOrCreateClientForPartner = async (
   const name = details.name.trim();
   if (!name) return null;
 
-  const [existing] = await db
-    .select({ id: privateClientContacts.id })
+  const sameName = await db
+    .select({
+      id: privateClientContacts.id,
+      name: privateClientContacts.name,
+      email: privateClientContacts.email,
+      phone: privateClientContacts.phone,
+      cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,
+    })
     .from(privateClientContacts)
     .where(
       and(
@@ -47,7 +58,14 @@ const findOrCreateClientForPartner = async (
         sql`LOWER(TRIM(${privateClientContacts.name})) = LOWER(${name})`,
       ),
     )
-    .limit(1);
+    .orderBy(asc(privateClientContacts.createdAt));
+
+  /*
+    A verified client is only reused when the typed phone and email agree with
+    it. Typing a verified client's name with someone else's number used to
+    attach the order to that verified record and skip verification.
+  */
+  const existing = sameName.find((record) => matchesClientIdentity(record, details));
 
   if (existing) return { clientId: existing.id, created: false };
 

@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
+import postPaymentVerified from '@/app/_teamTasks/data/postPaymentVerified';
 import db from '@/database/client';
 import {
   partnerMembers,
@@ -12,6 +13,7 @@ import {
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
 import assertDistributorSku from '../utils/assertDistributorSku';
+import distributorOrderView from '../utils/distributorOrderView';
 
 const distributorPaymentVerificationSchema = z.object({
   orderId: z.string().uuid(),
@@ -101,7 +103,11 @@ const ordersDistributorPaymentVerification = distributorProcedure
       }
     }
 
-    return updatedOrder;
+    // The team books the delivery as soon as payment is confirmed
+    if (updatedOrder) await postPaymentVerified(updatedOrder);
+
+    // Without C&C's own notes and its payment to the partner
+    return updatedOrder ? distributorOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersDistributorPaymentVerification;

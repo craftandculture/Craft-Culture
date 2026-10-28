@@ -25,11 +25,12 @@ const adminSyncHillebrandInvoices = adminProcedure.mutation(async () => {
       invoices: result.invoices,
     };
   } catch (error) {
-    logger.error('Hillebrand invoice sync failed', { error });
+    logger.error('Hillebrand invoice sync failed', { error: error instanceof Error ? error.message : String(error) });
 
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: error instanceof Error ? error.message : 'Failed to sync invoices with Hillebrand',
+      // The cause is logged; Hillebrand's raw reply is not passed to the browser
+      message: 'Failed to sync invoices with Hillebrand. Please try again, or check the Hillebrand connection.',
     });
   }
 });

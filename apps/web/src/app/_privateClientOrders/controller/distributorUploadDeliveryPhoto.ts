@@ -1,5 +1,4 @@
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
 import { fileTypeFromBuffer } from 'file-type';
 import { z } from 'zod';
@@ -21,6 +20,7 @@ import {
   privateClientOrderActivityLogs,
   privateClientOrders,
 } from '@/database/schema';
+import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB (keeps under Vercel body limit after base64)
@@ -91,11 +91,7 @@ const distributorUploadDeliveryPhoto = distributorProcedure
     const blobFilename = `delivery-photos/${partnerId}/${orderId}/${timestamp}-${sanitizedFilename}`;
 
     // Upload to Vercel Blob (using the verified content type)
-    const blob = await put(blobFilename, buffer, {
-      access: 'public',
-      contentType: detected.mime,
-      addRandomSuffix: true,
-    });
+    const blob = await putPrivateFile(blobFilename, buffer, detected.mime);
 
     const now = new Date();
 

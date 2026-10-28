@@ -32,7 +32,7 @@ let tokenRefreshPromise: Promise<string> | null = null;
  */
 const getZohoUrls = () => {
   const region = serverConfig.zohoRegion || 'us';
-  const domains: Record<string, { accounts: string; api: string }> = {
+  const domains = {
     us: {
       accounts: 'https://accounts.zoho.com',
       api: 'https://www.zohoapis.com/books/v3',
@@ -49,8 +49,8 @@ const getZohoUrls = () => {
       accounts: 'https://accounts.zoho.com.au',
       api: 'https://www.zohoapis.com.au/books/v3',
     },
-  };
-  return domains[region] || domains.us;
+  } satisfies Record<string, { accounts: string; api: string }>;
+  return domains[region as keyof typeof domains] || domains.us;
 };
 
 /**
@@ -78,9 +78,16 @@ const refreshAccessToken = async (): Promise<string> => {
   // pasted into an env var — even mid-value — silently breaks the OAuth token
   // request (400 HTML from accounts.zoho.*) and froze the invoice sync for
   // weeks in Jul 2026. .trim() only handles the ends; this handles any position.
-  const clientId = serverConfig.zohoClientId!.replace(/\s/g, '');
-  const clientSecret = serverConfig.zohoClientSecret!.replace(/\s/g, '');
-  const refreshToken = serverConfig.zohoRefreshToken!.replace(/\s/g, '');
+  //
+  // Also strip LITERAL escape sequences ("\n" as two characters). A value
+  // uploaded through a script can arrive with the escape written out rather
+  // than interpreted; it is not whitespace, survived the line above, and on
+  // 24 Oct 2026 every Zoho sync in Trigger.dev failed on a client ID ending
+  // "…LH\n". Zoho credentials never contain a backslash.
+  const clean = (value: string) => value.replace(/\\[nrt]/g, '').replace(/\s/g, '');
+  const clientId = clean(serverConfig.zohoClientId!);
+  const clientSecret = clean(serverConfig.zohoClientSecret!);
+  const refreshToken = clean(serverConfig.zohoRefreshToken!);
 
   logger.info('Zoho token refresh starting', {
     clientIdPreview: `${clientId.slice(0, 10)}...${clientId.slice(-4)}`,

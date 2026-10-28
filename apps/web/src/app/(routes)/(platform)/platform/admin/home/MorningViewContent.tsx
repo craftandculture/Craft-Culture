@@ -27,6 +27,9 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import useTRPC from '@/lib/trpc/browser';
 
+import HomeAttentionCard from './HomeAttentionCard';
+import HomeRevenueChart from './HomeRevenueChart';
+
 type Currency = 'USD' | 'AED';
 
 /** Time-based greeting */
@@ -65,6 +68,31 @@ const formatCurrency = (amount: number | null | undefined, currency: Currency) =
   return `${prefix} ${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 };
 
+/**
+ * A tile's money figure: the currency as a small muted prefix so the number
+ * itself reads first, e.g. "USD 209k", "USD 1.10M", "USD 48.6k"
+ */
+const tileMoney = (amount: number, currency: Currency) => {
+  const size = Math.abs(amount);
+  const number =
+    size >= 1_000_000
+      ? `${(amount / 1_000_000).toFixed(2)}M`
+      : size >= 100_000
+        ? `${Math.round(amount / 1000)}k`
+        : size >= 1000
+          ? `${(amount / 1000).toFixed(1)}k`
+          : amount.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+  return (
+    <>
+      <span className="mr-1 align-middle text-[11px] font-semibold tracking-normal text-text-muted">
+        {currency}
+      </span>
+      {number}
+    </>
+  );
+};
+
 /** Tile tints, from the Stock Explorer / Team Tasks house style */
 const TONES = {
   slate: {
@@ -95,15 +123,23 @@ const TONES = {
 } as const;
 
 /** A change against the previous period, as a coloured percentage */
-const changeLine = (current: number, previous: number, period: string) => {
+const changeLine = (current: number, previous: number, against: string) => {
   if (!(previous > 0)) {
-    return <span className="text-text-muted">No data last {period}</span>;
+    return <span className="text-text-muted">Nothing to compare yet</span>;
   }
   const pct = Math.round(((current - previous) / previous) * 100);
   return (
-    <span className={pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>
-      {pct >= 0 ? '+' : ''}
-      {pct}% vs last {period}
+    <span className="flex flex-col items-center gap-0.5">
+      <span
+        className={`whitespace-nowrap rounded-full px-1.5 py-px tabular-nums ${
+          pct >= 0
+            ? 'bg-emerald-100/70 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+            : 'bg-red-100/70 text-red-700 dark:bg-red-500/20 dark:text-red-400'
+        }`}
+      >
+        {pct >= 0 ? '▲' : '▼'} {Math.abs(pct)}%
+      </span>
+      <span className="font-normal text-text-muted">{against}</span>
     </span>
   );
 };
@@ -148,7 +184,6 @@ const agentConfig: Record<string, { icon: typeof IconBinoculars; bgColor: string
 /** Quick action definitions */
 const quickActions = [
   { label: '+ New Order', href: '/platform/admin/private-orders/new', icon: IconPlus },
-  { label: '+ Create Quote', href: '/platform/quotes', icon: IconFileText },
   { label: 'Open WMS', href: '/platform/admin/wms', icon: IconBuildingWarehouse },
   { label: 'Run Scout', href: '/platform/admin/agents', icon: IconBolt },
 ];
@@ -171,6 +206,20 @@ const MorningViewContent = () => {
   });
 
   const firstName = user?.firstName ?? user?.name?.split(' ')[0] ?? '';
+
+  /*
+    Most intelligence agents ran on Trigger.dev, which is switched off, and
+    their last briefs read like today's news. Each agent is judged on its own:
+    only briefs from the last week show, the home page always leads with what
+    is waiting on the team, and the agent alerts tile (Market Scout's action
+    items) shows only while Scout is running.
+  */
+  const isFresh = (createdAt: Date | string | null | undefined) =>
+    !!createdAt && Date.now() - new Date(createdAt).getTime() < 7 * 86_400_000;
+  const freshBriefs = (data?.agentBriefs ?? []).filter(
+    (b): b is NonNullable<typeof b> => !!b && isFresh(b.createdAt),
+  );
+  const scoutRunning = freshBriefs.some((b) => b.agentId === 'scout');
 
   // Loading skeleton matching layout
   if (isLoading) {
@@ -274,7 +323,7 @@ const MorningViewContent = () => {
       {data && (() => {
         const pick = (usd: number, aed: number) => (currency === 'USD' ? usd : aed);
         const money = (usd: number, aed: number) =>
-          redacted ? '•••' : formatCurrency(pick(usd, aed), currency);
+          redacted ? '•••' : tileMoney(pick(usd, aed), currency);
         const k = data.kpis;
 
         const tiles: {
@@ -305,8 +354,8 @@ const MorningViewContent = () => {
               ? '\u00a0'
               : changeLine(
                   pick(k.revenueMonthUsd, k.revenueMonthAed),
-                  pick(k.revenueLastMonthUsd, k.revenueLastMonthAed),
-                  'month',
+                  pick(k.revenueLastMonthToDateUsd, k.revenueLastMonthToDateAed),
+                  'vs same days last month',
                 ),
             icon: IconFileText,
             tone: 'emerald',
@@ -319,7 +368,7 @@ const MorningViewContent = () => {
               : changeLine(
                   pick(k.revenueYearUsd, k.revenueYearAed),
                   pick(k.revenueLastYearUsd, k.revenueLastYearAed),
-                  'year',
+                  'vs this point last year',
                 ),
             icon: IconCurrencyDollar,
             tone: 'emerald',
@@ -327,7 +376,10 @@ const MorningViewContent = () => {
           {
             label: 'Pending dispatch',
             value: k.pendingDispatch,
-            sub: `${k.stagedBatches} ${k.stagedBatches === 1 ? 'batch' : 'batches'} staged`,
+            sub:
+              k.pendingDispatch === 0
+                ? 'Nothing waiting'
+                : `${k.stagedBatches} ${k.stagedBatches === 1 ? 'batch' : 'batches'} staged`,
             icon: IconBuildingWarehouse,
             tone: 'blue',
             href: '/platform/admin/wms/dispatch',
@@ -345,16 +397,21 @@ const MorningViewContent = () => {
             value: k.overdueInvoices,
             sub:
               k.overdueInvoices > 0
-                ? money(k.overdueAmountUsd, k.overdueAmountAed)
+                ? redacted
+                  ? '•••'
+                  : `${formatCurrency(pick(k.overdueAmountUsd, k.overdueAmountAed), currency)} outstanding`
                 : 'All clear',
             icon: IconAlertTriangle,
             tone: k.overdueInvoices > 0 ? 'red' : 'emerald',
           },
         ];
+        const shown = scoutRunning ? tiles : tiles.filter((tile) => tile.label !== 'Agent alerts');
 
         return (
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-            {tiles.map((tile) => {
+          <div
+            className={`grid grid-cols-2 gap-2.5 sm:grid-cols-3 ${shown.length === 6 ? 'lg:grid-cols-6' : 'lg:grid-cols-5'}`}
+          >
+            {shown.map((tile) => {
               const tone = TONES[tile.tone];
               const TileIcon = tile.icon;
               const body = (
@@ -362,11 +419,15 @@ const MorningViewContent = () => {
                   <span className={`mx-auto mb-1.5 flex size-7 items-center justify-center rounded-md ${tone.icon}`}>
                     <TileIcon size={15} />
                   </span>
-                  <span className={`block text-2xl font-bold leading-tight tracking-tight tabular-nums ${tone.value}`}>
+                  <span className="block text-[11px] font-medium uppercase tracking-wide text-text-muted">
+                    {tile.label}
+                  </span>
+                  <span
+                    className={`mt-1 block whitespace-nowrap text-[26px] font-bold leading-tight tracking-tight tabular-nums ${tone.value}`}
+                  >
                     {tile.value}
                   </span>
-                  <span className="mt-0.5 block text-[11px] font-medium text-text-muted">{tile.label}</span>
-                  <span className="mt-0.5 block text-[11px] font-semibold text-text-muted/80">{tile.sub}</span>
+                  <span className="mt-1.5 block text-[11px] font-semibold text-text-muted/80">{tile.sub}</span>
                 </>
               );
               const className = `block rounded-xl border bg-gradient-to-b to-transparent px-3 py-3.5 text-center shadow-sm transition ${tone.tile}`;
@@ -389,26 +450,32 @@ const MorningViewContent = () => {
         );
       })()}
 
+      {data?.revenueByMonth && (
+        <HomeRevenueChart months={data.revenueByMonth} currency={currency} redacted={redacted} />
+      )}
+
       {/* ── Two-column layout ────────────────────── */}
       <div className="grid gap-5 lg:grid-cols-5">
-        {/* Agent Briefing — left 3 cols */}
-        <div className="min-w-0 lg:col-span-3">
-          <Card>
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between px-6 py-4">
-                <p className="text-[15px] font-bold">Intelligence Briefing</p>
-                <Link
-                  href="/platform/admin/agents"
-                  className="text-[12px] font-medium text-text-muted transition-colors hover:text-text-primary"
-                >
-                  View all &rarr;
-                </Link>
-              </div>
+        {/* Left 3 cols: what is waiting, then any agent briefs from the last week */}
+        <div className="min-w-0 space-y-5 lg:col-span-3">
+          <HomeAttentionCard overdueInvoices={data?.kpis?.overdueInvoices ?? 0} />
 
-              {data?.agentBriefs && data.agentBriefs.length > 0 ? (
+          {freshBriefs.length > 0 && (
+            <Card>
+              <CardContent className="p-0">
+                <div className="flex items-center justify-between px-6 py-4">
+                  <p className="text-[15px] font-bold">Intelligence Briefing</p>
+                  <Link
+                    href="/platform/admin/agents"
+                    className="text-[12px] font-medium text-text-muted transition-colors hover:text-text-primary"
+                  >
+                    View all &rarr;
+                  </Link>
+                </div>
+
                 <div className="flex flex-col">
-                  {data.agentBriefs.map((brief) => {
-                    const config = agentConfig[brief.agentId] ?? agentConfig.scout;
+                  {freshBriefs.map((brief) => {
+                    const config = agentConfig[brief.agentId] ?? agentConfig.scout!;
                     return (
                       <Link
                         key={brief.agentId}
@@ -445,15 +512,9 @@ const MorningViewContent = () => {
                     );
                   })}
                 </div>
-              ) : (
-                <div className="border-t border-border-muted px-6 py-10 text-center">
-                  <p className="text-sm text-text-muted">
-                    No briefs yet. Intelligence runs daily &mdash; check back soon.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right column — Recent Orders + Quick Actions */}

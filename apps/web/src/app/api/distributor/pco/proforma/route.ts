@@ -2,7 +2,10 @@ import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
+import distributorItemView from '@/app/_privateClientOrders/utils/distributorItemView';
+import getCraftCulturePartnerId from '@/app/_privateClientOrders/utils/getCraftCulturePartnerId';
 import renderProformaInvoicePDF from '@/app/_privateClientOrders/utils/renderProformaInvoicePDF';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { partners, privateClientOrderItems } from '@/database/schema';
 import logger from '@/utils/logger';
@@ -51,8 +54,8 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Allow if user is admin OR is a member of the distributor
-    if (user.role !== 'admin' && !membership) {
+    // Allow C&C staff, or a member of the distributor
+    if (!isTeamMember(user) && !membership) {
       return NextResponse.json({ error: 'You do not have access to this order' }, { status: 403 });
     }
 
@@ -62,19 +65,14 @@ export async function GET(request: NextRequest) {
       .from(privateClientOrderItems)
       .where(eq(privateClientOrderItems.orderId, order.id));
 
-    // Fetch partner details if available
-    let partner: { businessName: string; businessEmail: string | null; businessPhone: string | null } | null = null;
-    if (order.partnerId) {
-      const [partnerResult] = await db
-        .select({
-          businessName: partners.businessName,
-          businessEmail: partners.businessEmail,
-          businessPhone: partners.businessPhone,
-        })
-        .from(partners)
-        .where(eq(partners.id, order.partnerId));
-      partner = partnerResult ?? null;
-    }
+    /*
+      The wine partner is never named to the distributor, on the order page or
+      here. C&C's own orders (Private Cellar deliveries) may say they are C&C's.
+    */
+    const partner: { businessName: string } | null =
+      order.partnerId && order.partnerId === (await getCraftCulturePartnerId())
+        ? { businessName: 'Craft & Culture' }
+        : null;
 
     // Fetch distributor details
     let distributor: { businessName: string } = { businessName: 'Distributor' };
@@ -91,15 +89,9 @@ export async function GET(request: NextRequest) {
     // Get USD to AED exchange rate (default to 3.6725 if not set)
     const usdToAedRate = order.usdToAedRate ?? 3.6725;
 
-    // Calculate total supplier cost for prorating client prices
-    const totalSupplierCost = lineItems.reduce((sum, item) => sum + item.totalUsd, 0);
+    // Each line's share of the distributor cost and client price, never the partner's price
     const orderTotal = order.totalUsd ?? 0;
-
-    // Helper to calculate client-facing price by prorating order total
-    const calculateClientPrice = (supplierTotal: number) => {
-      if (totalSupplierCost === 0) return 0;
-      return (supplierTotal / totalSupplierCost) * orderTotal;
-    };
+    const visibleItems = distributorItemView(lineItems, order);
 
     // Generate PDF with client-facing prices
     const pdfBuffer = await renderProformaInvoicePDF({
@@ -120,24 +112,19 @@ export async function GET(request: NextRequest) {
         totalUsd: orderTotal,
         usdToAedRate,
       },
-      lineItems: lineItems.map((item) => {
-        const clientTotal = calculateClientPrice(item.totalUsd);
-        const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
-        // Distributor cost = supplier price / 0.97 (C&C margin + transfer)
-        const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
-        return {
-          productName: item.productName ?? 'Unknown Product',
-          producer: item.producer,
-          vintage: item.vintage,
-          region: item.region,
-          bottleSize: item.bottleSize,
-          caseConfig: item.caseConfig,
-          quantity: item.quantity ?? 0,
-          distributorCostPerCaseUsd: distributorCostPerCase,
-          pricePerCaseUsd: clientPricePerCase,
-          totalUsd: clientTotal,
-        };
-      }),
+      lineItems: visibleItems.map((item) => ({
+        productName: item.productName ?? 'Unknown Product',
+        producer: item.producer,
+        vintage: item.vintage,
+        region: item.region,
+        bottleSize: item.bottleSize,
+        caseConfig: item.caseConfig,
+        quantity: item.quantity ?? 0,
+        distributorCostPerCaseUsd: item.distributorCostPerCaseUsd,
+        pricePerCaseUsd: item.clientPricePerCaseUsd,
+        totalUsd: item.clientTotalUsd,
+        inBox: item.inBox,
+      })),
       partner,
       distributor,
     });

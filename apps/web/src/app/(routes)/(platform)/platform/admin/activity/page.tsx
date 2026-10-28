@@ -19,6 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import markActivitiesAsViewed from '@/app/_admin/actions/markActivitiesAsViewed';
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -61,18 +62,18 @@ const ActivityFeedPage = () => {
       offset: 0,
       action: actionFilter !== 'all' ? actionFilter : undefined,
     }),
-    refetchInterval: 5000, // Refresh every 10 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const getActivityIcon = (action: string) => {
     const iconClass = 'h-4 w-4';
-    if (action.includes('signin')) return <IconLogin className={`${iconClass} text-text-brand`} />;
+    if (action.includes('signin')) return <IconLogin className={`${iconClass} text-text-primary`} />;
     if (action.includes('signup'))
-      return <IconUserPlus className={`${iconClass} text-text-brand`} />;
+      return <IconUserPlus className={`${iconClass} text-text-primary`} />;
     if (action.includes('download'))
-      return <IconDownload className={`${iconClass} text-text-brand`} />;
+      return <IconDownload className={`${iconClass} text-text-primary`} />;
     if (action === 'quote.created')
-      return <IconFileText className={`${iconClass} text-text-brand`} />;
+      return <IconFileText className={`${iconClass} text-text-primary`} />;
     if (action === 'quote.submitted') return <IconSend className={`${iconClass} text-blue-500`} />;
     if (action === 'quote.approved') return <IconCheck className={`${iconClass} text-green-500`} />;
     if (action === 'quote.revision_requested')
@@ -163,34 +164,30 @@ const ActivityFeedPage = () => {
   return (
     <div className="container mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <Typography variant="headingMd" className="mb-0.5">
-            Activity Feed
-          </Typography>
-          <Typography variant="bodyXs" colorRole="muted">
-            {activityData?.total || 0} total activities
-          </Typography>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-          >
-            <IconRefresh className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className="sm:hidden"
-          >
-            <IconFilter className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Activity Feed"
+        description={`${activityData?.total || 0} total activities`}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <IconRefresh className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="sm:hidden"
+            >
+              <IconFilter className="h-4 w-4" />
+            </Button>
+          </>
+        }
+      />
 
       {/* Filters - Always visible on desktop, toggleable on mobile */}
       <Card className={`mb-4 ${showFilters ? 'block' : 'hidden sm:block'}`}>

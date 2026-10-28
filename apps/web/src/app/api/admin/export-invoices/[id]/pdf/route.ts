@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import { exportDocumentSchema } from '@/app/_exportInvoices/schemas/exportDocumentSchema';
 import renderExportInvoicePDF from '@/app/_exportInvoices/utils/renderExportInvoicePDF';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { exportInvoices } from '@/database/schema';
 
@@ -18,11 +19,15 @@ import { exportInvoices } from '@/database/schema';
  */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'admin') {
+  // C&C staff admins only, the same rule as every export invoice action
+  if (!user || user.role !== 'admin' || !isTeamMember(user)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const { id } = await params;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
   const [row] = await db.select().from(exportInvoices).where(eq(exportInvoices.id, id)).limit(1);
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 

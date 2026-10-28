@@ -157,7 +157,7 @@ const ApplicationCard = ({ row, onChanged }: ApplicationCardProps) => {
             }
             isDisabled={merge.isPending}
           >
-            <ButtonContent isLoading={merge.isPending}>It&apos;s them — merge</ButtonContent>
+            <ButtonContent isLoading={merge.isPending}>It&apos;s them: merge</ButtonContent>
           </Button>
         </div>
       )}
@@ -191,7 +191,7 @@ const ApplicationCard = ({ row, onChanged }: ApplicationCardProps) => {
             className={`${fieldClass} min-h-16 py-2 text-sm`}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="Reason (optional — shown to the applicant)"
+            placeholder="Reason (optional, shown to the applicant)"
           />
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="ghost" onClick={() => setMode('view')}>

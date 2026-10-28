@@ -406,9 +406,14 @@ const PricerBrief = () => {
           <Card>
             <CardContent className="p-5">
               <div className="mb-3 flex items-center justify-between">
-                <Typography variant="bodySm" className="font-semibold">
-                  Competitive Gaps
-                </Typography>
+                <div>
+                  <Typography variant="bodySm" className="font-semibold">
+                    Competitive Gaps
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted">
+                    Our duty-free price + 15% vs competitor duty-paid prices
+                  </Typography>
+                </div>
                 <Badge colorRole="neutral" size="xs">
                   <IconScale size={12} className="mr-1" />
                   {gaps.length} gaps
@@ -421,7 +426,9 @@ const PricerBrief = () => {
                       {gap.productName}
                     </Typography>
                     <div className="mt-1 flex items-center gap-3 text-xs">
-                      <span>Ours: {gap.ourPriceAed.toFixed(0)} AED</span>
+                      <span>
+                        Ours, duty paid (+15%): {gap.ourPriceAed.toFixed(0)} AED
+                      </span>
                       <span className="text-text-muted">vs</span>
                       <span>{gap.competitorName}: {gap.competitorPriceAed.toFixed(0)} AED</span>
                     </div>

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import syncReceivedAvailability from '@/app/_logistics/utils/syncReceivedAvailability';
 import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Mark in-transit lines for sale, or hold them for their owner
@@ -28,7 +28,7 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
  *     notForSale: false,
  *   });
  */
-const adminSetInboundAvailability = wmsOperatorProcedure
+const adminSetInboundAvailability = adminProcedure
   .input(
     z.object({
       lines: z

@@ -82,7 +82,7 @@ const ExportChangeRequest = ({ id, zohoCustomerId, consigneeName, document, onAp
       </Button>
 
       {proposal && (
-        <div className="space-y-2 rounded-lg border border-border-brand/40 bg-fill-brand/5 p-3 text-xs">
+        <div className="space-y-2 rounded-lg border border-text-primary/40 bg-text-primary/5 p-3 text-xs">
           <p>{proposal.explanation}</p>
           {proposal.needsZohoChange && (
             <p className="font-semibold text-text-warning">This needs the invoice reissued in Zoho, then a new draft.</p>

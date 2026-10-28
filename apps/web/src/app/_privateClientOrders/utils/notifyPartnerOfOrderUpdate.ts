@@ -7,6 +7,9 @@ import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
+import maskEmail from './maskEmail';
+import isLegacyOrderEmailOn from '../data/isLegacyOrderEmailOn';
+
 /**
  * Loops template IDs for partner notifications
  */
@@ -100,6 +103,22 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
   const { orderId, orderNumber, partnerId, type } = params;
 
   try {
+    /*
+      A Private Cellar member's delivery runs through these same order
+      screens, but these notices are written for the trade ("delivered to
+      your client") and link to screens a collector cannot open. Members hear
+      about their deliveries from the cellar's own notices and emails instead.
+    */
+    const [owner] = await db
+      .select({ type: partners.type })
+      .from(partners)
+      .where(eq(partners.id, partnerId));
+
+    if (owner?.type === 'private_collector') {
+      logger.info('Skipped trade order notice for a cellar member', { partnerId, orderId, type });
+      return;
+    }
+
     // Get all partner members
     const members = await db
       .select({
@@ -138,6 +157,9 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
       : undefined;
 
     // Send notifications to each member
+    // Once the new order emails are live they replace these; in-app notices stay
+    const sendLegacyEmail = await isLegacyOrderEmailOn('partner');
+
     for (const member of members) {
       // Create in-app notification
       await createNotification({
@@ -166,7 +188,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
         .from(users)
         .where(eq(users.id, member.userId));
 
-      if (user?.email) {
+      if (sendLegacyEmail && user?.email) {
         try {
           const emailPayload = {
             transactionalId: PARTNER_TEMPLATE_IDS[type],
@@ -199,7 +221,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
             error: error instanceof Error ? error.message : String(error),
           }));
           logger.error('PCO: Failed to send partner email via Loops', {
-            email: user.email,
+            email: maskEmail(user.email),
             error: error instanceof Error ? error.message : String(error),
           });
         }
@@ -207,7 +229,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
     }
 
     // Also send to business email if different from member emails
-    if (partner?.businessEmail) {
+    if (sendLegacyEmail && partner?.businessEmail) {
       const memberEmails = await Promise.all(
         members.map(async (m) => {
           const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, m.userId));
@@ -220,7 +242,7 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
           logger.info('PCO: Sending partner business email via Loops', {
             templateId: PARTNER_TEMPLATE_IDS[type],
             type,
-            email: partner.businessEmail,
+            email: maskEmail(partner.businessEmail),
           });
 
           const result = await loops.sendTransactionalEmail({
@@ -243,13 +265,13 @@ const notifyPartnerOfOrderUpdate = async (params: NotifyPartnerParams) => {
           });
 
           logger.info('PCO: Partner business email result', {
-            email: partner.businessEmail,
+            email: maskEmail(partner.businessEmail),
             result: JSON.stringify(result),
             success: result?.success,
           });
         } catch (error) {
           logger.error('PCO: Failed to send partner business email via Loops', {
-            email: partner.businessEmail,
+            email: maskEmail(partner.businessEmail),
             error: error instanceof Error ? error.message : String(error),
           });
         }

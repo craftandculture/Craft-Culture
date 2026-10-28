@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  IconArrowLeft,
   IconChevronDown,
   IconChevronUp,
   IconDownload,
@@ -9,9 +8,9 @@ import {
   IconSearch,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -42,7 +41,6 @@ interface SessionDetailViewProps {
  * Displays session info, variable configuration, and calculated prices
  */
 const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) => {
-  const router = useRouter();
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -172,24 +170,16 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/platform/admin/pricing-calculator')}
-          >
-            <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
-          </Button>
-          <div>
-            <Typography variant="headingMd">{session.name}</Typography>
-            <Typography variant="bodySm" colorRole="muted">
-              {session.sourceFileName} &middot; {rawDataRows.length} products
-            </Typography>
-          </div>
-        </div>
-        <div className="flex gap-2">
+      <AdminPageHeader
+        title={session.name}
+        description={
+          <>
+            {session.sourceFileName} &middot; {rawDataRows.length} products
+          </>
+        }
+        crumbs={[{ label: 'Pricing Calculator', href: '/platform/admin/pricing-calculator' }]}
+        actions={
+          <>
           <Button
             variant="outline"
             size="sm"
@@ -206,8 +196,9 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
           >
             <ButtonContent iconLeft={IconDownload}>Export D2C</ButtonContent>
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Main Content Grid */}
       <div className={`grid gap-4 ${isVariablesPanelCollapsed ? '' : 'lg:grid-cols-4'}`}>
@@ -222,7 +213,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                     type="button"
                     className={`pb-2 text-xs font-medium transition-colors ${
                       activeTab === 'b2b'
-                        ? 'border-b-2 border-fill-brand text-text-primary'
+                        ? 'border-b-2 border-text-primary text-text-primary'
                         : 'text-text-muted hover:text-text-primary'
                     }`}
                     onClick={() => setActiveTab('b2b')}
@@ -233,7 +224,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                     type="button"
                     className={`pb-2 text-xs font-medium transition-colors ${
                       activeTab === 'd2c'
-                        ? 'border-b-2 border-fill-brand text-text-primary'
+                        ? 'border-b-2 border-text-primary text-text-primary'
                         : 'text-text-muted hover:text-text-primary'
                     }`}
                     onClick={() => setActiveTab('d2c')}
@@ -253,7 +244,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                       max={400}
                       value={productColWidth}
                       onChange={(e) => setProductColWidth(parseInt(e.target.value, 10))}
-                      className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-border-muted accent-fill-brand"
+                      className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-border-muted accent-text-primary"
                     />
                   </div>
                   {/* Search */}

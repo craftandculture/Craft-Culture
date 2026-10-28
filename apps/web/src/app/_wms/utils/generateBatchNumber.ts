@@ -1,34 +1,21 @@
-import { desc, sql } from 'drizzle-orm';
-
-import db from '@/database/client';
-import { wmsDispatchBatches } from '@/database/schema';
+import nextDocumentNumber, { type DbExecutor } from './nextDocumentNumber';
 
 /**
- * Generate a unique batch number in format: BATCH-YYYY-NNNN
- * Example: BATCH-2026-0001
+ * Generate the next dispatch batch number (BATCH-YYYY-NNNN)
  *
- * @returns The generated batch number
+ * Pass the transaction the row is inserted in, so numbers taken earlier in the
+ * same transaction are seen. Collision-free via the wms_batch_number_seq sequence.
+ *
+ * @example
+ *   const number = await generateBatchNumber(tx); // "BATCH-2026-0042"
  */
-const generateBatchNumber = async () => {
-  const year = new Date().getFullYear();
-  const prefix = `BATCH-${year}-`;
-
-  // Get the last batch number for this year
-  const [lastBatch] = await db
-    .select({ batchNumber: wmsDispatchBatches.batchNumber })
-    .from(wmsDispatchBatches)
-    .where(sql`${wmsDispatchBatches.batchNumber} LIKE ${prefix + '%'}`)
-    .orderBy(desc(wmsDispatchBatches.batchNumber))
-    .limit(1);
-
-  let sequence = 1;
-
-  if (lastBatch?.batchNumber) {
-    const lastSequence = parseInt(lastBatch.batchNumber.split('-')[2] ?? '0', 10);
-    sequence = lastSequence + 1;
-  }
-
-  return `${prefix}${sequence.toString().padStart(4, '0')}`;
-};
+const generateBatchNumber = async (executor?: DbExecutor) =>
+  nextDocumentNumber({
+    executor,
+    code: 'BATCH',
+    table: 'wms_dispatch_batches',
+    column: 'batch_number',
+    sequence: 'wms_batch_number_seq',
+  });
 
 export default generateBatchNumber;

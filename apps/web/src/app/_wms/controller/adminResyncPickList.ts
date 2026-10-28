@@ -9,9 +9,10 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import db from '@/database/client';
 import {
   wmsPickListItems,
@@ -143,20 +144,50 @@ const adminResyncPickList = wmsOperatorProcedure
     }
 
     const result = await db.transaction(async (tx) => {
-      // Drop all unpicked lines — they are rebuilt from the live order below.
+      // Serialise with picks on this list while it is rebuilt
+      await tx
+        .select({ id: wmsPickLists.id })
+        .from(wmsPickLists)
+        .where(eq(wmsPickLists.id, pickListId))
+        .for('update');
+
+      /*
+        Drop exactly the lines read as untouched — they are rebuilt from the
+        live order below. The old delete took every line not marked picked,
+        including one partly picked (counted as preserved above, then deleted),
+        so its bottles were lost from the list while they had left the shelf.
+        If a line was picked since it was read, stop rather than guess.
+      */
       if (unpickedItems.length > 0) {
-        await tx
+        const deleted = await tx
           .delete(wmsPickListItems)
           .where(
             and(
               eq(wmsPickListItems.pickListId, pickListId),
-              eq(wmsPickListItems.isPicked, false),
+              inArray(
+                wmsPickListItems.id,
+                unpickedItems.map((item) => item.id),
+              ),
+              sql`${wmsPickListItems.isPicked} IS NOT TRUE`,
+              sql`COALESCE(${wmsPickListItems.pickedQuantity}, 0) = 0`,
             ),
-          );
+          )
+          .returning({ id: wmsPickListItems.id });
+
+        if (deleted.length !== unpickedItems.length) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'A line on this list was picked while it was re-syncing. Try the re-sync again.',
+          });
+        }
       }
 
       let added = 0;
       const orderLwins = new Set<string>();
+      // A member's own delivery comes only from their own bottles
+      const ownDelivery = (await getOwnerDeliveryOwners([pickList.orderId])).get(
+        pickList.orderId ?? '',
+      );
 
       for (const item of orderItems) {
         const resolvedLwin18 = item.lwin18
@@ -173,14 +204,24 @@ const adminResyncPickList = wmsOperatorProcedure
           item.description,
         );
         const orderedBottles = item.quantity * orderedPack;
-        const alreadyPicked = pickedBottlesByWine.get(wineKey(resolvedLwin18)) ?? 0;
-        const remainingBottles = orderedBottles - alreadyPicked;
+        /*
+          Picked bottles are used up by the line they cover. Read without being
+          taken off, the six-packs already picked counted against every line of
+          the same wine, and a second line (three singles beside two six-packs)
+          was dropped from the list and shipped short.
+        */
+        const key = wineKey(resolvedLwin18);
+        const alreadyPicked = pickedBottlesByWine.get(key) ?? 0;
+        const consumed = Math.min(alreadyPicked, orderedBottles);
+        pickedBottlesByWine.set(key, alreadyPicked - consumed);
+        const remainingBottles = orderedBottles - consumed;
         if (remainingBottles <= 0) continue;
         const remaining = Math.ceil(remainingBottles / orderedPack);
 
         // Pack-agnostic, in-stock-only match by LWIN7+vintage (safe name
         // fallback) — never pins an empty pack or a lookalike cuvée.
         const suggestedStock = await resolvePickStock({
+          ownerId: ownDelivery?.ownerId,
           lwin18: resolvedLwin18,
           productName: item.name,
           neededCases: remaining,

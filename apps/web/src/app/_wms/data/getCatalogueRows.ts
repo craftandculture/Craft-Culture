@@ -162,8 +162,13 @@ const getCatalogueRows = async (
         applying. A price the business has decided on has to be the price that
         publishes.
       */
+      /*
+        A spirit's old single margin (sell_margin_pct, only ever set on spirits
+        and RTD) counts as its In Bond margin, as the Pricing Manager shows it.
+      */
       inbondPct: sql<number | null>`COALESCE(
         ${preferExact(wmsProductPricing.b2bMarginPct)},
+        ${preferExact(wmsProductPricing.sellMarginPct)},
         MAX(${wmsOwnerPricingSettings.inbondMarginPct})
       )`,
       pcPct: sql<number | null>`COALESCE(

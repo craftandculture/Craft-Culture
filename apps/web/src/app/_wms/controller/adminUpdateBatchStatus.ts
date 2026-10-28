@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import announceDispatch from '@/app/_wms/data/announceDispatch';
 import db from '@/database/client';
@@ -8,6 +8,7 @@ import {
   privateClientOrders,
   wmsDispatchBatchOrders,
   wmsDispatchBatches,
+  wmsPickLists,
   wmsStockMovements,
   zohoSalesOrderItems,
   zohoSalesOrders,
@@ -16,6 +17,7 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { updateBatchStatusSchema } from '../schemas/dispatchBatchSchema';
 import generateMovementNumber from '../utils/generateMovementNumber';
+import planDispatchMovements from '../utils/planDispatchMovements';
 
 /**
  * Update dispatch batch status
@@ -83,8 +85,24 @@ const adminUpdateBatchStatus = wmsOperatorProcedure
     const [updated] = await db
       .update(wmsDispatchBatches)
       .set(updateData)
-      .where(eq(wmsDispatchBatches.id, batchId))
+      // Only from the status just checked: a second tap found the batch already
+      // moved on and wrote the dispatch movements a second time
+      .where(
+        and(
+          eq(wmsDispatchBatches.id, batchId),
+          batch.status === null
+            ? isNull(wmsDispatchBatches.status)
+            : eq(wmsDispatchBatches.status, batch.status),
+        ),
+      )
       .returning();
+
+    if (!updated) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This batch was updated a moment ago. Refresh to see its status.',
+      });
+    }
 
     // Update order statuses based on batch status
     if (status === 'dispatched' || status === 'delivered') {
@@ -148,25 +166,63 @@ const adminUpdateBatchStatus = wmsOperatorProcedure
             .from(privateClientOrderItems)
             .where(inArray(privateClientOrderItems.orderId, orderIds));
 
-          const allItems = [...zohoItems, ...pcoItems].filter(
-            (item) => item.lwin18 && item.quantity > 0,
-          );
+          // What was actually picked for these orders, with whose bottles they were
+          const picks = await db
+            .select({
+              orderId: wmsStockMovements.orderId,
+              lwin18: wmsStockMovements.lwin18,
+              productName: wmsStockMovements.productName,
+              quantityCases: wmsStockMovements.quantityCases,
+              quantityBottles: wmsStockMovements.quantityBottles,
+              fromOwnerId: wmsStockMovements.fromOwnerId,
+              stockId: wmsStockMovements.stockId,
+              performedAt: wmsStockMovements.performedAt,
+            })
+            .from(wmsStockMovements)
+            .where(
+              and(
+                eq(wmsStockMovements.movementType, 'pick'),
+                inArray(wmsStockMovements.orderId, orderIds),
+              ),
+            );
+
+          // When each order's current pick list began: earlier picks belong to a deleted list
+          const lists = await db
+            .select({ orderId: wmsPickLists.orderId, createdAt: wmsPickLists.createdAt })
+            .from(wmsPickLists)
+            .where(inArray(wmsPickLists.orderId, orderIds));
+          const pickListCreatedAt = new Map<string, Date>();
+          for (const list of lists) {
+            if (!list.orderId) continue;
+            const seen = pickListCreatedAt.get(list.orderId);
+            if (!seen || list.createdAt > seen) pickListCreatedAt.set(list.orderId, list.createdAt);
+          }
+
+          const movements = planDispatchMovements({
+            orderIds,
+            picks,
+            lines: [...zohoItems, ...pcoItems],
+            pickListCreatedAt,
+          });
 
           // Build order number lookup
           const orderNumberMap = new Map(
             batchOrders.map((o) => [o.orderId, o.orderNumber]),
           );
 
-          for (const item of allItems) {
+          for (const movement of movements) {
             const movementNumber = await generateMovementNumber();
             await db.insert(wmsStockMovements).values({
               movementNumber,
               movementType: 'dispatch',
-              lwin18: item.lwin18 ?? 'UNKNOWN',
-              productName: item.productName ?? 'Unknown Product',
-              quantityCases: item.quantity,
-              orderId: item.orderId,
-              notes: `Batch ${batch.batchNumber} → ${batch.distributorName} (${orderNumberMap.get(item.orderId) ?? ''})`,
+              lwin18: movement.lwin18,
+              productName: movement.productName,
+              quantityCases: movement.quantityCases,
+              quantityBottles: movement.quantityBottles,
+              fromOwnerId: movement.fromOwnerId,
+              stockId: movement.stockId,
+              orderId: movement.orderId,
+              notes: `Batch ${batch.batchNumber} → ${batch.distributorName} (${orderNumberMap.get(movement.orderId) ?? ''})`,
               performedBy: ctx.user.id,
               performedAt: new Date(),
             });

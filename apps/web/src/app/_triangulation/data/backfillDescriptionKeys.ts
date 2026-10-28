@@ -1,5 +1,7 @@
 import { client } from '@/database/client';
 
+import type { SqlClient } from './sqlClient';
+
 /**
  * Give codeless lines a matching key derived from their description
  *
@@ -15,14 +17,17 @@ import { client } from '@/database/client';
  * @param importId - Limit the repair to one import; omit to repair everything
  * @returns How many lines were given a key
  */
-const backfillDescriptionKeys = async (importId?: string) => {
-  const repaired = await client<{ id: string }[]>`
+const backfillDescriptionKeys = async (
+  importId?: string,
+  sql: SqlClient = client,
+) => {
+  const repaired = await sql<{ id: string }[]>`
     UPDATE tri_import_lines
     SET normalized_code = UPPER(REGEXP_REPLACE(raw_description, '[^A-Za-z0-9]', '', 'g')),
         updated_at = NOW()
     WHERE COALESCE(normalized_code, '') = ''
       AND COALESCE(raw_description, '') <> ''
-      ${importId ? client`AND import_id = ${importId}` : client``}
+      ${importId ? sql`AND import_id = ${importId}` : sql``}
     RETURNING id
   `;
 

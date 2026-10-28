@@ -1,11 +1,11 @@
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
 import { fileTypeFromBuffer } from 'file-type';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import { logisticsQuoteRequestAttachments, logisticsQuoteRequests } from '@/database/schema';
+import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -34,8 +34,8 @@ const adminUploadQuoteRequestAttachment = adminProcedure
     const { requestId, fileName, fileData, description } = input;
 
     // Check if Blob token is configured
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      logger.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
+    if (!process.env.BLOB_PRIVATE_READ_WRITE_TOKEN) {
+      logger.error('BLOB_PRIVATE_READ_WRITE_TOKEN environment variable is not set');
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'File storage is not configured. Please contact support.',
@@ -92,11 +92,7 @@ const adminUploadQuoteRequestAttachment = adminProcedure
       const blobFilename = `quote-requests/${requestId}/${timestamp}-${sanitizedFilename}`;
 
       // Upload to Vercel Blob
-      const blob = await put(blobFilename, buffer, {
-        access: 'public',
-        contentType: detectedType.mime,
-        addRandomSuffix: true,
-      });
+      const blob = await putPrivateFile(blobFilename, buffer, detectedType.mime);
 
       // Create attachment record
       const [attachment] = await db

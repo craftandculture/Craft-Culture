@@ -2,12 +2,14 @@ import { type SQL, sql } from 'drizzle-orm';
 import z from 'zod';
 
 import { getPricingConfig } from '@/app/_pricing/data/getPricingConfig';
+import getRatesToUsd, { rateFor } from '@/app/_pricing/data/getRatesToUsd';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
-import exchangeRateService, {
-  type SupportedCurrency,
-} from '@/lib/currency/exchangeRateService';
 import { approvedProcedure } from '@/lib/trpc/procedures';
+
+/** Largest page a caller may ask for; the catalogue export pages through */
+export const PRODUCTS_MAX_PAGE_SIZE = 500;
 
 interface PreparedSearch {
   trimmedSearch: string;
@@ -146,10 +148,10 @@ const createSearchExpressions = (
 const productsGetMany = approvedProcedure
   .input(
     z.object({
-      cursor: z.number().optional().default(0),
-      limit: z.number().optional().default(50),
+      cursor: z.number().int().min(0).optional().default(0),
+      limit: z.number().int().min(1).optional().default(50),
       search: z.string().optional(),
-      productIds: z.array(z.uuid()).optional(),
+      productIds: z.array(z.uuid()).max(PRODUCTS_MAX_PAGE_SIZE).optional(),
       omitProductIds: z.array(z.uuid()).optional(),
       countries: z.array(z.string()).optional(),
       regions: z.array(z.string()).optional(),
@@ -172,7 +174,7 @@ const productsGetMany = approvedProcedure
     async ({
       input: {
         cursor,
-        limit,
+        limit: requestedLimit,
         search,
         productIds,
         omitProductIds,
@@ -183,8 +185,16 @@ const productsGetMany = approvedProcedure
         source,
         sortBy,
       },
-      ctx: { user: _user },
+      ctx: { user },
     }) => {
+      const isStaff = isTeamMember(user);
+
+      // A lookup by id returns every requested product; otherwise cap the page
+      const limit = Math.min(
+        Math.max(requestedLimit, productIds?.length ?? 0),
+        PRODUCTS_MAX_PAGE_SIZE,
+      );
+
       const preparedSearch =
         search && search.trim().length > 0
           ? prepareSearch(search)
@@ -234,8 +244,33 @@ const productsGetMany = approvedProcedure
       const [productsResult, countResult] = await Promise.all([
         db.query.products.findMany({
           where: whereConditions,
+          columns: {
+            id: true,
+            lwin18: true,
+            name: true,
+            region: true,
+            producer: true,
+            country: true,
+            year: true,
+            imageUrl: true,
+            createdAt: true,
+            updatedAt: true,
+          },
           with: {
             productOffers: {
+              columns: {
+                id: true,
+                productId: true,
+                externalId: true,
+                source: true,
+                price: true,
+                currency: true,
+                unitCount: true,
+                unitSize: true,
+                availableQuantity: true,
+                createdAt: true,
+                updatedAt: true,
+              },
               orderBy: (productOffers, { asc, desc }) => [
                 // Prioritize local_inventory (immediate dispatch) first
                 desc(
@@ -335,47 +370,37 @@ const productsGetMany = approvedProcedure
         const b2bConfig = await getPricingConfig('b2b');
         const ccMarginPercent = b2bConfig.cc_margin_percent ?? 0;
 
-        // Get unique currencies and fetch exchange rates
-        const uniqueCurrencies = [
-          ...new Set(allOffers.map((offer) => offer.currency)),
-        ] as SupportedCurrency[];
-
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        const exchangeRatePromises = uniqueCurrencies.map((currency) =>
-          exchangeRateService
-            .getExchangeRate(currency, 'USD', yesterday)
-            .catch(() => 1),
-        );
-
-        const exchangeRates = await Promise.all(exchangeRatePromises);
-
-        const exchangeRateMap = new Map(
-          uniqueCurrencies.map((currency, index) => [
-            currency,
-            exchangeRates[index] ?? 1,
-          ]),
-        );
+        // Live ECB rate, else the stored Pricing Settings rate; never 1
+        const rates = await getRatesToUsd(allOffers.map((offer) => offer.currency));
 
         // Calculate In-Bond prices: rawPrice * exchangeRate / (1 - ccMarginPercent/100)
         const marginMultiplier = 1 / (1 - ccMarginPercent / 100);
 
         for (const offer of allOffers) {
-          const exchangeRate = exchangeRateMap.get(offer.currency as SupportedCurrency) ?? 1;
-          const rawPriceUsd = offer.price * exchangeRate;
+          const rawPriceUsd = offer.price * rateFor(rates, offer.currency);
           const inBondPriceUsd = Math.round(rawPriceUsd * marginMultiplier * 100) / 100;
           inBondPriceMap.set(offer.id, inBondPriceUsd);
         }
       }
 
-      // Map In-Bond prices to products
+      // Map In-Bond prices to products. Only C&C staff see the supplier's
+      // raw cost and the supplier's own listing id; everyone else gets the
+      // in-bond sell price in both `price` and `inBondPriceUsd`.
       const productsWithInBondPrices = paginatedProducts.map((product) => ({
         ...product,
-        productOffers: product.productOffers?.map((offer) => ({
-          ...offer,
-          inBondPriceUsd: inBondPriceMap.get(offer.id) ?? 0,
-        })),
+        productOffers: product.productOffers?.map((offer) => {
+          const inBondPriceUsd = inBondPriceMap.get(offer.id) ?? 0;
+
+          return isStaff
+            ? { ...offer, inBondPriceUsd }
+            : {
+                ...offer,
+                externalId: '',
+                price: inBondPriceUsd,
+                currency: 'USD',
+                inBondPriceUsd,
+              };
+        }),
       }));
 
       return {

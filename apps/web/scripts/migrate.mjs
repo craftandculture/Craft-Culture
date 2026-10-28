@@ -33,9 +33,43 @@ const runMigrations = async () => {
    * @param label - What the backfill does, for the log
    * @param run - Async thunk performing the work
    */
+  /*
+    Which backfills have already run, so each runs once.
+
+    This script runs on every deploy, and without a record a backfill re-ran
+    every time: it re-released pricing staff had withdrawn, put back pricing
+    releases on the retired C&C partner, and reset rates set deliberately
+    since. On the deploy that creates the ledger every backfill has already
+    run many times, so that deploy only records them.
+  */
+  let fixLedger = null;
+
+  const loadFixLedger = async () => {
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "data_fix_runs" (
+        "label" text PRIMARY KEY,
+        "ran_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    const rows = await client`SELECT "label" FROM "data_fix_runs"`;
+
+    return { done: new Set(rows.map((row) => row.label)), seeding: rows.length === 0 };
+  };
+
   const dataFix = async (label, run) => {
+    fixLedger ??= await loadFixLedger();
+
+    if (fixLedger.done.has(label)) return;
+
+    if (fixLedger.seeding) {
+      await client`INSERT INTO "data_fix_runs" ("label") VALUES (${label}) ON CONFLICT DO NOTHING`;
+      console.log(`⏭️  ${label} (already applied, recorded)`);
+      return;
+    }
+
     try {
       await run();
+      await client`INSERT INTO "data_fix_runs" ("label") VALUES (${label}) ON CONFLICT DO NOTHING`;
       console.log(`✅ ${label}`);
     } catch (error) {
       dataFixFailures.push(label);
@@ -245,6 +279,11 @@ const runMigrations = async () => {
       `ALTER TYPE "private_client_document_type" ADD VALUE IF NOT EXISTS 'partner_sales_order'`,
     );
     console.log('✅ private_client_document_type partner_sales_order ready');
+
+    // Cellar transfers: the route wine takes to the UAE (UK bond, forwarder, in-UAE).
+    console.log('🔄 Ensuring cellar_intakes.route column...');
+    await client.unsafe(`ALTER TABLE "cellar_intakes" ADD COLUMN IF NOT EXISTS "route" text`);
+    console.log('✅ cellar_intakes.route ready');
 
     // Shipments: UAE-to-UAE mainland transfer type.
     console.log('🔄 Ensuring logistics_shipment_type has mainland_transfer...');
@@ -525,11 +564,15 @@ const runMigrations = async () => {
     );
     // Backfill the split-case picks already recorded — their bottle count only
     // ever survived in the note text ("... — 3 bottle(s) (split-case)").
-    await client.unsafe(
-      `UPDATE "wms_stock_movements"
-         SET "quantity_bottles" = NULLIF(substring("notes" from '([0-9]+) bottle'), '')::int
-       WHERE "quantity_bottles" IS NULL
-         AND "notes" ~ '[0-9]+ bottle'`,
+    // Once only: later movements leave it NULL on purpose (full-case moves),
+    // and re-reading their notes on every deploy rewrote them.
+    await dataFix('movement bottle counts read from split-case notes', () =>
+      client.unsafe(
+        `UPDATE "wms_stock_movements"
+           SET "quantity_bottles" = NULLIF(substring("notes" from '([0-9]+) bottle'), '')::int
+         WHERE "quantity_bottles" IS NULL
+           AND "notes" ~ '[0-9]+ bottle'`,
+      ),
     );
     console.log('✅ wms_stock_movements.quantity_bottles ready');
 
@@ -711,12 +754,14 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "tri_programmes" ADD COLUMN IF NOT EXISTS "input_profile" text NOT NULL DEFAULT 'warehouse'`,
     );
-    await client.unsafe(`
+    await dataFix('tri_programmes other than Crurated read as consignment', () =>
+      client.unsafe(`
       UPDATE "tri_programmes"
       SET "input_profile" = 'consignment'
       WHERE "id" <> '${CRURATED_PROGRAMME_ID}'
         AND "input_profile" = 'warehouse'
-    `);
+    `),
+    );
     console.log('✅ tri_programmes input_profile ready');
 
     /*
@@ -740,29 +785,35 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "tri_programmes" ADD COLUMN IF NOT EXISTS "takes_unattributed" boolean NOT NULL DEFAULT false`,
     );
-    await client.unsafe(`
-      UPDATE "tri_programmes"
-      SET "consignment_tag" = 'CRURATED', "takes_unattributed" = true
-      WHERE "id" = '${CRURATED_PROGRAMME_ID}' AND "consignment_tag" IS NULL
-    `);
     /*
-      Everyone else is matched on the letters of their name, which is reliable
-      for the four tags that are a word from it. Anything it does not match is
-      left null and simply claims nothing until someone sets it — an unclaimed
-      client is visible, whereas a wrongly claimed one is not.
+      Once only: a tag staff later clear must stay cleared, and a programme
+      added later must not be claimed by its name on the next deploy.
     */
-    for (const [tag, pattern] of [
-      ['CULT', '%cult%'],
-      ['CRU', '%cru wine%'],
-      ['RARE', '%rare%'],
-    ]) {
+    await dataFix('tri_programmes consignment tags seeded by name', async () => {
       await client.unsafe(`
         UPDATE "tri_programmes"
-        SET "consignment_tag" = '${tag}'
-        WHERE "consignment_tag" IS NULL
-          AND LOWER("name") LIKE '${pattern}'
+        SET "consignment_tag" = 'CRURATED', "takes_unattributed" = true
+        WHERE "id" = '${CRURATED_PROGRAMME_ID}' AND "consignment_tag" IS NULL
       `);
-    }
+      /*
+        Everyone else is matched on the letters of their name, which is reliable
+        for the four tags that are a word from it. Anything it does not match is
+        left null and simply claims nothing until someone sets it — an unclaimed
+        client is visible, whereas a wrongly claimed one is not.
+      */
+      for (const [tag, pattern] of [
+        ['CULT', '%cult%'],
+        ['CRU', '%cru wine%'],
+        ['RARE', '%rare%'],
+      ]) {
+        await client.unsafe(`
+          UPDATE "tri_programmes"
+          SET "consignment_tag" = '${tag}'
+          WHERE "consignment_tag" IS NULL
+            AND LOWER("name") LIKE '${pattern}'
+        `);
+      }
+    });
     console.log('✅ tri_programmes consignment tags ready');
 
     /*
@@ -773,11 +824,13 @@ const runMigrations = async () => {
       nothing the sync was called with an empty customer and failed schema
       validation in front of the user.
     */
-    await client.unsafe(`
+    await dataFix('tri_programmes Zoho customer defaulted to CD General', () =>
+      client.unsafe(`
       UPDATE "tri_programmes"
       SET "zoho_customer_match" = 'CD General'
       WHERE COALESCE("zoho_customer_match", '') = ''
-    `);
+    `),
+    );
     console.log('✅ tri_programmes Zoho customer ready');
 
     /*
@@ -1321,8 +1374,10 @@ const runMigrations = async () => {
       Guarded on 0 so it seeds an unconfigured card and never overwrites a rate
       somebody has since set deliberately.
     */
-    await client.unsafe(
+    await dataFix('repack fee seeded at 6.81', () =>
+      client.unsafe(
       `UPDATE "cellar_release_rates" SET "repack_per_case" = 6.81 WHERE "repack_per_case" = 0`,
+    ),
     );
     console.log('✅ repack fee ready');
 
@@ -2090,12 +2145,15 @@ const runMigrations = async () => {
       happened to be Crurated, so the answer was right by accident and would
       have become wrong the moment the catch-all changed hands.
     */
-    await client.unsafe(`
+    // Once only, so an alias staff remove stays removed
+    await dataFix('OpenCellar alias added to Crurated', () =>
+      client.unsafe(`
       UPDATE "cons_owners"
       SET "owner_aliases" = array_append(COALESCE("owner_aliases", '{}'), 'OPENCELLAR')
       WHERE UPPER("consignment_tag") = 'CRURATED'
         AND NOT ('OPENCELLAR' = ANY(COALESCE("owner_aliases", '{}')))
-    `);
+    `),
+    );
     console.log('✅ OpenCellar reads as Crurated');
 
     /*
@@ -3358,9 +3416,21 @@ const runMigrations = async () => {
       `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "client_quoted_at" timestamp`,
       `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "client_price_usd" double precision`,
       `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "quoted_margin_usd" double precision`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "shipment_id" uuid REFERENCES "logistics_shipments"("id") ON DELETE SET NULL`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "client_name" text`,
+      `ALTER TABLE "logistics_quote_requests" ADD COLUMN IF NOT EXISTS "client_email" text`,
     ]) {
       await client.unsafe(ddl);
     }
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "logistics_quote_requests_shipment_id_idx" ON "logistics_quote_requests" ("shipment_id")`,
+    );
+    // A request started from a shipment is quoted for that shipment's job
+    await client.unsafe(`
+      UPDATE "logistics_quote_requests" r SET "shipment_id" = r."source_id"
+      WHERE r."shipment_id" IS NULL AND r."source_type" = 'shipment'
+        AND EXISTS (SELECT 1 FROM "logistics_shipments" s WHERE s."id" = r."source_id")
+    `);
     await client.unsafe(
       `CREATE INDEX IF NOT EXISTS "logistics_quotes_forwarder_id_idx" ON "logistics_quotes" ("forwarder_id")`,
     );
@@ -3474,6 +3544,671 @@ const runMigrations = async () => {
       `CREATE INDEX IF NOT EXISTS "logistics_quote_emails_request_id_idx" ON "logistics_quote_emails" ("request_id")`,
     );
     console.log('✅ logistics_quote_emails ready');
+
+    // What each forwarder covers, so a new route can suggest it
+    for (const ddl of [
+      `ALTER TABLE "logistics_forwarders" ADD COLUMN IF NOT EXISTS "modes" text[] DEFAULT '{}'::text[] NOT NULL`,
+      `ALTER TABLE "logistics_forwarders" ADD COLUMN IF NOT EXISTS "origin_countries" text[] DEFAULT '{}'::text[] NOT NULL`,
+      `ALTER TABLE "logistics_forwarders" ADD COLUMN IF NOT EXISTS "notes" text`,
+    ]) {
+      await client.unsafe(ddl);
+    }
+    console.log('✅ forwarder coverage ready');
+
+    /*
+      Wine Labs market data (Oct 2026). One row per wine and vintage (LWIN11)
+      so every screen reads the same cached answer and a credit is spent once,
+      plus a log of each call so a month's spend can be capped.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "winelabs_wines" (
+        "lwin11" text PRIMARY KEY NOT NULL,
+        "our_lwin7" text NOT NULL,
+        "our_name" text NOT NULL,
+        "match_status" text NOT NULL,
+        "wl_lwin7" text,
+        "wl_lwin" text,
+        "wl_id" text,
+        "wl_display_name" text,
+        "info" jsonb,
+        "drink_from" integer,
+        "drink_to" integer,
+        "info_fetched_at" timestamp,
+        "price" jsonb,
+        "price_median_usd" double precision,
+        "price_count" integer,
+        "price_fetched_at" timestamp,
+        "matched_at" timestamp DEFAULT now() NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "winelabs_calls" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "endpoint" text NOT NULL,
+        "credits" integer NOT NULL,
+        "status" integer NOT NULL,
+        "error" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "winelabs_calls_created_at_idx" ON "winelabs_calls" ("created_at")`,
+    );
+    console.log('✅ winelabs cache ready');
+
+    /*
+      London in-bond market snapshot from Wine Labs (Oct 2026): best bid, best
+      ask and last trade per wine and vintage, so the Pricing Manager reads a
+      cached price instead of spending 15 credits a call.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "winelabs_market" (
+        "lwin11" text PRIMARY KEY NOT NULL,
+        "lwin7" text NOT NULL,
+        "vintage" text NOT NULL,
+        "status" text NOT NULL,
+        "bid_usd" double precision,
+        "ask_usd" double precision,
+        "last_usd" double precision,
+        "last_traded_at" timestamp,
+        "bids" integer DEFAULT 0 NOT NULL,
+        "asks" integer DEFAULT 0 NOT NULL,
+        "trades" integer DEFAULT 0 NOT NULL,
+        "venues" text[] DEFAULT '{}'::text[] NOT NULL,
+        "checked_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    // When the trades were last asked for: they are refreshed quarterly, the order book monthly
+    await client.unsafe(`ALTER TABLE "winelabs_market" ADD COLUMN IF NOT EXISTS "trades_checked_at" timestamp`);
+    await client.unsafe(`
+      UPDATE "winelabs_market" SET "trades_checked_at" = "checked_at"
+      WHERE "status" = 'priced' AND "trades_checked_at" IS NULL
+    `);
+    // A person's call on an LWIN Wine Labs disagrees with; recorded only, nothing is recoded
+    for (const ddl of [
+      `ALTER TABLE "winelabs_wines" ADD COLUMN IF NOT EXISTS "review" text`,
+      `ALTER TABLE "winelabs_wines" ADD COLUMN IF NOT EXISTS "reviewed_by" text`,
+      `ALTER TABLE "winelabs_wines" ADD COLUMN IF NOT EXISTS "reviewed_at" timestamp`,
+    ]) {
+      await client.unsafe(ddl);
+    }
+    // One row per bottle size: magnums and larger trade at their own price, not twice a bottle's
+    await client.unsafe(`ALTER TABLE "winelabs_market" ADD COLUMN IF NOT EXISTS "format" text DEFAULT '750' NOT NULL`);
+    await client.unsafe(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint c
+          JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+          WHERE c.conrelid = 'winelabs_market'::regclass AND c.contype = 'p' AND a.attname = 'format'
+        ) THEN
+          ALTER TABLE "winelabs_market" DROP CONSTRAINT IF EXISTS "winelabs_market_pkey";
+          ALTER TABLE "winelabs_market" ADD CONSTRAINT "winelabs_market_pkey" PRIMARY KEY ("lwin11", "format");
+        END IF;
+      END $$
+    `);
+    console.log('✅ winelabs market ready');
+
+    /*
+      One owner key (Index 3.0, Oct 2026). The distribution ledger's owners
+      (cons_owners) were seeded with no partner account, so their consignment
+      sales could reach no portal. Link each to the partner whose warehouse
+      stock its name matches, only where exactly one partner matches; anything
+      ambiguous is left for staff to link on the Distribution page.
+    */
+    /*
+      Whose bottles left (Index 3.0, Oct 2026). Picks and dispatches recorded
+      no owner and no stock row, so a bottle that left the warehouse vanished
+      from its owner's statement. Additive, nullable, no foreign keys.
+    */
+    for (const ddl of [
+      `ALTER TABLE "wms_stock_movements" ADD COLUMN IF NOT EXISTS "stock_id" uuid`,
+      `ALTER TABLE "wms_pick_list_items" ADD COLUMN IF NOT EXISTS "picked_stock_id" uuid`,
+      `CREATE INDEX IF NOT EXISTS "wms_stock_movements_order_id_idx" ON "wms_stock_movements" ("order_id")`,
+      `CREATE INDEX IF NOT EXISTS "wms_stock_movements_from_owner_idx" ON "wms_stock_movements" ("from_owner_id")`,
+    ]) {
+      await client.unsafe(ddl);
+    }
+    console.log('✅ movements carry owner and stock row');
+
+    /*
+      Take out of stock with a reason (Index 3.0, Oct 2026). Every bottle
+      removed by hand (samples, marketing, breakage, loss, collected, sold
+      outside Zoho) gets one row here beside its movement, so the owner's
+      statement can say where it went and how it is settled. Its own table,
+      so a missed migration cannot break reads of the movements themselves.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "wms_stock_outflows" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "movement_id" uuid NOT NULL,
+        "stock_id" uuid NOT NULL,
+        "owner_id" uuid NOT NULL,
+        "lwin18" text NOT NULL,
+        "product_name" text NOT NULL,
+        "bottles" integer NOT NULL,
+        "reason" text NOT NULL,
+        "settlement" text NOT NULL,
+        "recipient" text,
+        "note" text,
+        "unit_price_usd" double precision,
+        "reference" text,
+        "backdated" boolean DEFAULT false NOT NULL,
+        "performed_by" uuid NOT NULL,
+        "performed_at" timestamp DEFAULT now() NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "wms_stock_outflows_owner_idx" ON "wms_stock_outflows" ("owner_id", "performed_at")`);
+    console.log('✅ stock outflows ready');
+
+    /*
+      What kind of order a PCO is (Index 3.0, Oct 2026). Every outbound
+      request runs through the PCO pipeline; the kind decides what the
+      bottles become on the owner's statement: client_sale (sold to a private
+      client), owner_delivery (a cellar member's own wine delivered to them,
+      not a sale), partner_samples, cellar_sale.
+    */
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "order_kind" text DEFAULT 'client_sale' NOT NULL`,
+    );
+    await dataFix('cellar deliveries marked as owner deliveries', async () => {
+      await client.unsafe(`
+        UPDATE "private_client_orders" o SET "order_kind" = 'owner_delivery'
+        FROM "cellar_release_requests" r
+        WHERE r."private_client_order_id" = o."id" AND o."order_kind" = 'client_sale'
+      `);
+    });
+    console.log('✅ PCO order kinds ready');
+
+    /*
+      Zoho invoice lines (Index 3.0, Oct 2026). Invoices were stored without
+      their lines and linked to sales orders by a text number, so nothing tied
+      a bottle that left to the invoice line it was billed on. Lines are
+      fetched by the invoice sync when an invoice is new or changed; the sync
+      marker lives in its own table so zoho_invoices itself is untouched.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_invoice_line_items" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "zoho_invoice_id" text NOT NULL,
+        "invoice_number" text NOT NULL,
+        "zoho_line_item_id" text,
+        "line_order" integer NOT NULL,
+        "item_type" text,
+        "zoho_item_id" text,
+        "sku" text,
+        "name" text NOT NULL,
+        "quantity" double precision NOT NULL,
+        "unit" text,
+        "rate" double precision NOT NULL,
+        "item_total" double precision,
+        "zoho_salesorder_id" text,
+        "zoho_salesorder_item_id" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "zoho_invoice_line_items_invoice_idx" ON "zoho_invoice_line_items" ("zoho_invoice_id")`);
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS "zoho_invoice_line_items_sku_idx" ON "zoho_invoice_line_items" ("sku")`);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_invoice_line_sync" (
+        "zoho_invoice_id" text PRIMARY KEY NOT NULL,
+        "last_modified" text,
+        "zoho_salesorder_id" text,
+        "zoho_salesorder_number" text,
+        "synced_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    console.log('✅ zoho invoice lines ready');
+
+    /*
+      Whose bottles left, for movements written before picks recorded it
+      (Index 3.0, 25 Oct 2026). Ihab Toma's October statement showed nothing
+      leaving while 75 of his bottles were picked for trade orders: picks
+      carried a bay but no owner. Where exactly one owner has ever held that
+      wine in that bay (zero-quantity rows included), the movement is stamped
+      with that owner and marked inferred; anything ambiguous is left for an
+      operator. Outflows only: picks, and count / adjust decreases.
+    */
+    await client.unsafe(
+      `ALTER TABLE "wms_stock_movements" ADD COLUMN IF NOT EXISTS "owner_inferred" boolean DEFAULT false NOT NULL`,
+    );
+    await dataFix('past outflows stamped with the owner of the bay they left', async () => {
+      await client.unsafe(`
+        UPDATE "wms_stock_movements" m
+        SET "from_owner_id" = s.owner_id, "owner_inferred" = true
+        FROM (
+          SELECT "lwin18", "location_id", MIN("owner_id"::text)::uuid AS owner_id
+          FROM "wms_stock"
+          GROUP BY "lwin18", "location_id"
+          HAVING COUNT(DISTINCT "owner_id") = 1
+        ) s
+        WHERE m."from_owner_id" IS NULL
+          AND m."from_location_id" IS NOT NULL
+          AND m."movement_type" IN ('pick', 'count', 'adjust')
+          AND m."lwin18" = s."lwin18"
+          AND m."from_location_id" = s."location_id"
+      `);
+    });
+
+    /*
+      The past-outflow backfill read today's bay owner. Where ownership of that
+      wine in that bay changed after the movement, today's owner is not who
+      held it then, so the guess is withdrawn (owner unknown beats the wrong
+      owner on a statement). Count and adjust increases were never outflows.
+    */
+    await dataFix('inferred owners withdrawn where the bay changed hands later', async () => {
+      await client.unsafe(`
+        UPDATE "wms_stock_movements" m
+        SET "from_owner_id" = NULL, "owner_inferred" = false
+        WHERE m."owner_inferred" = true
+          AND (
+            (m."movement_type" IN ('count', 'adjust') AND m."quantity_cases" >= 0 AND COALESCE(m."reason_code", '') NOT LIKE 'stock_out:%')
+            OR EXISTS (
+              SELECT 1 FROM "wms_stock_movements" t
+              WHERE t."movement_type" = 'ownership_transfer'
+                AND t."lwin18" = m."lwin18"
+                AND (t."from_location_id" = m."from_location_id" OR t."to_location_id" = m."from_location_id")
+                AND t."performed_at" > m."performed_at"
+            )
+          )
+      `);
+    });
+
+    // Take-outs written positive before 25 Oct: removals are negative everywhere else
+    await dataFix('take-out movements recorded as removals', async () => {
+      await client.unsafe(`
+        UPDATE "wms_stock_movements"
+        SET "quantity_cases" = -"quantity_cases", "quantity_bottles" = -"quantity_bottles"
+        WHERE "reason_code" LIKE 'stock_out:%' AND "quantity_cases" >= 0 AND "quantity_bottles" > 0
+      `);
+    });
+
+    /*
+      The private client order a Zoho sales order fulfils (25 Oct 2026). The
+      only link was the PCO number typed into the SO's Reference, read as text
+      wherever it mattered: SO-00225, Ihab Toma's own delivery, read as a sale
+      to City Drinks. Filled by the Zoho sync (linkSalesOrdersToPcos), which
+      also fills past orders on its first run.
+    */
+    await client.unsafe(
+      `ALTER TABLE "zoho_sales_orders" ADD COLUMN IF NOT EXISTS "private_client_order_id" uuid`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "zoho_sales_orders_pco_idx" ON "zoho_sales_orders" ("private_client_order_id")`,
+    );
+
+    await dataFix('consignment owners linked to their partner accounts', async () => {
+      await client.unsafe(`
+        UPDATE "cons_owners" ow
+        SET "partner_id" = m."owner_id", "updated_at" = now()
+        FROM (
+          SELECT ow2."id" AS cons_id, MIN(s."owner_id"::text)::uuid AS owner_id
+          FROM "cons_owners" ow2
+          JOIN "wms_stock" s
+            ON ow2."wms_owner_match" IS NOT NULL
+           AND UPPER(s."owner_name") LIKE '%' || UPPER(ow2."wms_owner_match") || '%'
+          WHERE ow2."partner_id" IS NULL
+          GROUP BY ow2."id"
+          HAVING COUNT(DISTINCT s."owner_id") = 1
+        ) m
+        WHERE ow."id" = m.cons_id
+          AND ow."partner_id" IS NULL
+          AND NOT EXISTS (SELECT 1 FROM "cons_owners" o3 WHERE o3."partner_id" = m."owner_id")
+      `);
+    });
+
+    /*
+      The currency a member set their asking price in (26 Oct 2026). USD stays
+      the base; a price typed in EUR, GBP or AED is converted at the rate on
+      the day it was listed and that rate is kept, so a later move in the
+      exchange rate never changes what the member was promised.
+    */
+    for (const [column, type] of [
+      ['ask_currency', `text DEFAULT 'USD' NOT NULL`],
+      ['ask_per_bottle_local', 'double precision'],
+      ['ask_fx_rate', 'double precision'],
+      ['ask_fx_at', 'timestamp'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "sale_mandates" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+    console.log('✅ Sale mandate asking currency ready');
+
+    /*
+      What's New for members (26 Oct 2026). Updates are drafted by the AI from
+      each release and published by staff; a member's last visit is one
+      timestamp on their user, which is all "new since your last visit" needs.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "product_updates" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "type" text NOT NULL,
+        "audiences" text[] DEFAULT '{}'::text[] NOT NULL,
+        "title" text NOT NULL,
+        "body" text DEFAULT '' NOT NULL,
+        "link_path" text,
+        "status" text DEFAULT 'draft' NOT NULL,
+        "published_at" timestamp,
+        "release_version" text,
+        "source_ref" text UNIQUE,
+        "source_text" text,
+        "skipped_reason" text,
+        "created_by" uuid,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "product_updates" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "product_updates_status_idx" ON "product_updates" ("status", "published_at")`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "whats_new_seen_at" timestamp`,
+    );
+    console.log('✅ What\'s New ready');
+
+    /*
+      SOURCE reminders (27 Oct 2026). The RFQ deadline reminder ran hourly
+      across a 24-hour window, so a supplier got about 24 copies; it now sends
+      once per RFQ per supplier. Supplier order reminders ran every 6 hours
+      forever; they are now capped and spaced a day apart.
+    */
+    await client.unsafe(
+      `ALTER TABLE "source_rfq_partners" ADD COLUMN IF NOT EXISTS "deadline_reminder_sent_at" timestamp`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "source_supplier_orders" ADD COLUMN IF NOT EXISTS "reminder_count" integer DEFAULT 0 NOT NULL`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "source_supplier_orders" ADD COLUMN IF NOT EXISTS "last_reminder_at" timestamp`,
+    );
+    console.log('✅ SOURCE reminder tracking ready');
+
+    /*
+      Platform audit fixes (27 Oct 2026).
+
+      1. API rate limit counter: one row per key per minute, bumped with an
+         atomic upsert so concurrent requests cannot all pass the limit.
+      2. Indexes on hot foreign keys that had none (sign-in lookups, offers by
+         product, WMS joins). Not needed for the code to run, so a failure is
+         logged and the deploy continues.
+      3. API keys: the partner feed is now the default for any key without
+         feed:unrestricted. C&C's own keys (the consumer portals) made before
+         either flag existed are marked unrestricted so the portals keep their
+         Private Client prices; other partners' old keys become restricted.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "partner_api_rate_limits" (
+        "api_key_id" uuid NOT NULL,
+        "window_start" timestamp NOT NULL,
+        "request_count" integer DEFAULT 0 NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "partner_api_rate_limits" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "partner_api_rate_limits_key_window_idx" ON "partner_api_rate_limits" ("api_key_id", "window_start")`,
+    );
+
+    const fkIndexes = [
+      ['sessions_user_id_idx', 'sessions', 'user_id'],
+      ['accounts_user_id_idx', 'accounts', 'user_id'],
+      ['passkeys_user_id_idx', 'passkeys', 'user_id'],
+      ['product_offers_product_id_idx', 'product_offers', 'product_id'],
+      ['wms_pick_list_items_suggested_stock_id_idx', 'wms_pick_list_items', 'suggested_stock_id'],
+      ['wms_pick_list_items_suggested_location_id_idx', 'wms_pick_list_items', 'suggested_location_id'],
+      ['wms_stock_movements_from_location_id_idx', 'wms_stock_movements', 'from_location_id'],
+      ['wms_stock_movements_to_location_id_idx', 'wms_stock_movements', 'to_location_id'],
+      ['wms_stock_reservations_owner_id_idx', 'wms_stock_reservations', 'owner_id'],
+      ['zoho_sales_orders_pick_list_id_idx', 'zoho_sales_orders', 'pick_list_id'],
+    ];
+    for (const [indexName, table, column] of fkIndexes) {
+      try {
+        await client.unsafe(
+          `CREATE INDEX IF NOT EXISTS "${indexName}" ON "${table}" ("${column}")`,
+        );
+      } catch (error) {
+        console.error(`⚠️  Index ${indexName} not created (deploy continues)`, error);
+      }
+    }
+
+    await dataFix('C&C portal API keys marked unrestricted before partner feed became the default', () =>
+      client.unsafe(`
+        UPDATE "partner_api_keys" k
+        SET "permissions" = k."permissions" || '["feed:unrestricted"]'::jsonb
+        FROM "partners" p
+        WHERE p."id" = k."partner_id"
+          AND p."business_name" ~* 'craft.*culture'
+          AND NOT (k."permissions" ? 'feed:partner')
+          AND NOT (k."permissions" ? 'feed:unrestricted')
+      `),
+    );
+    console.log('✅ Platform audit fixes ready');
+    /*
+      Pricing releases left on the retired C&C partner (28 Oct 2026). Until
+      the run-once ledger existed, the "historic releases attributed to C&C"
+      backfill re-ran on every deploy and gave every record named like C&C a
+      release, the retired duplicate included. Each is moved to C&C's own
+      record (kept where C&C already has it), then removed from the retired
+      one, and the record's name loses the doubled merge note.
+    */
+    await dataFix('pricing releases moved off the retired C&C partner', async () => {
+      await client.unsafe(`
+        WITH cc AS (
+          SELECT id FROM partners
+           WHERE lower(trim(business_name)) = 'craft & culture'
+             AND status = 'active' AND type <> 'private_collector'
+           ORDER BY created_at LIMIT 1
+        ), retired AS (
+          SELECT p.id FROM partners p, cc
+           WHERE p.business_name ~* '^craft & culture \\(merged into'
+             AND p.status <> 'active' AND p.id <> cc.id
+        )
+        INSERT INTO wms_pricing_releases (lwin_key, owner_id, released_at, released_by)
+        SELECT r.lwin_key, cc.id, r.released_at, r.released_by
+          FROM wms_pricing_releases r, cc
+         WHERE r.owner_id IN (SELECT id FROM retired)
+        ON CONFLICT DO NOTHING
+      `);
+      await client.unsafe(`
+        DELETE FROM wms_pricing_releases r
+         USING partners p
+         WHERE p.id = r.owner_id
+           AND p.business_name ~* '^craft & culture \\(merged into'
+           AND p.status <> 'active'
+      `);
+      await client.unsafe(`
+        UPDATE partners
+           SET business_name = 'Craft & Culture (merged into Craft & Culture)'
+         WHERE business_name ~* '^craft & culture \\(merged into.*\\(merged into'
+           AND status <> 'active'
+      `);
+    });
+
+
+    /*
+      WMS document number sequences (27 Oct 2026). Movement, pick list, repack,
+      cycle count, dispatch batch, delivery note and partner request numbers
+      come from these, so two scans at once can no longer take the same number.
+      Re-seeded every deploy to at least the highest number already in use.
+    */
+    for (const [seq, table, column, code] of [
+      ['wms_movement_number_seq', 'wms_stock_movements', 'movement_number', 'MOV'],
+      ['wms_pick_list_number_seq', 'wms_pick_lists', 'pick_list_number', 'PL'],
+      ['wms_repack_number_seq', 'wms_repacks', 'repack_number', 'RPK'],
+      ['wms_count_number_seq', 'wms_cycle_counts', 'count_number', 'CC'],
+      ['wms_batch_number_seq', 'wms_dispatch_batches', 'batch_number', 'BATCH'],
+      ['wms_delivery_note_number_seq', 'wms_delivery_notes', 'delivery_note_number', 'DN'],
+      ['wms_request_number_seq', 'wms_partner_requests', 'request_number', 'REQ'],
+    ]) {
+      await client.unsafe(`CREATE SEQUENCE IF NOT EXISTS "${seq}"`);
+      await client.unsafe(`
+        SELECT setval('${seq}', GREATEST(
+          COALESCE((SELECT MAX(substring("${column}" FROM '^${code}-[0-9]{4}-([0-9]+)$')::bigint) FROM "${table}"), 0),
+          (SELECT CASE WHEN is_called THEN last_value ELSE 0 END FROM "${seq}"),
+          1
+        ), true)
+      `);
+    }
+    console.log('✅ WMS number sequences ready');
+
+    /*
+      Retry-safe receiving (27 Oct 2026): a receipt carries a key, and a
+      resent request finds its own movement instead of booking the cases in
+      again. NULL for every other movement, so the unique index is safe.
+    */
+    await client.unsafe(
+      `ALTER TABLE "wms_stock_movements" ADD COLUMN IF NOT EXISTS "idempotency_key" text`,
+    );
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "wms_stock_movements_idempotency_key_unique" ON "wms_stock_movements" ("idempotency_key")`,
+    );
+    console.log('✅ WMS receive idempotency ready');
+
+    /*
+      C&C internal LWIN codes (27 Oct 2026). The last code handed out, so two
+      people adding a new wine at the same time cannot both be given the same
+      9000xxx code before either is saved anywhere. Seeded lazily by the
+      reserve endpoint from the highest code in use.
+    */
+    await client.unsafe(
+      `CREATE SEQUENCE IF NOT EXISTS "cc_internal_lwin7_seq" MINVALUE 9000001 START 9000008`,
+    );
+    console.log('✅ Internal LWIN sequence ready');
+
+    /*
+      Private Cellar member emails (26 Oct 2026). Every member email is queued
+      here first and sent by the member-emails cron in the switch's mode (off,
+      shadow or live), so nothing reaches a member until Kevin turns it on.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "member_email_outbox" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "dedupe_key" text NOT NULL UNIQUE,
+        "kind" text NOT NULL,
+        "entity_id" text NOT NULL,
+        "partner_id" uuid,
+        "recipient_user_id" uuid,
+        "recipient_email" text NOT NULL,
+        "recipient_name" text NOT NULL,
+        "template" text NOT NULL,
+        "data" jsonb NOT NULL,
+        "is_action" boolean DEFAULT false NOT NULL,
+        "is_mergeable" boolean DEFAULT false NOT NULL,
+        "send_at" timestamp NOT NULL,
+        "status" text DEFAULT 'pending' NOT NULL,
+        "merged_into" uuid,
+        "sent_mode" text,
+        "sent_to" text,
+        "sent_at" timestamp,
+        "error" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "member_email_outbox" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "member_email_outbox_due_idx" ON "member_email_outbox" ("status", "send_at")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "member_email_outbox_recipient_idx" ON "member_email_outbox" ("recipient_user_id", "send_at")`,
+    );
+    console.log('✅ Member email outbox ready');
+
+    /* Order emails to wine partners and distributors (order-emails cron) */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "order_email_outbox" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "dedupe_key" text NOT NULL UNIQUE,
+        "order_id" uuid NOT NULL,
+        "activity_log_id" uuid NOT NULL,
+        "audience" text NOT NULL,
+        "event" text NOT NULL,
+        "recipient_email" text NOT NULL,
+        "recipient_name" text NOT NULL,
+        "data" jsonb NOT NULL,
+        "is_action" boolean DEFAULT false NOT NULL,
+        "send_at" timestamp NOT NULL,
+        "status" text DEFAULT 'pending' NOT NULL,
+        "merged_into" uuid,
+        "sent_mode" text,
+        "sent_to" text,
+        "sent_at" timestamp,
+        "error" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "order_email_outbox" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "order_email_outbox_due_idx" ON "order_email_outbox" ("status", "send_at")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "order_email_outbox_order_idx" ON "order_email_outbox" ("order_id")`,
+    );
+    console.log('✅ Order email outbox ready');
+
+    /* Ops checks: one row per problem found, tied to its Team Tasks part */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "ops_check_items" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "check_key" text NOT NULL,
+        "record_key" text NOT NULL,
+        "task_id" uuid REFERENCES "team_tasks"("id") ON DELETE SET NULL,
+        "part_id" uuid REFERENCES "team_task_parts"("id") ON DELETE SET NULL,
+        "cleared_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "ops_check_items" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "ops_check_items_check_record_idx" ON "ops_check_items" ("check_key", "record_key")`,
+    );
+    console.log('✅ Ops check items ready');
+
+    /*
+      Private Cellar orders are raised under C&C, not under the member.
+
+      Releases and hand-raised member orders took the member's own collector
+      record as their partner, so every order list showed the member as their
+      own partner and distributor assignment waited for the member to verify
+      themselves. New orders resolve to C&C (resolveOrderPartnerId); this moves
+      the ones already raised. Whose wine a delivery moves is read from the
+      release request, so no stock, pick or statement changes with it.
+    */
+    await dataFix('private cellar orders raised under C&C, not the member', () =>
+      client.unsafe(`
+      UPDATE "private_client_orders" o
+      SET "partner_id" = cc."id", "updated_at" = now()
+      FROM "partners" p,
+        (SELECT "id" FROM "partners"
+          WHERE lower(trim("business_name")) = 'craft & culture' AND "status" = 'active'
+          ORDER BY "created_at" LIMIT 1) cc
+      WHERE o."partner_id" = p."id"
+        AND p."type" = 'private_collector'
+    `),
+    );
+
+    /*
+      Shipment next actions (28 Oct 2026). Who moves each shipment on next,
+      whether its ETA is confirmed, and when news was last logged, so the
+      board, an owner's own list and the morning digest replace the daily
+      Word tracker.
+    */
+    for (const [column, type] of [
+      ['next_action', 'text'],
+      ['next_action_owner_id', 'uuid REFERENCES "users"("id") ON DELETE SET NULL'],
+      ['eta_confirmed', 'boolean NOT NULL DEFAULT false'],
+      ['last_update_at', 'timestamp'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+    console.log('✅ Shipment next actions ready');
 
     await client.end();
     process.exit(0);

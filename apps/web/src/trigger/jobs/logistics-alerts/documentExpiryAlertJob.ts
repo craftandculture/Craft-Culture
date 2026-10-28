@@ -2,6 +2,7 @@ import { logger, schedules } from '@trigger.dev/sdk';
 import { and, eq, isNotNull, lt } from 'drizzle-orm';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import { logisticsDocuments, logisticsShipments, users } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
@@ -46,11 +47,13 @@ export const documentExpiryAlertJob = schedules.task({
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    // Get admin users who should receive alerts
-    const adminUsers = await triggerDb
-      .select({ id: users.id, email: users.email, name: users.name })
-      .from(users)
-      .where(eq(users.role, 'admin'));
+    // C&C staff admins only: the alerts name shipments across every partner
+    const adminUsers = (
+      await triggerDb
+        .select({ id: users.id, email: users.email, name: users.name, role: users.role })
+        .from(users)
+        .where(eq(users.role, 'admin'))
+    ).filter((u) => isTeamMember(u));
 
     if (adminUsers.length === 0) {
       logger.warn('No admin users found for document expiry alerts');

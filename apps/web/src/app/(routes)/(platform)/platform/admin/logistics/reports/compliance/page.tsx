@@ -2,7 +2,6 @@
 
 import {
   IconAlertTriangle,
-  IconArrowLeft,
   IconCheck,
   IconClock,
   IconFileX,
@@ -13,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -95,40 +95,31 @@ const ComplianceReportPage = () => {
     <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header - hide on print */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between print:hidden">
-          <div className="flex items-center gap-4">
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/platform/admin/logistics/reports">
-                <Icon icon={IconArrowLeft} size="sm" />
-              </Link>
-            </Button>
-            <div>
-              <Typography variant="headingLg" className="mb-2">
-                Document Compliance Report
-              </Typography>
-              <Typography variant="bodyMd" colorRole="muted">
-                Track missing and expiring documents
-              </Typography>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Select value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(filterLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handlePrint} variant="outline">
-              <ButtonContent iconLeft={IconPrinter}>Print / PDF</ButtonContent>
-            </Button>
-          </div>
-        </div>
+        <AdminPageHeader
+          className="print:hidden"
+          title="Document Compliance Report"
+          description="Track missing and expiring documents"
+          crumbs={[{ label: 'Logistics', href: '/platform/admin/logistics' }, { label: 'Reports', href: '/platform/admin/logistics/reports' }]}
+          actions={
+            <>
+              <Select value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(filterLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handlePrint} variant="outline">
+                <ButtonContent iconLeft={IconPrinter}>Print / PDF</ButtonContent>
+              </Button>
+            </>
+          }
+        />
 
         {/* Print Header - only show on print */}
         <div className="hidden print:block mb-6">
@@ -248,7 +239,7 @@ const ComplianceReportPage = () => {
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/platform/admin/logistics/shipments/${shipment.shipmentId}`}
-                            className="font-mono font-medium hover:text-brand-primary print:text-black"
+                            className="font-mono font-medium hover:text-text-primary print:text-black"
                           >
                             {shipment.shipmentNumber}
                           </Link>

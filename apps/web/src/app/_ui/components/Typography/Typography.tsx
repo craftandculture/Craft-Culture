@@ -36,7 +36,7 @@ export const typographyStyles = tv({
       success: 'text-text-success',
       warning: 'text-text-warning',
       danger: 'text-text-danger',
-      brand: 'text-text-brand',
+      brand: 'text-text-primary',
       accentOrange: 'text-text-accent-orange',
     },
   },

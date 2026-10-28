@@ -92,7 +92,7 @@ const MonthlyTab = ({ programmeId }: MonthlyTabProps) => {
             onClick={() => setAllProgrammes(option.value)}
             className={`rounded-full border px-3 py-1 text-xs ${
               allProgrammes === option.value
-                ? 'border-border-brand bg-fill-brand/10 text-text-brand'
+                ? 'border-text-primary bg-text-primary/10 text-text-primary'
                 : 'border-border-primary text-text-muted'
             }`}
           >

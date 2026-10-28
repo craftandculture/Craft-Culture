@@ -8,30 +8,30 @@ type OrderStatus = PrivateClientOrder['status'];
 
 interface StatusConfig {
   label: string;
-  colorRole: 'muted' | 'brand' | 'success' | 'warning' | 'danger';
+  colorRole: 'muted' | 'info' | 'success' | 'warning' | 'danger';
 }
 
 const statusConfig: Record<OrderStatus, StatusConfig> = {
   draft: { label: 'Draft', colorRole: 'muted' },
-  submitted: { label: 'Submitted', colorRole: 'brand' },
-  under_cc_review: { label: 'Under Review', colorRole: 'brand' },
+  submitted: { label: 'Submitted', colorRole: 'info' },
+  under_cc_review: { label: 'Under Review', colorRole: 'info' },
   revision_requested: { label: 'Revision Requested', colorRole: 'warning' },
   cc_approved: { label: 'Approved', colorRole: 'success' },
   awaiting_partner_verification: { label: 'Awaiting Partner Verification', colorRole: 'warning' },
   awaiting_distributor_verification: { label: 'Awaiting Distributor Verification', colorRole: 'warning' },
   verification_suspended: { label: 'Verification Suspended', colorRole: 'danger' },
-  awaiting_client_payment: { label: 'Awaiting Payment', colorRole: 'warning' },
-  awaiting_payment_verification: { label: 'Awaiting Payment Verification', colorRole: 'brand' },
+  awaiting_client_payment: { label: 'Awaiting Client Payment', colorRole: 'warning' },
+  awaiting_payment_verification: { label: 'Awaiting Payment Verification', colorRole: 'info' },
   client_paid: { label: 'Client Paid', colorRole: 'success' },
-  scheduling_delivery: { label: 'Scheduling Delivery', colorRole: 'brand' },
-  delivery_scheduled: { label: 'Delivery Scheduled', colorRole: 'brand' },
-  awaiting_distributor_payment: { label: 'Awaiting Distributor', colorRole: 'warning' },
+  scheduling_delivery: { label: 'Scheduling Delivery', colorRole: 'info' },
+  delivery_scheduled: { label: 'Delivery Scheduled', colorRole: 'info' },
+  awaiting_distributor_payment: { label: 'Awaiting Distributor Payment', colorRole: 'warning' },
   distributor_paid: { label: 'Distributor Paid', colorRole: 'success' },
-  awaiting_partner_payment: { label: 'Awaiting Partner', colorRole: 'warning' },
+  awaiting_partner_payment: { label: 'Awaiting Partner Payment', colorRole: 'warning' },
   partner_paid: { label: 'Partner Paid', colorRole: 'success' },
-  stock_in_transit: { label: 'In Transit', colorRole: 'brand' },
-  with_distributor: { label: 'With Distributor', colorRole: 'brand' },
-  out_for_delivery: { label: 'Out for Delivery', colorRole: 'brand' },
+  stock_in_transit: { label: 'In Transit', colorRole: 'info' },
+  with_distributor: { label: 'With Distributor', colorRole: 'info' },
+  out_for_delivery: { label: 'Out for Delivery', colorRole: 'info' },
   delivered: { label: 'Delivered', colorRole: 'success' },
   cancelled: { label: 'Cancelled', colorRole: 'danger' },
 };

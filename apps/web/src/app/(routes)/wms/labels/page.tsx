@@ -7,7 +7,6 @@ import {
   IconPrinter,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -26,11 +25,11 @@ import { generateBatchLocationLabelsZpl } from '@/app/_wms/utils/generateLocatio
 import useTRPC from '@/lib/trpc/browser';
 
 /**
- * Inner component that uses useSearchParams
+ * Label list and print controls for warehouse devices
  */
 const WMSDeviceLabelsContent = () => {
-  const searchParams = useSearchParams();
-  const deviceToken = searchParams.get('device_token');
+  // The device token travels in an httpOnly cookie set by middleware the first
+  // time the device opens its ?device_token= link; it is not read here
   const api = useTRPC();
 
   const [activeTab, setActiveTab] = useState<'location' | 'totem'>('totem');
@@ -39,16 +38,14 @@ const WMSDeviceLabelsContent = () => {
 
   const { print } = usePrint();
 
-  // Get location labels - pass device_token for auth
   const { data: locationLabelsData, isLoading: locationLabelsLoading, error: locationError } = useQuery({
-    ...api.wms.device.labels.getLocationLabels.queryOptions({ deviceToken: deviceToken ?? '' }),
-    enabled: !!deviceToken,
+    ...api.wms.device.labels.getLocationLabels.queryOptions({}),
+    retry: false,
   });
 
-  // Get bay totems - pass device_token for auth
   const { data: bayTotemsData, isLoading: bayTotemsLoading, error: totemError } = useQuery({
-    ...api.wms.device.labels.getBayTotems.queryOptions({ deviceToken: deviceToken ?? '' }),
-    enabled: !!deviceToken,
+    ...api.wms.device.labels.getBayTotems.queryOptions({}),
+    retry: false,
   });
 
   // Auto-select all on load for quick printing
@@ -138,7 +135,7 @@ const WMSDeviceLabelsContent = () => {
         } else {
           // Fallback: use server-side download endpoint
           const zplBase64 = btoa(zpl);
-          const downloadUrl = `/api/wms/print?device_token=${encodeURIComponent(deviceToken ?? '')}&zpl=${encodeURIComponent(zplBase64)}`;
+          const downloadUrl = `/api/wms/print?zpl=${encodeURIComponent(zplBase64)}`;
 
           // Use iframe to download without navigating away
           const iframe = document.createElement('iframe');
@@ -159,7 +156,7 @@ const WMSDeviceLabelsContent = () => {
 
   // Check for auth errors
   const authError = locationError || totemError;
-  if (!deviceToken || authError) {
+  if (authError) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background-primary p-8">
         <Card className="max-w-md">
@@ -168,9 +165,8 @@ const WMSDeviceLabelsContent = () => {
               Access Denied
             </Typography>
             <Typography variant="bodyMd" colorRole="muted">
-              {!deviceToken
-                ? 'No device token provided. This page is for authorized warehouse devices only.'
-                : `Authentication failed. Please contact support.`}
+              This page is for authorised warehouse devices only. Open it from the device&apos;s WMS
+              link, or contact support.
             </Typography>
           </CardContent>
         </Card>
@@ -212,7 +208,7 @@ const WMSDeviceLabelsContent = () => {
             onClick={() => { setActiveTab('totem'); setSelectedLabels(new Set()); }}
             className={`flex-1 rounded-lg px-6 py-4 text-lg font-medium transition-colors ${
               activeTab === 'totem'
-                ? 'bg-fill-brand text-white'
+                ? 'bg-text-primary text-white'
                 : 'bg-fill-secondary text-text-muted'
             }`}
           >
@@ -225,7 +221,7 @@ const WMSDeviceLabelsContent = () => {
             onClick={() => { setActiveTab('location'); setSelectedLabels(new Set()); }}
             className={`flex-1 rounded-lg px-6 py-4 text-lg font-medium transition-colors ${
               activeTab === 'location'
-                ? 'bg-fill-brand text-white'
+                ? 'bg-text-primary text-white'
                 : 'bg-fill-secondary text-text-muted'
             }`}
           >
@@ -266,7 +262,7 @@ const WMSDeviceLabelsContent = () => {
                     onClick={() => toggleLabel(totemKey)}
                     className={`rounded-xl p-6 text-left transition-all ${
                       isSelected
-                        ? 'bg-fill-brand text-white ring-4 ring-border-brand'
+                        ? 'bg-text-primary text-white ring-4 ring-text-primary'
                         : 'bg-fill-secondary hover:bg-fill-muted'
                     }`}
                   >
@@ -303,7 +299,7 @@ const WMSDeviceLabelsContent = () => {
                     onClick={() => toggleLabel(location.id)}
                     className={`rounded-xl p-6 text-left transition-all ${
                       isSelected
-                        ? 'bg-fill-brand text-white ring-4 ring-border-brand'
+                        ? 'bg-text-primary text-white ring-4 ring-text-primary'
                         : 'bg-fill-secondary hover:bg-fill-muted'
                     }`}
                   >

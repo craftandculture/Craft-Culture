@@ -8,6 +8,8 @@ import parseChangelog from '@/utils/parseChangelog';
 export interface BrandedFooterProps {
   customerType: 'b2b' | 'b2c' | 'private_clients';
   partnerType?: 'wine_partner' | 'distributor' | 'private_collector' | null;
+  /** C&C team member; only staff see the internal development log */
+  isTeamMember?: boolean;
 }
 
 /**
@@ -15,7 +17,11 @@ export interface BrandedFooterProps {
  *
  * @param props - The footer props including customerType
  */
-const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
+const BrandedFooter = ({
+  customerType,
+  partnerType,
+  isTeamMember = false,
+}: BrandedFooterProps) => {
   const currentYear = new Date().getFullYear();
   const versions = parseChangelog();
   const latestVersion = versions[0]?.version ?? '1.0.0';
@@ -38,6 +44,39 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
     return '/platform/support';
   };
   const supportHref = getSupportHref();
+
+  /*
+    Staff were shown the trade marketing footer: a line about building bridges
+    across the GCC and a link to a retired quote tool. They need the live
+    sensor strip, help, the development log and the version, on one line.
+  */
+  if (isTeamMember) {
+    return (
+      <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
+        <WarehouseDataFeed />
+        <div className="container flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-4 text-xs text-text-muted">
+          <span>© {currentYear} Craft & Culture</span>
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link href={supportHref} className="transition-colors hover:text-text-primary">
+              Help Centre
+            </Link>
+            <Link
+              href="/platform/development-log"
+              className="transition-colors hover:text-text-primary"
+            >
+              Development Log
+            </Link>
+            <Link
+              href="/platform/development-log"
+              className="font-light transition-colors hover:text-text-primary"
+            >
+              v{latestVersion}
+            </Link>
+          </nav>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
@@ -116,7 +155,7 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
                 href={supportHref}
                 className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
-                Help Center
+                Help Centre
               </Link>
               {/*
                 A member consolidating a purchase or offering wine for resale
@@ -131,7 +170,7 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
                   Email the cellar team
                 </a>
               )}
-              {access.kind !== 'collector' && (
+              {isTeamMember && (
                 <Link
                   href="/platform/development-log"
                   className="text-text-muted hover:text-text-primary text-xs transition-colors"
@@ -169,12 +208,18 @@ const BrandedFooter = ({ customerType, partnerType }: BrandedFooterProps) => {
                 `© ${currentYear} Craft & Culture. All rights reserved.`
               )}
             </p>
-            <Link
-              href="/platform/development-log"
-              className="text-text-muted hover:text-text-primary text-xs font-light transition-colors"
-            >
-              v{latestVersion}
-            </Link>
+            {isTeamMember ? (
+              <Link
+                href="/platform/development-log"
+                className="text-text-muted hover:text-text-primary text-xs font-light transition-colors"
+              >
+                v{latestVersion}
+              </Link>
+            ) : (
+              <span className="text-text-muted text-xs font-light">
+                v{latestVersion}
+              </span>
+            )}
           </div>
         </div>
       </div>

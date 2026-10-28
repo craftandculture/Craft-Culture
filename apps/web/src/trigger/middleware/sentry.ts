@@ -48,7 +48,7 @@ export const sentryMiddleware = tasks.middleware(
 
     const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
     if (!sentryDsn) {
-      throw new Error('NEXT_PUBLIC_SENTRY_DSN is not set');
+      return next();
     }
 
     Sentry.init({

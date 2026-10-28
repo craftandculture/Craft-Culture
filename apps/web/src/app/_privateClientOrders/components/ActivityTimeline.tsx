@@ -24,7 +24,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrderActivityLog } from '@/database/schema';
 
 interface ActivityWithUser extends PrivateClientOrderActivityLog {
-  user?: { id: string; name: string; email: string } | null;
+  user?: { id: string; name: string; email?: string } | null;
   partner?: { id: string; businessName: string } | null;
 }
 
@@ -243,7 +243,7 @@ const ActivityTimeline = ({ activities, maxItems }: ActivityTimelineProps) => {
               <div
                 className={`absolute left-0 top-0 flex h-4 w-4 items-center justify-center rounded-full ${
                   isFirst
-                    ? 'bg-fill-brand'
+                    ? 'bg-text-primary'
                     : colorRole === 'success'
                       ? 'bg-fill-success'
                       : colorRole === 'warning'

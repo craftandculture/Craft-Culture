@@ -1,8 +1,6 @@
 import { z } from 'zod';
 
-/**
- * Schema for creating a new quote request
- */
+/** Schema for creating a new quote request */
 const createQuoteRequestSchema = z.object({
   // Priority
   priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
@@ -17,7 +15,9 @@ const createQuoteRequestSchema = z.object({
   transportMode: z.enum(['sea_fcl', 'sea_lcl', 'air', 'road']).optional(),
 
   // Cargo details
-  productType: z.enum(['wine', 'spirits', 'beer', 'mixed', 'other']).default('wine'),
+  productType: z
+    .enum(['wine', 'spirits', 'beer', 'mixed', 'other'])
+    .default('wine'),
   productDescription: z.string().optional(),
   totalCases: z.number().int().positive().optional(),
   totalPallets: z.number().int().positive().optional(),
@@ -29,11 +29,30 @@ const createQuoteRequestSchema = z.object({
   // Where the request was started from
   sourceType: z.enum(['shipment', 'uk_move']).optional(),
   sourceId: z.string().uuid().optional(),
+  /** Who the freight is for; shown on the list and greeted on their quote */
+  clientName: z.string().trim().max(200).optional(),
+  clientEmail: z.string().trim().email('Enter a valid email').optional().or(z.literal('')),
+  /** The kind of job the request opens; read from the route when omitted */
+  jobType: z
+    .enum(['inbound', 'outbound', 're_export', 'mainland_transfer'])
+    .optional(),
 
   /** The date forwarders are asked to reply by */
   replyBy: z.coerce.date().optional(),
   /** Forwarders to ask, added to the request as it is saved */
   forwarderIds: z.array(z.string().uuid()).max(20).optional(),
+  /** Forwarders typed in on the form, added to the list as the request is saved */
+  newForwarders: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1),
+        email: z.string().trim().email().optional().or(z.literal('')),
+      }),
+    )
+    .max(10)
+    .optional(),
+  /** Email the request to its forwarders from logistics@ as soon as it is saved */
+  sendNow: z.boolean().optional(),
 
   // Special requirements
   requiresThermalLiner: z.boolean().default(false),

@@ -10,7 +10,7 @@ import logger from '@/utils/logger';
  * Fetch latest exchange rates from ECB
  *
  * Fetches GBP→USD and EUR→USD from the European Central Bank.
- * USD→AED uses a fixed rate (AED is pegged to USD at ~3.67).
+ * USD→AED uses the fixed peg (3.6725).
  */
 const fetchLatestExchangeRates = adminProcedure.mutation(async () => {
   const today = new Date();

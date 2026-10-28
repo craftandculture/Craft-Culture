@@ -1,18 +1,20 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { cellarApplications, cellarInvites, users } from '@/database/schema';
+import { cellarApplications, users } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 import serverConfig from '@/server.config';
 
 import { PRIVATE_CELLAR_TERMS_VERSION } from '../constants/privateCellarTerms';
 import wineSources from '../constants/wineSources';
+import assertApplicationHolder from '../data/assertApplicationHolder';
 import assertNotTradeAccount from '../data/assertNotTradeAccount';
 import ensureApplicantCellar from '../data/ensureApplicantCellar';
 import getApplicationView from '../data/getApplicationView';
 import getOrCreateApplication from '../data/getOrCreateApplication';
+import isInvitedApplicant from '../data/isInvitedApplicant';
 import notifyCellarTeamOfApplication from '../data/notifyCellarTeamOfApplication';
 import syncApplicantProfile from '../data/syncApplicantProfile';
 import sendOnboardingEmail from '../utils/sendOnboardingEmail';
@@ -34,6 +36,8 @@ const submitApplication = protectedProcedure
   .mutation(async ({ ctx }) => {
     await assertNotTradeAccount(ctx.user.id);
     const application = await getOrCreateApplication(ctx.user.id, ctx.user.name);
+    // A delegate of someone else's cellar can never write the holder's details
+    await assertApplicationHolder(application, ctx.user.id);
 
     if (application.status === 'declined') {
       throw new TRPCError({
@@ -55,22 +59,7 @@ const submitApplication = protectedProcedure
       gets in, and treating that as an invitation opened a cellar for anyone
       approved, with no review.
     */
-    const [invite] = application.inviteId
-      ? await db
-          .select({ id: cellarInvites.id })
-          .from(cellarInvites)
-          .where(
-            and(
-              eq(cellarInvites.id, application.inviteId),
-              /* Sent counts too: they may sign in without opening the link. */
-              inArray(cellarInvites.status, ['sent', 'accepted']),
-              eq(cellarInvites.userId, ctx.user.id),
-            ),
-          )
-          .limit(1)
-      : [];
-
-    const isInvited = Boolean(invite);
+    const isInvited = await isInvitedApplicant(application, ctx.user.id);
     const isApproved = isInvited || application.status === 'approved';
 
     const partnerId = await ensureApplicantCellar({

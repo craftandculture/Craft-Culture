@@ -4,7 +4,7 @@ import { z } from 'zod';
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import { cellarIntakes, users } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { collectorProcedure } from '@/lib/trpc/procedures';
 
 import cellarTeamEmails from '../constants/cellarTeamEmails';
 import wineSources, { WINE_SOURCE_VALUES } from '../constants/wineSources';
@@ -19,7 +19,7 @@ import openTransferTasks from '../data/openTransferTasks';
  * they would like to buy, does not. Kevin and Laraine get a task and a
  * notification either way. All details are optional — we chase the holder.
  */
-const memberAddIntake = stockOwnerProcedure
+const memberAddIntake = collectorProcedure
   .input(
     z.object({
       source: z.enum(WINE_SOURCE_VALUES),
@@ -55,7 +55,7 @@ const memberAddIntake = stockOwnerProcedure
         createNotification({
           userId: member.id,
           type: 'action_required',
-          title: `${memberName} — ${source.label}`,
+          title: `${memberName}: ${source.label}`,
           message: [intake!.holderName, intake!.approxCases && `about ${intake!.approxCases} cases`, intake!.note]
             .filter(Boolean)
             .join(' · '),

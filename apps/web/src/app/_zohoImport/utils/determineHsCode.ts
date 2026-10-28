@@ -1,7 +1,10 @@
 /**
  * Determine the HS (Harmonized System) tariff code for a wine product
  *
- * Based on UAE/GCC import classifications for alcoholic beverages.
+ * Based on UAE/GCC import classifications for alcoholic beverages. Only codes
+ * on C&C's HS code list (the export invoice menu) are returned, so an import
+ * never carries a code customs paperwork does not use: vermouth files as still
+ * wine, and tequila and other spirits as 22089090.
  *
  * @example
  *   determineHsCode('wine', 'red', null); // returns '22042100'
@@ -35,9 +38,6 @@ const determineHsCode = (
 
   // Fortified wines (Port, Sherry, Madeira, Marsala, Vermouth)
   if (typeLower === 'fortified') {
-    if (subTypeLower.includes('vermouth')) {
-      return '22051000';
-    }
     return '22042100';
   }
 
@@ -58,11 +58,11 @@ const determineHsCode = (
     if (subTypeLower.includes('rum')) {
       return '22084000';
     }
-    if (subTypeLower.includes('tequila') || subTypeLower.includes('mezcal')) {
-      return '22089000';
+    if (subTypeLower.includes('liqueur')) {
+      return '22087000';
     }
-    // Other spirits
-    return '22089000';
+    // Tequila, mezcal and other spirits
+    return '22089090';
   }
 
   // Beer

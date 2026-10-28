@@ -76,14 +76,14 @@ const AlternativeVintagesPicker = ({
           type="button"
           className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors ${
             hasSelections
-              ? 'bg-fill-brand/10 text-text-brand hover:bg-fill-brand/20'
+              ? 'bg-text-primary/10 text-text-primary hover:bg-text-primary/20'
               : 'text-text-muted hover:bg-fill-muted hover:text-text-primary'
           }`}
           title={hasSelections ? `${selectedVintages.length} alternative vintage${selectedVintages.length === 1 ? '' : 's'}` : 'Add alternative vintages'}
         >
           <IconArrowsExchange className="h-4 w-4" />
           {hasSelections && (
-            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fill-brand px-1 text-[10px] font-bold text-white">
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-text-primary px-1 text-[10px] font-bold text-white">
               {selectedVintages.length}
             </span>
           )}

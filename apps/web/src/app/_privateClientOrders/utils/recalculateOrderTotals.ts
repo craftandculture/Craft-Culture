@@ -31,7 +31,7 @@ const recalculateOrderTotals = async (orderId: string) => {
     // Get the order to resolve partnerId
     const order = await db.query.privateClientOrders.findFirst({
       where: { id: orderId },
-      columns: { partnerId: true },
+      columns: { partnerId: true, totalUsd: true },
     });
 
     // Get global PCO variables (from database or defaults)
@@ -82,6 +82,22 @@ const recalculateOrderTotals = async (orderId: string) => {
     }
 
     const itemCount = items.length;
+
+    // A subscription box carries one price for the whole order and none on its
+    // lines. Summing zero-priced lines would wipe that price, so keep the stored
+    // money and only refresh the counts.
+    const isBox =
+      itemCount > 0 &&
+      items.every((item) => !item.pricePerCaseUsd) &&
+      (Number(order?.totalUsd) || 0) > 0;
+
+    if (isBox) {
+      await db
+        .update(privateClientOrders)
+        .set({ itemCount, caseCount: totalCases, updatedAt: new Date() })
+        .where(eq(privateClientOrders.id, orderId));
+      return;
+    }
 
     // Round all values
     const round2 = (v: number) => Math.round(v * 100) / 100;

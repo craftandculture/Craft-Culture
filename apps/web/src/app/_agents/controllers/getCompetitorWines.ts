@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -19,25 +19,22 @@ const getCompetitorWines = adminProcedure
   .query(async ({ input }) => {
     const { competitorName, limit, offset } = input;
 
-    const query = db
+    // Active wines only, with or without a competitor filter (the filtered
+    // branch used to drop the active check and show withdrawn lists)
+    return db
       .select()
       .from(competitorWines)
-      .where(eq(competitorWines.isActive, true))
+      .where(
+        competitorName
+          ? and(
+              eq(competitorWines.isActive, true),
+              eq(competitorWines.competitorName, competitorName),
+            )
+          : eq(competitorWines.isActive, true),
+      )
       .orderBy(desc(competitorWines.uploadedAt))
       .limit(limit)
       .offset(offset);
-
-    if (competitorName) {
-      return db
-        .select()
-        .from(competitorWines)
-        .where(eq(competitorWines.competitorName, competitorName))
-        .orderBy(desc(competitorWines.uploadedAt))
-        .limit(limit)
-        .offset(offset);
-    }
-
-    return query;
   });
 
 export default getCompetitorWines;

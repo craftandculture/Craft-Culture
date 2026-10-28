@@ -1,9 +1,12 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
+import withNumberRetry from '@/app/_cellar/utils/withNumberRetry';
 import type db from '@/database/client';
 import { poolSales, saleMandateLots, saleMandates } from '@/database/schema';
 
+
 import generateSaleNumber from './generateSaleNumber';
+import { SELLABLE_STATUSES } from './mandateStatuses';
 import writeConsignmentSettlement from './writeConsignmentSettlement';
 import type { CommissionAudience } from '../constants/commissionRates';
 import { commissionPctFor } from '../constants/commissionRates';
@@ -67,11 +70,28 @@ const recordPoolSale = async ({
     .select()
     .from(saleMandates)
     .where(eq(saleMandates.id, mandateId))
+    // Locked so two sales of the same wine are counted one after the other
+    .for('update')
     .limit(1);
 
   if (!mandate) throw new Error('That mandate does not exist');
 
   if (bottles <= 0) throw new Error('A sale needs at least one bottle');
+
+  /*
+    Only a live offer can sell. A withdrawn, expired or suspended mandate is
+    the member saying no, and the CASE below would otherwise flip it back to
+    partially_sold and put the rest of their wine on sale again.
+  */
+  if (
+    !SELLABLE_STATUSES.includes(
+      mandate.status as (typeof SELLABLE_STATUSES)[number],
+    )
+  ) {
+    throw new Error(
+      `${mandate.mandateNumber} is ${mandate.status} and no longer for sale, so no sale can be recorded against it`,
+    );
+  }
 
   if (bottles > mandate.bottlesRemaining) {
     throw new Error(
@@ -97,35 +117,39 @@ const recordPoolSale = async ({
 
   const commissionUsd = Math.round((saleTotalUsd - owedToOwnerUsd) * 100) / 100;
 
-  const saleNumber = await generateSaleNumber();
+  const sale = await withNumberRetry((attempt) =>
+    tx.transaction(async (savepoint) => {
+      const [row] = await savepoint
+        .insert(poolSales)
+        .values({
+          saleNumber: await generateSaleNumber(savepoint, attempt),
+          mandateId,
+          mandateLotId,
+          stockId,
+          ownerId: mandate.ownerId,
+          ownerName: mandate.ownerName,
+          buyerPartnerId,
+          buyerName,
+          buyerAudience,
+          lwin18: mandate.lwin18,
+          productName: mandate.productName,
+          bottles,
+          caseConfig: mandate.caseConfig,
+          salePricePerBottleUsd,
+          saleTotalUsd,
+          askPerBottleUsd: mandate.askPerBottleUsd,
+          owedToOwnerUsd,
+          commissionPct,
+          commissionUsd,
+          source,
+          recordedBy,
+          notes,
+        })
+        .returning();
 
-  const [sale] = await tx
-    .insert(poolSales)
-    .values({
-      saleNumber,
-      mandateId,
-      mandateLotId,
-      stockId,
-      ownerId: mandate.ownerId,
-      ownerName: mandate.ownerName,
-      buyerPartnerId,
-      buyerName,
-      buyerAudience,
-      lwin18: mandate.lwin18,
-      productName: mandate.productName,
-      bottles,
-      caseConfig: mandate.caseConfig,
-      salePricePerBottleUsd,
-      saleTotalUsd,
-      askPerBottleUsd: mandate.askPerBottleUsd,
-      owedToOwnerUsd,
-      commissionPct,
-      commissionUsd,
-      source,
-      recordedBy,
-      notes,
-    })
-    .returning();
+      return row;
+    }),
+  );
 
   if (!sale) throw new Error('Could not record the sale');
 
@@ -143,21 +167,37 @@ const recordPoolSale = async ({
       );
   }
 
-  const remaining = mandate.bottlesRemaining - bottles;
-
-  await tx
+  /*
+    Relative, and only while enough remain. Writing the remaining count read
+    earlier let two sales of the same wine both pass the check and both write
+    "remaining minus mine", so the wine sold twice and the count went wrong.
+  */
+  const [decremented] = await tx
     .update(saleMandates)
     .set({
-      bottlesRemaining: remaining,
+      bottlesRemaining: sql`${saleMandates.bottlesRemaining} - ${bottles}`,
       /*
         Sold closes the mandate; partially_sold keeps it live so the rest stays
         on the lists. Both still count as committing bottles, which is what
         stops the remainder being offered twice.
       */
-      status: remaining === 0 ? 'sold' : 'partially_sold',
+      status: sql`CASE WHEN ${saleMandates.bottlesRemaining} - ${bottles} = 0 THEN 'sold' ELSE 'partially_sold' END::sale_mandate_status`,
       updatedAt: new Date(),
     })
-    .where(eq(saleMandates.id, mandateId));
+    .where(
+      and(
+        eq(saleMandates.id, mandateId),
+        inArray(saleMandates.status, [...SELLABLE_STATUSES]),
+        sql`${saleMandates.bottlesRemaining} >= ${bottles}`,
+      ),
+    )
+    .returning({ bottlesRemaining: saleMandates.bottlesRemaining });
+
+  if (!decremented) {
+    throw new Error(
+      `Fewer than ${bottles} bottles remain on ${mandate.mandateNumber}`,
+    );
+  }
 
   const settlement = await writeConsignmentSettlement({
     tx,

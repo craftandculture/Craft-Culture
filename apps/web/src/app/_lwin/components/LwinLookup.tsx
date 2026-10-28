@@ -7,9 +7,10 @@
  * Used when receiving stock without a known LWIN.
  */
 
-import { IconBottle, IconCheck, IconKeyboard, IconLoader2, IconSearch } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { IconBottle, IconCheck, IconKeyboard, IconLoader2, IconSearch, IconSparkles } from '@tabler/icons-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -127,6 +128,32 @@ const LwinLookup = ({
     enabled: manualMode,
   });
 
+  // A new code is reserved on click, so two people cannot take the same one
+  const { mutate: reserveInternal, isPending: isReserving } = useMutation({
+    ...api.lwin.reserveInternal.mutationOptions(),
+    onSuccess: ({ lwin7 }) => setManualLwin7(lwin7),
+    onError: (error) => toast.error(error.message),
+  });
+
+  /*
+    Wine Labs' name search, on a click (about 8 credits): it reads messy
+    supplier names our register search cannot, so a wine is coded right
+    before it gets an internal code or the wrong cuvée.
+  */
+  const {
+    mutate: askWinelabs,
+    data: suggestion,
+    isPending: isAsking,
+    reset: resetSuggestion,
+  } = useMutation({
+    ...api.lwin.suggest.mutationOptions(),
+    onSuccess: (result) => {
+      if (!result) toast.info('Wine Labs does not recognise this name either.');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const askQuery = [searchQuery || productName, vintage].filter(Boolean).join(' ');
+
   // Search query
   const { data: searchResults, isLoading } = useQuery({
     ...api.lwin.search.queryOptions({
@@ -215,7 +242,7 @@ const LwinLookup = ({
           }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
             !manualMode
-              ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400'
+              ? 'border-text-primary bg-surface-secondary text-text-primary dark:bg-surface-secondary dark:text-text-primary'
               : 'border-border-primary text-text-muted hover:bg-fill-secondary'
           }`}
         >
@@ -230,7 +257,7 @@ const LwinLookup = ({
           }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
             manualMode
-              ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400'
+              ? 'border-text-primary bg-surface-secondary text-text-primary dark:bg-surface-secondary dark:text-text-primary'
               : 'border-border-primary text-text-muted hover:bg-fill-secondary'
           }`}
         >
@@ -254,7 +281,7 @@ const LwinLookup = ({
                 setManualLwin7(val);
               }}
               placeholder="LWIN or supplier code (e.g. 1831498, W12008024)"
-              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 font-mono uppercase focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 font-mono uppercase focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
             />
             <Typography variant="bodyXs" colorRole="muted" className="mt-1">
               Standard LWIN (7 digits) or supplier code (alphanumeric)
@@ -279,10 +306,12 @@ const LwinLookup = ({
                   ))}
                   <button
                     type="button"
-                    onClick={() => setManualLwin7(internal.next)}
-                    className="rounded-md border border-brand-500 px-2 py-1 text-xs text-brand-700 hover:bg-brand-50 dark:text-brand-400"
+                    onClick={() => reserveInternal()}
+                    disabled={isReserving}
+                    className="rounded-md border border-text-primary px-2 py-1 text-xs text-text-primary hover:bg-surface-secondary disabled:opacity-50 dark:text-text-primary"
+                    title="Reserves the next free C&C code for this wine"
                   >
-                    New C&amp;C code: <span className="font-mono">{internal.next}</span>
+                    {isReserving ? 'Reserving…' : 'New C&C code'}
                   </button>
                 </div>
               </div>
@@ -297,7 +326,7 @@ const LwinLookup = ({
               value={manualDisplayName}
               onChange={(e) => setManualDisplayName(e.target.value)}
               placeholder="Product name for this SKU"
-              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
             />
           </div>
         </div>
@@ -320,7 +349,7 @@ const LwinLookup = ({
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search by producer, wine name, region..."
-              className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
             />
             {isLoading && (
               <Icon
@@ -330,6 +359,73 @@ const LwinLookup = ({
               />
             )}
           </div>
+        </div>
+      )}
+
+      {/* Wine Labs' suggestion, above our own register's results */}
+      {!manualMode && !selectedLwin && (
+        <div className="space-y-2">
+          {!suggestion && (
+            <button
+              type="button"
+              onClick={() => askWinelabs({ query: askQuery })}
+              disabled={isAsking || askQuery.trim().length < 3}
+              className="inline-flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary disabled:opacity-50"
+            >
+              <Icon icon={isAsking ? IconLoader2 : IconSparkles} size="xs" className={isAsking ? 'animate-spin' : ''} />
+              {isAsking ? 'Asking Wine Labs…' : 'Not sure which wine? Ask Wine Labs (about 8 credits)'}
+            </button>
+          )}
+          {suggestion && (
+            <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-2 dark:border-emerald-800 dark:bg-emerald-900/10">
+              <Typography variant="bodyXs" colorRole="muted" className="px-2 pb-1">
+                Wine Labs suggests
+              </Typography>
+              {suggestion.wine ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedLwin({
+                      lwin: suggestion.wine!.lwin,
+                      displayName: suggestion.wine!.displayName,
+                      producerName: suggestion.wine!.producerName,
+                      country: suggestion.wine!.country,
+                      region: suggestion.wine!.region,
+                      colour: suggestion.wine!.colour ?? null,
+                      type: suggestion.wine!.type ?? null,
+                      classification: suggestion.wine!.classification ?? null,
+                    })
+                  }
+                  className="flex w-full items-start gap-3 rounded-md p-2 text-left hover:bg-fill-primary"
+                >
+                  <Icon icon={IconSparkles} size="sm" className="mt-0.5 text-emerald-600" />
+                  <div className="flex-1">
+                    <Typography variant="bodySm" className="font-medium">
+                      {suggestion.wine.displayName}
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      {suggestion.wine.producerName} · {suggestion.wine.region}, {suggestion.wine.country}
+                    </Typography>
+                    <Typography variant="bodyXs" className="font-mono text-text-primary">
+                      LWIN: {suggestion.wine.lwin}
+                    </Typography>
+                  </div>
+                </button>
+              ) : (
+                <Typography variant="bodyXs" className="px-2">
+                  {suggestion.winelabsName} (LWIN {suggestion.lwin7}), which is not in our LWIN register yet:
+                  enter it under Manual Entry if it is right.
+                </Typography>
+              )}
+              <button
+                type="button"
+                onClick={() => resetSuggestion()}
+                className="px-2 pt-1 text-[11px] text-text-muted underline hover:text-text-primary"
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -357,7 +453,7 @@ const LwinLookup = ({
                 }
                 className="flex w-full items-start gap-3 rounded-md p-2 text-left hover:bg-fill-primary"
               >
-                <Icon icon={IconBottle} size="sm" className="mt-0.5 text-brand-500" />
+                <Icon icon={IconBottle} size="sm" className="mt-0.5 text-text-primary" />
                 <div className="flex-1">
                   <Typography variant="bodySm" className="font-medium">
                     {wine.displayName}
@@ -366,7 +462,7 @@ const LwinLookup = ({
                     {wine.producerName} · {wine.region}, {wine.country}
                     {wine.classification && ` · ${wine.classification}`}
                   </Typography>
-                  <Typography variant="bodyXs" className="font-mono text-brand-600">
+                  <Typography variant="bodyXs" className="font-mono text-text-primary">
                     LWIN: {wine.lwin}
                   </Typography>
                 </div>
@@ -399,7 +495,7 @@ const LwinLookup = ({
 
       {/* Selected Wine */}
       {selectedLwin && (
-        <Card className="border-brand-500">
+        <Card className="border-text-primary">
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3">
@@ -408,7 +504,7 @@ const LwinLookup = ({
                   <Typography variant="bodySm" className="font-medium">
                     {selectedLwin.displayName}
                   </Typography>
-                  <Typography variant="bodyXs" className="font-mono text-brand-600">
+                  <Typography variant="bodyXs" className="font-mono text-text-primary">
                     LWIN7: {selectedLwin.lwin}
                   </Typography>
                 </div>
@@ -440,7 +536,7 @@ const LwinLookup = ({
               placeholder="NV"
               min={1900}
               max={2030}
-              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 text-center focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 text-center focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
             />
             <Typography variant="bodyXs" colorRole="muted" className="mt-1">
               Leave empty for NV
@@ -453,7 +549,7 @@ const LwinLookup = ({
             <select
               value={caseSize}
               onChange={(e) => setCaseSize(parseInt(e.target.value, 10))}
-              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
             >
               {caseOptions.map((size) => (
                 <option key={size.size} value={size.size}>
@@ -469,7 +565,7 @@ const LwinLookup = ({
             <select
               value={bottleSizeMl}
               onChange={(e) => setBottleSizeMl(parseInt(e.target.value, 10))}
-              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
             >
               {bottleOptions.map((size) => (
                 <option key={size.ml} value={size.ml}>

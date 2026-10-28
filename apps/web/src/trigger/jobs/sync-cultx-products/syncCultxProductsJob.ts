@@ -2,7 +2,7 @@ import { AbortTaskRunError, logger, schedules } from '@trigger.dev/sdk';
 
 import { productOffers, products } from '@/database/schema';
 import conflictUpdateSet from '@/database/utils/conflictUpdateSet';
-import createClient from '@/lib/cultx/client';
+import createClient, { getCultxBaseUrl } from '@/lib/cultx/client';
 import triggerDb from '@/trigger/triggerDb';
 import getCountryFromRegion from '@/utils/getCountryFromRegion';
 import splitArrayBatches from '@/utils/splitArrayBatches';
@@ -14,7 +14,20 @@ export const syncCultxProductsJob = schedules.task({
     timezone: 'Asia/Dubai',
   },
   async run() {
-    const cultxClient = createClient();
+    const baseUrl = getCultxBaseUrl();
+
+    // No URL configured: skip rather than fall back to CultX's test gateway
+    if (!baseUrl) {
+      logger.warn('CultX sync skipped: CULTX_API_BASE_URL is not set');
+      return { skipped: true };
+    }
+
+    if (/-uat-/i.test(baseUrl)) {
+      logger.warn('CultX sync skipped: the configured URL is the UAT gateway', { baseUrl });
+      return { skipped: true };
+    }
+
+    const cultxClient = createClient({ baseUrl });
 
     const response = await cultxClient.GET('/CultxActiveMarkets', {
       params: {
@@ -78,16 +91,31 @@ export const syncCultxProductsJob = schedules.task({
         result.map((product) => [product.lwin18, product.id]),
       );
 
+      // An offer without a market value is not written: a price of 0 reads
+      // as free wine everywhere offers are shown
+      const priced = batch.filter(
+        (product) =>
+          typeof product.marketValue === 'number' &&
+          product.marketValue > 0 &&
+          lwin18Map.has(product.lwin18),
+      );
+
+      if (priced.length < batch.length) {
+        logger.info(`Skipped ${batch.length - priced.length} CultX offers with no price`);
+      }
+
+      if (!priced.length) continue;
+
       await triggerDb
         .insert(productOffers)
         .values(
-          batch.map(
+          priced.map(
             (product) =>
               ({
                 productId: lwin18Map.get(product.lwin18)!,
                 externalId: `cultx:${product.productUrn}`,
                 source: 'cultx',
-                price: product.marketValue ?? 0,
+                price: product.marketValue as number,
                 currency: 'GBP',
                 unitCount: product.unitCount,
                 unitSize: product.unitSize,
@@ -106,5 +134,7 @@ export const syncCultxProductsJob = schedules.task({
           ]),
         });
     }
+
+    return { skipped: false };
   },
 });

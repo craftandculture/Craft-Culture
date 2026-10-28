@@ -12,14 +12,19 @@ import {
   logisticsQuoteRequestRecipients,
   logisticsQuoteRequests,
   logisticsQuotes,
+  logisticsShipments,
   users,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getSuggestedClientPrice from '../data/getSuggestedClientPrice';
+import getUaeArrivalRateCard from '../data/getUaeArrivalRateCard';
 import logisticsEmailTemplateId from '../utils/logisticsEmailTemplateId';
+import quoteAllInPrices from '../utils/quoteAllInPrices';
+import quoteRequestNextStep from '../utils/quoteRequestNextStep';
 import quoteTotalUsd from '../utils/quoteTotalUsd';
-import quoteUnitPrices from '../utils/quoteUnitPrices';
+import requestUnitCounts from '../utils/requestUnitCounts';
+import uaeArrivalCharge from '../utils/uaeArrivalCharge';
 
 /**
  * Get a single quote request with full details
@@ -106,7 +111,10 @@ const adminGetQuoteRequest = adminProcedure
     const [lines, quoteFiles] = quoteIds.length
       ? await Promise.all([
           db
-            .select({ quoteId: logisticsQuoteLineItems.quoteId, category: logisticsQuoteLineItems.category })
+            .select({
+              quoteId: logisticsQuoteLineItems.quoteId,
+              category: logisticsQuoteLineItems.category,
+            })
             .from(logisticsQuoteLineItems)
             .where(inArray(logisticsQuoteLineItems.quoteId, quoteIds)),
           db
@@ -116,23 +124,50 @@ const adminGetQuoteRequest = adminProcedure
         ])
       : [[], []];
 
+    // The SHP job the request is quoted for
+    const [job] = request.shipmentId
+      ? await db
+          .select({
+            id: logisticsShipments.id,
+            shipmentNumber: logisticsShipments.shipmentNumber,
+            status: logisticsShipments.status,
+            type: logisticsShipments.type,
+            totalBottles: logisticsShipments.totalBottles,
+          })
+          .from(logisticsShipments)
+          .where(eq(logisticsShipments.id, request.shipmentId))
+          .limit(1)
+      : [];
+
+    const counts = requestUnitCounts(request, job?.totalBottles);
+    const rateCard = await getUaeArrivalRateCard();
+
     const now = Date.now();
     const quotes = quoteRows
       .map((q) => {
-        const usd = quoteTotalUsd(q);
+        const categories = [
+          ...new Set(
+            lines.filter((l) => l.quoteId === q.id).map((l) => l.category),
+          ),
+        ];
+        const arrival = uaeArrivalCharge(rateCard, request, categories);
 
         return {
           ...q,
-          totalUsd: usd,
-          ...quoteUnitPrices(usd, request.totalBottles, request.total75clEquivalents),
-          isExpired: q.status === 'expired' || (q.status === 'pending' && !!q.validUntil && q.validUntil.getTime() < now),
-          categories: [...new Set(lines.filter((l) => l.quoteId === q.id).map((l) => l.category))],
+          ...quoteAllInPrices(quoteTotalUsd(q), arrival, counts),
+          isExpired:
+            q.status === 'expired' ||
+            (q.status === 'pending' &&
+              !!q.validUntil &&
+              q.validUntil.getTime() < now),
+          categories,
           attachments: quoteFiles.filter((f) => f.quoteId === q.id),
         };
       })
       .sort(
         (a, b) =>
-          (a.per75clUsd ?? a.totalUsd ?? Number.MAX_VALUE) - (b.per75clUsd ?? b.totalUsd ?? Number.MAX_VALUE),
+          (a.per75clUsd ?? a.totalUsd ?? Number.MAX_VALUE) -
+          (b.per75clUsd ?? b.totalUsd ?? Number.MAX_VALUE),
       );
 
     // The forwarders asked, with their contacts, so the page writes their emails
@@ -146,7 +181,10 @@ const adminGetQuoteRequest = adminProcedure
         contacts: logisticsForwarders.contacts,
       })
       .from(logisticsQuoteRequestRecipients)
-      .innerJoin(logisticsForwarders, eq(logisticsForwarders.id, logisticsQuoteRequestRecipients.forwarderId))
+      .innerJoin(
+        logisticsForwarders,
+        eq(logisticsForwarders.id, logisticsQuoteRequestRecipients.forwarderId),
+      )
       .where(eq(logisticsQuoteRequestRecipients.requestId, requestId))
       .orderBy(asc(logisticsForwarders.name));
 
@@ -160,17 +198,26 @@ const adminGetQuoteRequest = adminProcedure
         kind: logisticsQuoteEmails.kind,
         toEmails: logisticsQuoteEmails.toEmails,
         subject: logisticsQuoteEmails.subject,
+        body: logisticsQuoteEmails.body,
+        forwarderName: logisticsForwarders.name,
         status: logisticsQuoteEmails.status,
         error: logisticsQuoteEmails.error,
         createdAt: logisticsQuoteEmails.createdAt,
       })
       .from(logisticsQuoteEmails)
+      .leftJoin(
+        logisticsForwarders,
+        eq(logisticsForwarders.id, logisticsQuoteEmails.forwarderId),
+      )
       .where(eq(logisticsQuoteEmails.requestId, requestId))
       .orderBy(desc(logisticsQuoteEmails.createdAt))
       .catch(() => []);
 
     return {
       ...request,
+      bottles: counts.bottles,
+      bottlesFrom: counts.bottlesFrom,
+      job: job ?? null,
       requester,
       assignee,
       completedByUser,
@@ -179,7 +226,11 @@ const adminGetQuoteRequest = adminProcedure
       recipients,
       suggestedClientPrice,
       emails,
-      /** Whether the page can send from logistics@, or only offers emails to copy */
+      nextStep: quoteRequestNextStep({ ...request, recipients, quotes }),
+      /**
+       * Whether the page can send from logistics@, or only offers emails to
+       * copy
+       */
       canSendEmail: !!logisticsEmailTemplateId(),
       /** Signs the emails the page writes */
       senderName: ctx.user.name || 'Craft & Culture',

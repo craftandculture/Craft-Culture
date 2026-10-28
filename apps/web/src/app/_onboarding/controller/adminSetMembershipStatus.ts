@@ -39,7 +39,7 @@ const adminSetMembershipStatus = staffAdminProcedure
     if (membership.zohoSubscriptionId) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'This member pays by card — change their subscription in Zoho Billing.',
+        message: 'This member pays by card. Change their subscription in Zoho Billing.',
       });
     }
 

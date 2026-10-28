@@ -8,5 +8,10 @@ describe('normaliseCountry', () => {
     expect(normaliseCountry('U.A.E.')).toBe('United Arab Emirates');
   });
 
-  it('leaves a full name as typed, trimmed', () => expect(normaliseCountry(' France ')).toBe('France'));
+  it('leaves a full name as typed, trimmed', () =>
+    expect(normaliseCountry(' France ')).toBe('France'));
+  it('keeps worldwide coverage under one name', () => {
+    expect(normaliseCountry('Worldwide')).toBe('Global');
+    expect(normaliseCountry(' global ')).toBe('Global');
+  });
 });

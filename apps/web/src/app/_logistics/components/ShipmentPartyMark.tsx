@@ -24,7 +24,7 @@ const ShipmentPartyMark = ({
 }) => {
   if (logoUrl) {
     return (
-      <span className={`flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 ring-1 ring-border-muted`}>
+      <span className={`flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-primary p-1 ring-1 ring-border-muted`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- partner logos come from Blob at any size */}
         <img src={logoUrl} alt={name ?? ''} className="max-h-full max-w-full object-contain" />
       </span>

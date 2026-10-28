@@ -80,12 +80,14 @@ const adminCompleteCycleCount = wmsOperatorProcedure
 
     // Calculate discrepancies per item
     let totalCounted = 0;
+    let totalExpected = 0;
     let discrepancyCount = 0;
 
     for (const item of items) {
       const counted = item.countedQuantity ?? 0;
       const discrepancy = counted - item.expectedQuantity;
       totalCounted += counted;
+      totalExpected += item.expectedQuantity;
       if (discrepancy !== 0) discrepancyCount++;
 
       await db
@@ -102,6 +104,11 @@ const adminCompleteCycleCount = wmsOperatorProcedure
       .update(wmsCycleCounts)
       .set({
         status: 'completed',
+        /*
+          Each line's expected is re-read when it is counted, so the header
+          total is rebuilt from the lines rather than kept from creation.
+        */
+        expectedItems: totalExpected,
         countedItems: totalCounted,
         discrepancyCount,
         completedAt: new Date(),
@@ -111,7 +118,7 @@ const adminCompleteCycleCount = wmsOperatorProcedure
 
     return {
       success: true,
-      totalExpected: cycleCount.expectedItems,
+      totalExpected,
       totalCounted,
       discrepancyCount,
       totalItems: items.length,

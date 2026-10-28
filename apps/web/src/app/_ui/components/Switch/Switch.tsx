@@ -5,7 +5,7 @@ import { VariantProps, tv } from 'tailwind-variants';
 const switchStyles = tv({
   slots: {
     wrapper:
-      'focus-visible:outline-hidden data-[state=unchecked]:bg-fill-muted bg-fill-brand focus-visible:ring-border-primary peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+      'focus-visible:outline-hidden data-[state=unchecked]:bg-fill-muted bg-text-primary focus-visible:ring-border-primary peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
     thumb:
       'pointer-events-none block size-5 rounded-full shadow-sm ring-0 transition-transform data-[state=checked]:translate-x-full data-[state=unchecked]:translate-x-0',
   },
@@ -16,7 +16,7 @@ const switchStyles = tv({
     },
     colorRole: {
       brand: {
-        wrapper: 'bg-fill-brand data-[state=checked]:bg-fill-brand',
+        wrapper: 'bg-text-primary data-[state=checked]:bg-text-primary',
         thumb: 'bg-text-primary-on-fill dark:bg-text-primary',
       },
       warning: {

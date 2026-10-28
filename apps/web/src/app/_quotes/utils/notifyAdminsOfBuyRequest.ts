@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import type { Quote } from '@/database/schema';
@@ -16,13 +17,18 @@ import logger from '@/utils/logger';
 const notifyAdminsOfBuyRequest = async (quote: Quote) => {
   try {
     // Query all admin users
-    const adminUsers = await db
-      .select({
-        email: users.email,
-        name: users.name,
-      })
-      .from(users)
-      .where(eq(users.role, 'admin'));
+    // C&C staff only: a partner holding an admin login must not receive
+    // other customers' orders
+    const adminUsers = (
+      await db
+        .select({
+          email: users.email,
+          name: users.name,
+          role: users.role,
+        })
+        .from(users)
+        .where(eq(users.role, 'admin'))
+    ).filter(isTeamMember);
 
     if (adminUsers.length === 0) {
       logger.warn('No admin users found to notify of buy request');

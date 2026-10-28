@@ -8,6 +8,8 @@ import lcbBurton from '../constants/lcbBurton';
 export interface TransferInstructionsProps {
   /** Where the wine is now, as a wine source value */
   source: string;
+  /** How the wine reaches the UAE; the forwarder route skips our UK bond */
+  route?: string;
   /** The member's reference, such as PC-1001; null before one is issued */
   reference: string | null;
 }
@@ -23,11 +25,17 @@ export interface TransferInstructionsProps {
  * theirs when it arrives. Wine already in bond in the UAE moves by an in-bond
  * transfer we arrange, so it carries no UK address.
  */
-const TransferInstructions = ({ source, reference }: TransferInstructionsProps) => {
-  const isAtLcb = source === 'lcb';
-  const isInUae = source === 'uae_bond';
+const TransferInstructions = ({ source, route, reference }: TransferInstructionsProps) => {
+  const isForwarder = route === 'forwarder';
+  const isAtLcb = !isForwarder && source === 'lcb';
+  const isInUae = !isForwarder && (route === 'uae' || source === 'uae_bond');
 
-  const details = isInUae
+  const details = isForwarder
+    ? [
+        ['Release to', 'Craft & Culture, for export under bond to the UAE'],
+        ...(reference ? [['Your reference, to quote', reference]] : []),
+      ]
+    : isInUae
     ? reference
       ? [['Your reference, to quote', reference]]
       : []
@@ -60,14 +68,16 @@ const TransferInstructions = ({ source, reference }: TransferInstructionsProps) 
   return (
     <div className="border-border-muted bg-surface-secondary/40 rounded-lg border p-3 sm:p-4">
       <p className="text-text-primary text-sm font-semibold">
-        {isAtLcb
+        {isAtLcb || isForwarder
           ? 'If you would like to instruct the merchant yourself'
           : isInUae
             ? 'If you would like to instruct the warehouse yourself'
             : 'If you would like to instruct them yourself'}
       </p>
       <p className="text-text-muted mt-1 text-xs leading-5">
-        {isInUae
+        {isForwarder
+          ? 'Our freight forwarder will collect your wine from them and export it directly to our bonded warehouse in the UAE. Please ask them to release it to Craft & Culture for export under bond, quoting your reference. We will confirm the collection date with them.'
+          : isInUae
           ? 'Ask them to release your wine to Craft & Culture as an in-bond transfer within the UAE, keeping duty suspended. Please let us know before it moves and we will arrange the customs paperwork and collection.'
           : isAtLcb
           ? 'Ask them to transfer your wine to us within London City Bond, keeping it under bond. LCB call this a Transfer – Retain Status. Nothing is moved, so it is usually done within days.'

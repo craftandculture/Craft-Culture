@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import quoteExtrasSchema from './quoteExtrasSchema';
+
 /**
  * Schema for updating an existing quote
  *
@@ -23,8 +25,10 @@ const updateQuoteSchema = z.object({
         alternativeVintages: z.array(z.string()).optional(),
       }),
     )
+    .max(200)
     .optional(),
-  quoteData: z.any().optional(),
+  /** Customer-chosen extras only; prices are recomputed on the server */
+  quoteData: quoteExtrasSchema,
   clientName: z.string().min(1).max(255).optional(),
   clientEmail: z.string().email().max(255).optional(),
   clientCompany: z.string().min(1).max(255).optional(),
@@ -34,7 +38,9 @@ const updateQuoteSchema = z.object({
   // approval), never by the owner setting it directly — that let a user mark
   // their own quote accepted.
   currency: z.enum(['USD', 'AED']).optional(),
+  /** Ignored: the server prices the quote itself */
   totalUsd: z.number().optional(),
+  /** Ignored: the server prices the quote itself */
   totalAed: z.number().optional(),
   expiresAt: z.date().optional().nullable(),
 });

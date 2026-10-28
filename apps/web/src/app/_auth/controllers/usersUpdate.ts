@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
@@ -20,12 +21,29 @@ const usersUpdate = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     const { acceptTerms, ...rest } = input;
 
+    /*
+      The account type is chosen once, at onboarding. Afterwards it decides
+      what the account can see, so a login still awaiting approval (or any
+      other) cannot switch itself to a different kind — only an admin can.
+    */
+    if (
+      ctx.user.onboardingCompletedAt &&
+      rest.customerType !== undefined &&
+      rest.customerType !== ctx.user.customerType
+    ) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'Your account type has already been set. Please contact us if it needs to change.',
+      });
+    }
+
     // Update the user record
     const [updatedUser] = await db
       .update(users)
       .set({
         ...rest,
-        onboardingCompletedAt: new Date(),
+        onboardingCompletedAt: ctx.user.onboardingCompletedAt ?? new Date(),
         ...(acceptTerms && { termsAcceptedAt: new Date() }),
       })
       .where(eq(users.id, ctx.user.id))
@@ -86,11 +104,40 @@ const usersUpdate = protectedProcedure
             logger.error('Failed to notify admins of partner name match:', error);
           }
         } else {
-          await db.insert(partners).values({
-            userId: ctx.user.id,
-            type: 'wine_partner',
-            businessName: name,
-          });
+          /*
+            A fresh signup is still awaiting approval, so the partner record
+            it creates opens nothing until an admin approves the account. A
+            login that is already approved (a cellar delegate, a distributor's
+            colleague, a user staff created) has no such review ahead of it,
+            and an active record would hand it the trade portal on the spot.
+            Its record starts inactive, and the admins are asked to review it.
+          */
+          const alreadyApproved = ctx.user.approvalStatus === 'approved';
+          const [created] = await db
+            .insert(partners)
+            .values({
+              userId: ctx.user.id,
+              type: 'wine_partner',
+              businessName: name,
+              ...(alreadyApproved && { status: 'inactive' as const }),
+            })
+            .returning({ id: partners.id });
+
+          if (alreadyApproved) {
+            try {
+              await createAdminNotifications({
+                type: 'new_user_pending',
+                title: 'Approved user set up a wine partner',
+                message: `${name} (${ctx.user.email}) chose a wine partner account after approval. The partner record was created inactive; activate it if this business should trade.`,
+                entityType: 'user',
+                entityId: ctx.user.id,
+                actionUrl: `/platform/admin/users/${ctx.user.id}`,
+                metadata: { partnerId: created?.id },
+              });
+            } catch (error) {
+              logger.error('Failed to notify admins of a post-approval partner:', error);
+            }
+          }
         }
       }
     }

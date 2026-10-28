@@ -18,6 +18,7 @@
  *   });
  */
 
+import escapeZpl from './escapeZpl';
 import { CC_LOGO_GF } from './zplLogo';
 
 export interface TotemLevel {
@@ -37,22 +38,6 @@ export interface BayTotemData {
   /** Levels from top to bottom (highest first) */
   levels: TotemLevel[];
 }
-
-/**
- * Escape special characters for ZPL
- */
-const escapeZpl = (str: string) => {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/œ/g, 'oe')
-    .replace(/Œ/g, 'OE')
-    .replace(/æ/g, 'ae')
-    .replace(/Æ/g, 'AE')
-    .replace(/ß/g, 'ss')
-    .replace(/\^/g, ' ')
-    .replace(/~/g, ' ');
-};
 
 /**
  * Generate ZPL code for a single bay totem label
@@ -116,7 +101,7 @@ ${CC_LOGO_GF}^FS
 ^FX -- Large QR code centred (mag 12 ≈ ~300 dots) --
 ^FO256,200
 ^BQN,2,12
-^FDMA,${bayBarcode}^FS
+^FDMA,${escapeZpl(bayBarcode)}^FS
 
 ^FX -- Bay code (~180pt, centred) --
 ^FO0,560

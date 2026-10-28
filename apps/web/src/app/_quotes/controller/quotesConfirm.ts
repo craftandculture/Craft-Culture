@@ -1,10 +1,11 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import logAdminActivity from '@/app/_admin/utils/logAdminActivity';
 import db from '@/database/client';
-import { quotes, users } from '@/database/schema';
+import { partners, quotes, users } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import convertUsdToAed from '@/utils/convertUsdToAed';
 import logger from '@/utils/logger';
 
 import confirmQuoteSchema from '../schemas/confirmQuoteSchema';
@@ -31,7 +32,6 @@ const quotesConfirm = adminProcedure
       ccConfirmationNotes,
       licensedPartnerId,
       paymentMethod,
-      paymentDetails,
       lineItemAdjustments,
       oocFulfillments,
     } = input;
@@ -70,6 +70,76 @@ const quotesConfirm = adminProcedure
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'B2C quotes require licensed partner and payment configuration',
+      });
+    }
+
+    // Payment details always come from the selected partner's own record,
+    // never from the browser: the customer pays into these.
+    let paymentDetails:
+      | NonNullable<typeof partners.$inferSelect.paymentDetails>
+      | undefined;
+
+    if (isB2C && licensedPartnerId && paymentMethod) {
+      const [partner] = await db
+        .select({ id: partners.id, paymentDetails: partners.paymentDetails })
+        .from(partners)
+        .where(eq(partners.id, licensedPartnerId))
+        .limit(1);
+
+      if (!partner) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Licensed partner not found',
+        });
+      }
+
+      const stored = partner.paymentDetails ?? {};
+
+      if (paymentMethod === 'bank_transfer') {
+        if (!stored.accountName || !stored.iban) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'This partner has no bank details on file (account name and IBAN are required)',
+          });
+        }
+
+        paymentDetails = {
+          bankName: stored.bankName,
+          accountName: stored.accountName,
+          accountNumber: stored.accountNumber,
+          sortCode: stored.sortCode,
+          iban: stored.iban,
+          swiftBic: stored.swiftBic,
+        };
+      } else {
+        if (!stored.paymentUrl) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'This partner has no payment link on file',
+          });
+        }
+
+        paymentDetails = { paymentUrl: stored.paymentUrl };
+      }
+    }
+
+    // Adjustments must refer to products on this quote; a stray key usually
+    // means the dialog carried state over from a different quote.
+    const quoteProductIds = new Set(
+      ((existingQuote.lineItems as Array<{ productId: string }>) || []).map(
+        (item) => item.productId,
+      ),
+    );
+    const strayKeys = Object.keys(lineItemAdjustments ?? {}).filter(
+      (key) => !quoteProductIds.has(key),
+    );
+
+    if (strayKeys.length > 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'The review contains wines that are not on this quote. Close the dialog, reopen the quote and try again.',
       });
     }
 
@@ -119,7 +189,14 @@ const quotesConfirm = adminProcedure
         (lineItemAdjustments && Object.keys(lineItemAdjustments).length > 0) ||
         (oocFulfillments && oocFulfillments.length > 0)
       ) {
-        const existingData = (existingQuote.quoteData as { lineItems?: unknown[]; outOfCatalogueRequests?: unknown[] }) || {};
+        const existingData =
+          (existingQuote.quoteData as {
+            lineItems?: Array<{ productId: string; basePriceUsd?: number }>;
+            outOfCatalogueRequests?: unknown[];
+          }) || {};
+        const existingPricing = new Map(
+          (existingData.lineItems ?? []).map((item) => [item.productId, item]),
+        );
         const lineItems = (existingQuote.lineItems as Array<{ productId: string; quantity: number }>) || [];
 
         // Type for adjustments from schema
@@ -143,11 +220,15 @@ const quotesConfirm = adminProcedure
           .map((item) => {
             const adjustment = lineItemAdjustments?.[item.productId] as LineItemAdjustment | undefined;
 
-            // Check if item is marked as unavailable
-            const isAvailable = !lineItemAdjustments || (adjustment && adjustment.available);
+            // A line without an adjustment keeps its quoted price and is
+            // available; only an explicit available:false removes it
+            const isAvailable = adjustment ? adjustment.available : true;
+            const quotedPricePerCase = existingPricing.get(item.productId)?.basePriceUsd ?? 0;
 
             // For unavailable items, set price/quantity to 0 but preserve alternatives
-            const pricePerCase = isAvailable ? (adjustment?.adjustedPricePerCase || 0) : 0;
+            const pricePerCase = isAvailable
+              ? (adjustment?.adjustedPricePerCase ?? quotedPricePerCase)
+              : 0;
             const quantity = isAvailable ? (adjustment?.confirmedQuantity || item.quantity) : 0;
             const lineItemTotalUsd = pricePerCase * quantity;
 
@@ -189,19 +270,19 @@ const quotesConfirm = adminProcedure
           })),
         };
         updateData.totalUsd = newTotalUsd;
-        updateData.totalAed = newTotalUsd * 3.67; // AED exchange rate
+        updateData.totalAed = convertUsdToAed(newTotalUsd);
       }
 
       const [updatedQuote] = await db
         .update(quotes)
         .set(updateData)
-        .where(eq(quotes.id, quoteId))
+        .where(and(eq(quotes.id, quoteId), eq(quotes.status, 'under_cc_review')))
         .returning();
 
       if (!updatedQuote) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to confirm quote',
+          code: 'CONFLICT',
+          message: 'This quote has already been confirmed or changed. Please reload.',
         });
       }
 
@@ -229,6 +310,8 @@ const quotesConfirm = adminProcedure
 
       return updatedQuote;
     } catch (error) {
+      if (error instanceof TRPCError) throw error;
+
       logger.error('Error confirming quote', { error, quoteId, adminId: user.id });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',

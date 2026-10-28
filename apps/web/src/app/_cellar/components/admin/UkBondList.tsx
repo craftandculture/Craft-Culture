@@ -31,8 +31,8 @@ const UkBondList = () => {
       onSuccess: (result) => {
         toast.success(
           `Imported ${result.lines} lines (${result.bottles} bottles) across ${result.rotations} rotations${
-            result.autoAssigned ? ` — ${result.autoAssigned} placed by member reference` : ''
-          }${result.unassigned ? ` — ${result.unassigned} to assign` : ''}`,
+            result.autoAssigned ? `; ${result.autoAssigned} placed by member reference` : ''
+          }${result.unassigned ? `; ${result.unassigned} to assign` : ''}`,
         );
         void refetch();
       },

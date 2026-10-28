@@ -18,9 +18,12 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import type { PcoStage } from '@/app/_privateClientOrders/constants';
 import formatSubscriptionBox from '@/app/_privateClientOrders/utils/formatSubscriptionBox';
+import { savePcoListOrder } from '@/app/_privateClientOrders/utils/pcoListOrder';
+import isRoutinePcoTransition from '@/app/_privateClientOrders/utils/pcoStatusTransitions';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -166,7 +169,7 @@ const AdminPrivateOrdersPage = () => {
         : undefined,
     }),
     staleTime: 0, // Always fetch fresh data
-    refetchInterval: 5000, // Refresh every 10 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const handleRefresh = () => {
@@ -227,6 +230,19 @@ const AdminPrivateOrdersPage = () => {
   const orders = data?.data ?? [];
   const totalCount = data?.meta.totalCount ?? 0;
 
+  /*
+    Bulk actions apply only to ticked orders still in the list on screen. A
+    tick used to survive a change of filter, so an action could reach orders
+    nobody could see any more.
+  */
+  const visibleSelected = orders.filter((o) => selected.has(o.id)).map((o) => o.id);
+
+  // An order's Previous and Next buttons step through this list as shown
+  useEffect(() => {
+    if (!data) return;
+    savePcoListOrder(data.data.map((o) => ({ id: o.id, orderNumber: o.orderNumber })));
+  }, [data]);
+
   // Counts for the quick filters: one row fetched each, the total is what matters
   const countOf = (filters: { status?: OrderStatus; distributor?: string }) =>
     api.privateClientOrders.adminGetMany.queryOptions({ limit: 1, ...filters });
@@ -237,9 +253,21 @@ const AdminPrivateOrdersPage = () => {
   const unassignedCount = unassigned?.meta.totalCount ?? 0;
   const draftCount = drafts?.meta.totalCount ?? 0;
 
-  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    setUpdatingId(orderId);
-    updateStatus({ orderId, status: newStatus });
+  // A status change is never one click: routine steps are confirmed, and a
+  // jump outside the normal steps is confirmed as a correction
+  const handleStatusChange = (
+    order: { id: string; orderNumber: string | null; status: OrderStatus },
+    newStatus: OrderStatus,
+  ) => {
+    if (newStatus === order.status) return;
+    const label = statusOptions.find((opt) => opt.value === newStatus)?.label ?? newStatus;
+    const routine = isRoutinePcoTransition(order.status, newStatus);
+    const question = routine
+      ? `Change ${order.orderNumber ?? 'this order'} to "${label}"?`
+      : `Moving ${order.orderNumber ?? 'this order'} to "${label}" skips or reverses the normal steps. Make this correction?`;
+    if (!window.confirm(question)) return;
+    setUpdatingId(order.id);
+    updateStatus({ orderId: order.id, status: newStatus, override: routine ? undefined : true });
   };
 
   const toggleExpanded = (orderId: string) => {
@@ -258,17 +286,11 @@ const AdminPrivateOrdersPage = () => {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Typography variant="headingLg" className="mb-2">
-              Private Client Orders
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Manage orders from wine partners for their private clients
-            </Typography>
-          </div>
-          <div className="flex items-center gap-2">
+        <AdminPageHeader
+          title="Private Client Orders"
+          description="Manage orders from wine partners for their private clients"
+          actions={
+            <>
             <Button
               variant="outline"
               size="sm"
@@ -286,8 +308,9 @@ const AdminPrivateOrdersPage = () => {
                 <ButtonContent iconLeft={IconPlus}>New Order</ButtonContent>
               </Link>
             </Button>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {/* Quick filters with counts */}
         <div className="flex flex-wrap gap-2">
@@ -349,7 +372,7 @@ const AdminPrivateOrdersPage = () => {
               onClick={chip.apply}
               className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
                 chip.active
-                  ? 'border-border-brand bg-fill-brand/10 text-text-primary'
+                  ? 'border-text-primary bg-text-primary/10 text-text-primary'
                   : 'border-border-muted bg-fill-primary text-text-muted hover:text-text-primary'
               }`}
             >
@@ -369,7 +392,7 @@ const AdminPrivateOrdersPage = () => {
             <button
               type="button"
               onClick={() => setStageFilter(null)}
-              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+              className="flex items-center gap-1.5 rounded-full border border-text-primary bg-text-primary/10 px-3 py-1.5 text-sm text-text-primary"
             >
               Stage: {STAGE_LABELS[stageFilter]} <span className="text-text-muted">×</span>
             </button>
@@ -378,7 +401,7 @@ const AdminPrivateOrdersPage = () => {
             <button
               type="button"
               onClick={() => setIdleFilter(false)}
-              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+              className="flex items-center gap-1.5 rounded-full border border-text-primary bg-text-primary/10 px-3 py-1.5 text-sm text-text-primary"
             >
               No change in 7 days <span className="text-text-muted">×</span>
             </button>
@@ -387,7 +410,7 @@ const AdminPrivateOrdersPage = () => {
             <button
               type="button"
               onClick={() => setInvoiceFilter(null)}
-              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+              className="flex items-center gap-1.5 rounded-full border border-text-primary bg-text-primary/10 px-3 py-1.5 text-sm text-text-primary"
             >
               Delivered – Invoiced <span className="text-text-muted">×</span>
             </button>
@@ -405,7 +428,7 @@ const AdminPrivateOrdersPage = () => {
             <button
               type="button"
               onClick={() => setSkuMissingFilter(false)}
-              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+              className="flex items-center gap-1.5 rounded-full border border-text-primary bg-text-primary/10 px-3 py-1.5 text-sm text-text-primary"
             >
               CD SKU missing <span className="text-text-muted">×</span>
             </button>
@@ -608,7 +631,7 @@ const AdminPrivateOrdersPage = () => {
                                     </span>
                                   )}
                                   {formatSubscriptionBox(order) && (
-                                    <span className="whitespace-nowrap rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                                    <span className="whitespace-nowrap rounded-full bg-text-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-text-primary">
                                       {formatSubscriptionBox(order)}
                                     </span>
                                   )}
@@ -624,6 +647,8 @@ const AdminPrivateOrdersPage = () => {
                                     width={24}
                                     height={24}
                                     className="h-6 w-6 shrink-0 rounded object-contain"
+                                    // Logos are pasted from anywhere; the optimiser only serves allow-listed hosts
+                                    unoptimized
                                   />
                                 ) : (
                                   <Icon icon={IconBuilding} size="sm" className="shrink-0 text-text-muted" />
@@ -697,7 +722,7 @@ const AdminPrivateOrdersPage = () => {
                                     <Select
                                       value={order.status}
                                       onValueChange={(v) =>
-                                        handleStatusChange(order.id, v as OrderStatus)
+                                        handleStatusChange(order, v as OrderStatus)
                                       }
                                       disabled={isThisUpdating}
                                     >
@@ -796,8 +821,8 @@ const AdminPrivateOrdersPage = () => {
                         className="cursor-pointer space-y-3"
                         onClick={() => toggleExpanded(order.id)}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex min-w-0 items-center gap-3">
                             <span onClick={(e) => e.stopPropagation()}>
                               <Checkbox
                                 aria-label={`Select ${order.orderNumber}`}
@@ -816,23 +841,24 @@ const AdminPrivateOrdersPage = () => {
                                 alt={order.partner?.businessName ?? 'Partner'}
                                 width={32}
                                 height={32}
-                                className="h-8 w-8 rounded-lg object-contain"
+                                className="h-8 w-8 shrink-0 rounded-lg object-contain"
+                                unoptimized
                               />
                             ) : (
                               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
                                 <Icon icon={IconBuilding} size="sm" className="text-text-muted" />
                               </div>
                             )}
-                            <div>
-                              <Typography variant="bodySm" className="font-medium">
+                            <div className="min-w-0">
+                              <Typography variant="bodySm" className="whitespace-nowrap font-medium">
                                 {order.orderNumber}
                               </Typography>
-                              <Typography variant="bodyXs" colorRole="muted">
+                              <Typography variant="bodyXs" colorRole="muted" className="truncate">
                                 {order.partner?.businessName ?? 'Unknown Partner'}
                               </Typography>
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-1">
+                          <div className="flex shrink-0 flex-col items-end gap-1 whitespace-nowrap">
                             <PrivateOrderStatusBadge status={order.status} />
                             {order.invoicing && <InvoicingBadge invoicing={order.invoicing} />}
                           </div>
@@ -853,7 +879,7 @@ const AdminPrivateOrdersPage = () => {
                                 </span>
                               )}
                               {formatSubscriptionBox(order) && (
-                                <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                                <span className="rounded-full bg-text-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-text-primary">
                                   {formatSubscriptionBox(order)}
                                 </span>
                               )}
@@ -886,7 +912,7 @@ const AdminPrivateOrdersPage = () => {
                             </Typography>
                             <Select
                               value={order.status}
-                              onValueChange={(v) => handleStatusChange(order.id, v as OrderStatus)}
+                              onValueChange={(v) => handleStatusChange(order, v as OrderStatus)}
                               disabled={isThisUpdating}
                             >
                               <SelectTrigger className="w-full">
@@ -945,11 +971,11 @@ const AdminPrivateOrdersPage = () => {
       </div>
     
       {/* Bulk actions for the ticked orders */}
-      {selected.size > 0 && (
+      {visibleSelected.length > 0 && (
         <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
           <div className="flex w-full max-w-4xl flex-wrap items-center gap-3 rounded-xl border border-border-primary bg-fill-primary px-4 py-3 shadow-lg">
             <Typography variant="bodySm" className="font-medium">
-              {selected.size} selected
+              {visibleSelected.length} selected
             </Typography>
 
             <div className="flex items-center gap-2">
@@ -971,7 +997,7 @@ const AdminPrivateOrdersPage = () => {
                 disabled={!bulkDistributorId || bulkAssign.isPending}
                 onClick={() =>
                   bulkAssign.mutate({
-                    orderIds: [...selected],
+                    orderIds: visibleSelected,
                     distributorId: bulkDistributorId,
                   })
                 }
@@ -1007,7 +1033,7 @@ const AdminPrivateOrdersPage = () => {
                 disabled={!bulkStockStatus || bulkStock.isPending}
                 onClick={() =>
                   bulkStock.mutate({
-                    orderIds: [...selected],
+                    orderIds: visibleSelected,
                     stockStatus: bulkStockStatus as
                       | 'confirmed'
                       | 'in_transit_to_cc'

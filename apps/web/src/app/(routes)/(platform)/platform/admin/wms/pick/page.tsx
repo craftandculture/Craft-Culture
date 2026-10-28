@@ -10,10 +10,10 @@ import {
   IconRefresh,
   IconSearch,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -21,35 +21,12 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ClientMark from '@/app/_wms/components/ClientMark';
 import useTRPC from '@/lib/trpc/browser';
 
+const PAGE_SIZE = 50;
+
 type StatusFilter = 'all' | 'pending' | 'in_progress' | 'completed' | 'cancelled';
-
-/** Two letters for a client with no logo, e.g. "JMK Trading LLC" → "JT" */
-const initials = (name: string) =>
-  name
-    .replace(/\b(llc|l\.l\.c|fze|fz-llc|ltd|co)\b\.?/gi, '')
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join('');
-
-/**
- * The square at the start of a pick card: the partner's logo when there is
- * one, otherwise the client's initials, so each order is told apart at a glance
- */
-const ClientMark = ({ logoUrl, name }: { logoUrl: string | null; name: string | null }) =>
-  logoUrl ? (
-    <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 ring-1 ring-border-muted">
-      {/* eslint-disable-next-line @next/next/no-img-element -- partner logos come from Blob at any size */}
-      <img src={logoUrl} alt={name ?? ''} className="max-h-full max-w-full object-contain" />
-    </span>
-  ) : (
-    <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-fill-secondary text-sm font-semibold text-text-muted">
-      {name ? initials(name) || '?' : <IconClipboardList className="h-5 w-5" />}
-    </span>
-  );
 
 /**
  * WMS Pick Lists - List and manage order pick lists
@@ -58,23 +35,27 @@ const WMSPickListsPage = () => {
   const api = useTRPC();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
   const [search, setSearch] = useState('');
+  const [term, setTerm] = useState('');
+  const [limit, setLimit] = useState(PAGE_SIZE);
 
-  const { data, isLoading, refetch } = useQuery({
+  // Search the server a moment after typing stops; a new search or filter starts from the top
+  useEffect(() => {
+    const timer = setTimeout(() => setTerm(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+  useEffect(() => setLimit(PAGE_SIZE), [term, statusFilter]);
+
+  const { data, isLoading, isFetching, refetch } = useQuery({
     ...api.wms.admin.picking.getMany.queryOptions({
       status: statusFilter === 'all' ? undefined : statusFilter,
-      limit: 50,
+      search: term || undefined,
+      limit,
       offset: 0,
     }),
+    placeholderData: keepPreviousData,
   });
 
-  const term = search.trim().toLowerCase();
-  const shown = (data?.pickLists ?? []).filter(
-    (pl) =>
-      !term ||
-      [pl.customerName, pl.pickListNumber, pl.invoiceNumber, pl.orderNumber, pl.referenceNumber].some((v) =>
-        v?.toLowerCase().includes(term),
-      ),
-  );
+  const shown = data?.pickLists ?? [];
 
   const statusFilters: { id: StatusFilter; label: string }[] = [
     { id: 'pending', label: 'Pending' },
@@ -202,7 +183,7 @@ const WMSPickListsPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search client or number"
-            className="h-12 w-full rounded-xl border border-border-muted bg-fill-primary pl-12 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
+            className="h-12 w-full rounded-xl border border-border-muted bg-fill-primary pl-12 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-text-primary focus:outline-none"
           />
         </div>
 
@@ -240,13 +221,13 @@ const WMSPickListsPage = () => {
                 return (
                   <Link key={pickList.id} href={`/platform/admin/wms/pick/${pickList.id}`}>
                     <Card
-                      className={`h-full transition-shadow hover:border-border-brand hover:shadow-md ${
+                      className={`h-full transition-shadow hover:border-text-primary hover:shadow-md ${
                         pickList.soModifiedAfterRelease ? 'border-amber-400 ring-1 ring-amber-300' : ''
                       }`}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
-                          <ClientMark logoUrl={pickList.customerLogoUrl} name={pickList.customerName} />
+                          <ClientMark logoUrl={pickList.customerLogoUrl} name={pickList.customerName} size="lg" />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-2">
                               <Typography variant="bodyMd" className="truncate font-semibold">
@@ -278,7 +259,7 @@ const WMSPickListsPage = () => {
 
                         <div className="mt-3 flex items-center gap-3">
                           <div className="h-2 flex-1 rounded-full bg-border-muted">
-                            <div className="h-2 rounded-full bg-brand-600" style={{ width: `${percent}%` }} />
+                            <div className="h-2 rounded-full bg-text-primary" style={{ width: `${percent}%` }} />
                           </div>
                           <Typography variant="bodyXs" className="shrink-0 font-medium tabular-nums">
                             {pickList.pickedItems}/{pickList.totalItems} picked
@@ -307,9 +288,16 @@ const WMSPickListsPage = () => {
 
             {/* Pagination */}
             {data.pagination.total > 0 && (
-              <Typography variant="bodyXs" colorRole="muted" className="text-center md:col-span-2">
-                Showing {shown.length} of {data.pagination.total} pick lists
-              </Typography>
+              <div className="flex flex-col items-center gap-2 md:col-span-2">
+                <Typography variant="bodyXs" colorRole="muted">
+                  Showing {shown.length} of {data.pagination.total} pick lists
+                </Typography>
+                {shown.length < data.pagination.total && (
+                  <Button variant="outline" onClick={() => setLimit((n) => n + PAGE_SIZE)} isDisabled={isFetching}>
+                    <ButtonContent>{isFetching ? 'Loading…' : `Show ${Math.min(PAGE_SIZE, data.pagination.total - shown.length)} more`}</ButtonContent>
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         )}

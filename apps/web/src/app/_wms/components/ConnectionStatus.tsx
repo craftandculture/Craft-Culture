@@ -1,21 +1,18 @@
 'use client';
 
-import { IconCloud, IconServer, IconWifi, IconWifiOff } from '@tabler/icons-react';
+import { IconWifi, IconWifiOff } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
-import { useLocalServer } from '../providers/LocalServerProvider';
-
 /**
  * Connection status indicator for WMS pages.
- * Shows Local Mode (green), Cloud Mode (amber), or Offline (red banner).
+ * Nothing while connected; a banner when the connection drops or returns.
  */
 const ConnectionStatus = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
-  const { isAvailable: isLocalAvailable } = useLocalServer();
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -43,29 +40,10 @@ const ConnectionStatus = () => {
     };
   }, []);
 
-  // Show local mode indicator as a small pill (always visible when local server is connected)
-  const localPill = isLocalAvailable && isOnline ? (
-    <div className="fixed right-4 top-16 z-40 flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 shadow-sm">
-      <Icon icon={IconServer} size="xs" className="text-white" />
-      <Typography variant="bodyXs" className="font-medium text-white">
-        Local
-      </Typography>
-    </div>
-  ) : null;
-
-  // Cloud-only pill (no NUC available but online)
-  const cloudPill = !isLocalAvailable && isOnline ? (
-    <div className="fixed right-4 top-16 z-40 flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1 shadow-sm">
-      <Icon icon={IconCloud} size="xs" className="text-white" />
-      <Typography variant="bodyXs" className="font-medium text-white">
-        Cloud
-      </Typography>
-    </div>
-  ) : null;
-
-  // Cloud mode — show appropriate pill
+  // Connected is the normal state: nothing to show. (The Local/Cloud pills
+  // went with the warehouse NUC.)
   if (isOnline && !showBanner) {
-    return localPill ?? cloudPill;
+    return null;
   }
 
   // Banner states
@@ -80,7 +58,7 @@ const ConnectionStatus = () => {
     );
   }
 
-  // Just came back online — show banner + keep pill visible
+  // Just came back online
   if (showBanner) {
     return (
       <>
@@ -90,12 +68,11 @@ const ConnectionStatus = () => {
             Back online — syncing changes...
           </Typography>
         </div>
-        {localPill ?? cloudPill}
       </>
     );
   }
 
-  return localPill ?? cloudPill;
+  return null;
 };
 
 export default ConnectionStatus;

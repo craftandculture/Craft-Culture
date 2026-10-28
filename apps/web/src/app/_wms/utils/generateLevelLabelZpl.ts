@@ -16,6 +16,7 @@
  *   });
  */
 
+import escapeZpl from './escapeZpl';
 import { CC_LOGO_GF } from './zplLogo';
 
 export interface LevelLabelData {
@@ -32,22 +33,6 @@ export interface LevelLabelData {
   /** Whether forklift is required to access */
   requiresForklift?: boolean | null;
 }
-
-/**
- * Escape special characters for ZPL
- */
-const escapeZpl = (str: string) => {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/œ/g, 'oe')
-    .replace(/Œ/g, 'OE')
-    .replace(/æ/g, 'ae')
-    .replace(/Æ/g, 'AE')
-    .replace(/ß/g, 'ss')
-    .replace(/\^/g, ' ')
-    .replace(/~/g, ' ');
-};
 
 /**
  * Generate ZPL code for a single per-level location label
@@ -117,7 +102,7 @@ ${CC_LOGO_GF}^FS
 ^FX -- Large QR code centred (mag 12 ≈ ~300 dots) --
 ^FO256,200
 ^BQN,2,12
-^FDMA,${data.barcode}^FS
+^FDMA,${escapeZpl(data.barcode)}^FS
 
 ^FX -- Location code (~120pt, centred) --
 ^FO0,540

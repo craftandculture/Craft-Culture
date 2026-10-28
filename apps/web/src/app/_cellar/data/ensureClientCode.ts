@@ -14,9 +14,19 @@ import logger from '@/utils/logger';
  * Never throws: with no references table yet the member is shown none.
  *
  * @param partnerId - The member's partner record
+ * @param options - `issue: false` to read without issuing
  * @returns The reference, such as 'PC-1007', or null
  */
-const ensureClientCode = async (partnerId: string) => {
+const ensureClientCode = async (
+  partnerId: string,
+  options: {
+    /**
+     * False to only read. A view-only guest's page load must not write to
+     * the cellar it is looking at; the holder's next visit issues the code.
+     */
+    issue?: boolean;
+  } = {},
+) => {
   try {
     const read = async () =>
       (
@@ -28,7 +38,7 @@ const ensureClientCode = async (partnerId: string) => {
       )[0]?.code ?? null;
 
     const existing = await read();
-    if (existing) return existing;
+    if (existing || options.issue === false) return existing;
 
     await db
       .insert(partnerClientCodes)

@@ -22,6 +22,8 @@ const sendInvite = async ({ token, email, name, inviterName, expiresAt }: SendIn
   const joinUrl = `${serverConfig.appUrl}/join?invite=${token}`;
 
   const emailed = await sendOnboardingEmail('invite', email, {
+    // The inbox preview line; Loops refuses the send without it
+    preheader: `${inviterName} has invited you to open a private cellar with Craft & Culture.`,
     name,
     inviterName,
     joinUrl,

@@ -3,17 +3,22 @@ import { and, asc, count, desc, eq, ilike, inArray, lt, or } from 'drizzle-orm';
 import db from '@/database/client';
 import {
   logisticsForwarders,
+  logisticsQuoteLineItems,
   logisticsQuoteRequestRecipients,
   logisticsQuoteRequests,
   logisticsQuotes,
+  logisticsShipments,
   users,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import getUaeArrivalRateCard from '../data/getUaeArrivalRateCard';
 import getQuoteRequestsSchema from '../schemas/getQuoteRequestsSchema';
+import quoteAllInPrices from '../utils/quoteAllInPrices';
 import quoteRequestNextStep from '../utils/quoteRequestNextStep';
 import quoteTotalUsd from '../utils/quoteTotalUsd';
-import quoteUnitPrices from '../utils/quoteUnitPrices';
+import requestUnitCounts from '../utils/requestUnitCounts';
+import uaeArrivalCharge from '../utils/uaeArrivalCharge';
 
 /**
  * List quote requests with filtering and pagination
@@ -24,7 +29,8 @@ import quoteUnitPrices from '../utils/quoteUnitPrices';
 const adminGetQuoteRequests = adminProcedure
   .input(getQuoteRequestsSchema)
   .query(async ({ input }) => {
-    const { limit, cursor, status, priority, requestedBy, assignedTo, search } = input;
+    const { limit, cursor, status, priority, requestedBy, assignedTo, search } =
+      input;
 
     // Build where conditions
     const conditions = [];
@@ -52,6 +58,7 @@ const adminGetQuoteRequests = adminProcedure
           ilike(logisticsQuoteRequests.originCountry, `%${search}%`),
           ilike(logisticsQuoteRequests.destinationCountry, `%${search}%`),
           ilike(logisticsQuoteRequests.productDescription, `%${search}%`),
+          ilike(logisticsQuoteRequests.clientName, `%${search}%`),
         ),
       );
     }
@@ -64,7 +71,9 @@ const adminGetQuoteRequests = adminProcedure
       });
 
       if (cursorRequest) {
-        conditions.push(lt(logisticsQuoteRequests.createdAt, cursorRequest.createdAt));
+        conditions.push(
+          lt(logisticsQuoteRequests.createdAt, cursorRequest.createdAt),
+        );
       }
     }
 
@@ -75,6 +84,7 @@ const adminGetQuoteRequests = adminProcedure
       .select({
         id: logisticsQuoteRequests.id,
         requestNumber: logisticsQuoteRequests.requestNumber,
+        clientName: logisticsQuoteRequests.clientName,
         status: logisticsQuoteRequests.status,
         priority: logisticsQuoteRequests.priority,
         originCountry: logisticsQuoteRequests.originCountry,
@@ -103,9 +113,20 @@ const adminGetQuoteRequests = adminProcedure
           name: users.name,
           email: users.email,
         },
+        /** The SHP job the request is quoted for */
+        job: {
+          id: logisticsShipments.id,
+          shipmentNumber: logisticsShipments.shipmentNumber,
+          status: logisticsShipments.status,
+        },
+        jobBottles: logisticsShipments.totalBottles,
       })
       .from(logisticsQuoteRequests)
       .leftJoin(users, eq(logisticsQuoteRequests.requestedBy, users.id))
+      .leftJoin(
+        logisticsShipments,
+        eq(logisticsShipments.id, logisticsQuoteRequests.shipmentId),
+      )
       .where(whereClause)
       .orderBy(desc(logisticsQuoteRequests.createdAt))
       .limit(limit + 1);
@@ -153,36 +174,68 @@ const adminGetQuoteRequests = adminProcedure
             outcome: logisticsQuoteRequestRecipients.outcome,
           })
           .from(logisticsQuoteRequestRecipients)
-          .innerJoin(logisticsForwarders, eq(logisticsForwarders.id, logisticsQuoteRequestRecipients.forwarderId))
+          .innerJoin(
+            logisticsForwarders,
+            eq(
+              logisticsForwarders.id,
+              logisticsQuoteRequestRecipients.forwarderId,
+            ),
+          )
           .where(inArray(logisticsQuoteRequestRecipients.requestId, requestIds))
           .orderBy(asc(logisticsForwarders.name))
       : [];
 
+    const quoteIds = quoteRows.map((q) => q.id);
+    const [lineRows, rateCard] = await Promise.all([
+      quoteIds.length
+        ? db
+            .select({
+              quoteId: logisticsQuoteLineItems.quoteId,
+              category: logisticsQuoteLineItems.category,
+            })
+            .from(logisticsQuoteLineItems)
+            .where(inArray(logisticsQuoteLineItems.quoteId, quoteIds))
+        : [],
+      getUaeArrivalRateCard(),
+    ]);
+
     return {
-      requests: items.map((r) => {
-        // Ranked in USD per 75cl, so a quote in pounds and one in dollars compare
+      requests: items.map(({ jobBottles, ...r }) => {
+        const counts = requestUnitCounts(r, jobBottles);
+
+        // Ranked all-in (freight + UAE arrival) in USD per 75cl, so currencies compare
         const quotes = quoteRows
           .filter((q) => q.requestId === r.id)
           .map((q) => {
-            const usd = quoteTotalUsd(q);
+            const arrival = uaeArrivalCharge(
+              rateCard,
+              r,
+              lineRows.filter((l) => l.quoteId === q.id).map((l) => l.category),
+            );
 
-            return { ...q, totalUsd: usd, ...quoteUnitPrices(usd, r.totalBottles, r.total75clEquivalents) };
+            return {
+              ...q,
+              ...quoteAllInPrices(quoteTotalUsd(q), arrival, counts),
+            };
           })
           .sort(
             (a, b) =>
-              (a.per75clUsd ?? a.totalUsd ?? Number.MAX_VALUE) - (b.per75clUsd ?? b.totalUsd ?? Number.MAX_VALUE),
+              (a.per75clUsd ?? a.totalUsd ?? Number.MAX_VALUE) -
+              (b.per75clUsd ?? b.totalUsd ?? Number.MAX_VALUE),
           );
         const recipients = recipientRows.filter((x) => x.requestId === r.id);
         const chosen = quotes.find((q) => q.id === r.clientQuoteId);
 
         return {
           ...r,
+          bottles: counts.bottles,
+          bottlesFrom: counts.bottlesFrom,
           quotes,
           recipients,
           nextStep: quoteRequestNextStep({ ...r, quotes, recipients }),
           marginUsd:
-            r.clientPriceUsd != null && chosen?.totalUsd != null
-              ? Math.round((r.clientPriceUsd - chosen.totalUsd) * 100) / 100
+            r.clientPriceUsd != null && chosen?.allInUsd != null
+              ? Math.round((r.clientPriceUsd - chosen.allInUsd) * 100) / 100
               : null,
         };
       }),

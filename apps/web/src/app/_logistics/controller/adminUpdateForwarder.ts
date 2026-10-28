@@ -6,12 +6,15 @@ import db from '@/database/client';
 import { logisticsForwarders, logisticsQuoteRequestRecipients, logisticsQuotes } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-import forwarderEmailDomain from '../utils/forwarderEmailDomain';
+import forwarderSchema from '../schemas/forwarderSchema';
+import cleanForwarderContacts from '../utils/cleanForwarderContacts';
+import normaliseCountry from '../utils/normaliseCountry';
 
 /**
  * Edit a forwarder, or fold a duplicate into the one to keep
  *
- * Contacts are replaced as given and their domains recalculated. Merging moves
+ * Contacts, modes and countries are replaced as given, and the email domains
+ * recalculated from the contacts. Merging moves
  * the duplicate's quotes and request rows to the forwarder kept, adds its
  * contacts there, and removes it; a request that asked both keeps one row.
  *
@@ -24,10 +27,10 @@ const adminUpdateForwarder = adminProcedure
     z.object({
       forwarderId: z.string().uuid(),
       name: z.string().trim().min(1).optional(),
-      contacts: z
-        .array(z.object({ name: z.string().trim().optional(), email: z.string().trim().toLowerCase().email() }))
-        .max(20)
-        .optional(),
+      contacts: forwarderSchema.shape.contacts.optional(),
+      modes: forwarderSchema.shape.modes.optional(),
+      originCountries: forwarderSchema.shape.originCountries.optional(),
+      notes: z.string().trim().nullable().optional(),
       isActive: z.boolean().optional(),
       mergeIntoId: z.string().uuid().optional(),
     }),
@@ -109,12 +112,10 @@ const adminUpdateForwarder = adminProcedure
       .set({
         ...(input.name && { name: input.name }),
         ...(input.isActive !== undefined && { isActive: input.isActive }),
-        ...(input.contacts && {
-          contacts: input.contacts.map((c) => ({ email: c.email, ...(c.name ? { name: c.name } : {}) })),
-          emailDomains: [
-            ...new Set(input.contacts.map((c) => forwarderEmailDomain(c.email)).filter((d): d is string => !!d)),
-          ],
-        }),
+        ...(input.contacts && cleanForwarderContacts(input.contacts)),
+        ...(input.modes && { modes: input.modes }),
+        ...(input.originCountries && { originCountries: [...new Set(input.originCountries.map(normaliseCountry))] }),
+        ...(input.notes !== undefined && { notes: input.notes || null }),
         updatedAt: new Date(),
       })
       .where(eq(logisticsForwarders.id, forwarder.id))

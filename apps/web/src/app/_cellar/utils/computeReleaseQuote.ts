@@ -3,9 +3,7 @@ import { eq, isNull, or } from 'drizzle-orm';
 import db from '@/database/client';
 import { cellarReleaseRates } from '@/database/schema';
 
-import priceFromRateCard, {
-  type ReleasePricing,
-} from './priceFromRateCard';
+import priceFromRateCard, { type ReleasePricing } from './priceFromRateCard';
 
 export interface ReleaseLine {
   bottles: number;
@@ -25,12 +23,12 @@ export interface ReleaseQuote extends ReleasePricing {
  * Four things are charged: what the state takes (duty), what the work costs
  * (clearance, transfer, the drive), what the licensed partner delivering it
  * takes, and what C&C earns. The last two are kept apart in the result so a
- * release can be reported on, even though the member sees them folded into
- * two lines and a service fee.
+ * release can be reported on, even though the member sees them folded into two
+ * lines and a service fee.
  *
  * Cases are derived from bottles rather than taken as given: a member asking
- * for three bottles out of a six-pack is still a case being opened, handled
- * and carried, and charging them for half a case of work would be wrong in the
+ * for three bottles out of a six-pack is still a case being opened, handled and
+ * carried, and charging them for half a case of work would be wrong in the
  * other direction.
  *
  * Falls back to the house default when a member has no rates of their own, so
@@ -67,19 +65,16 @@ const computeReleaseQuote = async (
   const bottles = lines.reduce((sum, line) => sum + line.bottles, 0);
 
   const cases = lines.reduce(
-    (sum, line) => sum + Math.ceil(line.bottles / Math.max(1, line.caseConfig ?? 1)),
+    (sum, line) =>
+      sum + Math.ceil(line.bottles / Math.max(1, line.caseConfig ?? 1)),
     0,
   );
 
   /*
-    A line taking a part case breaks exactly one sealed case, however many
-    bottles it takes from it. Singles can never break anything.
+    No repack on a delivery. The packages built for a member's deliveries are
+    billed on their monthly warehouse invoice (getMonthlyRepacks), so a quote
+    carrying one as well would charge it twice.
   */
-  const repackCases = lines.reduce((sum, line) => {
-    const pack = Math.max(1, line.caseConfig ?? 1);
-
-    return sum + (pack > 1 && line.bottles % pack !== 0 ? 1 : 0);
-  }, 0);
 
   const goodsValueUsd = lines.reduce(
     (sum, line) => sum + line.bottles * (line.costPerBottle ?? 0),
@@ -106,7 +101,7 @@ const computeReleaseQuote = async (
   }
 
   return {
-    ...priceFromRateCard(rate, { bottles, cases, repackCases, goodsValueUsd }),
+    ...priceFromRateCard(rate, { bottles, cases, repackCases: 0, goodsValueUsd }),
     priced: true,
   };
 };

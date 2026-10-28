@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { wmsOwnerPricingSettings } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getOwnerPricingSettingsSchema } from '../schemas/pricingManagerSchema';
 
@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS = {
  *
  * @param ownerId - The partner/owner UUID
  */
-const adminGetOwnerPricingSettings = wmsOperatorProcedure
+const adminGetOwnerPricingSettings = adminProcedure
   .input(getOwnerPricingSettingsSchema)
   .query(async ({ input }) => {
     const [row] = await db

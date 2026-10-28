@@ -3,12 +3,15 @@ import { inArray } from 'drizzle-orm';
 import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
 
+import intakeRouteOf from '../utils/intakeRouteOf';
 import intakeStageFromShipment from '../utils/intakeStageFromShipment';
 
 interface IntakeRef {
   id: string;
   partnerId: string | null;
   shipmentId: string | null;
+  source: string;
+  route: string | null;
 }
 
 /**
@@ -89,7 +92,7 @@ const getIntakeShipments = async (intakes: IntakeRef[]) => {
       shipmentId: shipment.id,
       shipmentNumber: shipment.shipmentNumber,
       status: shipment.status,
-      impliedStage: intakeStageFromShipment(shipment.status),
+      impliedStage: intakeStageFromShipment(shipment.status, intakeRouteOf(intake)),
       transportMode: shipment.transportMode,
       eta: shipment.eta,
       arrivedAt: shipment.ata,

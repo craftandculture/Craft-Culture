@@ -1,4 +1,4 @@
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { setLineLogisticsSchema } from '../schemas/pricingManagerSchema';
 import writeProductPricing from '../utils/writeProductPricing';
@@ -14,7 +14,7 @@ import writeProductPricing from '../utils/writeProductPricing';
  * @param lwin18 - The product LWIN18 identifier
  * @param logisticsPerBottle - Per-line logistics $/btl, or null to clear
  */
-const adminSetLineLogistics = wmsOperatorProcedure
+const adminSetLineLogistics = adminProcedure
   .input(setLineLogisticsSchema)
   .mutation(async ({ input, ctx }) => {
     const { lwin18, logisticsPerBottle } = input;

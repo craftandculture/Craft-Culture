@@ -6,6 +6,7 @@ import db from '@/database/client';
 import { cellarUkMoves } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
+import cancelUkMoveInvoiceTask from '../data/cancelUkMoveInvoiceTask';
 import notifyUkMoveUpdate from '../utils/notifyUkMoveUpdate';
 import ukMoveTotal from '../utils/ukMoveTotal';
 
@@ -60,6 +61,9 @@ const adminQuoteUkMove = staffAdminProcedure
           message: 'This move is already shipping or closed.',
         });
       }
+
+      // An accepted move had an invoice job opened for it; nothing to bill now
+      await cancelUkMoveInvoiceTask(move.moveNumber, ctx.user.id);
 
       await notifyUkMoveUpdate({
         event: 'cancelled',

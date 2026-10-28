@@ -1,6 +1,48 @@
 import { syncEnvVars } from '@trigger.dev/build/extensions/core';
 import { defineConfig } from '@trigger.dev/sdk';
 
+/**
+ * Read one production environment variable from the Vercel project
+ *
+ * Uses the deploy's VERCEL_ACCESS_TOKEN, VERCEL_PROJECT_ID and VERCEL_TEAM_ID.
+ * Returns null, never throws, when any is missing or Vercel refuses, so a
+ * deploy is never blocked by it.
+ *
+ * @param key - The variable's name
+ * @returns Its decrypted production value, or null
+ */
+const fetchVercelEnv = async (key: string) => {
+  const token = process.env.VERCEL_ACCESS_TOKEN;
+  const projectId = process.env.VERCEL_PROJECT_ID;
+  const teamId = process.env.VERCEL_TEAM_ID;
+
+  if (!token || !projectId) return null;
+
+  try {
+    const team = teamId ? `?teamId=${teamId}` : '';
+    const headers = { Authorization: `Bearer ${token}` };
+
+    // The list gives ids only; one variable read by id comes back decrypted
+    const listed = await fetch(`https://api.vercel.com/v9/projects/${projectId}/env${team}`, { headers });
+    if (!listed.ok) return null;
+
+    const { envs } = (await listed.json()) as {
+      envs: { id: string; key: string; target?: string[] }[];
+    };
+    const match = envs.find((env) => env.key === key && env.target?.includes('production'));
+    if (!match) return null;
+
+    const one = await fetch(`https://api.vercel.com/v1/projects/${projectId}/env/${match.id}${team}`, { headers });
+    if (!one.ok) return null;
+
+    const { value } = (await one.json()) as { value?: string };
+
+    return value || null;
+  } catch {
+    return null;
+  }
+};
+
 export const machineConfig = {
   default: 'small-1x',
   casafariInsert: 'medium-1x',
@@ -13,9 +55,20 @@ export default defineConfig({
     extensions: [
       syncEnvVars(async () => {
         const keys = ['ANTHROPIC_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY'] as const;
-        return keys
+        const vars: { name: string; value: string }[] = keys
           .filter((k) => process.env[k])
           .map((k) => ({ name: k, value: process.env[k]! }));
+
+        /*
+          The private file store's token lives on the Vercel project (it was
+          connected there), not in CI. Jobs that read uploaded documents need
+          it, so it is fetched from Vercel at deploy time, on its own, rather
+          than syncing every Vercel variable over Trigger's own.
+        */
+        const privateBlob = await fetchVercelEnv('BLOB_PRIVATE_READ_WRITE_TOKEN');
+        if (privateBlob) vars.push({ name: 'BLOB_PRIVATE_READ_WRITE_TOKEN', value: privateBlob });
+
+        return vars;
       }),
     ],
   },

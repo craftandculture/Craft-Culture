@@ -756,7 +756,7 @@ const ImportsTab = ({
           <Typography variant="bodyXs" colorRole="muted" asChild>
             <p className="flex items-center gap-3">
               <span className="flex items-center gap-1.5">
-                <span className="bg-fill-brand size-2 rounded-full" />
+                <span className="bg-text-primary size-2 rounded-full" />
                 Craft &amp; Culture
               </span>
               <span className="flex items-center gap-1.5">
@@ -825,7 +825,7 @@ const ImportsTab = ({
                           <span
                             className={`mt-1.5 size-2 shrink-0 rounded-full ${
                               importKindLabels[row.kind].side === 'cc'
-                                ? 'bg-fill-brand'
+                                ? 'bg-text-primary'
                                 : 'bg-fill-info'
                             }`}
                           />

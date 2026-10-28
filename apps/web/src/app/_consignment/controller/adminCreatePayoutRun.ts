@@ -2,12 +2,14 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, isNull, lte } from 'drizzle-orm';
 import { z } from 'zod';
 
+import withNumberRetry from '@/app/_cellar/utils/withNumberRetry';
 import db from '@/database/client';
 import {
   consignmentPayoutRuns,
   consignmentSettlements,
 } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
+
 
 import generateRunNumber from '../utils/generateRunNumber';
 
@@ -54,8 +56,6 @@ const adminCreatePayoutRun = staffAdminProcedure
       ? new Date(input.periodStart)
       : new Date(0);
 
-    const runNumber = await generateRunNumber();
-
     const result = await db.transaction(async (tx) => {
       const pending = await tx
         .select({
@@ -87,18 +87,28 @@ const adminCreatePayoutRun = staffAdminProcedure
 
       const members = new Set(pending.map((row) => row.ownerId));
 
-      const [run] = await tx
-        .insert(consignmentPayoutRuns)
-        .values({
-          runNumber,
-          periodStart,
-          periodEnd,
-          status: 'draft',
-          totalUsd: Math.round(total * 100) / 100,
-          memberCount: members.size,
-          notes: input.notes,
-        })
-        .returning({ id: consignmentPayoutRuns.id });
+      // Numbered inside the transaction, and retried on a clash
+      const run = await withNumberRetry((attempt) =>
+        tx.transaction(async (savepoint) => {
+          const [row] = await savepoint
+            .insert(consignmentPayoutRuns)
+            .values({
+              runNumber: await generateRunNumber(savepoint, attempt),
+              periodStart,
+              periodEnd,
+              status: 'draft',
+              totalUsd: Math.round(total * 100) / 100,
+              memberCount: members.size,
+              notes: input.notes,
+            })
+            .returning({
+              id: consignmentPayoutRuns.id,
+              runNumber: consignmentPayoutRuns.runNumber,
+            });
+
+          return row;
+        }),
+      );
 
       if (!run) {
         throw new TRPCError({
@@ -111,7 +121,7 @@ const adminCreatePayoutRun = staffAdminProcedure
         Claimed by id and only while still unclaimed. Two runs opened at once
         would otherwise both sweep the same settlements and pay a member twice.
       */
-      await tx
+      const claimed = await tx
         .update(consignmentSettlements)
         .set({ payoutRunId: run.id, updatedAt: new Date() })
         .where(
@@ -122,9 +132,20 @@ const adminCreatePayoutRun = staffAdminProcedure
             ),
             isNull(consignmentSettlements.payoutRunId),
           ),
-        );
+        )
+        .returning({ id: consignmentSettlements.id });
+
+      // Another run took some of these first: its total would be wrong
+      if (claimed.length !== pending.length) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'Another payout run has just been opened. Refresh and try again.',
+        });
+      }
 
       return {
+        runNumber: run.runNumber,
         id: run.id,
         settlements: pending.length,
         members: members.size,
@@ -132,7 +153,7 @@ const adminCreatePayoutRun = staffAdminProcedure
       };
     });
 
-    return { runNumber, ...result };
+    return result;
   });
 
 export default adminCreatePayoutRun;

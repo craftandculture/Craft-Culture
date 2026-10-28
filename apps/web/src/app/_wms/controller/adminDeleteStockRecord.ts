@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { wmsStock, wmsStockMovements } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import generateMovementNumber from '../utils/generateMovementNumber';
 
@@ -18,7 +18,7 @@ import generateMovementNumber from '../utils/generateMovementNumber';
  *     reason: "Duplicate record from receiving retry"
  *   });
  */
-const adminDeleteStockRecord = wmsOperatorProcedure
+const adminDeleteStockRecord = adminProcedure
   .input(
     z.object({
       stockId: z.string().uuid(),
@@ -28,36 +28,49 @@ const adminDeleteStockRecord = wmsOperatorProcedure
   .mutation(async ({ input, ctx }) => {
     const { stockId, reason } = input;
 
-    // Get the stock record first
-    const [stockRecord] = await db
-      .select()
-      .from(wmsStock)
-      .where(eq(wmsStock.id, stockId));
+    // Movement and delete land together or not at all, on a locked row
+    const { stockRecord, movementNumber } = await db.transaction(async (tx) => {
+      const [stockRecord] = await tx
+        .select()
+        .from(wmsStock)
+        .where(eq(wmsStock.id, stockId))
+        .for('update');
 
-    if (!stockRecord) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Stock record not found',
+      if (!stockRecord) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Stock record not found',
+        });
+      }
+
+      if (stockRecord.reservedCases > 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `${stockRecord.reservedCases} case(s) of this row are reserved for an order. Release the reservation first.`,
+        });
+      }
+
+      // Adjustment movement for the audit trail
+      const movementNumber = await generateMovementNumber(tx);
+      await tx.insert(wmsStockMovements).values({
+        movementNumber,
+        movementType: 'adjust',
+        lwin18: stockRecord.lwin18,
+        productName: stockRecord.productName,
+        quantityCases: -stockRecord.quantityCases, // Negative for removal
+        fromLocationId: stockRecord.locationId,
+        fromOwnerId: stockRecord.ownerId,
+        stockId: stockRecord.id,
+        notes: `DELETED: ${reason}`,
+        reasonCode: 'stock_correction',
+        performedBy: ctx.user.id,
+        performedAt: new Date(),
       });
-    }
 
-    // Create adjustment movement for audit trail
-    const movementNumber = await generateMovementNumber();
-    await db.insert(wmsStockMovements).values({
-      movementNumber,
-      movementType: 'adjust',
-      lwin18: stockRecord.lwin18,
-      productName: stockRecord.productName,
-      quantityCases: -stockRecord.quantityCases, // Negative for removal
-      fromLocationId: stockRecord.locationId,
-      notes: `DELETED: ${reason}`,
-      reasonCode: 'stock_correction',
-      performedBy: ctx.user.id,
-      performedAt: new Date(),
+      await tx.delete(wmsStock).where(eq(wmsStock.id, stockId));
+
+      return { stockRecord, movementNumber };
     });
-
-    // Delete the stock record
-    await db.delete(wmsStock).where(eq(wmsStock.id, stockId));
 
     return {
       success: true,

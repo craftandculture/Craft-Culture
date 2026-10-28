@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
@@ -9,7 +9,7 @@ import {
   privateClientOrderActivityLogs,
   privateClientOrders,
 } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 const adminMarkPartnerPaidSchema = z.object({
   orderId: z.string().uuid(),
@@ -24,7 +24,7 @@ const adminMarkPartnerPaidSchema = z.object({
  * for their stock. This does NOT affect the order status - it's purely
  * for tracking the payment from C&C to the partner.
  */
-const adminMarkPartnerPaid = wmsOperatorProcedure
+const adminMarkPartnerPaid = adminProcedure
   .input(adminMarkPartnerPaidSchema)
   .mutation(async ({ input, ctx }) => {
     const { orderId, reference, notes } = input;
@@ -59,8 +59,9 @@ const adminMarkPartnerPaid = wmsOperatorProcedure
 
     const now = new Date();
 
-    // Update order with partner payment info (NOT changing status)
-    await db
+    // Update order with partner payment info (NOT changing status). Only if
+    // still unpaid, so a double press cannot record the payment twice.
+    const [marked] = await db
       .update(privateClientOrders)
       .set({
         partnerPaidAt: now,
@@ -68,7 +69,15 @@ const adminMarkPartnerPaid = wmsOperatorProcedure
         partnerPaymentReference: reference ?? null,
         updatedAt: now,
       })
-      .where(eq(privateClientOrders.id, orderId));
+      .where(and(eq(privateClientOrders.id, orderId), isNull(privateClientOrders.partnerPaidAt)))
+      .returning({ id: privateClientOrders.id });
+
+    if (!marked) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'The partner payment has already been recorded',
+      });
+    }
 
     // Log activity
     await db.insert(privateClientOrderActivityLogs).values({

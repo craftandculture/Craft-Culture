@@ -2,8 +2,10 @@ import { and, eq, gte, inArray, isNotNull } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { teamTaskParts, teamTasks } from '@/database/schema';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 import serverConfig from '@/server.config';
 
+import getOpsSummaryLines from './getOpsSummaryLines';
 import getPeople from './getPeople';
 import buildEndOfDayReport, { nextWorkingDay } from '../utils/buildEndOfDayReport';
 import dubaiToday from '../utils/dubaiToday';
@@ -67,7 +69,13 @@ const sendEndOfDayReport = async () => {
     appUrl: serverConfig.appUrl,
   });
 
-  const result = await postTasksSlack(text);
+  // What the ops checks still have open, so problems no one typed in show too
+  const ops = await getOpsSummaryLines();
+  const withOps = ops.length
+    ? `${text}\n\n*Ops checks*\n${ops.map((line) => `• ${escapeSlackText(line)}`).join('\n')}`
+    : text;
+
+  const result = await postTasksSlack(withOps);
 
   return { ...result, closed: closed.length, opened: opened.length, ticked: ticked.length };
 };

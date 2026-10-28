@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -24,7 +24,17 @@ const cancelJob = teamProcedure.input(z.object({ taskId: z.string().uuid() })).m
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job is not open.' });
   }
 
-  await db.update(teamTasks).set({ status: 'cancelled', closedAt: new Date(), closedBy: ctx.user.id }).where(eq(teamTasks.id, task.id));
+  const [updated] = await db
+    .update(teamTasks)
+    .set({ status: 'cancelled', closedAt: new Date(), closedBy: ctx.user.id })
+    .where(and(eq(teamTasks.id, task.id), eq(teamTasks.status, 'open')))
+    .returning({ id: teamTasks.id });
+
+  // Someone else changed it between our read and this write
+  if (!updated) {
+    throw new TRPCError({ code: 'CONFLICT', message: 'This job has just been closed or cancelled by someone else.' });
+  }
+
   await logTaskEvent(task.id, ctx.user.id, `${ctx.user.name} cancelled the job`);
 
   return { slack: await announceTask(task.id, 'cancelled') };

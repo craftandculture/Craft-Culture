@@ -21,7 +21,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
+import InlineConfirm from '@/app/_logistics/components/shipment/InlineConfirm';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -117,6 +119,9 @@ const WMSReceiveShipmentPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [lotNumber, setLotNumber] = useState('');
   const [isCommitting, setIsCommitting] = useState(false);
+  // In-page confirms; the browser's confirm() can be suppressed by Chrome
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false);
+  const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
 
   // Current bay assignment state (for the current product)
   const [pendingCases, setPendingCases] = useState(0);
@@ -225,9 +230,18 @@ const WMSReceiveShipmentPage = () => {
     },
   });
 
+  /*
+    The autosave reads the latest state when it fires, not the state of the
+    render that scheduled it. Called straight after setReceivedItems, the old
+    closure saved the map from before the change, so an added wine or a
+    commit could be missing from the draft and come back wrong on reload.
+  */
+  const latestDraftRef = useRef({ receivedItems, notes, lotNumber });
+  latestDraftRef.current = { receivedItems, notes, lotNumber };
+
   // Save draft (debounced)
   const saveDraft = useCallback(() => {
-    if (receivedItems.size === 0) return;
+    if (latestDraftRef.current.receivedItems.size === 0 && receivedItems.size === 0) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -236,7 +250,9 @@ const WMSReceiveShipmentPage = () => {
     setIsSaving(true);
 
     saveTimeoutRef.current = setTimeout(() => {
-      const items = Array.from(receivedItems.values()).map((item) => ({
+      const { receivedItems: latestItems, notes: latestNotes, lotNumber: latestLot } =
+        latestDraftRef.current;
+      const items = Array.from(latestItems.values()).map((item) => ({
         id: item.id,
         shipmentItemId: item.shipmentItemId,
         baseItemId: item.baseItemId,
@@ -257,7 +273,7 @@ const WMSReceiveShipmentPage = () => {
         isCommitted: item.isCommitted,
         committedAt: item.committedAt,
         locationAssignments: item.locationAssignments,
-        lotNumber: lotNumber || undefined,
+        lotNumber: latestLot || undefined,
         locationId: item.locationAssignments[0]?.locationId,
         notes: item.notes,
         photos: item.photos,
@@ -266,10 +282,10 @@ const WMSReceiveShipmentPage = () => {
       saveDraftMutate({
         shipmentId,
         items,
-        notes: notes || undefined,
+        notes: latestNotes || undefined,
       });
     }, 1000);
-  }, [receivedItems, notes, lotNumber, shipmentId, saveDraftMutate]);
+  }, [receivedItems, shipmentId, saveDraftMutate]);
 
   // Get current item - defined early so it can be used in effects
   const getCurrentItem = useCallback((): ReceivedItem | undefined => {
@@ -307,7 +323,12 @@ const WMSReceiveShipmentPage = () => {
         }
         loadedItems.set(item.id, {
           ...item,
-          ...(live
+          /*
+            An added wine is not a logistics line. It carries the first line's
+            id only because the commit schema needs one, so refreshing it from
+            that line turned the added wine into the shipment's first wine.
+          */
+          ...(live && !item.isAddedItem
             ? {
                 productName: live.productName,
                 producer: live.producer,
@@ -408,7 +429,16 @@ const WMSReceiveShipmentPage = () => {
   }, [shipment?.items, savedDraft, initialized, draftLoading]);
 
   // Reset pending cases when product changes
+  /*
+    Only when the operator moves to a different product. getCurrentItem
+    changes on every edit to receivedItems (a count, a label printed, the
+    autosave), and resetting on each of those wiped the bay just scanned.
+  */
+  const currentItemKey = `${currentProductIndex}:${getCurrentItem()?.id ?? ''}`;
+  const lastResetKeyRef = useRef<string | null>(null);
   useEffect(() => {
+    if (lastResetKeyRef.current === currentItemKey) return;
+    lastResetKeyRef.current = currentItemKey;
     const currentItem = getCurrentItem();
     if (currentItem) {
       const assignedCases = currentItem.locationAssignments.reduce((sum, a) => sum + a.cases, 0);
@@ -420,7 +450,7 @@ const WMSReceiveShipmentPage = () => {
     setPrintError(null);
     setPalletLabelQty(1);
     setReprintQty({});
-  }, [currentProductIndex, getCurrentItem]);
+  }, [currentItemKey, getCurrentItem]);
 
   // Cleanup
   useEffect(() => {
@@ -753,6 +783,8 @@ const WMSReceiveShipmentPage = () => {
         shipmentId,
         lotNumber: currentLotNumber,
         notes: currentItem.notes,
+        // One receipt per line: a resend after a dropped connection is not booked twice
+        idempotencyKey: `receive:${shipmentId}:${currentItem.id}`,
         // Enriched context for NUC local server
         shipmentNumber: shipment?.shipmentNumber,
         shipmentType: shipment?.type,
@@ -794,7 +826,7 @@ const WMSReceiveShipmentPage = () => {
       // Auto-advance to next product
       handleNextProduct();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to save to warehouse');
+      toast.error(err instanceof Error ? err.message : 'Failed to save to warehouse');
     } finally {
       setIsCommitting(false);
     }
@@ -866,7 +898,9 @@ const WMSReceiveShipmentPage = () => {
     );
 
     if (uncommitted.length > 0) {
-      alert(`${uncommitted.length} product(s) not yet saved to warehouse. Please confirm each product before finishing.`);
+      toast.error(
+        `${uncommitted.length} product(s) not yet saved to warehouse. Please confirm each product before finishing.`,
+      );
       return;
     }
 
@@ -875,9 +909,8 @@ const WMSReceiveShipmentPage = () => {
 
   // Reset handler
   const handleReset = () => {
-    if (confirm('Clear all progress and start fresh? This cannot be undone.')) {
-      deleteDraftMutate({ shipmentId });
-    }
+    setIsConfirmingReset(false);
+    deleteDraftMutate({ shipmentId });
   };
 
   // Debounced search for Add Item
@@ -964,7 +997,7 @@ const WMSReceiveShipmentPage = () => {
   const handleDeleteAddedItem = (itemId: string) => {
     const item = receivedItems.get(itemId);
     if (!item?.isAddedItem || item.isCommitted) return;
-    if (!confirm(`Remove "${item.productName}" from this receiving session?`)) return;
+    setConfirmingRemoveId(null);
     const newMap = new Map(receivedItems);
     newMap.delete(itemId);
     setReceivedItems(newMap);
@@ -1129,9 +1162,19 @@ const WMSReceiveShipmentPage = () => {
               <IconCheck className="h-4 w-4" />
             </span>
           ) : null}
-          {lastSaved && (
+          {lastSaved && isConfirmingReset && (
+            <InlineConfirm
+              message="Clear all progress?"
+              confirmLabel="Clear"
+              danger
+              isPending={isDeletingDraft}
+              onConfirm={handleReset}
+              onCancel={() => setIsConfirmingReset(false)}
+            />
+          )}
+          {lastSaved && !isConfirmingReset && (
             <button
-              onClick={handleReset}
+              onClick={() => setIsConfirmingReset(true)}
               disabled={isDeletingDraft}
               className="rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
             >
@@ -1174,7 +1217,7 @@ const WMSReceiveShipmentPage = () => {
               <input
                 type="text"
                 placeholder="Search products by name, producer, or LWIN..."
-                className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-border-brand focus:outline-none"
+                className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-text-primary focus:outline-none"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -1185,7 +1228,7 @@ const WMSReceiveShipmentPage = () => {
               <button
                 type="button"
                 onClick={() => setShowAddItem(true)}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border-primary bg-fill-primary text-base font-medium text-text-muted transition-colors hover:border-border-brand hover:text-text-primary"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border-primary bg-fill-primary text-base font-medium text-text-muted transition-colors hover:border-text-primary hover:text-text-primary"
               >
                 <IconPlus className="h-5 w-5" />
                 Add Item
@@ -1216,7 +1259,7 @@ const WMSReceiveShipmentPage = () => {
                       placeholder="Search existing stock..."
                       value={addItemSearch}
                       onChange={(e) => handleAddItemSearchChange(e.target.value)}
-                      className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-border-brand focus:outline-none"
+                      className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-text-primary focus:outline-none"
                     />
                     {/* Search results dropdown */}
                     {addItemSearchDebounce.length >= 2 && stockSearchResults?.results && stockSearchResults.results.length > 0 && addItemSearch && (
@@ -1253,7 +1296,7 @@ const WMSReceiveShipmentPage = () => {
                         value={addItemForm.productName}
                         onChange={(e) => setAddItemForm({ ...addItemForm, productName: e.target.value })}
                         placeholder="e.g. Chateau Margaux"
-                        className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-border-brand focus:outline-none"
+                        className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-text-primary focus:outline-none"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -1265,7 +1308,7 @@ const WMSReceiveShipmentPage = () => {
                           type="text"
                           value={addItemForm.producer}
                           onChange={(e) => setAddItemForm({ ...addItemForm, producer: e.target.value })}
-                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-border-brand focus:outline-none"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-text-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -1278,7 +1321,7 @@ const WMSReceiveShipmentPage = () => {
                           value={addItemForm.vintage}
                           onChange={(e) => setAddItemForm({ ...addItemForm, vintage: e.target.value })}
                           placeholder="2020"
-                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-border-brand focus:outline-none"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-text-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1292,7 +1335,7 @@ const WMSReceiveShipmentPage = () => {
                           inputMode="numeric"
                           value={addItemForm.bottlesPerCase}
                           onChange={(e) => setAddItemForm({ ...addItemForm, bottlesPerCase: parseInt(e.target.value) || 12 })}
-                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-border-brand focus:outline-none"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-text-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -1304,7 +1347,7 @@ const WMSReceiveShipmentPage = () => {
                           inputMode="numeric"
                           value={addItemForm.bottleSizeMl}
                           onChange={(e) => setAddItemForm({ ...addItemForm, bottleSizeMl: parseInt(e.target.value) || 750 })}
-                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-border-brand focus:outline-none"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-text-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -1317,7 +1360,7 @@ const WMSReceiveShipmentPage = () => {
                           min={1}
                           value={addItemForm.cases}
                           onChange={(e) => setAddItemForm({ ...addItemForm, cases: parseInt(e.target.value) || 1 })}
-                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-border-brand focus:outline-none"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-text-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1359,7 +1402,7 @@ const WMSReceiveShipmentPage = () => {
                     <button
                       key={item.id}
                       onClick={() => selectProduct(index)}
-                      className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand hover:bg-fill-secondary"
+                      className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-text-primary hover:bg-fill-secondary"
                     >
                       {/* Top row: Status badge and case count */}
                       <div className="mb-2 flex items-center justify-between">
@@ -1394,12 +1437,23 @@ const WMSReceiveShipmentPage = () => {
                                 <IconPlus className="h-3 w-3" />
                                 Added
                               </span>
-                              {!receivedItem.isCommitted && (
+                              {!receivedItem.isCommitted && confirmingRemoveId === receivedItem.id && (
+                                <span onClick={(e) => e.stopPropagation()}>
+                                  <InlineConfirm
+                                    message="Remove this product?"
+                                    confirmLabel="Remove"
+                                    danger
+                                    onConfirm={() => handleDeleteAddedItem(receivedItem.id)}
+                                    onCancel={() => setConfirmingRemoveId(null)}
+                                  />
+                                </span>
+                              )}
+                              {!receivedItem.isCommitted && confirmingRemoveId !== receivedItem.id && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDeleteAddedItem(receivedItem.id);
+                                    setConfirmingRemoveId(receivedItem.id);
                                   }}
                                   className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
                                 >
@@ -1539,7 +1593,7 @@ const WMSReceiveShipmentPage = () => {
                       <input
                         type="number"
                         inputMode="numeric"
-                        className="h-14 w-20 rounded-lg border-2 border-border-primary bg-fill-primary text-center text-xl font-bold focus:border-border-brand focus:outline-none"
+                        className="h-14 w-20 rounded-lg border-2 border-border-primary bg-fill-primary text-center text-xl font-bold focus:border-text-primary focus:outline-none"
                         value={currentItem.receivedCases}
                         onChange={(e) => updateReceivedCases(parseInt(e.target.value) || 0)}
                         min={0}
@@ -1748,7 +1802,7 @@ const WMSReceiveShipmentPage = () => {
                                 onBlur={() => {
                                   if (casesForThisBay < 1) setCasesForThisBay(1);
                                 }}
-                                className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
+                                className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-text-primary focus:outline-none"
                               />
                             </div>
                             <div className="text-center text-sm text-text-muted">
@@ -1785,7 +1839,7 @@ const WMSReceiveShipmentPage = () => {
                               }`}
                             >
                               <div
-                                className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                                className={`h-5 w-5 rounded-full bg-surface-primary shadow transition-transform ${
                                   isPalletMode ? 'translate-x-5' : 'translate-x-0.5'
                                 }`}
                               />
@@ -1809,7 +1863,7 @@ const WMSReceiveShipmentPage = () => {
                                     const parsed = parseInt(e.target.value);
                                     if (!isNaN(parsed)) setPalletLabelQty(Math.max(1, Math.min(10, parsed)));
                                   }}
-                                  className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
+                                  className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-text-primary focus:outline-none"
                                 />
                               </div>
                               <div className="text-center text-sm text-text-muted">
@@ -1970,7 +2024,7 @@ const WMSReceiveShipmentPage = () => {
                                       setReprintQty({ ...reprintQty, [index]: Math.max(1, Math.min(assignment.cases, parsed)) });
                                     }
                                   }}
-                                  className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-border-brand focus:outline-none"
+                                  className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-text-primary focus:outline-none"
                                 />
                                 <button
                                   onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? (assignment.isPalletized ? 1 : assignment.cases))}
@@ -2053,7 +2107,7 @@ const WMSReceiveShipmentPage = () => {
                                   setReprintQty({ ...reprintQty, [index]: Math.max(1, Math.min(assignment.cases, parsed)) });
                                 }
                               }}
-                              className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-border-brand focus:outline-none"
+                              className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-text-primary focus:outline-none"
                             />
                             <button
                               onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? (assignment.isPalletized ? 1 : assignment.cases))}
@@ -2126,7 +2180,7 @@ const WMSReceiveShipmentPage = () => {
                 <CardContent className="p-4">
                   <CardTitle className="mb-2 text-base">Notes for this product (Optional)</CardTitle>
                   <textarea
-                    className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
+                    className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-text-primary focus:outline-none"
                     rows={2}
                     placeholder="Add notes about discrepancies, damage, etc."
                     value={currentItem.notes ?? ''}

@@ -24,6 +24,7 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 import safeHref from '@/utils/safeHref';
 
 import QuoteApprovalDialog from './QuoteApprovalDialog';
@@ -52,14 +53,14 @@ const filterGroups: FilterGroup[] = [
   {
     label: 'Incoming',
     filters: [
-      { label: 'Pending', value: 'buy_request_submitted', icon: IconSend, color: 'text-text-brand' },
+      { label: 'Pending', value: 'buy_request_submitted', icon: IconSend, color: 'text-text-primary' },
     ],
   },
   {
     label: 'In Progress',
     filters: [
-      { label: 'Under Review', value: 'under_cc_review', icon: IconClock, color: 'text-text-brand' },
-      { label: 'Confirmed', value: 'cc_confirmed', icon: IconCheck, color: 'text-text-brand' },
+      { label: 'Under Review', value: 'under_cc_review', icon: IconClock, color: 'text-text-primary' },
+      { label: 'Confirmed', value: 'cc_confirmed', icon: IconCheck, color: 'text-text-primary' },
       { label: 'Awaiting Payment', value: 'awaiting_payment', icon: IconClock, color: 'text-text-warning' },
     ],
   },
@@ -73,8 +74,8 @@ const filterGroups: FilterGroup[] = [
   {
     label: 'B2B',
     filters: [
-      { label: 'PO Submitted', value: 'po_submitted', icon: IconFileText, color: 'text-text-brand' },
-      { label: 'PO Confirmed', value: 'po_confirmed', icon: IconCheck, color: 'text-text-brand' },
+      { label: 'PO Submitted', value: 'po_submitted', icon: IconFileText, color: 'text-text-primary' },
+      { label: 'PO Confirmed', value: 'po_confirmed', icon: IconCheck, color: 'text-text-primary' },
     ],
   },
 ];
@@ -103,7 +104,7 @@ const QuoteApprovalsList = () => {
         cursor: 0,
         search: search || undefined,
       }),
-    refetchInterval: 5000, // Refresh every 10 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const quotes = quotesData?.data ?? [];
@@ -277,7 +278,7 @@ const QuoteApprovalsList = () => {
               variant="outline"
               size="sm"
               onClick={() => {
-                const href = safeHref(quote.poAttachmentUrl);
+                const href = safeHref(fileHref(quote.poAttachmentUrl));
                 if (href) window.open(href, '_blank', 'noopener,noreferrer');
               }}
             >
@@ -345,15 +346,15 @@ const QuoteApprovalsList = () => {
                     onClick={() => setActiveFilter(filter.value)}
                     className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
                       isActive
-                        ? 'bg-fill-brand text-text-brand-contrast shadow-sm'
+                        ? 'bg-text-primary text-text-primary-contrast shadow-sm'
                         : 'bg-fill-muted/50 text-text-muted hover:bg-fill-muted hover:text-text-primary dark:bg-background-secondary dark:hover:bg-background-tertiary'
                     }`}
                   >
-                    <Icon icon={filter.icon} size="xs" className={isActive ? 'text-text-brand-contrast' : filter.color} />
+                    <Icon icon={filter.icon} size="xs" className={isActive ? 'text-text-primary-contrast' : filter.color} />
                     <span>{filter.label}</span>
                     <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${
                       isActive
-                        ? 'bg-white/20 text-text-brand-contrast'
+                        ? 'bg-white/20 text-text-primary-contrast'
                         : 'bg-fill-primary/50 text-text-muted'
                     }`}>
                       {count}
@@ -408,12 +409,12 @@ const QuoteApprovalsList = () => {
       ) : (
         <>
           {/* Desktop Table */}
-          <div className="hidden rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm md:block">
+          <div className="hidden rounded-lg border border-border-muted bg-surface-primary dark:bg-background-secondary shadow-sm md:block">
             <DataTable columns={getColumns()} data={filteredQuotes} />
           </div>
 
           {/* Mobile Cards */}
-          <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm md:hidden">
+          <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted bg-surface-primary dark:bg-background-secondary shadow-sm md:hidden">
             {filteredQuotes.map((quote) => (
               <button
                 key={quote.id}
@@ -448,7 +449,7 @@ const QuoteApprovalsList = () => {
                       ? format(new Date(quote.buyRequestSubmittedAt), 'MMM d, yyyy')
                       : '-'}
                   </Typography>
-                  <div className="flex items-center gap-1 text-text-brand">
+                  <div className="flex items-center gap-1 text-text-primary">
                     <Icon icon={IconEye} size="xs" />
                     <Typography variant="bodyXs" className="font-medium">
                       Review
@@ -471,7 +472,10 @@ const QuoteApprovalsList = () => {
       )}
 
       {/* Quote Approval Dialog */}
+      {/* Keyed by quote so review state (adjustments, partner, payment)
+          never carries over from the previous quote */}
       <QuoteApprovalDialog
+        key={selectedQuote?.id ?? 'none'}
         quote={selectedQuote}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}

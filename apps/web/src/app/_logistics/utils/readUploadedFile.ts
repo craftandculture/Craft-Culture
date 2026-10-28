@@ -1,5 +1,8 @@
 import { TRPCError } from '@trpc/server';
 
+import { readStoredFileBuffer } from '@/lib/blob/privateFiles';
+import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
+
 /**
  * Read a file the browser sent, either inline or already uploaded to Blob
  *
@@ -8,27 +11,25 @@ import { TRPCError } from '@trpc/server';
  * the page showed "Request Entity Too Large… is not valid JSON". Larger files
  * go to Blob straight from the browser and arrive here as a URL instead.
  *
- * Only Vercel Blob URLs are fetched, so the server cannot be pointed at an
- * arbitrary address.
+ * Only URLs in C&C's own Blob store are fetched, so the server cannot be
+ * pointed at an arbitrary address or another party's store.
  *
  * @param input - Either `file` (base64 or data URL) or `blobUrl`
  * @returns The file's bytes
  */
 const readUploadedFile = async (input: { file?: string | null; blobUrl?: string | null }) => {
   if (input.blobUrl) {
-    const url = new URL(input.blobUrl);
-
-    if (url.protocol !== 'https:' || !url.hostname.endsWith('.blob.vercel-storage.com')) {
+    if (!isVercelBlobUrl(input.blobUrl)) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unrecognised file location' });
     }
 
-    const response = await fetch(url);
+    const buffer = await readStoredFileBuffer(input.blobUrl);
 
-    if (!response.ok) {
+    if (!buffer) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Could not read the uploaded file' });
     }
 
-    return Buffer.from(await response.arrayBuffer());
+    return buffer;
   }
 
   const base64Data = input.file?.includes(',') ? input.file.split(',')[1] : input.file;

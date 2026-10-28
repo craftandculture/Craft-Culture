@@ -129,16 +129,25 @@ const adminSyncOutFromZoho = adminProcedure
       only thing that can answer — and a wine's owner does not change between
       invoices.
     */
+    /*
+      Every owner a wine has been sent under, not just the latest. Keeping one
+      per LWIN (DISTINCT ON) gave a wine two owners both consign to whichever
+      invoiced last; with two on record and no tag, the line is flagged for a
+      person instead.
+    */
     const knownRows = await client<{ lwin18: string; ownerId: string }[]>`
-      SELECT DISTINCT ON (m.lwin18) m.lwin18, a.owner_id AS "ownerId"
+      SELECT DISTINCT m.lwin18, a.owner_id AS "ownerId"
       FROM cons_movements m
       JOIN cons_arrangements a ON a.id = m.arrangement_id
       WHERE m.lwin18 IS NOT NULL AND m.kind = 'out'
-      ORDER BY m.lwin18, m.doc_date DESC NULLS LAST, m.created_at DESC
     `;
-    const knownOwnerByLwin = new Map(
-      knownRows.map((row) => [squash(row.lwin18), row.ownerId]),
-    );
+    const knownOwnersByLwin = new Map<string, Set<string>>();
+    for (const row of knownRows) {
+      const key = squash(row.lwin18);
+      const set = knownOwnersByLwin.get(key) ?? new Set<string>();
+      set.add(row.ownerId);
+      knownOwnersByLwin.set(key, set);
+    }
 
     const wanted = squash(outlet.zohoCustomerMatch);
     const headers: { id: string; number: string }[] = [];
@@ -244,6 +253,25 @@ const adminSyncOutFromZoho = adminProcedure
         const pack = packStated ? parsedPack! : 1;
 
         const saidByHand = lwin18 ? ownerByWine.get(squash(lwin18)) : null;
+        /* The line's own header beats the invoice's tag, being narrower */
+        const lineTag = headerTag ?? invoiceTag;
+        const registry = lwin18 ? knownOwnersByLwin.get(squash(lwin18)) : undefined;
+
+        if (!saidByHand && registry && registry.size > 1) {
+          // Only a tag on the document can settle a wine with two owners
+          const byTag = resolveOwner({
+            tag: lineTag,
+            knownOwnerId: null,
+            owners: owners.map((owner) => ({ ...owner, takesUnattributed: false })),
+          });
+
+          if (!byTag.ownerId) {
+            unattributed.push(
+              `${header.number} · ${line.name} — more than one owner has consigned this wine and the invoice does not say whose; set its owner by hand`,
+            );
+            continue;
+          }
+        }
 
         const { ownerId, reason } = saidByHand
           ? {
@@ -251,11 +279,9 @@ const adminSyncOutFromZoho = adminProcedure
               reason: 'Set by hand against the wine',
             }
           : resolveOwner({
-              /* The line's own header beats the invoice's tag, being narrower */
-              tag: headerTag ?? invoiceTag,
-              knownOwnerId: lwin18
-                ? knownOwnerByLwin.get(squash(lwin18))
-                : null,
+              tag: lineTag,
+              knownOwnerId:
+                registry && registry.size === 1 ? [...registry][0] : null,
               owners,
             });
 
@@ -292,18 +318,22 @@ const adminSyncOutFromZoho = adminProcedure
       feed is the authority on its own lines — anything it no longer returns
       has been voided or retagged in Zoho and should leave here too.
     */
-    await client`
-      DELETE FROM cons_movements m
-      USING cons_arrangements a
-      WHERE m.arrangement_id = a.id
-        AND a.outlet_id = ${input.outletId}
-        AND m.kind = 'out'
-        AND m.source = 'zoho-invoices'
-    `;
+    // One transaction, so a failed insert never leaves the outlet with no
+    // invoiced lines at all
+    await client.begin(async (sql) => {
+      await sql`
+        DELETE FROM cons_movements m
+        USING cons_arrangements a
+        WHERE m.arrangement_id = a.id
+          AND a.outlet_id = ${input.outletId}
+          AND m.kind = 'out'
+          AND m.source = 'zoho-invoices'
+      `;
 
-    if (rows.length > 0) {
-      await client`INSERT INTO cons_movements ${client(rows)}`;
-    }
+      if (rows.length > 0) {
+        await sql`INSERT INTO cons_movements ${sql(rows)}`;
+      }
+    });
 
     return {
       outlet: outlet.outletName,

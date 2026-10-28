@@ -296,8 +296,17 @@ const ZohoImportClient = () => {
           updated.country = editValue || null;
           break;
         case 'hsCode':
-          updated.hsCode = editValue;
+          updated.hsCode = editValue.trim();
           break;
+        case 'lwin7': {
+          // A Liv-ex LWIN7 or a C&C internal code (9000001 upwards); the SKU is rebuilt when the file is made
+          const code = editValue.trim().split('-')[0] ?? '';
+          updated.lwin7 = /^\d{7}$/.test(code) ? code : null;
+          updated.hasLwinMatch = updated.lwin7 !== null;
+          updated.matchConfidence = updated.lwin7 ? 1 : 0;
+          updated.needsReview = updated.lwin7 === null;
+          break;
+        }
       }
       return updated;
     });
@@ -546,7 +555,7 @@ const ZohoImportClient = () => {
                         <select
                           value={item.caseConfig}
                           onChange={(e) => handleCaseConfigChange(item.id, parseInt(e.target.value, 10))}
-                          className="w-full px-1 py-1 text-xs border border-border-muted rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-1 py-1 text-xs border border-border-muted rounded bg-surface-primary focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           {CASE_SIZES.map((size) => (
                             <option key={size} value={size}>
@@ -633,19 +642,39 @@ const ZohoImportClient = () => {
                         )}
                       </td>
 
-                      {/* LWIN - Read only */}
+                      {/* LWIN7 - Editable (Liv-ex code or C&C internal code) */}
                       <td className="px-2 py-2">
-                        {item.hasLwinMatch ? (
-                          <span
-                            className={`text-xs font-mono ${getConfidenceColor(item.matchConfidence)}`}
-                            title={`${Math.round(item.matchConfidence * 100)}% match`}
-                          >
-                            {item.lwin7}
-                          </span>
+                        {editingCell?.itemId === item.id && editingCell?.field === 'lwin7' ? (
+                          <input
+                            ref={editInputRef}
+                            type="text"
+                            inputMode="numeric"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleSaveEdit}
+                            onKeyDown={handleEditKeyDown}
+                            className="w-full px-2 py-1 text-xs border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                          />
                         ) : (
-                          <Typography variant="bodyXs" className="text-red-600">
-                            -
-                          </Typography>
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(item.id, 'lwin7', item.lwin7)}
+                            className="w-full text-left hover:bg-fill-muted rounded px-1 py-0.5"
+                            title="Click to enter the LWIN7 or a C&C internal code"
+                          >
+                            {item.hasLwinMatch && item.lwin7 ? (
+                              <span
+                                className={`text-xs font-mono ${getConfidenceColor(item.matchConfidence)}`}
+                                title={`${Math.round(item.matchConfidence * 100)}% match`}
+                              >
+                                {item.lwin7}
+                              </span>
+                            ) : (
+                              <Typography variant="bodyXs" className="text-red-600">
+                                Add LWIN
+                              </Typography>
+                            )}
+                          </button>
                         )}
                       </td>
 
@@ -682,8 +711,9 @@ const ZohoImportClient = () => {
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
               <IconAlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <Typography variant="bodyXs" className="text-amber-800">
-                {stats.unmatched} item{stats.unmatched > 1 ? 's' : ''} could not be matched to the LWIN database. These
-                will have placeholder SKUs and may need manual correction in Zoho.
+                {stats.unmatched} item{stats.unmatched > 1 ? 's' : ''} could not be matched to the LWIN database. Click
+                Add LWIN on each one and enter its Liv-ex LWIN7, or a C&amp;C internal code (9000001 upwards) for a wine
+                Liv-ex does not list. The file cannot be made until every line has one.
               </Typography>
             </div>
           )}

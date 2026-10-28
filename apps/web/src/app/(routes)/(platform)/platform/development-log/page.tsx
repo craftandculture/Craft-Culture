@@ -1,13 +1,30 @@
 import { IconHistory } from '@tabler/icons-react';
+import { redirect } from 'next/navigation';
 
+import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import groupChangelogByDay from '@/utils/groupChangelogByDay';
 import parseChangelog from '@/utils/parseChangelog';
 
-import VersionEntry from './VersionEntry';
+import DayEntry from './DayEntry';
 
-const DevelopmentLogPage = () => {
+const DAYS_SHOWN = 14;
+
+/**
+ * Internal release history. The changelog names partners and pricing work, so
+ * it is for the C&C team only.
+ */
+const DevelopmentLogPage = async () => {
+  const user = await getUserOrRedirect();
+
+  if (!isTeamMember(user)) {
+    redirect('/platform');
+  }
+
   const versions = parseChangelog();
+  const days = groupChangelogByDay(versions);
 
   return (
     <main className="container py-6 md:py-10">
@@ -20,14 +37,15 @@ const DevelopmentLogPage = () => {
           <div>
             <Typography variant="headingMd">Development Log</Typography>
             <Typography variant="bodyXs" colorRole="muted">
+              {versions[0] ? `v${versions[0].version} · ` : ''}
               {versions.length} releases
             </Typography>
           </div>
         </div>
 
         {/* Version List */}
-        <div className="rounded-xl border border-border-primary bg-fill-primary">
-          {versions.length === 0 ? (
+        <div className="overflow-hidden rounded-xl border border-border-primary bg-fill-primary">
+          {days.length === 0 ? (
             <div className="px-4 py-8 text-center">
               <Typography variant="bodySm" colorRole="muted">
                 No version history available.
@@ -35,25 +53,21 @@ const DevelopmentLogPage = () => {
             </div>
           ) : (
             <div className="divide-y divide-border-primary">
-              {versions.slice(0, 20).map((version, index) => (
-                <VersionEntry
-                  key={version.version}
-                  version={version}
-                  isLatest={index === 0}
-                />
+              {days.slice(0, DAYS_SHOWN).map((day, index) => (
+                <DayEntry key={day.date} day={day} isLatest={index === 0} />
               ))}
             </div>
           )}
         </div>
 
         {/* Footer note */}
-        {versions.length > 20 && (
+        {days.length > DAYS_SHOWN && (
           <Typography
             variant="bodyXs"
             colorRole="muted"
             className="mt-3 text-center"
           >
-            Showing latest 20 releases
+            Showing the last {DAYS_SHOWN} days of releases
           </Typography>
         )}
       </div>

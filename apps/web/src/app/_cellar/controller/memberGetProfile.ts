@@ -59,8 +59,12 @@ const memberGetProfile = stockOwnerProcedure.query(async ({ ctx }) => {
     eidExpiry: isHolder ? (partner?.eidExpiry ?? null) : null,
     documents,
     /** The member's cellar reference, quoted on wine sent to our UK bond */
-    reference: await ensureClientCode(ctx.partner.id),
+    reference: await ensureClientCode(ctx.partner.id, {
+      issue: ctx.cellarRole !== 'viewer',
+    }),
     cellarRole: ctx.cellarRole,
+    /** Member-only features (sourcing, allocations) are hidden from trade partners */
+    isPrivateCollector: ctx.partner.type === 'private_collector',
   };
 });
 

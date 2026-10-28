@@ -189,7 +189,7 @@ const PartnerContactsSection = ({ partnerId }: PartnerContactsSectionProps) => {
                     {contact.name}
                   </Typography>
                   {contact.isPrimary && (
-                    <span className="bg-fill-brand/10 text-text-brand text-xs px-1.5 py-0.5 rounded">
+                    <span className="bg-text-primary/10 text-text-primary text-xs px-1.5 py-0.5 rounded">
                       Primary
                     </span>
                   )}
@@ -222,7 +222,7 @@ const PartnerContactsSection = ({ partnerId }: PartnerContactsSectionProps) => {
                   </Button>
                 )}
                 {contact.isPrimary && (
-                  <IconStarFilled className="h-4 w-4 text-text-brand" />
+                  <IconStarFilled className="h-4 w-4 text-text-primary" />
                 )}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>

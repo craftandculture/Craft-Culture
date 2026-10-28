@@ -38,7 +38,7 @@ const ReconcilePage = () => {
   const deleteMutation = useMutation({
     ...api.wms.admin.stock.deleteRecord.mutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'stock'] });
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'stock']] });
       void refetch();
     },
   });
@@ -46,7 +46,7 @@ const ReconcilePage = () => {
   const autoFixMutation = useMutation({
     ...api.wms.admin.stock.autoFix.mutationOptions(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'stock'] });
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'stock']] });
       void refetch();
     },
     // Without this the button 500s in silence and reads as "nothing happened",
@@ -57,10 +57,10 @@ const ReconcilePage = () => {
   });
 
   const rebuildMutation = useMutation({
+    // Read only: lists bays holding less than the ledger says, changes nothing
     ...api.wms.admin.stock.rebuildFromMovements.mutationOptions(),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'stock'] });
-      void refetch();
+    onError: (error) => {
+      toast.error(`Comparison failed: ${error.message}`);
     },
   });
 
@@ -103,14 +103,12 @@ const ReconcilePage = () => {
                 variant="default"
                 size="sm"
                 onClick={() => {
-                  if (confirm('Rebuild stock records from movement history? This will create missing stock records.')) {
-                    rebuildMutation.mutate({});
-                  }
+                  rebuildMutation.mutate();
                 }}
                 disabled={rebuildMutation.isPending}
               >
                 <ButtonContent iconLeft={IconDatabaseImport}>
-                  {rebuildMutation.isPending ? 'Rebuilding...' : 'Rebuild Stock'}
+                  {rebuildMutation.isPending ? 'Comparing…' : 'Find short bays'}
                 </ButtonContent>
               </Button>
             )}
@@ -125,7 +123,7 @@ const ReconcilePage = () => {
                       'Reconcile records the movements the ledger is missing — a pack re-designation as a repack, and stock that arrived without paperwork as an arrival.\n\nIt never changes a stock quantity and never deletes stock. Under-counts are listed for you to count, not fixed.\n\nContinue?',
                     )
                   ) {
-                    autoFixMutation.mutate({});
+                    autoFixMutation.mutate();
                   }
                 }}
                 disabled={autoFixMutation.isPending}
@@ -252,9 +250,9 @@ const ReconcilePage = () => {
 
         {/* Rebuild Results */}
         {rebuildMutation.data && (
-          <Card className="border-emerald-200 bg-emerald-50">
+          <Card className="border-amber-200 bg-amber-50">
             <CardContent className="p-4">
-              <Typography variant="headingSm" className="mb-2 text-emerald-800">
+              <Typography variant="headingSm" className="mb-2 text-amber-800">
                 {rebuildMutation.data.message}
               </Typography>
               {rebuildMutation.data.errors && rebuildMutation.data.errors.length > 0 && (

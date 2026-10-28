@@ -8,8 +8,8 @@ import { useState } from 'react';
 import type { AppRouter } from '@/trpc-router';
 
 import TransferInstructions from './TransferInstructions';
-import intakeStages from '../constants/intakeStages';
 import wineSources from '../constants/wineSources';
+import intakeStagesFor from '../utils/intakeStagesFor';
 
 type Intake = inferRouterOutputs<AppRouter>['onboarding']['member']['overview']['intakes'][number];
 
@@ -40,6 +40,7 @@ const bottleLabel = (bottleSizeMl: number) =>
 const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) => {
   const [showAll, setShowAll] = useState(false);
   const [showHow, setShowHow] = useState(false);
+  const intakeStages = intakeStagesFor(intake.route);
   const at = intakeStages.findIndex((stage) => stage.value === intake.stage);
   const source = wineSources.find((item) => item.value === intake.source);
   const title = intake.holderName && intake.source !== 'lcb' ? intake.holderName : (source?.label ?? 'Your wine');
@@ -86,7 +87,10 @@ const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) 
       </header>
 
       {/* Across on a wide screen */}
-      <ol className="mt-5 hidden grid-cols-5 sm:grid">
+      <ol
+        className="mt-5 hidden sm:grid"
+        style={{ gridTemplateColumns: `repeat(${intakeStages.length}, minmax(0, 1fr))` }}
+      >
         {intakeStages.map((stage, index) => (
           <li key={stage.value} className="relative flex flex-col items-center text-center">
             {index > 0 && (
@@ -172,7 +176,7 @@ const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) 
           </button>
           {showHow && (
             <div className="mt-3">
-              <TransferInstructions source={intake.source} reference={reference} />
+              <TransferInstructions source={intake.source} route={intake.route} reference={reference} />
             </div>
           )}
         </div>

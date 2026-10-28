@@ -4,6 +4,7 @@ import logger from '@/utils/logger';
 
 import fetchCityDrinksStock from './fetchCityDrinksStock';
 import getDailyOutletSales from './getDailyOutletSales';
+import rememberLandedCosts from './rememberLandedCosts';
 import writeSnapshot from './writeSnapshot';
 import formatDailySalesForSlack from '../utils/formatDailySalesForSlack';
 
@@ -42,33 +43,59 @@ const sendDailySalesReport = async () => {
 
   const results: { outlet: string; posted: boolean; bottles: number; note?: string }[] = [];
 
-  for (const outlet of outlets) {
-    let note: string | undefined;
+  /*
+    A failed post (webhook unset, Slack down) still fails the run, but only
+    after the landed costs below are written down; otherwise every failed
+    morning would also lose the cost of whatever sold out that day.
+  */
+  let postError: unknown = null;
 
-    try {
-      const parsed = await fetchCityDrinksStock(outlet);
-      await writeSnapshot(client, outlet.id, parsed);
-    } catch (error) {
-      note = `Pull failed: ${error instanceof Error ? error.message : String(error)}`;
-      logger.error(`Daily sales: pulling ${outlet.name} failed`, { error: note });
+  try {
+    for (const outlet of outlets) {
+      let note: string | undefined;
+
+      try {
+        const parsed = await fetchCityDrinksStock(outlet);
+        await writeSnapshot(client, outlet.id, parsed);
+      } catch (error) {
+        note = `Pull failed: ${error instanceof Error ? error.message : String(error)}`;
+        logger.error(`Daily sales: pulling ${outlet.name} failed`, { error: note });
+      }
+
+      const sales = await getDailyOutletSales(outlet.id, 1);
+      const message = formatDailySalesForSlack(sales);
+
+      await postSlackWebhook(DAILY_SALES_WEBHOOK_ENV, message);
+
+      const day = sales.days[0];
+
+      results.push({
+        outlet: outlet.name,
+        posted: true,
+        bottles: day ? day.consigned.bottles + day.bought.bottles : 0,
+        note,
+      });
     }
-
-    const sales = await getDailyOutletSales(outlet.id, 1);
-    const message = formatDailySalesForSlack(sales);
-
-    await postSlackWebhook(DAILY_SALES_WEBHOOK_ENV, message);
-
-    const day = sales.days[0];
-
-    results.push({
-      outlet: outlet.name,
-      posted: true,
-      bottles: day ? day.consigned.bottles + day.bought.bottles : 0,
-      note,
-    });
+  } catch (error) {
+    postError = error;
   }
 
-  return { outlets: results };
+  /*
+    Write down each consigned wine's landed cost while the Pricing Manager
+    still has it, so owner statements can price a wine after it sells out.
+    Done on this daily run rather than when a statement is opened, and never
+    allowed to stop the report.
+  */
+  const landed = await rememberLandedCosts().catch((error: unknown) => {
+    logger.error('Daily sales: remembering landed costs failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  });
+
+  if (postError) throw postError;
+
+  return { outlets: results, landedCostsRemembered: landed?.written ?? null };
 };
 
 export default sendDailySalesReport;

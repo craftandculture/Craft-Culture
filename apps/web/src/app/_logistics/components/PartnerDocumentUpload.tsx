@@ -24,6 +24,7 @@ import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { LogisticsDocument } from '@/database/schema';
 import { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 type DocumentType =
   | 'bill_of_lading'
@@ -44,7 +45,8 @@ type DocumentType =
 
 interface PartnerDocumentUploadProps {
   shipmentId: string;
-  documents?: LogisticsDocument[];
+  /** Only the fields a partner is sent (see toPartnerShipmentDocument) */
+  documents?: Pick<LogisticsDocument, 'id' | 'fileName' | 'documentType' | 'mimeType' | 'fileSize' | 'fileUrl'>[];
   onUploadComplete?: () => void;
 }
 
@@ -201,10 +203,10 @@ const PartnerDocumentUpload = ({
           {...getRootProps()}
           className={`relative rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
             isDragActive
-              ? 'border-border-brand bg-surface-brand/5'
+              ? 'border-text-primary bg-surface-brand/5'
               : isUploading
                 ? 'cursor-wait border-border-muted bg-fill-muted/50'
-                : 'cursor-pointer border-border-muted hover:border-border-brand hover:bg-fill-muted/50'
+                : 'cursor-pointer border-border-muted hover:border-text-primary hover:bg-fill-muted/50'
           }`}
         >
           <input {...getInputProps()} />
@@ -271,7 +273,7 @@ const PartnerDocumentUpload = ({
 
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="sm" asChild>
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                    <a href={fileHref(doc.fileUrl)} target="_blank" rel="noopener noreferrer">
                       <Icon icon={IconFile} size="sm" />
                     </a>
                   </Button>

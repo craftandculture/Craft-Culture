@@ -133,9 +133,9 @@ const notifyPartnerOfPo = async ({ poId, partnerId }: NotifyPartnerOfPoParams) =
         },
       });
 
-      logger.dev(`Sent PO notification to: ${recipientEmail}`);
+      logger.dev(`Sent PO notification`);
     } catch (error) {
-      logger.error(`Failed to send PO email notification to ${recipientEmail}:`, error);
+      logger.error(`Failed to send PO email notification:`, error);
     }
   } catch (error) {
     logger.error('Failed to notify partner of PO:', error);

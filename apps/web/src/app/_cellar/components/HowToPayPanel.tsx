@@ -65,9 +65,9 @@ const HowToPayPanel = ({ details, amountUsd, amountAed, reference, confirmHint =
   };
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-gradient-to-b from-amber-50/70 to-transparent p-4 dark:border-amber-900/50 dark:from-amber-500/10">
+    <div className="rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-transparent p-4 dark:border-emerald-900/50 dark:from-emerald-500/10">
       <div className="mb-3 flex items-start gap-3">
-        <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-100/80 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+        <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-100/80 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
           <IconBuildingBank size={16} />
         </span>
         <div>

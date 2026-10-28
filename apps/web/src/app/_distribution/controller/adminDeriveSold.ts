@@ -21,6 +21,7 @@ interface MovementRow {
   heldTo: number;
   delivered: number;
   soldLast30d: number | null;
+  ownerCount: number;
 }
 
 /**
@@ -77,7 +78,10 @@ const adminDeriveSold = adminProcedure
       WHERE a.outlet_id = ${input.outletId}
         AND m.kind = 'sold'
         AND m.source = 'outlet-sales-report'
-        AND m.doc_date BETWEEN ${input.from}::date AND ${input.to}::date
+        -- A report is dated the 1st and covers its whole month, so it clashes
+        -- whenever that month overlaps the window at all
+        AND m.doc_date <= ${input.to}::date
+        AND (m.doc_date + INTERVAL '1 month') > ${input.from}::date
     `;
 
     if (clash?.months) {
@@ -106,16 +110,25 @@ const adminDeriveSold = adminProcedure
         GROUP BY 1
         HAVING ${resolvedSnapshotCode()} IS NOT NULL
       ),
+      /*
+        One row per wine, counting its owners: a wine two owners both send
+        cannot be attributed from a stock position, so it is reported rather
+        than handed to whoever invoiced last.
+      */
       ours AS (
-        SELECT DISTINCT ON (code) code, arrangement_id, lwin18, product_name
+        SELECT code,
+          (ARRAY_AGG(arrangement_id ORDER BY doc_date DESC NULLS LAST))[1] AS arrangement_id,
+          (ARRAY_AGG(lwin18 ORDER BY doc_date DESC NULLS LAST))[1] AS lwin18,
+          (ARRAY_AGG(product_name ORDER BY doc_date DESC NULLS LAST))[1] AS product_name,
+          COUNT(DISTINCT owner_id)::int AS owner_count
         FROM (
           SELECT UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g')) AS code,
-                 m.arrangement_id, m.lwin18, m.product_name, m.doc_date
+                 m.arrangement_id, a.owner_id, m.lwin18, m.product_name, m.doc_date
           FROM cons_movements m
           JOIN cons_arrangements a ON a.id = m.arrangement_id
           WHERE a.outlet_id = ${input.outletId} AND m.kind = 'out'
         ) lines
-        ORDER BY code, doc_date DESC NULLS LAST
+        GROUP BY code
       ),
       delivered AS (
         SELECT UPPER(REGEXP_REPLACE(COALESCE(m.lwin18, m.product_name), '[^A-Za-z0-9]', '', 'g')) AS code,
@@ -134,7 +147,8 @@ const adminDeriveSold = adminProcedure
              COALESCE(p.held_from, 0) AS "heldFrom",
              COALESCE(p.held_to, 0) AS "heldTo",
              COALESCE(d.bottles, 0) AS "delivered",
-             p.sold_last_30d AS "soldLast30d"
+             p.sold_last_30d AS "soldLast30d",
+             o.owner_count AS "ownerCount"
       FROM position p
       JOIN ours o ON o.code = p.code
       LEFT JOIN delivered d ON d.code = p.code
@@ -156,6 +170,13 @@ const adminDeriveSold = adminProcedure
       }
 
       if (sold === 0) continue;
+
+      if (row.ownerCount > 1) {
+        impossible.push(
+          `${row.productName} — ${sold} btl sold, but more than one owner sent this wine, so it needs attributing by hand`,
+        );
+        continue;
+      }
 
       /*
         The feed's own rolling thirty days, as a second opinion. It covers a
@@ -185,19 +206,21 @@ const adminDeriveSold = adminProcedure
       });
     }
 
-    await client`
-      DELETE FROM cons_movements m
-      USING cons_arrangements a
-      WHERE m.arrangement_id = a.id
-        AND a.outlet_id = ${input.outletId}
-        AND m.kind = 'sold'
-        AND m.source = 'cd-api-derived'
-        AND m.doc_date = ${input.to.slice(0, 10)}::date
-    `;
+    await client.begin(async (sql) => {
+      await sql`
+        DELETE FROM cons_movements m
+        USING cons_arrangements a
+        WHERE m.arrangement_id = a.id
+          AND a.outlet_id = ${input.outletId}
+          AND m.kind = 'sold'
+          AND m.source = 'cd-api-derived'
+          AND m.doc_date = ${input.to.slice(0, 10)}::date
+      `;
 
-    if (movements.length > 0) {
-      await client`INSERT INTO cons_movements ${client(movements)}`;
-    }
+      if (movements.length > 0) {
+        await sql`INSERT INTO cons_movements ${sql(movements)}`;
+      }
+    });
 
     return {
       from: input.from,

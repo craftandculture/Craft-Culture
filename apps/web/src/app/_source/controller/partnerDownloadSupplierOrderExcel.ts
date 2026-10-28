@@ -3,11 +3,21 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { sourceSupplierOrders } from '@/database/schema';
+import {
+  partners,
+  sourceSupplierOrderItems,
+  sourceSupplierOrders,
+} from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+
+import { exportSupplierOrderToBase64 } from '../utils/exportSupplierOrderToExcel';
 
 /**
  * Download a Supplier Order Excel file
+ *
+ * The file is rebuilt from the order lines on every download rather than
+ * served from the stored copy, so older stored files (which carried the C&C
+ * end customer) are never handed to the supplier.
  *
  * @example
  *   await trpcClient.source.partner.supplierOrders.downloadExcel.query({
@@ -24,7 +34,10 @@ const partnerDownloadSupplierOrderExcel = winePartnerProcedure
       .select({
         id: sourceSupplierOrders.id,
         orderNumber: sourceSupplierOrders.orderNumber,
-        excelFileUrl: sourceSupplierOrders.excelFileUrl,
+        status: sourceSupplierOrders.status,
+        totalAmountUsd: sourceSupplierOrders.totalAmountUsd,
+        sentAt: sourceSupplierOrders.sentAt,
+        createdAt: sourceSupplierOrders.createdAt,
       })
       .from(sourceSupplierOrders)
       .where(
@@ -42,30 +55,50 @@ const partnerDownloadSupplierOrderExcel = winePartnerProcedure
       });
     }
 
-    if (!supplierOrder.excelFileUrl) {
+    if (supplierOrder.status === 'draft') {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Excel file not available for this order',
       });
     }
 
-    // Extract base64 from data URL
-    const base64Match = supplierOrder.excelFileUrl.match(
-      /^data:application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet;base64,(.+)$/,
-    );
+    const [partner] = await db
+      .select({ businessName: partners.businessName })
+      .from(partners)
+      .where(eq(partners.id, partnerId))
+      .limit(1);
 
-    if (!base64Match?.[1]) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Invalid Excel file format',
-      });
-    }
+    const items = await db
+      .select()
+      .from(sourceSupplierOrderItems)
+      .where(eq(sourceSupplierOrderItems.supplierOrderId, id))
+      .orderBy(sourceSupplierOrderItems.sortOrder);
+
+    const { base64 } = exportSupplierOrderToBase64({
+      orderNumber: supplierOrder.orderNumber,
+      partnerName: partner?.businessName ?? '',
+      createdAt: supplierOrder.sentAt ?? supplierOrder.createdAt,
+      items: items.map((item) => ({
+        productName: item.productName,
+        producer: item.producer,
+        vintage: item.vintage,
+        lwin7: item.lwin7,
+        lwin18: item.lwin18,
+        quantityBottles: item.quantityBottles,
+        quantityCases: item.quantityCases,
+        caseConfig: item.caseConfig,
+        costPerBottleUsd: item.costPerBottleUsd,
+        costPerCaseUsd: item.costPerCaseUsd,
+        lineTotalUsd: item.lineTotalUsd,
+      })),
+      totalAmountUsd: supplierOrder.totalAmountUsd,
+    });
 
     const timestamp = new Date().toISOString().split('T')[0];
     const filename = `SupplierOrder_${supplierOrder.orderNumber}_${timestamp}.xlsx`;
 
     return {
-      base64: base64Match[1],
+      base64,
       filename,
       mimeType:
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

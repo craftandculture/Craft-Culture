@@ -497,7 +497,7 @@ const LpoPreviewReport = ({
                             onClick={() =>
                               onChooseVintage?.(at, String(row.vintage))
                             }
-                            className="rounded-md border border-amber-300 bg-white px-2 py-0.5 text-[12px] font-medium tabular-nums hover:border-amber-500 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-md border border-amber-300 bg-surface-primary px-2 py-0.5 text-[12px] font-medium tabular-nums hover:border-amber-500 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {row.vintage}{' '}
                             <span className="font-normal text-text-muted">
@@ -558,7 +558,7 @@ const LpoPreviewReport = ({
           <button
             type="button"
             onClick={() => setRemoved(new Set())}
-            className="text-[13px] font-medium text-text-brand hover:underline"
+            className="text-[13px] font-medium text-text-primary hover:underline"
           >
             Put them all back
           </button>
@@ -687,7 +687,7 @@ const LpoPreviewReport = ({
                       <button
                         type="button"
                         onClick={() => setPicking(index)}
-                        className="mt-0.5 text-[11px] text-text-brand hover:underline"
+                        className="mt-0.5 text-[11px] text-text-primary hover:underline"
                       >
                         change wine
                       </button>

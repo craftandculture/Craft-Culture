@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -105,18 +106,16 @@ const PricingCalculatorWizard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with Back Button */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={handleBack}>
-          <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
-        </Button>
-        <div>
-          <Typography variant="headingMd">New Pricing Session</Typography>
-          <Typography variant="bodySm" colorRole="muted">
-            {uploadData?.fileName || 'Upload a supplier price sheet to get started'}
-          </Typography>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="New Pricing Session"
+        description={uploadData?.fileName || 'Upload a supplier price sheet to get started'}
+        crumbs={[{ label: 'Pricing Calculator', href: '/platform/admin/pricing-calculator' }]}
+        actions={
+          <Button variant="ghost" size="sm" onClick={handleBack}>
+            <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
+          </Button>
+        }
+      />
 
       {/* Progress Steps */}
       <div className="flex items-center justify-center gap-2">
@@ -127,7 +126,7 @@ const PricingCalculatorWizard = () => {
                 index < currentStep
                   ? 'bg-green-500 text-white'
                   : index === currentStep
-                    ? 'bg-fill-brand text-white'
+                    ? 'bg-text-primary text-white'
                     : 'bg-surface-secondary text-text-muted'
               }`}
             >

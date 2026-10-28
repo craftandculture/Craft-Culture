@@ -287,7 +287,7 @@ const CompetitorUpload = () => {
               value={competitorName}
               onChange={(e) => setCompetitorName(e.target.value)}
               placeholder="e.g. JY Wine, MMI, A&E"
-              className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm focus:border-border-brand focus:outline-none"
+              className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none"
             />
           </div>
 
@@ -378,7 +378,7 @@ const CompetitorUpload = () => {
             <div>
               <div className="mb-1 h-2 w-full overflow-hidden rounded-full bg-surface-secondary">
                 <div
-                  className="h-full rounded-full bg-fill-brand transition-all"
+                  className="h-full rounded-full bg-text-primary transition-all"
                   style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
                 />
               </div>

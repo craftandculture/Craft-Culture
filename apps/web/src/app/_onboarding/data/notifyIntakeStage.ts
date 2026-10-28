@@ -5,14 +5,16 @@ import db from '@/database/client';
 import { partnerMembers, users } from '@/database/schema';
 import serverConfig from '@/server.config';
 
-import intakeStages from '../constants/intakeStages';
 import wineSources from '../constants/wineSources';
+import intakeRouteOf from '../utils/intakeRouteOf';
+import intakeStagesFor from '../utils/intakeStagesFor';
 import sendOnboardingEmail from '../utils/sendOnboardingEmail';
 
 interface NotifyIntakeStageParams {
   partnerId: string;
   source: string;
   holderName: string | null;
+  route: string | null;
   stage: string;
 }
 
@@ -24,8 +26,9 @@ interface NotifyIntakeStageParams {
  *
  * @param params - The member's cellar, where the wine is from, and the stage
  */
-const notifyIntakeStage = async ({ partnerId, source, holderName, stage }: NotifyIntakeStageParams) => {
-  const stageLabel = intakeStages.find((item) => item.value === stage)?.label ?? stage;
+const notifyIntakeStage = async ({ partnerId, source, holderName, route, stage }: NotifyIntakeStageParams) => {
+  const stages = intakeStagesFor(intakeRouteOf({ route, source }));
+  const stageLabel = stages.find((item) => item.value === stage)?.label ?? stage;
   const sourceLabel = wineSources.find((item) => item.value === source)?.label ?? source;
 
   const owners = await db

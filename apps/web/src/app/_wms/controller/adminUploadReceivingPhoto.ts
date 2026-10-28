@@ -1,11 +1,11 @@
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
 import { fileTypeFromBuffer } from 'file-type';
 import { z } from 'zod';
 
 /** Image types accepted for uploaded photos. */
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
+import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB (client compresses before upload; stays under Vercel 4.5MB body limit after base64)
@@ -70,11 +70,7 @@ const adminUploadReceivingPhoto = wmsOperatorProcedure
     const blobFilename = `wms/receiving/${shipmentId}/${itemId}/${timestamp}-${sanitizedFilename}`;
 
     // Upload to Vercel Blob (using the verified content type)
-    const blob = await put(blobFilename, buffer, {
-      access: 'public',
-      contentType: detected.mime,
-      addRandomSuffix: true,
-    });
+    const blob = await putPrivateFile(blobFilename, buffer, detected.mime);
 
     return {
       url: blob.url,

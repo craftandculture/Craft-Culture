@@ -516,7 +516,7 @@ const WMSPalletDetailPage = () => {
                           isCurrent
                             ? 'bg-fill-secondary opacity-50 cursor-not-allowed'
                             : isSelected
-                              ? 'bg-brand-100 border-2 border-brand-500 dark:bg-brand-900/30'
+                              ? 'bg-surface-secondary border-2 border-text-primary dark:bg-surface-secondary'
                               : 'bg-fill-secondary hover:bg-fill-secondary/70'
                         }`}
                       >
@@ -536,7 +536,7 @@ const WMSPalletDetailPage = () => {
                             <div
                               className={`h-5 w-5 rounded border-2 ${
                                 isSelected
-                                  ? 'border-brand-500 bg-brand-500'
+                                  ? 'border-text-primary bg-surface-secondary0'
                                   : 'border-border-primary'
                               }`}
                             >
@@ -606,7 +606,7 @@ const WMSPalletDetailPage = () => {
                   value={unsealReason}
                   onChange={(e) => setUnsealReason(e.target.value)}
                   placeholder="e.g. Need to add more cases"
-                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 px-3 text-sm focus:border-brand-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 px-3 text-sm focus:border-text-primary focus:outline-none"
                   autoFocus
                 />
               </div>
@@ -713,7 +713,7 @@ const WMSPalletDetailPage = () => {
                           onClick={() => setDissolveLocationId(location.id)}
                           className={`w-full rounded-lg p-3 text-left transition-colors ${
                             isSelected
-                              ? 'bg-brand-100 border-2 border-brand-500 dark:bg-brand-900/30'
+                              ? 'bg-surface-secondary border-2 border-text-primary dark:bg-surface-secondary'
                               : 'bg-fill-secondary hover:bg-fill-secondary/70'
                           }`}
                         >
@@ -729,7 +729,7 @@ const WMSPalletDetailPage = () => {
                             <div
                               className={`h-5 w-5 rounded border-2 ${
                                 isSelected
-                                  ? 'border-brand-500 bg-brand-500'
+                                  ? 'border-text-primary bg-surface-secondary0'
                                   : 'border-border-primary'
                               }`}
                             >
@@ -753,7 +753,7 @@ const WMSPalletDetailPage = () => {
                   value={dissolveReason}
                   onChange={(e) => setDissolveReason(e.target.value)}
                   placeholder="Why are you dissolving this pallet?"
-                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 px-3 text-sm focus:border-brand-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 px-3 text-sm focus:border-text-primary focus:outline-none"
                 />
               </div>
             </div>

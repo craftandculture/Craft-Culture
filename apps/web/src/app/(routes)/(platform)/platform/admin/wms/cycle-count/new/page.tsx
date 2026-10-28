@@ -156,7 +156,7 @@ const NewCycleCountPage = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-lg bg-fill-secondary p-3 text-center">
-                  <Typography variant="h4" className="text-brand-teal">
+                  <Typography variant="h4" className="text-text-primary">
                     {stockSummary.stockCount}
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
@@ -164,7 +164,7 @@ const NewCycleCountPage = () => {
                   </Typography>
                 </div>
                 <div className="rounded-lg bg-fill-secondary p-3 text-center">
-                  <Typography variant="h4" className="text-brand-teal">
+                  <Typography variant="h4" className="text-text-primary">
                     {stockSummary.totalCases}
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
@@ -172,7 +172,7 @@ const NewCycleCountPage = () => {
                   </Typography>
                 </div>
                 <div className="rounded-lg bg-fill-secondary p-3 text-center">
-                  <Typography variant="h4" className="text-brand-teal">
+                  <Typography variant="h4" className="text-text-primary">
                     {stockSummary.totalAvailable}
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
@@ -190,7 +190,7 @@ const NewCycleCountPage = () => {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="e.g., Monthly count for Aisle A..."
-                  className="w-full rounded-lg border border-border-muted bg-fill-primary p-3 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
+                  className="w-full rounded-lg border border-border-muted bg-fill-primary p-3 text-sm text-text-primary placeholder:text-text-muted focus:border-text-primary focus:outline-none"
                   rows={2}
                 />
               </div>

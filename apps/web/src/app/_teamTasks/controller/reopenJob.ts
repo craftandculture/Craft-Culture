@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -24,7 +24,17 @@ const reopenJob = teamProcedure.input(z.object({ taskId: z.string().uuid() })).m
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job is already open.' });
   }
 
-  await db.update(teamTasks).set({ status: 'open', closedAt: null, closedBy: null }).where(eq(teamTasks.id, task.id));
+  const [updated] = await db
+    .update(teamTasks)
+    .set({ status: 'open', closedAt: null, closedBy: null })
+    .where(and(eq(teamTasks.id, task.id), ne(teamTasks.status, 'open')))
+    .returning({ id: teamTasks.id });
+
+  // Someone else changed it between our read and this write
+  if (!updated) {
+    throw new TRPCError({ code: 'CONFLICT', message: 'This job has just been reopened by someone else.' });
+  }
+
   await logTaskEvent(task.id, ctx.user.id, `${ctx.user.name} reopened the job`);
 
   return { slack: await announceTask(task.id, 'reopened') };

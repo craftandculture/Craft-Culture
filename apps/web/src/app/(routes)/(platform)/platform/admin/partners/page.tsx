@@ -19,7 +19,9 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import DuplicatePartners from '@/app/_partners/components/DuplicatePartners';
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
 import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
@@ -64,6 +66,25 @@ interface PaymentDetails {
  * They receive payment from customers and purchase inventory from C&C.
  * Note: "Partners" in the codebase refers to wine companies who source stock and bring clients.
  */
+/** A stored rate (0.05) as the percentage typed in the form ('5'), or blank */
+const percentText = (rate: number | null | undefined) =>
+  rate === null || rate === undefined
+    ? ''
+    : String(Math.round(rate * 100 * 10000) / 10000);
+
+/**
+ * A typed figure: null when blank, undefined when it is not a number
+ *
+ * Distinguishing the two is the point. `parseFloat(x) || 0` turned both a
+ * blank and a typo into zero and saved it.
+ */
+const parseOptionalNumber = (text: string): number | null | undefined => {
+  const trimmed = text.trim();
+  if (trimmed === '') return null;
+  const value = Number(trimmed);
+  return Number.isFinite(value) && value >= 0 ? value : undefined;
+};
+
 const DistributorsPage = () => {
   const api = useTRPC();
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,7 +113,7 @@ const DistributorsPage = () => {
   // Form state for creating API key
   const [newApiKey, setNewApiKey] = useState({
     name: '',
-    permissions: ['read:inventory'] as string[],
+    permissions: ['read:inventory'] as ('read:inventory' | 'feed:partner')[],
   });
 
   // Edit partner dialog state
@@ -109,10 +130,15 @@ const DistributorsPage = () => {
     enablePaymentLink: boolean;
     paymentDetails: PaymentDetails | null;
     commissionRate: number;
-    // PCO pricing fields
-    pcoDutyRate: number;
-    pcoVatRate: number;
-    logisticsCostPerCase: number;
+    /*
+      PCO pricing fields, held as typed. Blank means "no figure of their own,
+      use the global default"; numbers are parsed only on save, so a blank is
+      never written back as 0 or the default, and the duty field no longer
+      rounds what is being typed.
+    */
+    pcoDutyRatePct: string;
+    pcoVatRatePct: string;
+    logisticsCostPerCase: string;
     // Finance email for proforma invoices
     financeEmail: string;
   } | null>(null);
@@ -157,6 +183,7 @@ const DistributorsPage = () => {
         setIsEditDialogOpen(false);
         setEditingPartner(null);
       },
+      onError: (error) => toast.error(error.message),
     }),
   );
 
@@ -203,7 +230,7 @@ const DistributorsPage = () => {
     switch (status) {
       case 'active':
         return (
-          <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+          <span className="bg-text-primary/10 text-text-primary border border-text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
             Active
           </span>
         );
@@ -258,10 +285,13 @@ const DistributorsPage = () => {
       enablePaymentLink: hasPaymentLink,
       paymentDetails: partner.paymentDetails,
       commissionRate: partner.commissionRate,
-      // PCO pricing fields with defaults
-      pcoDutyRate: partner.pcoDutyRate ?? 0.05,
-      pcoVatRate: partner.pcoVatRate ?? 0.05,
-      logisticsCostPerCase: partner.logisticsCostPerCase ?? 60,
+      // PCO pricing fields: blank when the partner has none of its own
+      pcoDutyRatePct: percentText(partner.pcoDutyRate),
+      pcoVatRatePct: percentText(partner.pcoVatRate),
+      logisticsCostPerCase:
+        partner.logisticsCostPerCase === null || partner.logisticsCostPerCase === undefined
+          ? ''
+          : String(partner.logisticsCostPerCase),
       // Finance email
       financeEmail: partner.financeEmail || '',
     });
@@ -271,35 +301,47 @@ const DistributorsPage = () => {
   const handleSavePartner = () => {
     if (!editingPartner) return;
 
-    // Build payment details based on enabled methods
+    /*
+      Bank details are copied whole — sort code and reference included, which
+      this form does not show and used to drop on every save — and an empty
+      set is sent as null so turning a method off actually clears it.
+    */
     const paymentDetails: PaymentDetails = {};
     if (editingPartner.enableBankTransfer && editingPartner.paymentDetails) {
-      paymentDetails.bankName = editingPartner.paymentDetails.bankName;
-      paymentDetails.accountName = editingPartner.paymentDetails.accountName;
-      paymentDetails.accountNumber = editingPartner.paymentDetails.accountNumber;
-      paymentDetails.iban = editingPartner.paymentDetails.iban;
-      paymentDetails.swiftBic = editingPartner.paymentDetails.swiftBic;
+      const { paymentUrl: _link, ...bank } = editingPartner.paymentDetails;
+      Object.assign(paymentDetails, bank);
     }
     if (editingPartner.enablePaymentLink && editingPartner.paymentDetails) {
       paymentDetails.paymentUrl = editingPartner.paymentDetails.paymentUrl;
+    }
+    const hasPayment = Object.values(paymentDetails).some(Boolean);
+
+    const duty = parseOptionalNumber(editingPartner.pcoDutyRatePct);
+    const vat = parseOptionalNumber(editingPartner.pcoVatRatePct);
+    const logistics = parseOptionalNumber(editingPartner.logisticsCostPerCase);
+
+    if (duty === undefined || vat === undefined || logistics === undefined) {
+      toast.error('Duty, VAT and logistics must be numbers, or left blank to use the default.');
+      return;
     }
 
     updatePartner({
       partnerId: editingPartner.id,
       businessName: editingPartner.businessName,
-      businessAddress: editingPartner.businessAddress || undefined,
-      businessPhone: editingPartner.businessPhone || undefined,
-      businessEmail: editingPartner.businessEmail || undefined,
-      taxId: editingPartner.taxId || undefined,
-      logoUrl: editingPartner.logoUrl || undefined,
-      paymentDetails: Object.keys(paymentDetails).length > 0 ? paymentDetails : undefined,
+      // Sent as typed, blanks included: the server clears a blank field
+      businessAddress: editingPartner.businessAddress,
+      businessPhone: editingPartner.businessPhone,
+      businessEmail: editingPartner.businessEmail,
+      taxId: editingPartner.taxId,
+      logoUrl: editingPartner.logoUrl,
+      paymentDetails: hasPayment ? paymentDetails : null,
       commissionRate: editingPartner.commissionRate,
-      // PCO pricing fields
-      pcoDutyRate: editingPartner.pcoDutyRate,
-      pcoVatRate: editingPartner.pcoVatRate,
-      logisticsCostPerCase: editingPartner.logisticsCostPerCase,
+      // PCO pricing fields; null falls back to the global default
+      pcoDutyRate: duty === null ? null : duty / 100,
+      pcoVatRate: vat === null ? null : vat / 100,
+      logisticsCostPerCase: logistics,
       // Finance email
-      financeEmail: editingPartner.financeEmail || undefined,
+      financeEmail: editingPartner.financeEmail,
     });
   };
 
@@ -342,341 +384,337 @@ const DistributorsPage = () => {
         <DuplicatePartners />
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div>
-            <Typography variant="headingLg" className="mb-2">
-              Licensed Distributors
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Manage licensed distributors that fulfill B2C orders
-            </Typography>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/docs/api" target="_blank">
-              <Button variant="outline">
-                <ButtonContent iconRight={IconExternalLink}>API Docs</ButtonContent>
-              </Button>
-            </Link>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="default" colorRole="brand">
-                  <ButtonContent iconLeft={IconPlus}>Add Distributor</ButtonContent>
+        <AdminPageHeader
+          title="Licensed Distributors"
+          description="Manage licensed distributors that fulfill B2C orders"
+          actions={
+            <>
+              <Link href="/docs/api" target="_blank">
+                <Button variant="outline">
+                  <ButtonContent iconRight={IconExternalLink}>API Docs</ButtonContent>
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Add Distributor</DialogTitle>
-                  <DialogDescription>
-                    Add a licensed distributor that will fulfill B2C orders
-                  </DialogDescription>
-                </DialogHeader>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleCreatePartner();
-                  }}
-                  className="space-y-6 mt-4"
-                >
-                  {/* Business Details Section */}
-                  <div className="space-y-4">
-                    <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
-                      <IconBuilding className="h-4 w-4" />
-                      Business Details
-                    </Typography>
+              </Link>
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" colorRole="brand">
+                    <ButtonContent iconLeft={IconPlus}>Add Distributor</ButtonContent>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add Distributor</DialogTitle>
+                    <DialogDescription>
+                      Add a licensed distributor that will fulfill B2C orders
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleCreatePartner();
+                    }}
+                    className="space-y-6 mt-4"
+                  >
+                    {/* Business Details Section */}
+                    <div className="space-y-4">
+                      <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                        <IconBuilding className="h-4 w-4" />
+                        Business Details
+                      </Typography>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Business Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={newPartner.businessName}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessName: e.target.value })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                          required
-                        />
-                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Business Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={newPartner.businessName}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessName: e.target.value })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                            required
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          TRN / Tax ID *
-                        </label>
-                        <input
-                          type="text"
-                          value={newPartner.taxId}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, taxId: e.target.value })
-                          }
-                          placeholder="e.g., 100123456789003"
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                          required
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            TRN / Tax ID *
+                          </label>
+                          <input
+                            type="text"
+                            value={newPartner.taxId}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, taxId: e.target.value })
+                            }
+                            placeholder="e.g., 100123456789003"
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                            required
+                          />
+                        </div>
 
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Business Address *
-                        </label>
-                        <textarea
-                          value={newPartner.businessAddress}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessAddress: e.target.value })
-                          }
-                          rows={2}
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                          required
-                        />
-                      </div>
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Business Address *
+                          </label>
+                          <textarea
+                            value={newPartner.businessAddress}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessAddress: e.target.value })
+                            }
+                            rows={2}
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                            required
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={newPartner.businessEmail}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessEmail: e.target.value })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            value={newPartner.businessEmail}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessEmail: e.target.value })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Phone
-                        </label>
-                        <input
-                          type="tel"
-                          value={newPartner.businessPhone}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessPhone: e.target.value })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Phone
+                          </label>
+                          <input
+                            type="tel"
+                            value={newPartner.businessPhone}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessPhone: e.target.value })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Branding Section */}
-                  <div className="space-y-4 border-t border-border-muted pt-4">
-                    <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
-                      <IconPhoto className="h-4 w-4" />
-                      Branding
-                    </Typography>
+                    {/* Branding Section */}
+                    <div className="space-y-4 border-t border-border-muted pt-4">
+                      <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                        <IconPhoto className="h-4 w-4" />
+                        Branding
+                      </Typography>
 
-                    <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        Logo URL
-                      </label>
-                      <input
-                        type="url"
-                        value={newPartner.logoUrl}
-                        onChange={(e) =>
-                          setNewPartner({ ...newPartner, logoUrl: e.target.value })
-                        }
-                        placeholder="https://example.com/logo.png"
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                      />
-                      {newPartner.logoUrl && (
-                        <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
-                          <Image
-                            src={newPartner.logoUrl}
-                            alt="Logo preview"
-                            width={48}
-                            height={48}
-                            className="max-h-12 w-auto object-contain"
-                            unoptimized
+                      <div>
+                        <label className="block text-sm font-medium text-text-primary mb-1">
+                          Logo URL
+                        </label>
+                        <input
+                          type="url"
+                          value={newPartner.logoUrl}
+                          onChange={(e) =>
+                            setNewPartner({ ...newPartner, logoUrl: e.target.value })
+                          }
+                          placeholder="https://example.com/logo.png"
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                        {newPartner.logoUrl && (
+                          <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
+                            <Image
+                              src={newPartner.logoUrl}
+                              alt="Logo preview"
+                              width={48}
+                              height={48}
+                              className="max-h-12 w-auto object-contain"
+                              unoptimized
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Payment Configuration Section */}
+                    <div className="space-y-4 border-t border-border-muted pt-4">
+                      <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                        <IconCreditCard className="h-4 w-4" />
+                        Payment Configuration
+                      </Typography>
+
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Select payment methods available for this partner (can enable both)
+                      </Typography>
+
+                      <div className="flex flex-col gap-4">
+                        {/* Bank Transfer Checkbox */}
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newPartner.enableBankTransfer}
+                            onChange={(e) =>
+                              setNewPartner({
+                                ...newPartner,
+                                enableBankTransfer: e.target.checked,
+                              })
+                            }
+                            className="h-4 w-4 rounded border-border-primary text-text-primary focus:ring-text-primary"
+                          />
+                          <span className="text-sm font-medium">Bank Transfer</span>
+                        </label>
+
+                        {/* Payment Link Checkbox */}
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newPartner.enablePaymentLink}
+                            onChange={(e) =>
+                              setNewPartner({
+                                ...newPartner,
+                                enablePaymentLink: e.target.checked,
+                              })
+                            }
+                            className="h-4 w-4 rounded border-border-primary text-text-primary focus:ring-text-primary"
+                          />
+                          <span className="text-sm font-medium">Payment Link</span>
+                        </label>
+                      </div>
+
+                      {newPartner.enableBankTransfer && (
+                        <div className="grid grid-cols-2 gap-3 p-4 bg-fill-muted/50 rounded-lg">
+                          <div>
+                            <label className="block text-xs text-text-muted mb-1">Bank Name</label>
+                            <input
+                              type="text"
+                              value={newPartner.paymentDetails.bankName || ''}
+                              onChange={(e) =>
+                                setNewPartner({
+                                  ...newPartner,
+                                  paymentDetails: {
+                                    ...newPartner.paymentDetails,
+                                    bankName: e.target.value,
+                                  },
+                                })
+                              }
+                              className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-text-muted mb-1">Account Name</label>
+                            <input
+                              type="text"
+                              value={newPartner.paymentDetails.accountName || ''}
+                              onChange={(e) =>
+                                setNewPartner({
+                                  ...newPartner,
+                                  paymentDetails: {
+                                    ...newPartner.paymentDetails,
+                                    accountName: e.target.value,
+                                  },
+                                })
+                              }
+                              className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-text-muted mb-1">Account Number</label>
+                            <input
+                              type="text"
+                              value={newPartner.paymentDetails.accountNumber || ''}
+                              onChange={(e) =>
+                                setNewPartner({
+                                  ...newPartner,
+                                  paymentDetails: {
+                                    ...newPartner.paymentDetails,
+                                    accountNumber: e.target.value,
+                                  },
+                                })
+                              }
+                              className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-text-muted mb-1">IBAN</label>
+                            <input
+                              type="text"
+                              value={newPartner.paymentDetails.iban || ''}
+                              onChange={(e) =>
+                                setNewPartner({
+                                  ...newPartner,
+                                  paymentDetails: {
+                                    ...newPartner.paymentDetails,
+                                    iban: e.target.value,
+                                  },
+                                })
+                              }
+                              className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-text-muted mb-1">SWIFT/BIC</label>
+                            <input
+                              type="text"
+                              value={newPartner.paymentDetails.swiftBic || ''}
+                              onChange={(e) =>
+                                setNewPartner({
+                                  ...newPartner,
+                                  paymentDetails: {
+                                    ...newPartner.paymentDetails,
+                                    swiftBic: e.target.value,
+                                  },
+                                })
+                              }
+                              className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {newPartner.enablePaymentLink && (
+                        <div className="p-4 bg-fill-muted/50 rounded-lg">
+                          <label className="block text-xs text-text-muted mb-1">Payment URL</label>
+                          <input
+                            type="url"
+                            value={newPartner.paymentDetails.paymentUrl || ''}
+                            onChange={(e) =>
+                              setNewPartner({
+                                ...newPartner,
+                                paymentDetails: {
+                                  ...newPartner.paymentDetails,
+                                  paymentUrl: e.target.value,
+                                },
+                              })
+                            }
+                            placeholder="https://pay.partner.com/..."
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
                           />
                         </div>
                       )}
                     </div>
-                  </div>
 
-                  {/* Payment Configuration Section */}
-                  <div className="space-y-4 border-t border-border-muted pt-4">
-                    <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
-                      <IconCreditCard className="h-4 w-4" />
-                      Payment Configuration
-                    </Typography>
-
-                    <Typography variant="bodyXs" colorRole="muted">
-                      Select payment methods available for this partner (can enable both)
-                    </Typography>
-
-                    <div className="flex flex-col gap-4">
-                      {/* Bank Transfer Checkbox */}
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={newPartner.enableBankTransfer}
-                          onChange={(e) =>
-                            setNewPartner({
-                              ...newPartner,
-                              enableBankTransfer: e.target.checked,
-                            })
-                          }
-                          className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
-                        />
-                        <span className="text-sm font-medium">Bank Transfer</span>
-                      </label>
-
-                      {/* Payment Link Checkbox */}
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={newPartner.enablePaymentLink}
-                          onChange={(e) =>
-                            setNewPartner({
-                              ...newPartner,
-                              enablePaymentLink: e.target.checked,
-                            })
-                          }
-                          className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
-                        />
-                        <span className="text-sm font-medium">Payment Link</span>
-                      </label>
+                    <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsCreateDialogOpen(false)}
+                      >
+                        <ButtonContent>Cancel</ButtonContent>
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="default"
+                        colorRole="brand"
+                        isDisabled={isCreating}
+                      >
+                        <ButtonContent>
+                          {isCreating ? 'Creating...' : 'Add Distributor'}
+                        </ButtonContent>
+                      </Button>
                     </div>
-
-                    {newPartner.enableBankTransfer && (
-                      <div className="grid grid-cols-2 gap-3 p-4 bg-fill-muted/50 rounded-lg">
-                        <div>
-                          <label className="block text-xs text-text-muted mb-1">Bank Name</label>
-                          <input
-                            type="text"
-                            value={newPartner.paymentDetails.bankName || ''}
-                            onChange={(e) =>
-                              setNewPartner({
-                                ...newPartner,
-                                paymentDetails: {
-                                  ...newPartner.paymentDetails,
-                                  bankName: e.target.value,
-                                },
-                              })
-                            }
-                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-text-muted mb-1">Account Name</label>
-                          <input
-                            type="text"
-                            value={newPartner.paymentDetails.accountName || ''}
-                            onChange={(e) =>
-                              setNewPartner({
-                                ...newPartner,
-                                paymentDetails: {
-                                  ...newPartner.paymentDetails,
-                                  accountName: e.target.value,
-                                },
-                              })
-                            }
-                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-text-muted mb-1">Account Number</label>
-                          <input
-                            type="text"
-                            value={newPartner.paymentDetails.accountNumber || ''}
-                            onChange={(e) =>
-                              setNewPartner({
-                                ...newPartner,
-                                paymentDetails: {
-                                  ...newPartner.paymentDetails,
-                                  accountNumber: e.target.value,
-                                },
-                              })
-                            }
-                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-text-muted mb-1">IBAN</label>
-                          <input
-                            type="text"
-                            value={newPartner.paymentDetails.iban || ''}
-                            onChange={(e) =>
-                              setNewPartner({
-                                ...newPartner,
-                                paymentDetails: {
-                                  ...newPartner.paymentDetails,
-                                  iban: e.target.value,
-                                },
-                              })
-                            }
-                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-text-muted mb-1">SWIFT/BIC</label>
-                          <input
-                            type="text"
-                            value={newPartner.paymentDetails.swiftBic || ''}
-                            onChange={(e) =>
-                              setNewPartner({
-                                ...newPartner,
-                                paymentDetails: {
-                                  ...newPartner.paymentDetails,
-                                  swiftBic: e.target.value,
-                                },
-                              })
-                            }
-                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {newPartner.enablePaymentLink && (
-                      <div className="p-4 bg-fill-muted/50 rounded-lg">
-                        <label className="block text-xs text-text-muted mb-1">Payment URL</label>
-                        <input
-                          type="url"
-                          value={newPartner.paymentDetails.paymentUrl || ''}
-                          onChange={(e) =>
-                            setNewPartner({
-                              ...newPartner,
-                              paymentDetails: {
-                                ...newPartner.paymentDetails,
-                                paymentUrl: e.target.value,
-                              },
-                            })
-                          }
-                          placeholder="https://pay.partner.com/..."
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsCreateDialogOpen(false)}
-                    >
-                      <ButtonContent>Cancel</ButtonContent>
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="default"
-                      colorRole="brand"
-                      isDisabled={isCreating}
-                    >
-                      <ButtonContent>
-                        {isCreating ? 'Creating...' : 'Add Distributor'}
-                      </ButtonContent>
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
+          }
+        />
 
         {/* Filters */}
         <Card>
@@ -788,7 +826,7 @@ const DistributorsPage = () => {
                       {partner.paymentDetails && (
                         <div className="flex items-center gap-2 flex-wrap">
                           {(partner.paymentDetails.bankName || partner.paymentDetails.iban || partner.paymentDetails.accountNumber) && (
-                            <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+                            <span className="bg-text-primary/10 text-text-primary border border-text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
                               Bank Transfer
                             </span>
                           )}
@@ -1133,17 +1171,18 @@ const DistributorsPage = () => {
                         min="0"
                         max="100"
                         step="0.1"
-                        value={(editingPartner.pcoDutyRate * 100).toFixed(1)}
+                        value={editingPartner.pcoDutyRatePct}
+                        placeholder="5"
                         onChange={(e) =>
                           setEditingPartner({
                             ...editingPartner,
-                            pcoDutyRate: parseFloat(e.target.value) / 100 || 0,
+                            pcoDutyRatePct: e.target.value,
                           })
                         }
                         className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
                       />
                       <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                        Default: 5%
+                        Blank uses the default (5%)
                       </Typography>
                     </div>
 
@@ -1156,17 +1195,18 @@ const DistributorsPage = () => {
                         min="0"
                         max="100"
                         step="0.1"
-                        value={(editingPartner.pcoVatRate * 100).toFixed(1)}
+                        value={editingPartner.pcoVatRatePct}
+                        placeholder="5"
                         onChange={(e) =>
                           setEditingPartner({
                             ...editingPartner,
-                            pcoVatRate: parseFloat(e.target.value) / 100 || 0,
+                            pcoVatRatePct: e.target.value,
                           })
                         }
                         className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
                       />
                       <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                        Default: 5%
+                        Blank uses the default (5%)
                       </Typography>
                     </div>
 
@@ -1179,16 +1219,17 @@ const DistributorsPage = () => {
                         min="0"
                         step="1"
                         value={editingPartner.logisticsCostPerCase}
+                        placeholder="60"
                         onChange={(e) =>
                           setEditingPartner({
                             ...editingPartner,
-                            logisticsCostPerCase: parseFloat(e.target.value) || 0,
+                            logisticsCostPerCase: e.target.value,
                           })
                         }
                         className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
                       />
                       <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                        Default: $60/case
+                        Blank uses the default ($60/case)
                       </Typography>
                     </div>
                   </div>
@@ -1248,7 +1289,7 @@ const DistributorsPage = () => {
                             paymentDetails: editingPartner.paymentDetails || {},
                           })
                         }
-                        className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                        className="h-4 w-4 rounded border-border-primary text-text-primary focus:ring-text-primary"
                       />
                       <span className="text-sm font-medium">Bank Transfer</span>
                     </label>
@@ -1265,7 +1306,7 @@ const DistributorsPage = () => {
                             paymentDetails: editingPartner.paymentDetails || {},
                           })
                         }
-                        className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                        className="h-4 w-4 rounded border-border-primary text-text-primary focus:ring-text-primary"
                       />
                       <span className="text-sm font-medium">Payment Link</span>
                     </label>
@@ -1488,7 +1529,7 @@ const DistributorsPage = () => {
                         type="checkbox"
                         checked={newApiKey.permissions.includes('read:inventory')}
                         onChange={(e) => {
-                          const perms = e.target.checked
+                          const perms: typeof newApiKey.permissions = e.target.checked
                             ? [...newApiKey.permissions, 'read:inventory']
                             : newApiKey.permissions.filter((p) => p !== 'read:inventory');
                           setNewApiKey({ ...newApiKey, permissions: perms });

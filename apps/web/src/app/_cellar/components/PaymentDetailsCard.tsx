@@ -55,7 +55,7 @@ const PaymentDetailsCard = () => {
   const save = useMutation(
     api.cellar.admin.setPaymentDetails.mutationOptions({
       onSuccess: () => {
-        toast.success('Saved — members now see these on every reserved purchase');
+        toast.success('Saved. Members now see these on every reserved purchase');
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -77,7 +77,7 @@ const PaymentDetailsCard = () => {
         </div>
         {!data?.details && (
           <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
-            Not set — members are told details will follow by email
+            Not set; members are told details will follow by email
           </span>
         )}
       </div>

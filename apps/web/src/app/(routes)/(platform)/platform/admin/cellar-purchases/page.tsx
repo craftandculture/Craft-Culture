@@ -6,6 +6,7 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -129,23 +130,20 @@ const CellarPurchasesPage = () => {
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Typography variant="headingLg">Cellar purchases</Typography>
-          <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
-            Members buying wine in bond. Nothing moves until you confirm the
-            money landed.
-          </Typography>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          isDisabled={isRefetching}
-        >
-          <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Cellar purchases"
+        description="Members buying wine in bond. Nothing moves until you confirm the money landed."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            isDisabled={isRefetching}
+          >
+            <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
+          </Button>
+        }
+      />
 
       <div className="mb-5 flex flex-wrap gap-1.5">
         {filters.map((filter) => (

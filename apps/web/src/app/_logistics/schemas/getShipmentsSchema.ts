@@ -28,6 +28,10 @@ const getShipmentsSchema = z.object({
   type: z.enum(['inbound', 'outbound', 're_export', 'mainland_transfer']).optional(),
   transportMode: z.enum(['sea_fcl', 'sea_lcl', 'air', 'road']).optional(),
   partnerId: z.string().uuid().optional(),
+  /** me = shipments whose next action is the viewer's; a user id = that person's */
+  owner: z.union([z.literal('me'), z.string().uuid()]).optional(),
+  /** Only shipments on their way with no news for 48 hours */
+  noNews: z.boolean().optional(),
   /** newest = most recently opened first; eta = soonest arrival first, undated last */
   sort: z.enum(['newest', 'eta']).default('newest'),
 });

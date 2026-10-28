@@ -1,0 +1,258 @@
+'use client';
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { toast } from 'sonner';
+
+import Dialog from '@/app/_ui/components/Dialog/Dialog';
+import DialogBody from '@/app/_ui/components/Dialog/DialogBody';
+import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
+import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
+import DialogFooter from '@/app/_ui/components/Dialog/DialogFooter';
+import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
+import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
+import useTRPC from '@/lib/trpc/browser';
+
+type Mode = 'off' | 'shadow' | 'live';
+
+const MODES: { mode: Mode; label: string; detail: string }[] = [
+  { mode: 'off', label: 'Off', detail: 'Nothing is sent. Emails that fall due are set aside and never sent later.' },
+  { mode: 'shadow', label: 'Shadow', detail: 'Every member email goes to the team inbox instead, marked with who it was for.' },
+  { mode: 'live', label: 'Live', detail: 'Emails go to members.' },
+];
+
+type WordingMode = 'off' | 'staff' | 'live';
+
+const WORDING_MODES: { mode: WordingMode; label: string; detail: string }[] = [
+  { mode: 'off', label: 'Off', detail: 'Everyone sees the cellar as before, in packs and cases.' },
+  { mode: 'staff', label: 'Staff', detail: 'Staff, and staff viewing a member’s cellar, see bottles; members see it as before.' },
+  { mode: 'live', label: 'Live', detail: 'Every member sees their cellar in bottles, with cases named only where a case is sealed.' },
+];
+
+const STATUS: Record<string, { label: string; tint: string }> = {
+  pending: { label: 'Waiting', tint: 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300' },
+  shadowed: { label: 'Sent to team', tint: 'bg-sky-50 text-sky-800 dark:bg-sky-500/10 dark:text-sky-300' },
+  sent: { label: 'Sent to member', tint: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300' },
+  merged: { label: 'Combined', tint: 'bg-fill-muted text-text-muted' },
+  suppressed: { label: 'Not sent (off)', tint: 'bg-fill-muted text-text-muted' },
+  failed: { label: 'Failed', tint: 'bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-300' },
+};
+
+const smallButton = 'border-border-muted hover:bg-fill-muted rounded-lg border px-3 py-1.5 text-xs font-semibold';
+const primaryButton = 'bg-text-primary text-surface-primary rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-40';
+
+const when = (value: Date | string | null) =>
+  value
+    ? new Date(value).toLocaleString('en-GB', {
+        timeZone: 'Asia/Dubai',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
+
+/**
+ * Member Emails: the switch for Private Cellar emails, and everything queued
+ *
+ * Off by default. Shadow sends each email a member would have received to the
+ * team inbox, so the team can read real emails from real events before any
+ * member does. Live needs a confirmation, and only staff admins see this screen.
+ */
+const MemberEmailsAdmin = () => {
+  const api = useTRPC();
+  const queryClient = useQueryClient();
+  const [confirm, setConfirm] = useState<Mode | null>(null);
+
+  const { data } = useQuery(api.cellar.admin.getMemberEmails.queryOptions());
+
+  const setMode = useMutation({
+    ...api.cellar.admin.setMemberEmailMode.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(
+        result.mode === 'live'
+          ? 'Member emails are now live'
+          : result.mode === 'shadow'
+            ? 'Member emails now go to the team inbox'
+            : 'Member emails are off',
+      );
+      setConfirm(null);
+      void queryClient.invalidateQueries({ queryKey: api.cellar.admin.getMemberEmails.queryKey() });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const { data: wording } = useQuery(api.cellar.admin.getBottleWordingMode.queryOptions());
+  const setWording = useMutation({
+    ...api.cellar.admin.setBottleWordingMode.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(
+        result.mode === 'live'
+          ? 'Members now see their cellar in bottles'
+          : result.mode === 'staff'
+            ? 'Bottle wording is shown to staff only'
+            : 'Bottle wording is off',
+      );
+      void queryClient.invalidateQueries({ queryKey: api.cellar.admin.getBottleWordingMode.queryKey() });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const rows = data?.rows ?? [];
+  const count = (status: string) => rows.filter((row) => row.status === status).length;
+
+  return (
+    <div className="pb-10">
+      <header className="mb-5">
+        <h1 className="text-text-primary text-2xl font-semibold tracking-tight">Member Emails</h1>
+        <p className="text-text-muted mt-0.5 max-w-2xl text-sm">
+          Private Cellar emails to members. Each event queues an email here; it is sent when due, the way the switch
+          below says.
+        </p>
+      </header>
+
+      <div className="border-border-muted bg-surface-muted mb-5 rounded-xl border p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-text-primary text-sm">
+            <span className="font-semibold">
+              {data?.mode === 'live'
+                ? 'Live: emails go to members.'
+                : data?.mode === 'shadow'
+                  ? `Shadow: every email goes to ${data.shadowInbox}.`
+                  : 'Off: nothing is sent.'}
+            </span>{' '}
+            {MODES.find((m) => m.mode === data?.mode)?.detail}
+          </p>
+          <div className="flex gap-2">
+            {MODES.map((option) => (
+              <button
+                key={option.mode}
+                type="button"
+                disabled={!data || data.mode === option.mode || setMode.isPending}
+                aria-pressed={data?.mode === option.mode}
+                className={data?.mode === option.mode ? primaryButton : smallButton}
+                onClick={() => setConfirm(option.mode)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/*
+        Not an email, but the same kind of switch for the same clients: a change
+        to what members read, shown to staff before anyone else.
+      */}
+      <div className="border-border-muted bg-surface-muted mb-5 rounded-xl border p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-text-primary text-sm">
+            <span className="font-semibold">Cellar in bottles:</span>{' '}
+            {WORDING_MODES.find((m) => m.mode === wording?.mode)?.detail}
+          </p>
+          <div className="flex gap-2">
+            {WORDING_MODES.map((option) => (
+              <button
+                key={option.mode}
+                type="button"
+                disabled={!wording || wording.mode === option.mode || setWording.isPending}
+                aria-pressed={wording?.mode === option.mode}
+                className={wording?.mode === option.mode ? primaryButton : smallButton}
+                onClick={() => {
+                  // Live changes what every member reads; ask once
+                  if (option.mode === 'live' && !window.confirm('Show every member their cellar in bottles?')) return;
+                  setWording.mutate({ mode: option.mode });
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          { label: 'Waiting', value: count('pending'), tint: 'bg-amber-50 dark:bg-amber-500/10' },
+          { label: 'Sent to team', value: count('shadowed'), tint: 'bg-sky-50 dark:bg-sky-500/10' },
+          { label: 'Sent to members', value: count('sent'), tint: 'bg-emerald-50 dark:bg-emerald-500/10' },
+          { label: 'Sent in 30 days (Loops limit 4,000)', value: data?.sentLast30Days ?? 0, tint: 'bg-fill-muted' },
+        ].map((tile) => (
+          <div key={tile.label} className={`rounded-xl px-4 py-3 ${tile.tint}`}>
+            <span className="text-text-primary block text-2xl font-semibold tabular-nums">{tile.value}</span>
+            <span className="text-text-muted text-xs font-semibold">{tile.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="text-text-muted border-border-muted rounded-xl border border-dashed px-4 py-10 text-center text-sm">
+          No member emails yet. They appear here as deliveries, moves and arrivals happen.
+        </p>
+      ) : (
+        <ul className="border-border-muted divide-border-muted divide-y rounded-xl border">
+          {rows.map((row) => {
+            const status = STATUS[row.status] ?? STATUS.pending!;
+            return (
+              <li key={row.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-text-primary truncate text-sm font-semibold">{row.subject ?? row.kind}</p>
+                  <p className="text-text-muted truncate text-xs">
+                    For {row.recipientName || row.recipientEmail} ({row.recipientEmail})
+                    {row.reference ? ` · ${row.reference}` : ''}
+                    {row.error ? ` · ${row.error}` : ''}
+                  </p>
+                </div>
+                <span className="text-text-muted text-xs tabular-nums sm:w-28 sm:text-right">
+                  {when(row.sentAt ?? row.sendAt)}
+                </span>
+                <span className={`w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${status.tint}`}>
+                  {status.label}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <Dialog open={confirm !== null} onOpenChange={(open) => !open && setConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirm === 'live'
+                ? 'Send emails to members?'
+                : confirm === 'shadow'
+                  ? 'Send member emails to the team inbox?'
+                  : 'Turn member emails off?'}
+            </DialogTitle>
+            <DialogDescription>{MODES.find((m) => m.mode === confirm)?.detail}</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-text-muted text-sm">
+              {confirm === 'live'
+                ? 'From the next run, within ten minutes, Private Cellar members receive these emails directly.'
+                : confirm === 'shadow'
+                  ? `Nothing reaches a member. Each email goes to ${data?.shadowInbox ?? 'the team inbox'} with the member's name in the subject.`
+                  : 'Emails that fall due while off are set aside and are not sent later.'}
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <button type="button" className={smallButton} onClick={() => setConfirm(null)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={primaryButton}
+              disabled={setMode.isPending}
+              onClick={() => confirm && setMode.mutate({ mode: confirm })}
+            >
+              {confirm === 'live' ? 'Go live' : confirm === 'shadow' ? 'Turn on shadow' : 'Turn off'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default MemberEmailsAdmin;

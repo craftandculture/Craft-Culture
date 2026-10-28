@@ -1,7 +1,7 @@
 import { and, count, desc, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { sourceCustomerPos, sourceSupplierOrders } from '@/database/schema';
+import { sourceSupplierOrders } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 import getManySupplierOrdersSchema from '../schemas/getManySupplierOrdersSchema';
@@ -33,7 +33,6 @@ const partnerGetManySupplierOrders = winePartnerProcedure
         .select({
           id: sourceSupplierOrders.id,
           orderNumber: sourceSupplierOrders.orderNumber,
-          customerPoId: sourceSupplierOrders.customerPoId,
           status: sourceSupplierOrders.status,
           itemCount: sourceSupplierOrders.itemCount,
           totalAmountUsd: sourceSupplierOrders.totalAmountUsd,
@@ -41,14 +40,8 @@ const partnerGetManySupplierOrders = winePartnerProcedure
           sentAt: sourceSupplierOrders.sentAt,
           confirmedAt: sourceSupplierOrders.confirmedAt,
           createdAt: sourceSupplierOrders.createdAt,
-          customerPoNumber: sourceCustomerPos.ccPoNumber,
-          customerCompany: sourceCustomerPos.customerCompany,
         })
         .from(sourceSupplierOrders)
-        .leftJoin(
-          sourceCustomerPos,
-          eq(sourceSupplierOrders.customerPoId, sourceCustomerPos.id),
-        )
         .where(whereClause)
         .orderBy(desc(sourceSupplierOrders.sentAt))
         .limit(limit)

@@ -10,7 +10,9 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, gt, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import announcePickList from '@/app/_wms/data/announcePickList';
+import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
@@ -181,11 +183,52 @@ const adminReleaseToPick = wmsOperatorProcedure
       })
       .returning();
 
+    /*
+      A double press (or two people releasing at once) both pass the "no open
+      pick list" check above and each create one. Now that ours is in the
+      table, look again: if another open list for this order was created
+      first, ours is withdrawn before any line or reservation is made.
+    */
+    if (!pickList) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'The pick list could not be created. Try again.',
+      });
+    }
+
+    {
+      const openLists = await db
+        .select({ id: wmsPickLists.id, createdAt: wmsPickLists.createdAt })
+        .from(wmsPickLists)
+        .where(
+          and(
+            eq(wmsPickLists.orderId, salesOrderId),
+            inArray(wmsPickLists.status, ['pending', 'in_progress']),
+          ),
+        );
+
+      const first = openLists.sort(
+        (a, b) =>
+          (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0) || a.id.localeCompare(b.id),
+      )[0];
+
+      if (first && first.id !== pickList.id) {
+        await db.delete(wmsPickLists).where(eq(wmsPickLists.id, pickList.id));
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'This order has just been released by someone else. Refresh to see its pick list.',
+        });
+      }
+    }
+
     // Create pick list items with suggested locations
     const pickListItems = [];
     const unresolvedItems: string[] = [];
     const shortOnRelease: string[] = [];
     let reservedCases = 0;
+
+    // A member's own delivery, raised in Zoho with the PCO as its reference
+    const ownDelivery = (await getOwnerDeliveryOwners([order.id])).get(order.id);
 
     for (const item of itemsToRelease) {
       // Normalize LWIN18 to dashed format (Zoho imports may lack dashes)
@@ -201,6 +244,8 @@ const adminReleaseToPick = wmsOperatorProcedure
         lwin18: string;
         productName: string;
         caseConfig: number | null;
+        ownerId: string;
+        notForSale: boolean;
       }[] = [];
 
       const stockSelect = {
@@ -212,6 +257,8 @@ const adminReleaseToPick = wmsOperatorProcedure
         lwin18: wmsStock.lwin18,
         productName: wmsStock.productName,
         caseConfig: wmsStock.caseConfig,
+        ownerId: wmsStock.ownerId,
+        notForSale: wmsStock.notForSale,
       };
 
       // Strategy 1: Match by LWIN18, PACK-AGNOSTIC — the ordered pack and the
@@ -299,6 +346,8 @@ const adminReleaseToPick = wmsOperatorProcedure
               lwin18: wmsStock.lwin18,
               productName: wmsStock.productName,
               caseConfig: wmsStock.caseConfig,
+              ownerId: wmsStock.ownerId,
+              notForSale: wmsStock.notForSale,
             })
             .from(wmsStock)
             .innerJoin(wmsLocations, eq(wmsLocations.id, wmsStock.locationId))
@@ -347,6 +396,13 @@ const adminReleaseToPick = wmsOperatorProcedure
       // preview so the bay an operator was shown is the bay they're sent to.
       const packOf = (caseConfig: number | null) =>
         caseConfig && caseConfig > 0 ? caseConfig : orderedPack;
+      // Wine held for its owner is not trade stock unless they have offered it
+      // except on the owner's own delivery, which reaches here as a Zoho order quoting its PCO
+      const holds = await getCollectorStockHolds(availableStock.map((s) => ({ ...s, id: s.stockId })));
+      const blocked = (s: (typeof availableStock)[number]) =>
+        holds.isHeld({ ...s, id: s.stockId }) && s.ownerId !== ownDelivery?.ownerId;
+      const heldForMembers = availableStock.filter(blocked);
+      availableStock = availableStock.filter((s) => !blocked(s));
       availableStock = rankStockByPack(availableStock, orderedPack);
 
       // Prefer a bay with enough UNRESERVED stock; fall back to one that
@@ -424,7 +480,9 @@ const adminReleaseToPick = wmsOperatorProcedure
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes: !suggestedStock
-            ? 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
+            ? heldForMembers.length > 0
+              ? `UNRESOLVED: the only stock of this wine (${heldForMembers.map((h) => h.locationCode).join(', ')}) is held for its owner, not for sale — do not pick it`
+              : 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
             : alreadyHeldCases === 0 && suggestedStock.availableCases < casesNeeded
               ? `RESERVED: ${suggestedStock.locationCode} physically holds this wine but it is reserved for another order — confirm before picking`
               : null,
@@ -461,6 +519,8 @@ const adminReleaseToPick = wmsOperatorProcedure
         if (held > 0) {
           await db.insert(wmsStockReservations).values({
             stockId: suggestedStock.stockId,
+            // Whose bottles are promised: the owner a client sees as "reserved" (Index 3.0)
+            ownerId: suggestedStock.ownerId,
             orderType: 'zoho',
             orderId: order.id,
             orderItemId: item.id,

@@ -6,9 +6,10 @@
  */
 
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import resolvePickStock from '@/app/_wms/utils/resolvePickStock';
@@ -20,6 +21,7 @@ import {
   zohoSalesOrders,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import resolvePickQuantities from '../../_wms/utils/resolvePickQuantities';
 
@@ -82,89 +84,170 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
       });
     }
 
-    // Generate pick list number
-    const pickListNumber = await generatePickListNumber();
+    /*
+      Claim the order before building anything. Two presses of the button
+      used to both see "no pick list yet" and each create one, sending two
+      people to the same bay for the same cases. Only the press that moves the
+      order from approved to picking goes on; the other is told it is done.
+    */
+    const [claimed] = await db
+      .update(zohoSalesOrders)
+      .set({ status: 'picking', updatedAt: new Date() })
+      .where(
+        and(
+          eq(zohoSalesOrders.id, salesOrderId),
+          eq(zohoSalesOrders.status, 'approved'),
+          isNull(zohoSalesOrders.pickListId),
+        ),
+      )
+      .returning({ id: zohoSalesOrders.id });
 
-    // Create pick list
-    const [pickList] = await db
-      .insert(wmsPickLists)
-      .values({
-        pickListNumber,
-        orderId: salesOrderId,
-        orderNumber: order.salesOrderNumber,
-        totalItems: orderItems.length,
-        pickedItems: 0,
-      })
-      .returning();
-
-    // Create pick list items with suggested locations
-    const pickListItems = [];
-
-    for (const item of orderItems) {
-      // Resolve LWIN18: use explicit lwin18 field, or convert SKU to LWIN18 format
-      const resolvedLwin18 = item.lwin18
-        ? item.lwin18
-        : item.sku
-          ? formatSkuAsLwin18(item.sku)
-          : '';
-
-      // Pack-agnostic, in-stock-only match by LWIN7+vintage with a safe name
-      // fallback — never pins an empty pack or a lookalike cuvée (this is the
-      // path that mis-matched Talenti Brunello to the empty Talenti Piero pack).
-      const suggestedStock = await resolvePickStock({
-        lwin18: resolvedLwin18,
-        productName: item.name,
-        neededCases: item.quantity,
-        db,
+    if (!claimed) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'A pick list is already being created for this order',
       });
-
-      // Bottles vs cases — shared with release-to-pick and the re-sync so a
-      // single-bottle line can never become "1 case" of a 6-pack again.
-      const quantities = resolvePickQuantities({
-        quantity: item.quantity,
-        unit: item.unit,
-        description: item.description,
-        sku: item.sku ?? resolvedLwin18,
-        stockCaseConfig: suggestedStock?.caseConfig,
-      });
-
-      const [pickListItem] = await db
-        .insert(wmsPickListItems)
-        .values({
-          pickListId: pickList.id,
-          lwin18: suggestedStock?.lwin18 ?? resolvedLwin18,
-          productName: item.name,
-          quantityCases: quantities.casesNeeded,
-          quantityBottles: quantities.quantityBottles,
-          suggestedLocationId: suggestedStock?.locationId ?? null,
-          suggestedStockId: suggestedStock?.stockId ?? null,
-          notes:
-            suggestedStock?.matchedBy === 'name'
-              ? 'VERIFY: matched by name (no LWIN match) — confirm the wine'
-              : null,
-        })
-        .returning();
-
-      pickListItems.push(pickListItem);
-
-      // Update zoho sales order item with stock reference
-      if (suggestedStock) {
-        await db
-          .update(zohoSalesOrderItems)
-          .set({ stockId: suggestedStock.stockId })
-          .where(eq(zohoSalesOrderItems.id, item.id));
-      }
     }
 
-    // Update sales order with pick list reference and status
-    await db
-      .update(zohoSalesOrders)
-      .set({
-        pickListId: pickList.id,
-        status: 'picking',
-        updatedAt: new Date(),
-      })
-      .where(eq(zohoSalesOrders.id, salesOrderId));
+    let pickList: typeof wmsPickLists.$inferSelect | undefined;
+    let pickListNumber: string;
+
+    try {
+      // Generate pick list number
+      pickListNumber = await generatePickListNumber();
+
+      // Create pick list
+      [pickList] = await db
+        .insert(wmsPickLists)
+        .values({
+          pickListNumber,
+          orderId: salesOrderId,
+          orderNumber: order.salesOrderNumber,
+          totalItems: orderItems.length,
+          pickedItems: 0,
+        })
+        .returning();
+    } catch (error) {
+      // Hand the order back so it can be released again
+      await db
+        .update(zohoSalesOrders)
+        .set({ status: 'approved', updatedAt: new Date() })
+        .where(and(eq(zohoSalesOrders.id, salesOrderId), isNull(zohoSalesOrders.pickListId)));
+      throw error;
+    }
+
+    if (!pickList) {
+      await db
+        .update(zohoSalesOrders)
+        .set({ status: 'approved', updatedAt: new Date() })
+        .where(and(eq(zohoSalesOrders.id, salesOrderId), isNull(zohoSalesOrders.pickListId)));
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'The pick list could not be created. Try again.',
+      });
+    }
+
+    const pickListItems = [];
+
+    /*
+      Lines and the order's final update, undone together on failure. A throw
+      here used to leave a header-only pick list and the order at picking with
+      no pick list, so every retry was refused as "already being created".
+    */
+    try {
+      // Create pick list items with suggested locations.
+      // A member's own delivery comes only from their own bottles
+      const ownDelivery = (await getOwnerDeliveryOwners([salesOrderId])).get(salesOrderId);
+
+      for (const item of orderItems) {
+        // Resolve LWIN18: use explicit lwin18 field, or convert SKU to LWIN18 format
+        const resolvedLwin18 = item.lwin18
+          ? item.lwin18
+          : item.sku
+            ? formatSkuAsLwin18(item.sku)
+            : '';
+
+        // Pack-agnostic, in-stock-only match by LWIN7+vintage with a safe name
+        // fallback — never pins an empty pack or a lookalike cuvée (this is the
+        // path that mis-matched Talenti Brunello to the empty Talenti Piero pack).
+        const suggestedStock = await resolvePickStock({
+          ownerId: ownDelivery?.ownerId,
+          lwin18: resolvedLwin18,
+          productName: item.name,
+          neededCases: item.quantity,
+          db,
+        });
+
+        // Bottles vs cases — shared with release-to-pick and the re-sync so a
+        // single-bottle line can never become "1 case" of a 6-pack again.
+        const quantities = resolvePickQuantities({
+          quantity: item.quantity,
+          unit: item.unit,
+          description: item.description,
+          sku: item.sku ?? resolvedLwin18,
+          stockCaseConfig: suggestedStock?.caseConfig,
+        });
+
+        const [pickListItem] = await db
+          .insert(wmsPickListItems)
+          .values({
+            pickListId: pickList.id,
+            lwin18: suggestedStock?.lwin18 ?? resolvedLwin18,
+            productName: item.name,
+            quantityCases: quantities.casesNeeded,
+            quantityBottles: quantities.quantityBottles,
+            suggestedLocationId: suggestedStock?.locationId ?? null,
+            suggestedStockId: suggestedStock?.stockId ?? null,
+            notes:
+              suggestedStock?.matchedBy === 'name'
+                ? 'VERIFY: matched by name (no LWIN match) — confirm the wine'
+                : null,
+          })
+          .returning();
+
+        pickListItems.push(pickListItem);
+
+        // Update zoho sales order item with stock reference
+        if (suggestedStock) {
+          await db
+            .update(zohoSalesOrderItems)
+            .set({ stockId: suggestedStock.stockId })
+            .where(eq(zohoSalesOrderItems.id, item.id));
+        }
+      }
+
+      // Update sales order with pick list reference and status
+      await db
+        .update(zohoSalesOrders)
+        .set({
+          pickListId: pickList.id,
+          status: 'picking',
+          updatedAt: new Date(),
+        })
+        .where(eq(zohoSalesOrders.id, salesOrderId));
+    } catch (error) {
+      try {
+        // Hand the order back first, so nothing points at the list being removed
+        await db
+          .update(zohoSalesOrders)
+          .set({ status: 'approved', pickListId: null, updatedAt: new Date() })
+          .where(
+            and(
+              eq(zohoSalesOrders.id, salesOrderId),
+              or(isNull(zohoSalesOrders.pickListId), eq(zohoSalesOrders.pickListId, pickList.id)),
+            ),
+          );
+        await db.delete(wmsPickListItems).where(eq(wmsPickListItems.pickListId, pickList.id));
+        await db.delete(wmsPickLists).where(eq(wmsPickLists.id, pickList.id));
+      } catch (cleanupError) {
+        logger.error('Failed to undo a part-built pick list', {
+          salesOrderId,
+          pickListId: pickList.id,
+          error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+        });
+      }
+      throw error;
+    }
 
     // Tell #warehouse-activity a new list is out to the floor
     if (pickList) await announcePickList(pickList.id, 'released');

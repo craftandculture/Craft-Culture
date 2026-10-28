@@ -1,20 +1,23 @@
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
 import { fileTypeFromBuffer } from 'file-type';
 
+import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import uploadPaymentProofSchema from '../schemas/uploadPaymentProofSchema';
 
-const ALLOWED_IMAGE_TYPES = [
+// The upload form offers PDF (bank transfer confirmations usually are one),
+// so the server must accept it too
+const ALLOWED_TYPES = [
   'image/jpeg',
   'image/png',
   'image/gif',
   'image/webp',
+  'application/pdf',
 ];
 
 /**
- * Upload a payment proof screenshot to Vercel Blob storage
+ * Upload a payment proof (screenshot or PDF) to Vercel Blob storage
  *
  * @example
  *   await trpcClient.quotes.uploadPaymentProof.mutate({
@@ -29,7 +32,7 @@ const quotesUploadPaymentProof = approvedProcedure
     const { file, filename } = input;
 
     // Check if Blob token is configured
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    if (!process.env.BLOB_PRIVATE_READ_WRITE_TOKEN) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'File storage is not configured. Please contact support.',
@@ -51,10 +54,10 @@ const quotesUploadPaymentProof = approvedProcedure
 
       // Validate actual file content type
       const detectedType = await fileTypeFromBuffer(buffer);
-      if (!detectedType || !ALLOWED_IMAGE_TYPES.includes(detectedType.mime)) {
+      if (!detectedType || !ALLOWED_TYPES.includes(detectedType.mime)) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP',
+          message: 'Invalid file type. Allowed: PDF, JPEG, PNG, GIF, WebP',
         });
       }
 
@@ -73,11 +76,8 @@ const quotesUploadPaymentProof = approvedProcedure
       const blobFilename = `payment-proofs/${user.id}/${timestamp}-${sanitizedFilename}`;
 
       // Upload to Vercel Blob using detected content type
-      const blob = await put(blobFilename, buffer, {
-        access: 'public',
-        contentType: detectedType.mime,
-        addRandomSuffix: true,
-      });
+      // Private store: opened only through /api/files after a login check
+      const blob = await putPrivateFile(blobFilename, buffer, detectedType.mime);
 
       return {
         url: blob.url,

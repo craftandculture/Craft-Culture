@@ -4,12 +4,13 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
+  cellarReleaseRequests,
   privateClientOrderActivityLogs,
   privateClientOrderDocuments,
   privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 const deleteOrderSchema = z.object({
   orderId: z.string().uuid(),
@@ -21,7 +22,7 @@ const deleteOrderSchema = z.object({
  * Deletes the order and all associated data including items, documents, and activity logs.
  * Only orders in draft or cancelled status can be deleted.
  */
-const adminDelete = wmsOperatorProcedure.input(deleteOrderSchema).mutation(async ({ input }) => {
+const adminDelete = adminProcedure.input(deleteOrderSchema).mutation(async ({ input }) => {
   const { orderId } = input;
 
   // Fetch the order
@@ -54,6 +55,12 @@ const adminDelete = wmsOperatorProcedure.input(deleteOrderSchema).mutation(async
 
   // 3. Delete line items
   await db.delete(privateClientOrderItems).where(eq(privateClientOrderItems.orderId, orderId));
+
+  // A release keeps no pointer to a deleted order, so the release page offers to link the new one
+  await db
+    .update(cellarReleaseRequests)
+    .set({ privateClientOrderId: null })
+    .where(eq(cellarReleaseRequests.privateClientOrderId, orderId));
 
   // 4. Delete the order itself
   await db.delete(privateClientOrders).where(eq(privateClientOrders.id, orderId));

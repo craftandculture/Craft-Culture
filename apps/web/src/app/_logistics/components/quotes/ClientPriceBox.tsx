@@ -1,9 +1,8 @@
 'use client';
 
 import { IconCheck } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -34,6 +33,7 @@ const usd = (n: number) => `USD ${n.toLocaleString('en-GB', { minimumFractionDig
 const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
+  const rateCard = useQuery(api.logistics.admin.quotes.arrivalRateCard.queryOptions());
   const quote = request.quotes.find((q) => q.id === quoteId);
   const saved = request.clientQuoteId === quoteId ? request.clientPriceUsd : null;
   const start = saved ?? request.suggestedClientPrice?.priceUsd ?? null;
@@ -45,6 +45,30 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
     setValue(start != null ? String(start) : '');
     setBasis('total');
   }, [quoteId, start]);
+
+  const [clientEmail, setClientEmail] = useState(request.clientEmail ?? '');
+  useEffect(() => setClientEmail(request.clientEmail ?? ''), [request.clientEmail]);
+
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'requests']] });
+
+  const sendToClient = useMutation({
+    ...api.logistics.admin.requests.sendClientQuote.mutationOptions(),
+    onSuccess: (r) => {
+      toast.success(`Quote sent to ${r.to}`);
+      refresh();
+    },
+    onError: (error) => toast.error(error.message || 'The quote was not sent'),
+  });
+
+  const accept = useMutation({
+    ...api.logistics.admin.quotes.accept.mutationOptions(),
+    onSuccess: () => {
+      toast.success(`Accepted: ${request.job ? `the cost is on job ${request.job.shipmentNumber}` : 'quote accepted'}`);
+      refresh();
+      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'quotes']] });
+    },
+    onError: (error) => toast.error(error.message || 'The quote was not accepted'),
+  });
 
   const setPrice = useMutation({
     ...api.logistics.admin.requests.setClientPrice.mutationOptions(),
@@ -59,14 +83,17 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
     !value || !Number.isFinite(typed) || typed <= 0
       ? null
       : basis === 'bottle'
-        ? request.totalBottles
-          ? Math.round(typed * request.totalBottles * 100) / 100
+        ? request.bottles
+          ? Math.round(typed * request.bottles * 100) / 100
           : null
         : typed;
-  const cost = quote.totalUsd;
+  // Margin is on the true cost: the forwarder plus UAE customs and handling
+  const cost = quote.allInUsd;
   const margin = priceUsd != null && cost != null ? priceUsd - cost : null;
-  const others = request.quotes.filter((q) => q.id !== quote.id && q.status === 'pending' && !q.isExpired && q.totalUsd != null);
-  const cheapestOther = others.reduce<number | null>((m, q) => (m == null || q.totalUsd! < m ? q.totalUsd! : m), null);
+  const others = request.quotes.filter((q) => q.id !== quote.id && q.status === 'pending' && !q.isExpired && q.allInUsd != null);
+  const cheapestOther = others.reduce<number | null>((m, q) => (m == null || q.allInUsd! < m ? q.allInUsd! : m), null);
+  // Every figure also per bottle, so the client's bottle price reads beside the cost
+  const perBottle = (n: number | null) => (n != null && request.bottles ? `${usd(n / request.bottles)} / btl` : null);
   const isSaved = saved != null && priceUsd != null && Math.abs(saved - priceUsd) < 0.005;
 
   return (
@@ -97,12 +124,12 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
           <button
             type="button"
             className={secondaryButton}
-            disabled={!request.totalBottles}
+            disabled={!request.bottles}
             onClick={() => {
-              if (priceUsd != null && request.totalBottles) {
+              if (priceUsd != null && request.bottles) {
                 setValue(
                   basis === 'total'
-                    ? (Math.round((priceUsd / request.totalBottles) * 100) / 100).toString()
+                    ? (Math.round((priceUsd / request.bottles) * 100) / 100).toString()
                     : priceUsd.toString(),
                 );
               }
@@ -116,18 +143,28 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
 
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
         <div>
-          <dt className="text-xs text-text-muted">Forwarder cost</dt>
+          <dt className="text-xs text-text-muted">{quote.arrivalUsd != null ? 'True cost' : 'Forwarder cost'}</dt>
           <dd className="tabular-nums">{cost != null ? usd(cost) : 'Rate unknown'}</dd>
+          {perBottle(cost) && <dd className="tabular-nums">{perBottle(cost)}</dd>}
+          {quote.arrivalUsd != null && quote.totalUsd != null && (
+            <dd className="text-[11px] tabular-nums text-text-muted">
+              Freight {usd(quote.totalUsd)} + UAE arrival {usd(quote.arrivalUsd)}
+            </dd>
+          )}
         </div>
         <div>
-          <dt className="text-xs text-text-muted">Client price</dt>
+          <dt className="text-xs text-text-muted">Client price, with C&amp;C margin</dt>
           <dd className="tabular-nums">{priceUsd != null ? usd(priceUsd) : '—'}</dd>
+          {perBottle(priceUsd) && (
+            <dd className="text-base font-semibold tabular-nums text-text-primary">{perBottle(priceUsd)}</dd>
+          )}
         </div>
         <div>
           <dt className="text-xs text-text-muted">Margin</dt>
           <dd className={`font-semibold tabular-nums ${margin != null && margin < 0 ? 'text-red-600' : 'text-text-primary'}`}>
             {margin != null && priceUsd ? `${usd(margin)} · ${((margin / priceUsd) * 100).toFixed(1)}%` : '—'}
           </dd>
+          {priceUsd != null && perBottle(margin) && <dd className="tabular-nums">{perBottle(margin)}</dd>}
         </div>
         <div>
           <dt className="text-xs text-text-muted">Against the other quotes</dt>
@@ -141,6 +178,16 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
         </div>
       </dl>
 
+      {quote.arrivalUsd != null && (rateCard.data?.variables.length ?? 0) > 0 && (
+        <p className="text-xs text-text-muted">
+          Not included, only if it happens:{' '}
+          {rateCard.data?.variables
+            .map((v) => `${v.label}, AED ${v.amountAed.toLocaleString('en-GB')} per ${v.per}`)
+            .join('; ')}
+          .
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -150,19 +197,38 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
         >
           {isSaved ? <IconCheck size={15} /> : null} {isSaved ? 'Price saved' : 'Save the price'}
         </button>
-        {request.clientQuotedAt && isSaved && (
-          <Link href={`/platform/admin/logistics/quotes/${quote.id}`} className={secondaryButton}>
-            Client agreed: accept this quote
-          </Link>
+        {isSaved && (
+          <button
+            type="button"
+            className={request.clientQuotedAt ? primaryButton : secondaryButton}
+            disabled={accept.isPending || !request.job}
+            title={request.job ? undefined : 'Open the job first'}
+            onClick={() => accept.mutate({ quoteId: quote.id })}
+          >
+            <IconCheck size={15} /> Client agreed: accept {quote.forwarderName}
+          </button>
         )}
       </div>
+
+      {isSaved && saved != null && request.canSendEmail && (
+        <label className="block max-w-md">
+          <span className={label}>Client email</span>
+          <input
+            className={input}
+            type="email"
+            value={clientEmail}
+            onChange={(e) => setClientEmail(e.target.value)}
+            placeholder="To send the quote from logistics@"
+          />
+        </label>
+      )}
 
       {isSaved && saved != null && (
         <CopyTextCard
           title="Quote to the client"
           status={
             request.clientQuotedAt
-              ? { label: `Copied ${request.clientQuotedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`, tone: 'blue' }
+              ? { label: `Quoted ${request.clientQuotedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`, tone: 'blue' }
               : { label: 'Not sent', tone: 'amber' }
           }
           email={buildFreightEmail({
@@ -180,6 +246,12 @@ const ClientPriceBox = ({ request, quoteId }: ClientPriceBoxProps) => {
             clientPriceUsd: saved,
             senderName: request.senderName,
           })}
+          onSend={
+            request.canSendEmail && /^\S+@\S+\.\S+$/.test(clientEmail.trim())
+              ? () => sendToClient.mutate({ requestId: request.id, to: clientEmail.trim() })
+              : undefined
+          }
+          isSending={sendToClient.isPending}
           onCopied={() => setPrice.mutate({ requestId: request.id, quoteId: quote.id, clientPriceUsd: saved, copied: true })}
           onUndo={() => setPrice.mutate({ requestId: request.id, quoteId: quote.id, clientPriceUsd: saved, copied: false })}
           defaultOpen={!request.clientQuotedAt}

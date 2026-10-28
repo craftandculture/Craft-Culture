@@ -41,45 +41,50 @@ const usersAssignPartner = adminProcedure
       });
     }
 
-    // Get all partners of the same type to remove only those memberships
-    const sameTypePartners = await db
-      .select({ id: partners.id })
-      .from(partners)
-      .where(eq(partners.type, partner.type));
-
-    const sameTypePartnerIds = sameTypePartners.map((p) => p.id);
-
-    // Remove existing membership for this user with partners of the same type only
-    if (sameTypePartnerIds.length > 0) {
-      await db
+    /*
+      One transaction: the old membership is removed and the new one written
+      together, so a failure between them can never leave the user linked to
+      nothing (or, with the legacy column, to the wrong partner).
+    */
+    const membership = await db.transaction(async (tx) => {
+      // Remove existing membership for this user with partners of the same type only
+      await tx
         .delete(partnerMembers)
         .where(
           and(
             eq(partnerMembers.userId, userId),
-            inArray(partnerMembers.partnerId, sameTypePartnerIds),
+            inArray(
+              partnerMembers.partnerId,
+              tx
+                .select({ id: partners.id })
+                .from(partners)
+                .where(eq(partners.type, partner.type)),
+            ),
           ),
         );
-    }
 
-    // Create new membership
-    const [membership] = await db
-      .insert(partnerMembers)
-      .values({
-        userId,
-        partnerId,
-        role,
-        addedBy: ctx.user.id,
-      })
-      .returning();
+      // Create new membership
+      const [created] = await tx
+        .insert(partnerMembers)
+        .values({
+          userId,
+          partnerId,
+          role,
+          addedBy: ctx.user.id,
+        })
+        .returning();
 
-    // Clear the legacy user.partnerId field for any stock-owning partner, so
-    // partnerMembers stays the single source of truth for partner resolution.
-    if (isStockOwnerPartnerType(partner.type)) {
-      await db
-        .update(users)
-        .set({ partnerId: null })
-        .where(eq(users.id, userId));
-    }
+      // Clear the legacy user.partnerId field for any stock-owning partner, so
+      // partnerMembers stays the single source of truth for partner resolution.
+      if (isStockOwnerPartnerType(partner.type)) {
+        await tx
+          .update(users)
+          .set({ partnerId: null })
+          .where(eq(users.id, userId));
+      }
+
+      return created;
+    });
 
     return {
       membership,

@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { logisticsDocuments } from '@/database/schema';
+import { readStoredFileBuffer } from '@/lib/blob/privateFiles';
 import triggerDb from '@/trigger/triggerDb';
 import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 
@@ -160,8 +161,9 @@ export const logisticsDocumentExtractionJob = task({
     logger.info('Starting logistics document extraction', { documentId });
 
     // Get document from database
+    // Relational queries take the object filter form; eq() here throws "Unknown relational filter field"
     const document = await triggerDb.query.logisticsDocuments.findFirst({
-      where: eq(logisticsDocuments.id, documentId),
+      where: { id: documentId },
     });
 
     if (!document) {
@@ -179,20 +181,20 @@ export const logisticsDocumentExtractionJob = task({
       if (!isVercelBlobUrl(document.fileUrl)) {
         throw new AbortTaskRunError('Refusing to fetch non-Vercel-Blob document URL');
       }
-      // Fetch document content
-      const response = await fetch(document.fileUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch document: ${response.statusText}`);
+      // Read the document from whichever store holds it (private or public)
+      const fileBuffer = await readStoredFileBuffer(document.fileUrl);
+      if (!fileBuffer) {
+        throw new Error('Failed to fetch document');
       }
 
-      const contentType = document.mimeType || response.headers.get('content-type') || '';
+      const contentType = document.mimeType || '';
       const systemPrompt = getExtractionPrompt(document.documentType);
 
       let extractedData: LogisticsExtractedData;
 
       if (contentType.startsWith('image/')) {
         // For images, use vision capabilities
-        const imageBuffer = await response.arrayBuffer();
+        const imageBuffer = fileBuffer;
         const base64Image = Buffer.from(imageBuffer).toString('base64');
         const imageDataUrl = `data:${contentType};base64,${base64Image}`;
 
@@ -217,7 +219,7 @@ export const logisticsDocumentExtractionJob = task({
         extractedData = result.object;
       } else if (contentType === 'application/pdf') {
         // For PDFs, use file input
-        const pdfBuffer = await response.arrayBuffer();
+        const pdfBuffer = fileBuffer;
         const base64Pdf = Buffer.from(pdfBuffer).toString('base64');
         const pdfDataUrl = `data:application/pdf;base64,${base64Pdf}`;
 

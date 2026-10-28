@@ -12,7 +12,7 @@ export const linkStyles = tv({
       primary:
         'text-text-primary hover:text-text-primary-hover active:text-text-primary-active decoration-border-primary hover:decoration-border-primary-hover active:decoration-border-primary-active',
       muted: 'text-text-muted',
-      brand: 'text-text-brand',
+      brand: 'text-text-primary',
       success: 'text-text-success',
       danger: 'text-text-danger',
       warning: 'text-text-warning',

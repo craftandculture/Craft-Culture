@@ -307,7 +307,7 @@ const OverviewTab = ({
           <label
             className={`flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm transition-colors ${
               variancesOnly
-                ? 'border-border-brand bg-fill-brand/10 text-text-brand'
+                ? 'border-text-primary bg-text-primary/10 text-text-primary'
                 : 'border-border-primary text-text-muted hover:bg-fill-muted/20'
             }`}
           >
@@ -381,11 +381,11 @@ const OverviewTab = ({
                 <th className="bg-fill-primary sticky left-0 top-0 z-30 h-9 py-2 pl-3 pr-3" />
                 <th className="bg-fill-primary sticky top-0 z-20 h-9 py-2 pr-3" colSpan={3} />
                 <th
-                  className="border-border-primary bg-fill-primary text-text-brand sticky top-0 z-20 h-9 border-x py-2 text-center font-medium"
+                  className="border-border-primary bg-fill-primary text-text-primary sticky top-0 z-20 h-9 border-x py-2 text-center font-medium"
                   colSpan={holdsStock ? 4 : 1}
                 >
                   <span className="flex items-center justify-center gap-1.5">
-                    <span className="bg-fill-brand size-2 rounded-full" />
+                    <span className="bg-text-primary size-2 rounded-full" />
                     Craft &amp; Culture
                   </span>
                 </th>

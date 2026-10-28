@@ -22,6 +22,7 @@ import TableCell from '@/app/_ui/components/Table/TableCell';
 import TableHead from '@/app/_ui/components/Table/TableHead';
 import TableHeader from '@/app/_ui/components/Table/TableHeader';
 import TableRow from '@/app/_ui/components/Table/TableRow';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC from '@/lib/trpc/browser';
 
 interface MarketSignal {
@@ -207,7 +208,7 @@ const ScoutBrief = () => {
     (sum, g) => sum + Math.max(0, (g.competitorRetailAed ?? g.competitorPriceAed ?? 0) - (g.ourCostAed ?? g.ourPriceAed ?? 0)),
     0,
   );
-  const revenueUsd = Math.round(revenueAed / 3.67);
+  const revenueUsd = Math.round(revenueAed / USD_TO_AED);
 
   // KPI deltas vs previous brief
   const prevPriceGaps = prevD?.priceGaps ?? [];
@@ -258,7 +259,7 @@ const ScoutBrief = () => {
             <IconRefresh size={15} className={triggerMutation.isPending ? 'animate-spin' : ''} />
             {triggerMutation.isPending ? 'Running...' : 'Run Now'}
           </button>
-          <button className="inline-flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-text-brand transition-opacity hover:opacity-80">
+          <button className="inline-flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-text-primary transition-opacity hover:opacity-80">
             <IconSettings size={15} />
             Configure
           </button>
@@ -296,14 +297,14 @@ const ScoutBrief = () => {
               <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
                 Revenue Opportunity
               </p>
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-text-brand">
+              <p className="mt-1 text-2xl font-semibold tracking-tight text-text-primary">
                 {revenueAed > 0 ? `AED ${Math.round(revenueAed / 1000)}k` : '\u2014'}
               </p>
               <p className="mt-0.5 text-[11px] text-text-muted">
                 {revenueUsd > 0 ? `$${revenueUsd.toLocaleString()} USD` : 'No data'}
               </p>
             </div>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10 text-text-brand">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-text-primary/10 text-text-primary">
               <IconStarFilled size={18} />
             </div>
           </CardContent>
@@ -370,7 +371,7 @@ const ScoutBrief = () => {
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm font-semibold">Price Gaps vs Competitors</p>
               {priceGaps.length > 0 && (
-                <span className="rounded-full bg-fill-brand/10 px-2.5 py-0.5 text-[11px] font-semibold text-text-brand">
+                <span className="rounded-full bg-text-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-text-primary">
                   {priceGaps.length} found
                 </span>
               )}
@@ -382,7 +383,7 @@ const ScoutBrief = () => {
                     <TableRow isHeaderRow>
                       <TableHead>Wine</TableHead>
                       <TableHead>Competitor</TableHead>
-                      <TableHead>Your Price</TableHead>
+                      <TableHead>Yours, duty paid (+15%)</TableHead>
                       <TableHead className="text-right">Gap</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -415,7 +416,7 @@ const ScoutBrief = () => {
                 </Table>
                 {priceGaps.length > 6 && (
                   <div className="mt-3 text-center">
-                    <button className="text-[12px] font-medium text-text-brand transition-opacity hover:opacity-80">
+                    <button className="text-[12px] font-medium text-text-primary transition-opacity hover:opacity-80">
                       View all {priceGaps.length} gaps &rarr;
                     </button>
                   </div>
@@ -512,7 +513,7 @@ const ScoutBrief = () => {
           <CardContent className="p-6">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm font-semibold">Previous Briefs</p>
-              <button className="text-[12px] font-medium text-text-brand transition-opacity hover:opacity-80">
+              <button className="text-[12px] font-medium text-text-primary transition-opacity hover:opacity-80">
                 View All &rarr;
               </button>
             </div>

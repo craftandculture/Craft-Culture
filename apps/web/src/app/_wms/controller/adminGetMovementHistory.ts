@@ -1,10 +1,11 @@
-import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, like, lte, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { users, wmsLocations, wmsStockMovements } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { getMovementHistorySchema } from '../schemas/stockQuerySchema';
+import lwinPackAgnosticPattern from '../utils/lwinPackAgnosticPattern';
 
 /**
  * Get stock movement history with filtering and pagination
@@ -19,7 +20,7 @@ import { getMovementHistorySchema } from '../schemas/stockQuerySchema';
 const adminGetMovementHistory = wmsOperatorProcedure
   .input(getMovementHistorySchema)
   .query(async ({ input }) => {
-    const { movementType, lwin18, locationId, dateFrom, dateTo, limit, offset } = input;
+    const { movementType, lwin18, allPacks, locationId, dateFrom, dateTo, limit, offset } = input;
 
     const conditions = [];
 
@@ -28,7 +29,10 @@ const adminGetMovementHistory = wmsOperatorProcedure
     }
 
     if (lwin18) {
-      conditions.push(eq(wmsStockMovements.lwin18, lwin18));
+      const pattern = allPacks ? lwinPackAgnosticPattern(lwin18) : null;
+      conditions.push(
+        pattern ? like(wmsStockMovements.lwin18, pattern) : eq(wmsStockMovements.lwin18, lwin18),
+      );
     }
 
     if (locationId) {

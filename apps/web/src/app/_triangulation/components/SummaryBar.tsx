@@ -46,8 +46,8 @@ const SummaryBar = ({
   const groups = [
     {
       name: 'Craft & Culture',
-      dot: 'bg-fill-brand',
-      text: 'text-text-brand',
+      dot: 'bg-text-primary',
+      text: 'text-text-primary',
       figures: holdsStock
         ? [
             { label: 'Received', value: ccReceived },

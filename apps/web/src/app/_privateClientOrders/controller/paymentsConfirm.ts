@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
@@ -11,6 +11,10 @@ import {
 } from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
 
+import partnerOrderView from '../utils/partnerOrderView';
+import isRoutinePcoTransition from '../utils/pcoStatusTransitions';
+import resolveOrderParty from '../utils/resolveOrderParty';
+
 const confirmPaymentSchema = z.object({
   orderId: z.string().uuid(),
   paymentStage: z.enum(['client', 'distributor', 'partner']),
@@ -21,7 +25,7 @@ const confirmPaymentSchema = z.object({
  * Confirm a payment for a private client order
  *
  * Updates the payment timestamp and reference for the specified stage.
- * Also updates the order status to the next appropriate state.
+ * Also moves the order status on, but only when that is the routine next step.
  */
 const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(async ({ input, ctx }) => {
   const { orderId, paymentStage, reference } = input;
@@ -39,17 +43,10 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
     });
   }
 
-  // Check access - must be admin or relevant party
-  const isAdmin = user.role === 'admin';
-
-  // Check if user is a member of the partner that owns this order
-  const [userPartnerMembership] = await db
-    .select({ partnerId: partnerMembers.partnerId })
-    .from(partnerMembers)
-    .where(eq(partnerMembers.userId, user.id))
-    .limit(1);
-
-  const isPartner = userPartnerMembership && order.partnerId === userPartnerMembership.partnerId;
+  // C&C staff, or a member of the wine partner who placed it (not view-only)
+  const { party, canWrite } = await resolveOrderParty(user, order);
+  const isAdmin = party === 'staff';
+  const isPartner = party === 'partner' && canWrite;
 
   // Validate permissions based on payment stage
   if (paymentStage === 'client') {
@@ -126,7 +123,11 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
       if (reference) {
         updateData.distributorPaymentReference = reference;
       }
-      updateData.status = 'distributor_paid';
+      // Record the payment always, but only move the status on when it is the
+      // next step; a delivered or cancelled order never goes backwards
+      if (isRoutinePcoTransition(order.status, 'distributor_paid')) {
+        updateData.status = 'distributor_paid';
+      }
       break;
 
     case 'partner':
@@ -141,16 +142,26 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
       if (reference) {
         updateData.partnerPaymentReference = reference;
       }
-      updateData.status = 'partner_paid';
+      // As adminMarkPartnerPaid: record the payout without regressing status
+      if (isRoutinePcoTransition(order.status, 'partner_paid')) {
+        updateData.status = 'partner_paid';
+      }
       break;
   }
 
-  // Update order
+  // Update order, unless it moved on while this was being confirmed
   const [updatedOrder] = await db
     .update(privateClientOrders)
     .set(updateData)
-    .where(eq(privateClientOrders.id, orderId))
+    .where(and(eq(privateClientOrders.id, orderId), eq(privateClientOrders.status, order.status)))
     .returning();
+
+  if (!updatedOrder) {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'The order changed while you were confirming this payment. Refresh and try again.',
+    });
+  }
 
   // Log activity and send notifications for client payment confirmation
   if (paymentStage === 'client' && updatedOrder) {
@@ -165,14 +176,7 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
       notes: 'Partner confirmed client payment received. Awaiting distributor verification.',
     });
 
-    // Get partner name for notification
-    const partner = order.partnerId
-      ? await db.query.partners.findFirst({
-          where: { id: order.partnerId },
-          columns: { businessName: true },
-        })
-      : null;
-
+    // The distributor is never told which trade partner placed the order
     // Notify distributor members to verify the payment
     if (order.distributorId) {
       const distributorMembers = await db
@@ -186,7 +190,7 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
           partnerId: order.distributorId,
           type: 'action_required',
           title: 'Payment Verification Required',
-          message: `${partner?.businessName ?? 'Partner'} confirmed client payment for order ${updatedOrder.orderNumber}. Please verify and schedule delivery.`,
+          message: `Client payment confirmed for order ${updatedOrder.orderNumber}. Please verify and schedule delivery.`,
           entityType: 'private_client_order',
           entityId: orderId,
           actionUrl: `/platform/distributor/orders/${orderId}`,
@@ -195,7 +199,7 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
     }
   }
 
-  return updatedOrder;
+  return isAdmin ? updatedOrder : partnerOrderView(updatedOrder);
 });
 
 export default paymentsConfirm;

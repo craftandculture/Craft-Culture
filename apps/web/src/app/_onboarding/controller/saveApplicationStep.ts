@@ -7,6 +7,7 @@ import { cellarApplications, cellarIntakes } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 import { WINE_SOURCE_VALUES } from '../constants/wineSources';
+import assertApplicationHolder from '../data/assertApplicationHolder';
 import assertNotTradeAccount from '../data/assertNotTradeAccount';
 import getApplicationView from '../data/getApplicationView';
 import getOrCreateApplication from '../data/getOrCreateApplication';
@@ -73,6 +74,8 @@ const saveApplicationStep = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     await assertNotTradeAccount(ctx.user.id);
     const application = await getOrCreateApplication(ctx.user.id, ctx.user.name);
+    // A delegate of someone else's cellar can never write the holder's details
+    await assertApplicationHolder(application, ctx.user.id);
 
     if (application.status === 'declined') {
       throw new TRPCError({

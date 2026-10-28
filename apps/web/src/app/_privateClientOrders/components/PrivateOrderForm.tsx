@@ -650,8 +650,8 @@ const PrivateOrderForm = () => {
               {...getRootProps()}
               className={`flex cursor-pointer items-center justify-center gap-3 rounded-lg border-2 border-dashed p-4 transition-colors ${
                 isDragActive
-                  ? 'border-border-brand bg-fill-brand-muted'
-                  : 'border-border-muted hover:border-border-brand hover:bg-fill-muted'
+                  ? 'border-text-primary bg-text-primary-muted'
+                  : 'border-border-muted hover:border-text-primary hover:bg-fill-muted'
               }`}
             >
               <input {...getInputProps()} />
@@ -688,7 +688,7 @@ const PrivateOrderForm = () => {
           )}
 
           {extractedData && extractedData.lineItems.length > 0 && !isMatching && (
-            <div className="flex flex-col gap-3 rounded-lg border border-border-brand bg-fill-brand-muted p-3">
+            <div className="flex flex-col gap-3 rounded-lg border border-text-primary bg-text-primary-muted p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Icon icon={IconCheck} size="sm" colorRole="success" />
@@ -800,8 +800,8 @@ const PrivateOrderForm = () => {
 
           {lineItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border-muted bg-surface-secondary/30 py-8">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-fill-brand/10">
-                <Icon icon={IconPlus} size="lg" className="text-text-brand" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-text-primary/10">
+                <Icon icon={IconPlus} size="lg" className="text-text-primary" />
               </div>
               <div className="text-center">
                 <Typography variant="bodySm" className="font-medium">
@@ -860,7 +860,7 @@ const PrivateOrderForm = () => {
               <Typography variant="bodyXs" colorRole="muted">
                 Subtotal
               </Typography>
-              <Typography variant="headingSm" className="font-bold text-text-brand">
+              <Typography variant="headingSm" className="font-bold text-text-primary">
                 {formatCurrency(calculateSubtotal())}
               </Typography>
             </div>

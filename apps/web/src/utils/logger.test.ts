@@ -41,10 +41,10 @@ describe('logger', () => {
       expect(console.warn).toHaveBeenCalledWith('warning message');
     });
 
-    it('should not warn in production mode', () => {
+    it('should also warn in production mode', () => {
       vi.stubEnv('NODE_ENV', 'production');
       logger.warn('warning message');
-      expect(console.warn).not.toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith('warning message');
     });
   });
 

@@ -24,7 +24,7 @@ export interface BringWineInProps {
 }
 
 /*
-  Buying is not bringing wine in, and it has its own tab in The Cellar List,
+  Buying is not bringing wine in, and it has its own tab in the C&C Cellar List,
   so it is offered here as a link beneath the choices rather than as one of
   them.
 */
@@ -129,7 +129,7 @@ const BringWineIn = ({ reference, folded = false, onAdded }: BringWineInProps) =
         <p className="text-text-muted mt-3 text-xs">
           Looking to add something new?{' '}
           <Link href="/platform/cellar/available" className="text-text-primary font-semibold underline underline-offset-2">
-            Browse The Cellar List
+            Browse the C&C Cellar List
           </Link>
         </p>
       )}

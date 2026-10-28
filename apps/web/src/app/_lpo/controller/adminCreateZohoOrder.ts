@@ -2,12 +2,15 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { PEGGED } from '@/app/_logistics/utils/resolveFxToUsd';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { searchContacts } from '@/lib/zoho/contacts';
 import { createWineItem, searchItems } from '@/lib/zoho/items';
-import { createSalesOrder } from '@/lib/zoho/salesOrders';
+import { createSalesOrder, listSalesOrders } from '@/lib/zoho/salesOrders';
 import logger from '@/utils/logger';
+
+import squashCompanyName from '../utils/squashCompanyName';
 
 /**
  * The order's date in the only format Zoho accepts
@@ -75,67 +78,64 @@ const toZohoDate = (value: string | null) => {
  * makes this worth automating: a client taking three bottles of a six needs a
  * three-pack code, and thirteen of those on one order is an hour of typing.
  */
-const adminCreateZohoOrder = adminProcedure
-  .input(
-    z.object({
-      client: z.string().min(1),
-      /**
-       * The Zoho customer, chosen rather than matched.
-       *
-       * The name on a purchase order is not an identifier. This client's own
-       * template labels the buyer "SUPPLIER", so the order was raised against
-       * "Craft & Culture Dubai" — us — and Zoho, correctly, held no such
-       * customer. Where a contact id is given the name search is skipped
-       * entirely; `client` is then only what gets written on the order.
-       */
-      clientContactId: z.string().optional(),
-      poNumber: z.string().nullable(),
-      poDate: z.string().nullable(),
-      creditTerms: z.string().nullable(),
-      /**
-       * What we bill in, which is not what the client wrote the PO in.
-       *
-       * C D General send their orders in dirhams and are invoiced in dollars.
-       * Stated rather than inherited from the Zoho customer: an unstated
-       * currency is how AED figures came to print as $125,700 on an order worth
-       * $34,228.
-       */
-      billingCurrency: z.enum(['USD', 'AED']).default('USD'),
-      /**
-       * Lines the preview could not identify, left off but recorded.
-       *
-       * An order that quietly contains fewer lines than the document it came
-       * from is the hardest kind to reconcile later, so what was left out is
-       * written onto the order rather than remembered.
-       */
-      excluded: z.array(z.string()).default([]),
-      lines: z
-        .array(
-          z.object({
-            lwin18: z.string().min(1),
-            wine: z.string().min(1),
-            producer: z.string().nullable().optional(),
-            vintage: z.number().nullable().optional(),
-            bottles: z.number().int().positive(),
-            /** Bottles in the pack being sold — 3 where a six is split */
-            soldPack: z.number().int().positive(),
-            unitPriceAed: z.number().nonnegative(),
-            bottleSizeMl: z.number().int().positive().optional(),
-            hsCode: z.string().nullable().optional(),
-            countryOfOrigin: z.string().nullable().optional(),
-          }),
-        )
-        .min(1)
-        .max(300),
-    }),
-  )
-  .mutation(async ({ input }) => {
-    if (!isZohoConfigured()) {
-      throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
-        message: 'Zoho is not configured on this environment.',
-      });
-    }
+const createZohoOrderInput = z.object({
+  client: z.string().min(1),
+  /**
+   * The Zoho customer, chosen rather than matched.
+   *
+   * The name on a purchase order is not an identifier. This client's own
+   * template labels the buyer "SUPPLIER", so the order was raised against
+   * "Craft & Culture Dubai" — us — and Zoho, correctly, held no such
+   * customer. Where a contact id is given the name search is skipped
+   * entirely; `client` is then only what gets written on the order.
+   */
+  clientContactId: z.string().optional(),
+  poNumber: z.string().nullable(),
+  poDate: z.string().nullable(),
+  creditTerms: z.string().nullable(),
+  /**
+   * What we bill in, which is not what the client wrote the PO in.
+   *
+   * C D General send their orders in dirhams and are invoiced in dollars.
+   * Stated rather than inherited from the Zoho customer: an unstated
+   * currency is how AED figures came to print as $125,700 on an order worth
+   * $34,228.
+   */
+  billingCurrency: z.enum(['USD', 'AED']).default('USD'),
+  /**
+   * Lines the preview could not identify, left off but recorded.
+   *
+   * An order that quietly contains fewer lines than the document it came
+   * from is the hardest kind to reconcile later, so what was left out is
+   * written onto the order rather than remembered.
+   */
+  excluded: z.array(z.string()).default([]),
+  lines: z
+    .array(
+      z.object({
+        lwin18: z.string().min(1),
+        wine: z.string().min(1),
+        producer: z.string().nullable().optional(),
+        vintage: z.number().nullable().optional(),
+        bottles: z.number().int().positive(),
+        /** Bottles in the pack being sold — 3 where a six is split */
+        soldPack: z.number().int().positive(),
+        unitPriceAed: z.number().nonnegative(),
+        bottleSizeMl: z.number().int().positive().optional(),
+        hsCode: z.string().nullable().optional(),
+        countryOfOrigin: z.string().nullable().optional(),
+      }),
+    )
+    .min(1)
+    .max(300),
+});
+
+/** Orders being created right now on this server, to stop a double click */
+const inFlight = new Set<string>();
+
+type CreateOrderInput = z.infer<typeof createZohoOrderInput>;
+
+const createOrder = async (input: CreateOrderInput) => {
 
     /*
       Chosen from the Zoho list, which is the whole of the question answered.
@@ -158,29 +158,7 @@ const adminCreateZohoOrder = adminProcedure
       invented from a PDF is how a duplicate customer gets into the accounts, in
       a system we do not control.
     */
-    /*
-      Names compared the way a person compares them.
-
-      "CD General L.L.C" and "C D General Trading L.L.C" are the same company
-      and neither contains the other — "Trading" sits in the middle. So the
-      letters are squashed together and the registered suffixes stripped off
-      the end, repeatedly, until what is left is the name anyone would say out
-      loud: both become "cdgeneral".
-    */
-    const SUFFIX =
-      /(fze|fzc|fzco|llc|lc|ltd|limited|inc|gmbh|sa|srl|bv|plc|spc|co|company|trading|general|group|holdings)$/;
-
-    const squash = (value: string) => {
-      let key = value.toLowerCase().replace(/[^a-z0-9]/g, '');
-      let previous = '';
-
-      while (key !== previous && key.length > 3) {
-        previous = key;
-        key = key.replace(SUFFIX, '');
-      }
-
-      return key;
-    };
+    const squash = squashCompanyName;
 
     const words = input.client
       .replace(/[^a-zA-Z0-9 ]/g, ' ')
@@ -261,13 +239,41 @@ const adminCreateZohoOrder = adminProcedure
     }
 
     /*
+      One PO, one sales order. Clicking Create again after it succeeded (or a
+      retry after a timeout that did in fact succeed) raised a second draft for
+      the same purchase order.
+    */
+    const poNumber = input.poNumber?.trim();
+
+    if (poNumber) {
+      const { salesOrders: existingOrders } = await listSalesOrders({
+        customerId: contact.contact_id,
+        referenceNumber: poNumber,
+      });
+      const duplicate = (existingOrders ?? []).find(
+        (order) =>
+          order.status !== 'void' &&
+          (order.reference_number ?? '').trim().toLowerCase() === poNumber.toLowerCase(),
+      );
+
+      if (duplicate) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            `Zoho already has sales order ${duplicate.salesorder_number} for PO ${poNumber}. ` +
+            'Open that order instead, or void it first if it is wrong. Nothing has been created.',
+        });
+      }
+    }
+
+    /*
       Item codes first, because a sales order cannot reference one that does not
       exist. Sequential rather than parallel: Zoho rate-limits, and a
       half-created set of items is a worse place to fail than none.
     */
     /** AED → the billing currency. The dirham is pegged, so this is exact. */
     const rateToBilling =
-      input.billingCurrency === 'AED' ? 1 : (PEGGED.AED ?? 0.2723);
+      input.billingCurrency === 'AED' ? 1 : (PEGGED.AED ?? 1 / USD_TO_AED);
 
     const lineItems = [];
     const createdCodes: string[] = [];
@@ -407,7 +413,7 @@ const adminCreateZohoOrder = adminProcedure
         `Created from ${input.poNumber ?? 'client LPO'} — check before confirming.` +
         (input.billingCurrency === 'AED'
           ? ''
-          : ` Stated in AED on the client's PO; billed in ${input.billingCurrency} at the dirham peg, ${rateToBilling} per AED.`) +
+          : ` Stated in AED on the client's PO; billed in ${input.billingCurrency} at the dirham peg, AED ${USD_TO_AED} per USD.`) +
         (input.excluded.length > 0
           ? ` NOT ON THIS ORDER — could not be identified: ${input.excluded.join('; ')}.`
           : ''),
@@ -425,6 +431,56 @@ const adminCreateZohoOrder = adminProcedure
       lineCount: lineItems.length,
       itemsCreated: createdCodes.length,
     };
+};
+
+const adminCreateZohoOrder = adminProcedure
+  .input(createZohoOrderInput)
+  .mutation(async ({ input }) => {
+    if (!isZohoConfigured()) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Zoho is not configured on this environment.',
+      });
+    }
+
+    /*
+      Zoho holds these as packs, so every line must be a whole number of them.
+      7 bottles against a six-pack would go to Zoho as 1.1667 cases.
+    */
+    const partPacks = input.lines.filter(
+      (line) => line.bottles % line.soldPack !== 0,
+    );
+
+    if (partPacks.length > 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'These lines are not a whole number of packs: ' +
+          partPacks
+            .map((line) => `${line.wine} (${line.bottles} bottles in packs of ${line.soldPack})`)
+            .join('; ') +
+          '. Correct the pack or quantity, then create the order. Nothing has been created.',
+      });
+    }
+
+    const inFlightKey = `${input.clientContactId ?? input.client}|${input.poNumber ?? ''}|${input.lines
+      .map((line) => `${line.lwin18}x${line.bottles}`)
+      .join(',')}`;
+
+    if (inFlight.has(inFlightKey)) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This order is already being created. Wait for it to finish.',
+      });
+    }
+
+    inFlight.add(inFlightKey);
+
+    try {
+      return await createOrder(input);
+    } finally {
+      inFlight.delete(inFlightKey);
+    }
   });
 
 export default adminCreateZohoOrder;

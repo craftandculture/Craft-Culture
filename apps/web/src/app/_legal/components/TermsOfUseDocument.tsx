@@ -518,7 +518,7 @@ const TermsOfUseDocument = () => {
                   Email:{' '}
                   <a
                     href="mailto:support@craftculture.xyz"
-                    className="text-text-brand transition-colors hover:text-text-brand-hover"
+                    className="text-text-primary transition-colors hover:text-text-primary-hover"
                   >
                     support@craftculture.xyz
                   </a>
@@ -529,7 +529,7 @@ const TermsOfUseDocument = () => {
                     href="https://craftculture.xyz"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-text-brand transition-colors hover:text-text-brand-hover"
+                    className="text-text-primary transition-colors hover:text-text-primary-hover"
                   >
                     craftculture.xyz
                   </a>

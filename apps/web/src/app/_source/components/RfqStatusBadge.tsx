@@ -22,8 +22,8 @@ const RfqStatusBadge = ({ status }: RfqStatusBadgeProps) => {
       label: 'Parsing',
     },
     ready_to_send: {
-      bg: 'bg-fill-brand/10',
-      text: 'text-text-brand',
+      bg: 'bg-text-primary/10',
+      text: 'text-text-primary',
       label: 'Ready',
     },
     sent: {
@@ -42,8 +42,8 @@ const RfqStatusBadge = ({ status }: RfqStatusBadgeProps) => {
       label: 'Comparing',
     },
     selecting: {
-      bg: 'bg-fill-brand/10',
-      text: 'text-text-brand',
+      bg: 'bg-text-primary/10',
+      text: 'text-text-primary',
       label: 'Selecting',
     },
     client_review: {

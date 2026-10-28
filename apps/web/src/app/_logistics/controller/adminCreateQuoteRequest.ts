@@ -5,12 +5,16 @@ import {
   logisticsQuoteRequestRecipients,
   logisticsQuoteRequests,
 } from '@/database/schema';
-import { approvedProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
+import findOrCreateForwarder from '../data/findOrCreateForwarder';
+import openJobForRequest from '../data/openJobForRequest';
+import sendFreightEmails from '../data/sendFreightEmails';
 import createQuoteRequestSchema from '../schemas/createQuoteRequestSchema';
 import generateRequestNumber from '../utils/generateRequestNumber';
 import isUniqueViolation from '../utils/isUniqueViolation';
+import logisticsEmailTemplateId from '../utils/logisticsEmailTemplateId';
 import normaliseCountry from '../utils/normaliseCountry';
 
 /**
@@ -18,8 +22,11 @@ import normaliseCountry from '../utils/normaliseCountry';
  *
  * Allows sales team to request freight quotes from logistics. Request numbers
  * are auto-generated in format QRQ-YYYY-XXXX.
+ *
+ * No quotes without a job: a request started from a shipment is quoted for that
+ * shipment; any other opens its own job, a draft SHP shipment, as it is saved.
  */
-const adminCreateQuoteRequest = approvedProcedure
+const adminCreateQuoteRequest = adminProcedure
   .input(createQuoteRequestSchema)
   .mutation(async ({ input, ctx }) => {
     try {
@@ -54,6 +61,10 @@ const adminCreateQuoteRequest = approvedProcedure
               total75clEquivalents: input.total75clEquivalents || null,
               sourceType: input.sourceType ?? null,
               sourceId: input.sourceType ? input.sourceId || null : null,
+              shipmentId:
+                input.sourceType === 'shipment' ? input.sourceId || null : null,
+              clientName: input.clientName || null,
+              clientEmail: input.clientEmail || null,
               replyBy: input.replyBy || null,
               requiresThermalLiner: input.requiresThermalLiner,
               requiresTracker: input.requiresTracker,
@@ -80,17 +91,47 @@ const adminCreateQuoteRequest = approvedProcedure
         });
       }
 
-      if (input.forwarderIds?.length) {
+      const job = await openJobForRequest(request, {
+        type: input.jobType,
+        userId: ctx.user.id,
+      });
+
+      const added = await Promise.all(
+        (input.newForwarders ?? []).map((f) =>
+          findOrCreateForwarder({ name: f.name, email: f.email || null, addedBy: ctx.user.id }),
+        ),
+      );
+      const forwarderIds = [
+        ...new Set([...(input.forwarderIds ?? []), ...added.map((f) => f.id)]),
+      ];
+      const saved = request;
+
+      if (forwarderIds.length) {
         await db
           .insert(logisticsQuoteRequestRecipients)
           .values(
-            [...new Set(input.forwarderIds)].map((forwarderId) => ({
-              requestId: request.id,
+            forwarderIds.map((forwarderId) => ({
+              requestId: saved.id,
               forwarderId,
             })),
           )
           .onConflictDoNothing();
       }
+
+      // Saving and sending is one step; a failed send leaves the request saved, its forwarders not marked sent
+      const emailResult =
+        input.sendNow && forwarderIds.length && logisticsEmailTemplateId()
+          ? await sendFreightEmails(
+              { requestId: saved.id, kind: 'request', forwarderIds },
+              ctx.user,
+            ).catch((error) => {
+              logger.error('Request saved but not sent', {
+                requestId: saved.id,
+                error,
+              });
+              return null;
+            })
+          : null;
 
       logger.info('Created quote request', {
         requestId: request.id,
@@ -98,9 +139,12 @@ const adminCreateQuoteRequest = approvedProcedure
         requestedBy: ctx.user.id,
       });
 
-      return request;
+      return { ...request, shipmentId: job.id, job, emailResult };
     } catch (error) {
-      logger.error('Failed to create quote request', { error, input });
+      logger.error('Failed to create quote request', {
+        error: error instanceof Error ? error.message : String(error),
+        requestedBy: ctx.user.id,
+      });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to create quote request',

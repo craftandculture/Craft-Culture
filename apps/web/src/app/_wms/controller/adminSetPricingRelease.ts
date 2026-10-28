@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import writeProductPricing from '../utils/writeProductPricing';
 
@@ -25,7 +25,7 @@ import writeProductPricing from '../utils/writeProductPricing';
  *     lwin18s: ['1014525-2019-06-00750'], released: true,
  *   });
  */
-const adminSetPricingRelease = wmsOperatorProcedure
+const adminSetPricingRelease = adminProcedure
   .input(
     z.object({
       lwin18s: z.array(z.string()).min(1).max(500),

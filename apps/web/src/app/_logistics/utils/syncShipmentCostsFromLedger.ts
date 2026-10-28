@@ -2,7 +2,9 @@ import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
+  logisticsGroupCostLines,
   logisticsShipmentCostLines,
+  logisticsShipmentGroups,
   logisticsShipmentItems,
   logisticsShipments,
 } from '@/database/schema';
@@ -11,13 +13,24 @@ import calculateLandedCost from './calculateLandedCost';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /**
  * Recompute a shipment's 8 cost fields as the sum of its cost-ledger lines by
  * category, then re-run landed-cost allocation. Call after any ledger change so
  * the breakdown, per-item landed cost and pricing stay in sync with the ledger.
+ *
+ * A shipment in a consolidation group whose freight has been allocated (the
+ * group has cost lines or an allocation date) takes its landed cost from the
+ * group: the breakdown fields are still updated, but the items' landed cost is
+ * left as the group allocation wrote it rather than overwritten.
+ *
+ * @param shipmentId - The shipment whose ledger changed
+ * @param conn - A transaction to run inside, or the database
+ * @returns Whether the landed cost was left to the shipment's group
  */
-const syncShipmentCostsFromLedger = async (shipmentId: string) => {
-  const lines = await db
+const syncShipmentCostsFromLedger = async (shipmentId: string, conn: Tx | typeof db = db) => {
+  const lines = await conn
     .select()
     .from(logisticsShipmentCostLines)
     .where(eq(logisticsShipmentCostLines.shipmentId, shipmentId));
@@ -40,7 +53,7 @@ const syncShipmentCostsFromLedger = async (shipmentId: string) => {
     b[k] += l.amountUsd;
   }
 
-  await db
+  await conn
     .update(logisticsShipments)
     .set({
       freightCostUsd: round2(b.freight),
@@ -55,23 +68,40 @@ const syncShipmentCostsFromLedger = async (shipmentId: string) => {
     })
     .where(eq(logisticsShipments.id, shipmentId));
 
-  const [shipment] = await db
+  const [shipment] = await conn
     .select()
     .from(logisticsShipments)
     .where(eq(logisticsShipments.id, shipmentId));
-  const items = await db
+
+  if (shipment?.groupId) {
+    const [group] = await conn
+      .select({ allocatedAt: logisticsShipmentGroups.allocatedAt })
+      .from(logisticsShipmentGroups)
+      .where(eq(logisticsShipmentGroups.id, shipment.groupId));
+    const [groupLine] = await conn
+      .select({ id: logisticsGroupCostLines.id })
+      .from(logisticsGroupCostLines)
+      .where(eq(logisticsGroupCostLines.groupId, shipment.groupId))
+      .limit(1);
+
+    if (group && (group.allocatedAt || groupLine)) {
+      return { deferredToGroup: true };
+    }
+  }
+
+  const items = await conn
     .select()
     .from(logisticsShipmentItems)
     .where(eq(logisticsShipmentItems.shipmentId, shipmentId));
 
   if (shipment && items.length > 0) {
     const result = calculateLandedCost(shipment, items);
-    await db
+    await conn
       .update(logisticsShipments)
       .set({ totalLandedCostUsd: result.totalLandedCost, updatedAt: new Date() })
       .where(eq(logisticsShipments.id, shipmentId));
     for (const it of result.items) {
-      await db
+      await conn
         .update(logisticsShipmentItems)
         .set({
           freightAllocated: it.freightAllocated,
@@ -82,6 +112,8 @@ const syncShipmentCostsFromLedger = async (shipmentId: string) => {
         .where(eq(logisticsShipmentItems.id, it.itemId));
     }
   }
+
+  return { deferredToGroup: false };
 };
 
 export default syncShipmentCostsFromLedger;

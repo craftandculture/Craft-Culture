@@ -56,6 +56,18 @@ export const OPEN_ORDER_STATUSES = (
   ] as OrderStatus[]
 ).filter((status) => !CLOSED_STATUSES.includes(status));
 
+/**
+ * Orders not yet approved by C&C: the only ones a partner's own edit to a
+ * client reaches. Once approved, the distributor works from (and may have
+ * verified) the details on the order, so changing them is C&C's call.
+ */
+export const PRE_APPROVAL_ORDER_STATUSES: OrderStatus[] = [
+  'draft',
+  'submitted',
+  'under_cc_review',
+  'revision_requested',
+];
+
 /** One line, as an order stores an address. */
 const joinAddress = (input: ClientDetailInput) =>
   [

@@ -1,24 +1,27 @@
+import type { IntakeRoute } from '../constants/intakeRoutes';
 import type { IntakeStage } from '../constants/intakeStages';
 
 /**
  * The transfer stage a linked inbound shipment's status implies
  *
- * Only the UAE leg is in the logistics module, so a shipment can move a
- * transfer to "arranging", "shipping to the UAE" or "in your cellar" — the
- * UK bond stage before it stays with the team. A draft or cancelled shipment
- * implies nothing.
+ * On the UK bond route only the UAE leg is in the logistics module, so the
+ * UK bond stage stays with the team. On the forwarder route the shipment is
+ * the whole journey, so its collection is the member's "collected" step. A
+ * draft or cancelled shipment implies nothing.
  *
  * @example
  *   intakeStageFromShipment('in_transit'); // 'shipping_uae'
  *
  * @param status - The shipment's status
+ * @param route - The transfer's route
  * @returns The stage it implies, or null
  */
-const intakeStageFromShipment = (status: string): IntakeStage | null => {
+const intakeStageFromShipment = (status: string, route: IntakeRoute = 'uk_bond'): IntakeStage | null => {
   switch (status) {
     case 'booked':
-    case 'picked_up':
       return 'in_progress';
+    case 'picked_up':
+      return route === 'forwarder' ? 'arriving_uk' : 'in_progress';
     case 'in_transit':
     case 'arrived_port':
     case 'customs_clearance':

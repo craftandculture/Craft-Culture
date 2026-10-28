@@ -1,7 +1,6 @@
 'use client';
 
 import { IconDeviceMobile, IconShare2, IconSquarePlus, IconX } from '@tabler/icons-react';
-import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const DISMISSED_KEY = 'cc-cellar-install-dismissed';
@@ -9,6 +8,11 @@ const DISMISSED_KEY = 'cc-cellar-install-dismissed';
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+export interface CellarInstallCardProps {
+  /** Your cellar offers it once and lets it be dismissed; Your details always offers it */
+  placement?: 'home' | 'details';
 }
 
 const readDismissed = () => {
@@ -24,21 +28,23 @@ const isInstalled = () =>
   (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
 /**
- * A one-time suggestion to keep the cellar on the home screen
+ * A suggestion to keep the cellar on the home screen
  *
- * Shown on a phone, on Your cellar, until it is installed or dismissed. iPhone
- * has no install prompt a page can raise, so it is told the two taps in
- * Safari; Android and desktop Chrome offer their own, which the button opens.
- * Nothing shows once the cellar is opened from the home screen.
+ * On Your cellar it sits beneath the wine, on a phone, until it is installed
+ * or dismissed. On Your details it stays, without a close button, for as long
+ * as the cellar is not installed. iPhone has no install prompt a page can
+ * raise, so it is told the two taps in Safari; Android and desktop Chrome
+ * offer their own, which the link opens. Nothing shows once the cellar is
+ * opened from the home screen.
  */
-const CellarInstallCard = () => {
-  const pathname = usePathname();
+const CellarInstallCard = ({ placement = 'home' }: CellarInstallCardProps) => {
   const [visible, setVisible] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [prompt, setPrompt] = useState<InstallPromptEvent | null>(null);
 
   useEffect(() => {
-    if (isInstalled() || readDismissed()) return;
+    if (isInstalled()) return;
+    if (placement === 'home' && readDismissed()) return;
     setIsIos(/iphone|ipad|ipod/i.test(navigator.userAgent));
     setVisible(true);
 
@@ -48,7 +54,7 @@ const CellarInstallCard = () => {
     };
     window.addEventListener('beforeinstallprompt', onPrompt);
     return () => window.removeEventListener('beforeinstallprompt', onPrompt);
-  }, []);
+  }, [placement]);
 
   const dismiss = () => {
     setVisible(false);
@@ -67,12 +73,14 @@ const CellarInstallCard = () => {
     setPrompt(null);
   };
 
-  if (!visible || pathname !== '/platform/cellar') return null;
+  if (!visible) return null;
   if (!isIos && !prompt) return null;
 
   return (
-    <div className="relative mb-5 flex gap-3 rounded-2xl bg-black/[0.04] p-4 pr-11 md:hidden dark:bg-white/[0.06]">
-      <span className="bg-text-primary text-surface-primary grid size-10 shrink-0 place-items-center rounded-xl">
+    <div
+      className={`border-border-muted relative flex gap-3 rounded-2xl border p-4 md:hidden ${placement === 'home' ? 'mt-5 pr-11' : ''}`}
+    >
+      <span className="bg-surface-muted text-text-muted grid size-10 shrink-0 place-items-center rounded-xl">
         <IconDeviceMobile size={20} />
       </span>
       <div className="flex min-w-0 flex-col gap-1.5">
@@ -89,21 +97,23 @@ const CellarInstallCard = () => {
             <button
               type="button"
               onClick={install}
-              className="bg-text-primary text-surface-primary mt-1 self-start rounded-lg px-3.5 py-2 text-sm font-semibold"
+              className="self-start text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
             >
               Add to home screen
             </button>
           </>
         )}
       </div>
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label="Dismiss"
-        className="text-text-muted absolute top-3 right-3 grid size-8 place-items-center rounded-full"
-      >
-        <IconX size={16} />
-      </button>
+      {placement === 'home' && (
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="Dismiss"
+          className="text-text-muted absolute top-3 right-3 grid size-8 place-items-center rounded-full"
+        >
+          <IconX size={16} />
+        </button>
+      )}
     </div>
   );
 };

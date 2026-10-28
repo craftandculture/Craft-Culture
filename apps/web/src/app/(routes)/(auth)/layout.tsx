@@ -6,12 +6,13 @@ import { PropsWithChildren } from 'react';
 import Logo from '@/app/_ui/components/Logo/Logo';
 import logoOnDark from '@/app/_ui/components/Logo/logo-on-dark.png';
 
-const OFFERS = ['Stock, pricing and availability', 'Orders, deliveries and documents', 'Your cellar, held in bond'];
+/* Neutral on purpose: collectors and trade partners sign in through the same door */
+const OFFERS = ['Your wine, held in bond', 'Orders, deliveries and documents', 'Availability across our cellars'];
 
 /**
  * Sign-in, verify and welcome, framed by a brand panel on wide screens
  *
- * The panel says what Index is before anyone has an account, over a photo of
+ * The panel says what Craft & Culture is before anyone has an account, over a photo of
  * our own cold room; on a phone it is dropped and the logo sits above the form
  * instead, so the form is never pushed below the fold.
  */
@@ -40,7 +41,7 @@ const AuthLayout = async ({ children }: PropsWithChildren) => {
               Temperature-controlled bonded storage, 12–16°C
             </p>
           </div>
-          <p className="text-xs text-neutral-400">Craft and Culture FZE · craftculture.xyz</p>
+          <p className="text-xs text-neutral-400">Craft &amp; Culture · craftculture.xyz</p>
         </div>
       </aside>
       <main className="flex min-w-0 flex-1 flex-col px-4 py-10 sm:px-8">

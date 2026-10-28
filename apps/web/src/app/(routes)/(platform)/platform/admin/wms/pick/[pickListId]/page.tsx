@@ -26,6 +26,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ClientMark from '@/app/_wms/components/ClientMark';
 import LocationBadge from '@/app/_wms/components/LocationBadge';
 import RelabelRemainderPrompt from '@/app/_wms/components/RelabelRemainderPrompt';
 import type { RemainderToRelabel } from '@/app/_wms/components/RelabelRemainderPrompt';
@@ -34,6 +35,9 @@ import type { ScanInputHandle } from '@/app/_wms/components/ScanInput';
 import usePrintPcoLabels from '@/app/_wms/hooks/usePrintPcoLabels';
 import useWmsApi from '@/app/_wms/hooks/useWmsApi';
 import caseScanMatchesLwin from '@/app/_wms/utils/caseScanMatchesLwin';
+import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
+import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
+import pakKeyOf from '@/app/_wms/utils/pakKeyOf';
 import useTRPC from '@/lib/trpc/browser';
 
 /**
@@ -158,6 +162,8 @@ const WMSPickListDetailPage = () => {
       resetAfterPick();
       toast.success(`Picked ${qty} case(s)${where}`);
     },
+    // Re-read the list so the bay shown is one that can still cover the pick.
+    onError: () => invalidatePickQueries(),
   });
 
   // Bottle (split-case) pick — always cloud tRPC; the local NUC server has no
@@ -171,6 +177,7 @@ const WMSPickListDetailPage = () => {
       // Only a cracked case leaves one; a clean pick returns null.
       if (result?.remainder) setRemainderToRelabel(result.remainder);
     },
+    onError: () => invalidatePickQueries(),
   });
 
   // Complete pick list mutation — routes through local NUC when available
@@ -275,12 +282,30 @@ const WMSPickListDetailPage = () => {
       const result = await lookupLocation({ barcode });
 
       /*
-        Any bay is accepted, not only the suggested one. The suggestion is a
-        best guess; the picker can see a shelf holding the same wine, and
-        blocking them sent people up to a pallet for a case within reach. The
-        pick itself checks the scanned bay holds enough and says where else it
-        is if not.
+        Any bay holding this wine is accepted, not only the suggested one. The
+        suggestion is a best guess; the picker can see a shelf holding the same
+        wine, and blocking them sent people up to a pallet for a case within
+        reach. A bay that does not hold the wine at all is still refused here,
+        at the scan — accepting it let any barcode through until Confirm.
+
+        Matched pack-agnostically, like the pick itself. A line whose code
+        cannot be split (released before it had a usable LWIN) is left to the
+        pick, which falls back to the product name at the bay.
       */
+      if (pickingItem && lwinPackAgnosticPattern(pickingItem.lwin18)) {
+        const wanted = pakKeyOf(normalizeLwin18(pickingItem.lwin18));
+        const holdsWine = result.stock.some(
+          (row) => pakKeyOf(normalizeLwin18(row.lwin18)) === wanted,
+        );
+
+        if (!holdsWine) {
+          const suggestedCode = data?.items.find((i) => i.id === pickingItem.itemId)?.suggestedLocationCode;
+          setLocationError(
+            `${pickingItem.productName} is not in ${result.location.locationCode}${suggestedCode ? ` — try ${suggestedCode}` : ''}`,
+          );
+          return;
+        }
+      }
 
       setPickedLocationId(result.location.id);
       setPickedLocationCode(result.location.locationCode);
@@ -292,7 +317,7 @@ const WMSPickListDetailPage = () => {
     } finally {
       setIsLookingUpLocation(false);
     }
-  }, [scannedBarcodes, lookupLocation]);
+  }, [scannedBarcodes, lookupLocation, pickingItem, data]);
 
   // Handle case barcode scan
   const handleCaseScan = useCallback((barcode: string) => {
@@ -317,8 +342,10 @@ const WMSPickListDetailPage = () => {
     */
     const normalizedScan = barcode.replace(/-/g, '').toLowerCase();
     const normalizedLwin = pickingItem.lwin18.replace(/-/g, '').toLowerCase();
-    const exactMatch =
-      normalizedScan.includes(normalizedLwin) || normalizedLwin.includes(normalizedScan);
+    // One way only: the scan may carry the code (`CASE-{lwin18}-001`), but a
+    // scan that is merely part of the code — `2015`, `750`, a bare wine ID —
+    // says nothing about which case this is.
+    const exactMatch = normalizedScan.includes(normalizedLwin);
 
     if (exactMatch || caseScanMatchesLwin(barcode, pickingItem.lwin18)) {
       setCaseVerified(true);
@@ -351,6 +378,18 @@ const WMSPickListDetailPage = () => {
   // Get next location hint for picker
   const nextItem = unpickedItems[currentItemIndex + 1];
   const nextLocationHint = nextItem?.suggestedLocationCode;
+
+  /*
+    The line being picked, by id rather than by position.
+
+    The list is sorted by bay, and the bay is now worked out from live stock on
+    every read. A refresh mid-pick that moves this line to another bay also
+    moves it in the sort, and reading by index would then show the picker a
+    different wine's bay while they hold this one.
+  */
+  const pickingLine =
+    (pickingItem && data?.items.find((item) => item.id === pickingItem.itemId)) ||
+    currentItem;
 
   // Start picking current item
   const startPicking = () => {
@@ -481,7 +520,15 @@ const WMSPickListDetailPage = () => {
             <Icon icon={IconArrowLeft} size="sm" />
           </Button>
         </Link>
+        {data.customerName ? (
+          <ClientMark logoUrl={data.customerLogoUrl} name={data.customerName} size="lg" />
+        ) : null}
         <div className="min-w-0 flex-1">
+          {data.customerName ? (
+            <div className="truncate text-sm font-semibold text-text-primary">
+              {data.customerName}
+            </div>
+          ) : null}
           <div className="flex items-center gap-2">
             <Typography variant="headingSm" className="truncate">
               {data.pickListNumber}
@@ -501,7 +548,7 @@ const WMSPickListDetailPage = () => {
           <div className="mt-1.5 flex items-center gap-2">
             <div className="h-1.5 flex-1 rounded-full bg-fill-secondary">
               <div
-                className="h-1.5 rounded-full bg-brand-600 transition-all"
+                className="h-1.5 rounded-full bg-text-primary transition-all"
                 style={{ width: `${data.progress.percent}%` }}
               />
             </div>
@@ -537,15 +584,15 @@ const WMSPickListDetailPage = () => {
           href={`/api/admin/wms/picking-list/${pickListId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mb-3 flex w-full items-center gap-3 rounded-xl border-2 border-brand-500 bg-brand-50 px-4 py-3 transition-colors hover:bg-brand-100 active:scale-[0.99] dark:border-brand-700 dark:bg-brand-900/20"
+          className="mb-3 flex w-full items-center gap-3 rounded-xl border-2 border-text-primary bg-surface-secondary px-4 py-3 transition-colors hover:bg-surface-secondary active:scale-[0.99] dark:border-text-primary dark:bg-surface-secondary"
         >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-white">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-surface-secondary0 text-white">
             <Icon icon={IconPrinter} size="md" />
           </span>
           <span className="min-w-0 flex-1">
             <Typography
               variant="bodyMd"
-              className="font-bold text-brand-700 dark:text-brand-300"
+              className="font-bold text-text-primary dark:text-text-primary"
             >
               Print Pick List
             </Typography>
@@ -556,7 +603,7 @@ const WMSPickListDetailPage = () => {
           <Icon
             icon={IconChevronRight}
             size="sm"
-            className="shrink-0 text-brand-400"
+            className="shrink-0 text-text-primary"
           />
         </a>
       )}
@@ -629,7 +676,7 @@ const WMSPickListDetailPage = () => {
               title="Print every case label for this order"
               className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-border-primary bg-fill-secondary px-4 py-2.5 text-left transition-colors hover:bg-fill-muted disabled:opacity-60"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-brand text-text-brand">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-brand text-text-primary">
                 <Icon
                   icon={isPrintingLabels ? IconLoader2 : IconTag}
                   size="sm"
@@ -645,7 +692,7 @@ const WMSPickListDetailPage = () => {
                 </Typography>
               </span>
               {pcoRef.labelCount ? (
-                <span className="shrink-0 rounded-full bg-surface-brand px-2.5 py-1 text-xs font-semibold text-text-brand">
+                <span className="shrink-0 rounded-full bg-surface-brand px-2.5 py-1 text-xs font-semibold text-text-primary">
                   {pcoRef.labelCount} label{pcoRef.labelCount === 1 ? '' : 's'}
                 </span>
               ) : null}
@@ -750,12 +797,12 @@ const WMSPickListDetailPage = () => {
       {/* ── Pre-Pick: Current Item Card ── */}
       {!isComplete && !allPicked && !pickingItem && currentItem && (
         <div className="space-y-3">
-          <Card className="border-2 border-brand-500">
+          <Card className="border-2 border-text-primary">
             <CardContent className="p-0">
               {/* Item counter + location row */}
               <div className="flex items-center justify-between border-b border-border-primary px-4 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-brand-600">
+                  <span className="text-xs font-semibold text-text-primary">
                     {currentItemIndex + 1}/{unpickedItems.length}
                   </span>
                   {formatCaseConfig(currentItem) &&
@@ -827,7 +874,7 @@ const WMSPickListDetailPage = () => {
                   <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
                     Pick Qty
                   </span>
-                  <div className="text-3xl font-bold text-brand-600">
+                  <div className="text-3xl font-bold text-text-primary">
                     {currentItem.quantityBottles ?? currentItem.quantityCases}
                   </div>
                   <span className="text-[10px] text-text-muted">
@@ -857,7 +904,9 @@ const WMSPickListDetailPage = () => {
                     {currentItem.suggestedLocationCode ?? '—'}
                   </div>
                   <span className="text-[10px] text-text-muted">
-                    go to location
+                    {currentItem.bayMovedFrom
+                      ? `${currentItem.bayMovedFrom} is empty — stock moved here`
+                      : 'go to location'}
                   </span>
                 </div>
               </div>
@@ -910,13 +959,13 @@ const WMSPickListDetailPage = () => {
       {pickingItem && (
         <div className="space-y-3">
           {/* Picking header bar — product + qty + location */}
-          <div className="flex items-start gap-3 rounded-lg bg-brand-50 p-3 dark:bg-brand-900/20">
+          <div className="flex items-start gap-3 rounded-lg bg-surface-secondary p-3 dark:bg-surface-secondary">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-600">Picking</span>
-                {formatCaseConfig(currentItem ?? { caseConfig: null, bottleSize: null }) && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-text-primary">Picking</span>
+                {formatCaseConfig(pickingLine ?? { caseConfig: null, bottleSize: null }) && (
                   <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                    {formatCaseConfig(currentItem ?? { caseConfig: null, bottleSize: null })}
+                    {formatCaseConfig(pickingLine ?? { caseConfig: null, bottleSize: null })}
                   </span>
                 )}
               </div>
@@ -925,27 +974,55 @@ const WMSPickListDetailPage = () => {
               </Typography>
             </div>
             <div className="shrink-0 text-right">
-              <div className="text-2xl font-bold text-brand-600">{pickingItem.quantityNeeded}</div>
+              <div className="text-2xl font-bold text-text-primary">{pickingItem.quantityNeeded}</div>
               <span className="text-[10px] text-text-muted">
                 {pickingItem.isBottlePick ? 'bottles' : 'cases'}
               </span>
             </div>
           </div>
 
+          {/*
+            The break-a-case instruction again, for the whole scan.
+
+            It used to show only on the line card, which is gone once Pick is
+            tapped. A picker at the bay then saw "4 bottles" over a 6x75cl
+            badge and nothing saying a case had to be opened, and the relabel
+            prompt for the two left over only arrives after Confirm Pick.
+          */}
+          {pickingLine && isCrackPick(pickingLine) && (
+            <div className="flex items-center gap-2 rounded-lg border-2 border-amber-400 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-900/20">
+              <Icon icon={IconPackage} size="sm" className="shrink-0 text-amber-600" />
+              <Typography variant="bodySm" className="font-semibold text-amber-800 dark:text-amber-300">
+                {wholeCases(pickingLine) > 0
+                  ? `Take ${wholeCases(pickingLine)} sealed ${formatCaseConfig(pickingLine)} case${wholeCases(pickingLine) === 1 ? '' : 's'}, then break one more — `
+                  : `Break open a ${formatCaseConfig(pickingLine)} case — `}
+                take {looseBottles(pickingLine)} loose bottle
+                {looseBottles(pickingLine) === 1 ? '' : 's'}, return{' '}
+                {(pickingLine.caseConfig ?? 0) - looseBottles(pickingLine)} to the
+                shelf. You will be asked to relabel them after Confirm Pick.
+              </Typography>
+            </div>
+          )}
+
           {/* GO TO LOCATION — prominent only during location step */}
-          {currentItem?.suggestedLocationCode && scanStep === 'location' && (
+          {pickingLine?.suggestedLocationCode && scanStep === 'location' && (
             <div className="rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-4 text-center dark:bg-amber-900/20">
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
                 Go to Bay
               </span>
               <div className="font-mono text-3xl font-bold text-amber-700 dark:text-amber-300">
-                {currentItem.suggestedLocationCode}
+                {pickingLine.suggestedLocationCode}
               </div>
+              {pickingLine.bayMovedFrom && (
+                <div className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                  {pickingLine.bayMovedFrom} is empty for this wine — use this bay instead
+                </div>
+              )}
             </div>
           )}
 
           {/* No suggested location warning */}
-          {!currentItem?.suggestedLocationCode && scanStep === 'location' && (
+          {!pickingLine?.suggestedLocationCode && scanStep === 'location' && (
             <div className="rounded-lg border-2 border-red-400 bg-red-50 px-4 py-3 text-center dark:bg-red-900/20">
               <Typography variant="bodySm" className="font-semibold text-red-700 dark:text-red-300">
                 No location found in system
@@ -972,7 +1049,13 @@ const WMSPickListDetailPage = () => {
               <Button
                 variant="outline"
                 className="h-10 w-10 text-lg"
-                onClick={() => setPickedQuantity((prev) => prev + 1)}
+                // Capped at the line: the server refuses more than the line asks for
+                onClick={() =>
+                  setPickedQuantity((prev) =>
+                    Math.min(pickingItem?.quantityNeeded ?? prev + 1, prev + 1),
+                  )
+                }
+                disabled={pickedQuantity >= (pickingItem?.quantityNeeded ?? Infinity)}
               >
                 +
               </Button>
@@ -983,13 +1066,13 @@ const WMSPickListDetailPage = () => {
           <Card className="overflow-hidden">
             <CardContent className="p-0">
               {/* Step 1: Location */}
-              <div className={`p-3 ${scanStep === 'location' ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}>
+              <div className={`p-3 ${scanStep === 'location' ? 'bg-surface-secondary dark:bg-surface-secondary' : ''}`}>
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                       pickedLocationCode
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                        : 'bg-surface-secondary text-text-primary dark:bg-surface-secondary dark:text-text-primary'
                     }`}>
                       {pickedLocationCode ? <Icon icon={IconCheck} size="sm" /> : '1'}
                     </span>
@@ -1009,18 +1092,18 @@ const WMSPickListDetailPage = () => {
                       error={locationError ?? (duplicateScanError && scanStep === 'location' ? duplicateScanError : undefined)}
                       autoFocus
                     />
-                    {currentItem?.suggestedLocationId && (
+                    {pickingLine?.suggestedLocationId && (
                       <button
                         type="button"
                         onClick={() => {
-                          setPickedLocationId(currentItem.suggestedLocationId);
-                          setPickedLocationCode(currentItem.suggestedLocationCode ?? 'Manual');
+                          setPickedLocationId(pickingLine.suggestedLocationId);
+                          setPickedLocationCode(pickingLine.suggestedLocationCode ?? 'Manual');
                           setScanStep('case');
                         }}
                         className="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 active:scale-[0.98] dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
                       >
                         <Icon icon={IconHandStop} size="xs" className="mr-1 inline-block" />
-                        Skip Scan — Use {currentItem.suggestedLocationCode}
+                        Skip Scan — Use {pickingLine.suggestedLocationCode}
                       </button>
                     )}
                   </div>
@@ -1035,14 +1118,14 @@ const WMSPickListDetailPage = () => {
               <div className="border-t border-border-primary" />
 
               {/* Step 2: Case */}
-              <div className={`p-3 ${scanStep === 'case' ? 'bg-brand-50/50 dark:bg-brand-900/10' : !pickedLocationCode ? 'opacity-40' : ''}`}>
+              <div className={`p-3 ${scanStep === 'case' ? 'bg-surface-secondary dark:bg-surface-secondary' : !pickedLocationCode ? 'opacity-40' : ''}`}>
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                       caseVerified
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                         : scanStep === 'case'
-                          ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                          ? 'bg-surface-secondary text-text-primary dark:bg-surface-secondary dark:text-text-primary'
                           : 'bg-fill-secondary text-text-muted'
                     }`}>
                       {caseVerified ? <Icon icon={IconCheck} size="sm" /> : '2'}
@@ -1124,10 +1207,39 @@ const WMSPickListDetailPage = () => {
           </div>
 
           {(pickItemMutation.isError || pickBottlesMutation.isError) && (
-            <Typography variant="bodyXs" className="text-center text-red-600">
-              {pickItemMutation.error?.message ??
-                pickBottlesMutation.error?.message}
-            </Typography>
+            <div className="space-y-2">
+              <Typography variant="bodyXs" className="block text-center text-red-600">
+                {pickItemMutation.error?.message ??
+                  pickBottlesMutation.error?.message}
+              </Typography>
+              {/*
+                Back to the bay step without losing the line. The only way out
+                was Cancel and start again, and the scans from the failed try
+                were still remembered, so the same case label scanned at the
+                next bay was refused as already scanned.
+              */}
+              <Button
+                variant="outline"
+                className="h-12 w-full"
+                onClick={() => {
+                  pickItemMutation.reset();
+                  pickBottlesMutation.reset();
+                  setPickedLocationId(null);
+                  setPickedLocationCode('');
+                  setCaseVerified(false);
+                  setScanStep('location');
+                  setScannedBarcodes(new Set());
+                  setDuplicateScanError(null);
+                  setLocationError(null);
+                }}
+              >
+                Scan a different bay
+                {pickingLine?.suggestedLocationCode &&
+                pickingLine.suggestedLocationCode !== pickedLocationCode
+                  ? ` — go to ${pickingLine.suggestedLocationCode}`
+                  : ''}
+              </Button>
+            </div>
           )}
 
           {/* Next bay hint */}

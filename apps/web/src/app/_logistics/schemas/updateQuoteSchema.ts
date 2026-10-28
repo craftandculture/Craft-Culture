@@ -10,6 +10,8 @@ const updateQuoteSchema = z.object({
   forwarderName: z.string().min(1).optional(),
   forwarderContact: z.string().optional(),
   forwarderEmail: z.string().email('Invalid email').optional().or(z.literal('')),
+  /** The forwarder's own quote reference */
+  forwarderReference: z.string().optional(),
 
   // Route details
   originCountry: z.string().optional(),
@@ -27,7 +29,7 @@ const updateQuoteSchema = z.object({
 
   // Validity
   validFrom: z.coerce.date().optional(),
-  validUntil: z.coerce.date().optional(),
+  validUntil: z.coerce.date().optional().nullable(),
 
   // Notes
   notes: z.string().optional(),

@@ -22,6 +22,8 @@ export interface StatementLine {
   /** What City Drinks were billed for those same bottles, FIFO */
   billedToOutlet: number;
   currency: string | null;
+  /** The currency costPerBottle and dueToOwner are stated in */
+  costCurrency: 'AED' | 'USD';
   /** Bottles that sold with no invoice layer left to draw from */
   shortBottles: number;
   /** Which of our invoices the value came from */
@@ -45,6 +47,9 @@ interface LayerRow {
   pack: number | null;
   currency: string | null;
 }
+
+/** The UAE dirham's fixed peg to the US dollar */
+const AED_PER_USD = 3.6725;
 
 const keyOf = (value: string | null | undefined) =>
   (value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -152,34 +157,10 @@ const buildOwnerStatement = async (input: {
     const live = await getPricingManagerLanded(keys);
 
     /*
-      Written down while it is still there to write down. A wine costed today
-      and sold out tomorrow keeps the figure it was costed at, which is the
-      whole of what makes a past month still priceable.
+      Reading a statement writes nothing. The live cost is written down by the
+      daily cron (rememberLandedCosts) while the wine is still on the Pricing
+      Manager, which is what keeps a sold-out wine's past month priceable.
     */
-    if (remembers && live.length > 0) {
-      const byKey = new Map(sold.map((row) => [wineKey(row.lwin18), row]));
-
-      await client`
-        INSERT INTO cons_wine_landed ${client(
-          live.map((row) => ({
-            owner_id: input.ownerId,
-            wine_key: row.key,
-            lwin18: byKey.get(row.key)?.lwin18 ?? null,
-            product_name: byKey.get(row.key)?.productName ?? null,
-            landed_per_bottle: row.landedPerBottle,
-            source: 'pricing-manager',
-          })),
-        )}
-        ON CONFLICT (owner_id, wine_key) DO UPDATE SET
-          landed_per_bottle = EXCLUDED.landed_per_bottle,
-          lwin18 = COALESCE(EXCLUDED.lwin18, cons_wine_landed.lwin18),
-          product_name = COALESCE(
-            EXCLUDED.product_name, cons_wine_landed.product_name
-          ),
-          source = EXCLUDED.source,
-          updated_at = NOW()
-      `;
-    }
 
     const remembered = remembers
       ? await client<{ key: string; landedPerBottle: number; source: string }[]>`
@@ -249,7 +230,17 @@ const buildOwnerStatement = async (input: {
       );
 
       const costed = costByLwin.get(wineKey(row.lwin18));
-      const costPerBottle = costed?.landedPerBottle ?? null;
+      /*
+        Landed cost is held in USD (the Pricing Manager's currency); the
+        outlet is billed in the invoice's currency. Subtracting one from the
+        other gave a margin in no currency at all, so a cost is stated in the
+        billing currency: AED at the fixed peg. Any other billing currency is
+        left as it was and the line says so through costCurrency.
+      */
+      const landedUsd = costed?.landedPerBottle ?? null;
+      const inAed = valued.currency === 'AED';
+      const costPerBottle =
+        landedUsd === null ? null : inAed ? landedUsd * AED_PER_USD : landedUsd;
 
       return {
         lwin18: row.lwin18,
@@ -266,6 +257,7 @@ const buildOwnerStatement = async (input: {
         costIsOwnLine: costed?.ownLine ?? false,
         billedToOutlet: valued.value,
         currency: valued.currency,
+        costCurrency: inAed ? 'AED' : 'USD',
         shortBottles: valued.shortBottles,
         drawnFrom: valued.drawnFrom,
       };

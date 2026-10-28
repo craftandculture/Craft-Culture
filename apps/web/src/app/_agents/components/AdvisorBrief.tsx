@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  IconAlertCircle,
   IconBinoculars,
   IconBrain,
   IconCurrencyDollar,
@@ -10,7 +9,9 @@ import {
   IconRefresh,
   IconShoppingCart,
   IconSparkles,
+  IconTarget,
   IconTrendingUp,
+  IconTrophy,
   IconTruck,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -27,11 +28,16 @@ interface AdvisorData {
   kpiSnapshot?: {
     revenueThisMonthUsd: number;
     revenueTrend: string;
+    revenueTrendDetail?: string;
     openOrders: number;
     overdueInvoicesUsd: number;
     stockCasesTotal: number;
     dispatchPending: number;
   };
+  wins?: Array<{
+    title: string;
+    description: string;
+  }>;
   risks?: Array<{
     severity: string;
     title: string;
@@ -54,6 +60,12 @@ interface AdvisorData {
     rationale: string;
   }>;
 }
+
+const improvementTiming: Record<string, string> = {
+  high: 'This week',
+  medium: 'Soon',
+  low: 'When convenient',
+};
 
 const agentIcons: Record<string, typeof IconBrain> = {
   scout: IconBinoculars,
@@ -136,6 +148,7 @@ const AdvisorBrief = () => {
 
   const d = brief.data as AdvisorData | null;
   const kpi = d?.kpiSnapshot;
+  const wins = d?.wins ?? [];
   const risks = d?.risks ?? [];
   const opportunities = d?.opportunities ?? [];
   const synthesis = d?.agentSynthesis ?? [];
@@ -184,6 +197,11 @@ const AdvisorBrief = () => {
               <Typography variant="headingSm" className="mt-1">
                 {kpi.revenueTrend}
               </Typography>
+              {kpi.revenueTrendDetail && (
+                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                  {kpi.revenueTrendDetail}
+                </Typography>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -201,7 +219,7 @@ const AdvisorBrief = () => {
               <Typography variant="bodyXs" colorRole="muted" className="text-[10px] font-medium uppercase">
                 Overdue
               </Typography>
-              <Typography variant="headingSm" className={`mt-1 ${kpi.overdueInvoicesUsd > 0 ? 'text-red-600' : 'text-text-muted'}`}>
+              <Typography variant="headingSm" className={`mt-1 ${kpi.overdueInvoicesUsd > 0 ? 'text-amber-600' : 'text-text-muted'}`}>
                 ${(kpi.overdueInvoicesUsd / 1000).toFixed(0)}k
               </Typography>
             </CardContent>
@@ -236,7 +254,7 @@ const AdvisorBrief = () => {
         <Card>
           <CardContent className="border-l-3 border-l-indigo-500 p-4">
             <Typography variant="bodyXs" className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-indigo-600">
-              Strategic Summary
+              This Week
             </Typography>
             <Typography variant="bodySm">
               {d.executiveSummary}
@@ -245,19 +263,48 @@ const AdvisorBrief = () => {
         </Card>
       )}
 
-      {/* Risks + Opportunities */}
+      {/* Wins */}
+      {wins.length > 0 && (
+        <Card>
+          <CardContent className="p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <Typography variant="bodySm" className="font-semibold">
+                Wins
+              </Typography>
+              <Badge colorRole="success" size="xs">
+                <IconTrophy size={12} className="mr-1" />
+                {wins.length}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {wins.map((win, i) => (
+                <div key={i} className="rounded-lg border border-border-muted bg-emerald-50/50 p-3 dark:bg-emerald-950/20">
+                  <Typography variant="bodySm" className="font-semibold">
+                    {win.title}
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                    {win.description}
+                  </Typography>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Improvements + Opportunities */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        {/* Risks */}
+        {/* Improvements (stored as risks) */}
         {risks.length > 0 && (
           <Card>
             <CardContent className="p-5">
               <div className="mb-3 flex items-center justify-between">
                 <Typography variant="bodySm" className="font-semibold">
-                  Risks
+                  Improvements
                 </Typography>
-                <Badge colorRole="danger" size="xs">
-                  <IconAlertCircle size={12} className="mr-1" />
-                  {risks.length} flagged
+                <Badge colorRole="muted" size="xs">
+                  <IconTarget size={12} className="mr-1" />
+                  {risks.length} to action
                 </Badge>
               </div>
               <div className="flex flex-col gap-3">
@@ -265,11 +312,11 @@ const AdvisorBrief = () => {
                   <div key={i} className="rounded-lg border border-border-muted p-3">
                     <div className="flex items-start gap-2">
                       <Badge
-                        colorRole={risk.severity === 'high' ? 'danger' : risk.severity === 'medium' ? 'warning' : 'neutral'}
+                        colorRole={risk.severity === 'high' ? 'warning' : 'muted'}
                         size="xs"
                         className="mt-0.5 shrink-0"
                       >
-                        {risk.severity}
+                        {improvementTiming[risk.severity] ?? risk.severity}
                       </Badge>
                       <Typography variant="bodySm" className="font-semibold">
                         {risk.title}
@@ -278,7 +325,7 @@ const AdvisorBrief = () => {
                     <Typography variant="bodyXs" colorRole="muted" className="mt-1.5">
                       {risk.description}
                     </Typography>
-                    <Typography variant="bodyXs" className="mt-1.5 font-medium text-text-brand">
+                    <Typography variant="bodyXs" className="mt-1.5 font-medium text-text-primary">
                       Action: {risk.suggestedAction}
                     </Typography>
                   </div>
@@ -315,7 +362,7 @@ const AdvisorBrief = () => {
                         Impact: ~${opp.estimatedImpactUsd.toLocaleString()}
                       </Typography>
                     </div>
-                    <Typography variant="bodyXs" className="mt-1 font-medium text-text-brand">
+                    <Typography variant="bodyXs" className="mt-1 font-medium text-text-primary">
                       Action: {opp.suggestedAction}
                     </Typography>
                   </div>

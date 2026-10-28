@@ -187,7 +187,7 @@ const ScannerTestPage = () => {
               <div className="flex items-center gap-4 mb-4">
                 <div
                   className={`flex-1 border-2 rounded-lg transition-colors ${
-                    isInputFocused ? 'border-brand-primary' : 'border-border-muted'
+                    isInputFocused ? 'border-text-primary' : 'border-border-muted'
                   }`}
                 >
                   <div className="flex items-center gap-3 px-4 py-3">
@@ -225,7 +225,7 @@ const ScannerTestPage = () => {
               <div className="flex items-center justify-between text-xs text-text-muted">
                 <span>
                   {isInputFocused ? (
-                    <span className="text-brand-primary">Ready to scan</span>
+                    <span className="text-text-primary">Ready to scan</span>
                   ) : (
                     'Click to focus input'
                   )}

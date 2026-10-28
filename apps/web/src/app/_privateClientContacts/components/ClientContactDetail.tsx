@@ -8,6 +8,7 @@ import {
   IconPencil,
   IconPhone,
   IconPlus,
+  IconRefresh,
   IconShieldCheck,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -30,7 +31,7 @@ interface ClientContactDetailProps {
 const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
   const trpcClient = useTRPCClient();
 
-  const { data: contact, isLoading } = useQuery({
+  const { data: contact, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ['privateClientContacts.getOne', clientId],
     queryFn: () => trpcClient.privateClientContacts.getOne.query({ id: clientId }),
   });
@@ -46,10 +47,34 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Typography variant="bodySm" colorRole="muted">
-          Loading client...
+      <div className="space-y-6" aria-busy="true">
+        <div className="space-y-2">
+          <div className="h-4 w-28 animate-pulse rounded bg-surface-muted" />
+          <div className="h-8 w-64 max-w-full animate-pulse rounded-lg bg-surface-muted" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="h-48 animate-pulse rounded-xl bg-surface-muted lg:col-span-2" />
+          <div className="h-48 animate-pulse rounded-xl bg-surface-muted" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border-muted bg-surface-primary py-12 text-center shadow-sm">
+        <Typography variant="bodySm" className="font-medium">
+          This client could not be loaded
         </Typography>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-text-primary px-3 py-1.5 text-sm font-medium text-surface-primary transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          <Icon icon={IconRefresh} size="sm" />
+          {isFetching ? 'Loading…' : 'Try again'}
+        </button>
       </div>
     );
   }
@@ -63,7 +88,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
         <Button asChild variant="outline">
           <Link href="/platform/clients">
             <Icon icon={IconArrowLeft} size="sm" className="mr-2" />
-            Back to Clients
+            Back to clients
           </Link>
         </Button>
       </div>
@@ -91,14 +116,14 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
             className="mb-2 flex items-center gap-1 text-sm text-text-muted hover:text-text-primary"
           >
             <Icon icon={IconArrowLeft} size="sm" />
-            Back to Clients
+            Back to clients
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Typography variant="headingLg">{contact.name}</Typography>
             {contact.cityDrinksVerifiedAt && (
               <span
-                className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                title="City Drinks Verified"
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60"
+                title="Verified with the distributor"
               >
                 <Icon icon={IconShieldCheck} size="sm" />
                 <span className="text-xs font-medium">Verified</span>
@@ -109,7 +134,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
             Client since {format(new Date(contact.createdAt), 'MMMM yyyy')}
           </Typography>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
             <Link href={`/platform/clients/${contact.id}/edit`}>
               <Icon icon={IconPencil} size="sm" className="mr-2" />
@@ -119,7 +144,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
           <Button asChild>
             <Link href={`/platform/private-orders/new?clientId=${contact.id}`}>
               <Icon icon={IconPlus} size="sm" className="mr-2" />
-              New Order
+              New order
             </Link>
           </Button>
         </div>
@@ -129,9 +154,9 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
         {/* Contact Info */}
         <div className="space-y-6 lg:col-span-2">
           {/* Contact Details Card */}
-          <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-6">
+          <div className="rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm sm:p-6">
             <Typography variant="headingXs" className="mb-4">
-              Contact Details
+              Contact details
             </Typography>
             <div className="space-y-3">
               {contact.email && (
@@ -157,7 +182,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
 
           {/* Preferences Card */}
           {(contact.winePreferences || contact.deliveryInstructions || contact.paymentNotes) && (
-            <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-6">
+            <div className="rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm sm:p-6">
               <Typography variant="headingXs" className="mb-4">
                 Preferences
               </Typography>
@@ -165,7 +190,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
                 {contact.winePreferences && (
                   <div>
                     <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                      Wine Preferences
+                      Wine preferences
                     </Typography>
                     <Typography variant="bodySm">{contact.winePreferences}</Typography>
                   </div>
@@ -173,7 +198,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
                 {contact.deliveryInstructions && (
                   <div>
                     <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                      Delivery Instructions
+                      Delivery instructions
                     </Typography>
                     <Typography variant="bodySm">{contact.deliveryInstructions}</Typography>
                   </div>
@@ -181,7 +206,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
                 {contact.paymentNotes && (
                   <div>
                     <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                      Payment Notes
+                      Payment notes
                     </Typography>
                     <Typography variant="bodySm">{contact.paymentNotes}</Typography>
                   </div>
@@ -192,22 +217,22 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
 
           {/* Notes Card */}
           {contact.notes && (
-            <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-6">
+            <div className="rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm sm:p-6">
               <Typography variant="headingXs" className="mb-4">
-                Internal Notes
+                Internal notes
               </Typography>
               <Typography variant="bodySm">{contact.notes}</Typography>
             </div>
           )}
 
           {/* Order History */}
-          <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-6">
+          <div className="rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm sm:p-6">
             <div className="mb-4 flex items-center justify-between">
-              <Typography variant="headingXs">Order History</Typography>
+              <Typography variant="headingXs">Order history</Typography>
               <Button asChild size="sm" variant="outline">
                 <Link href={`/platform/private-orders/new?clientId=${contact.id}`}>
                   <Icon icon={IconPlus} size="sm" className="mr-1" />
-                  New Order
+                  New order
                 </Link>
               </Button>
             </div>
@@ -225,7 +250,7 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
                   <Link
                     key={order.id}
                     href={`/platform/private-orders/${order.id}`}
-                    className="flex items-center justify-between py-3 transition-colors hover:bg-surface-secondary/50"
+                    className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-3 transition-colors hover:bg-surface-secondary/50"
                   >
                     <div className="flex items-center gap-4">
                       <div>
@@ -233,11 +258,11 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
                           {order.orderNumber}
                         </Typography>
                         <Typography variant="bodyXs" colorRole="muted">
-                          {format(new Date(order.createdAt), 'MMM d, yyyy')}
+                          {format(new Date(order.createdAt), 'd MMM yyyy')}
                         </Typography>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-4">
                       <div className="text-right">
                         <Typography variant="bodySm" className="font-medium">
                           {formatCurrency(order.totalUsd)}
@@ -257,31 +282,31 @@ const ClientContactDetail = ({ clientId }: ClientContactDetailProps) => {
 
         {/* Stats Sidebar */}
         <div className="space-y-4">
-          <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-6">
+          <div className="rounded-xl border border-border-muted bg-surface-primary p-4 shadow-sm sm:p-6">
             <Typography variant="headingXs" className="mb-4">
               Summary
             </Typography>
             <div className="space-y-4">
               <div>
                 <Typography variant="bodyXs" colorRole="muted">
-                  Total Orders
+                  Total orders
                 </Typography>
                 <Typography variant="headingSm">{contact.totalOrders}</Typography>
               </div>
               <div>
                 <Typography variant="bodyXs" colorRole="muted">
-                  Total Spend
+                  Total spend
                 </Typography>
                 <Typography variant="headingSm">{formatCurrency(contact.totalSpendUsd)}</Typography>
               </div>
               <div>
                 <Typography variant="bodyXs" colorRole="muted">
-                  Last Order
+                  Last order
                 </Typography>
                 <Typography variant="bodySm">
                   {contact.lastOrderAt
-                    ? format(new Date(contact.lastOrderAt), 'MMMM d, yyyy')
-                    : 'Never'}
+                    ? format(new Date(contact.lastOrderAt), 'd MMM yyyy')
+                    : 'No orders yet'}
                 </Typography>
               </div>
             </div>

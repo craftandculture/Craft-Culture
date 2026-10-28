@@ -11,6 +11,7 @@ import {
   IconSearch,
   IconSnowflake,
   IconThermometer,
+  IconUsers,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,12 +23,12 @@ import type { Tone } from '@/app/_logistics/components/exports/exportUi';
 import {
   card,
   money,
-  pill,
   pillClass,
   primaryButton,
   secondaryButton,
   sectionHeading,
 } from '@/app/_logistics/components/exports/exportUi';
+import UaeArrivalCostsCard from '@/app/_logistics/components/quotes/UaeArrivalCostsCard';
 import type { QuoteRequestNextStep } from '@/app/_logistics/utils/quoteRequestNextStep';
 import type {
   logisticsQuoteRequestStatus,
@@ -64,10 +65,15 @@ const quoteStatusTone: Record<QuoteStatus, Tone> = {
 };
 
 /** What each request is waiting on, as the list says it */
-const nextStepLabel: Record<QuoteRequestNextStep, { text: string; tone: Tone } | null> = {
+const nextStepLabel: Record<
+  QuoteRequestNextStep,
+  { text: string; tone: Tone } | null
+> = {
+  add_cargo: { text: 'Add the cargo size', tone: 'amber' },
   choose_forwarders: { text: 'Choose forwarders', tone: 'amber' },
   send: { text: 'Send to forwarders', tone: 'amber' },
   chase: { text: 'Chase due', tone: 'red' },
+  fix_quotes: { text: 'Quotes expired', tone: 'red' },
   awaiting: { text: 'Awaiting replies', tone: 'blue' },
   price: { text: 'Price the client', tone: 'violet' },
   send_price: { text: 'Send the client price', tone: 'violet' },
@@ -75,11 +81,21 @@ const nextStepLabel: Record<QuoteRequestNextStep, { text: string; tone: Tone } |
   done: null,
 };
 
-const ACTION_STEPS: QuoteRequestNextStep[] = ['choose_forwarders', 'send', 'chase', 'price', 'send_price'];
+const ACTION_STEPS: QuoteRequestNextStep[] = [
+  'add_cargo',
+  'choose_forwarders',
+  'send',
+  'chase',
+  'fix_quotes',
+  'price',
+  'send_price',
+];
 const DECIDE_STEPS: QuoteRequestNextStep[] = ['price', 'send_price', 'accept'];
 
 const usd = (n: number | null | undefined) =>
-  n == null ? '—' : `USD ${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  n == null
+    ? '—'
+    : `USD ${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const modeLabel: Record<string, string> = {
   sea_fcl: 'Sea FCL',
@@ -87,6 +103,15 @@ const modeLabel: Record<string, string> = {
   air: 'Air',
   road: 'Road',
 };
+
+/**
+ * The forwarder a quote is from, as the list shows it
+ *
+ * @param name - Forwarder name as stored
+ * @returns The name, or a prompt when the quote was entered without one
+ */
+const forwarderLabel = (name: string | null) =>
+  !name || name === 'Unknown' ? 'Forwarder not set' : name;
 
 /** The most quotes the comparison screen sets side by side */
 const MAX_COMPARE = 5;
@@ -97,7 +122,8 @@ const MAX_COMPARE = 5;
  * @param status - Quote status
  * @returns False for rejected and expired quotes
  */
-const isLive = (status: QuoteStatus) => status !== 'rejected' && status !== 'expired';
+const isLive = (status: QuoteStatus) =>
+  status !== 'rejected' && status !== 'expired';
 
 /**
  * Capitalise the first letter of a status
@@ -105,7 +131,8 @@ const isLive = (status: QuoteStatus) => status !== 'rejected' && status !== 'exp
  * @param text - Status as stored
  * @returns The status as it reads on screen
  */
-const titleCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const titleCase = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1);
 
 /**
  * Freight quotes: one home for quote requests and the quotes they receive
@@ -121,8 +148,13 @@ const FreightQuotesPage = () => {
   const shipmentId = searchParams.get('shipmentId') || undefined;
 
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<RequestStatus | ''>('');
-  const [focus, setFocus] = useState<Focus>('action');
+  /*
+    Always opens on everything. It used to open on Needs action whenever
+    something did, while the All requests pill still read as selected, so the
+    same page showed two lists depending on when it was loaded. The tiles
+    count what needs doing; clicking one narrows the list.
+  */
+  const [focus, setFocus] = useState<Focus>('');
   const [selected, setSelected] = useState<string[]>([]);
 
   const {
@@ -152,7 +184,6 @@ const FreightQuotesPage = () => {
   const requests = requestData?.requests ?? [];
   const standalone = quoteData?.quotes ?? [];
 
-  const isOpen = (s: RequestStatus) => s !== 'completed' && s !== 'cancelled';
   const needsAction = requests.filter((r) => ACTION_STEPS.includes(r.nextStep));
   const awaiting = requests.filter((r) => r.nextStep === 'awaiting');
   const toDecide = requests.filter((r) => DECIDE_STEPS.includes(r.nextStep));
@@ -210,8 +241,8 @@ const FreightQuotesPage = () => {
     },
     {
       key: 'standalone',
-      label: 'Without a request',
-      sub: 'Quotes entered directly',
+      label: 'Without a job',
+      sub: 'Older quotes entered directly',
       value: standalone.length,
       icon: IconFileInvoice,
       tone: 'border-slate-200 from-slate-50/60 dark:border-slate-700 dark:from-slate-500/10',
@@ -225,125 +256,161 @@ const FreightQuotesPage = () => {
     if (focus === 'awaiting' && !awaiting.includes(r)) return false;
     if (focus === 'decide' && !toDecide.includes(r)) return false;
     if (focus === 'completed' && r.status !== 'completed') return false;
-    if (status && r.status !== status) return false;
     return true;
   });
   const showStandalone = !!shipmentId || focus === '' || focus === 'standalone';
 
   const toggleSelected = (id: string) =>
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  const canCompareSelected = selected.length >= 2 && selected.length <= MAX_COMPARE;
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  const canCompareSelected =
+    selected.length >= 2 && selected.length <= MAX_COMPARE;
 
   return (
     <div className="container mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="mb-1 flex items-center gap-1.5 text-sm text-text-muted">
-            <Link href="/platform/admin/logistics" className="transition-colors hover:text-text-primary">
+          <div className="text-text-muted mb-1 flex items-center gap-1.5 text-sm">
+            <Link
+              href="/platform/admin/logistics"
+              className="hover:text-text-primary transition-colors"
+            >
               Logistics
             </Link>
             <IconChevronRight className="size-4" />
             <span className="text-text-primary">Freight quotes</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Freight quotes</h1>
-          <p className="mt-0.5 text-sm text-text-muted">
-            Requests for freight and the forwarder quotes received against each one
+          <h1 className="text-text-primary text-2xl font-semibold tracking-tight">
+            Freight quotes
+          </h1>
+          <p className="text-text-muted mt-0.5 text-sm">
+            Freight requests and the forwarder quotes against them
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/platform/admin/logistics/quotes/new" className={secondaryButton}>
-            <IconPlus size={16} /> Quote without a request
+          <Link
+            href="/platform/admin/logistics/forwarders"
+            className={secondaryButton}
+          >
+            <IconUsers size={16} /> Forwarders
           </Link>
-          <Link href="/platform/admin/logistics/requests/new" className={primaryButton}>
+          <Link
+            href="/platform/admin/logistics/requests/new"
+            className={primaryButton}
+          >
             <IconPlus size={16} /> New request
           </Link>
         </div>
       </div>
 
       {(requestsError || quotesError) && (
-        <p className={`${card} p-6 text-sm text-text-muted`}>
-          Freight quotes could not be loaded: {(requestsError ?? quotesError)?.message}
+        <p className={`${card} text-text-muted p-6 text-sm`}>
+          Freight quotes could not be loaded:{' '}
+          {(requestsError ?? quotesError)?.message}
         </p>
       )}
 
       {shipmentId ? (
-        <p className={`${card} flex items-center justify-between gap-3 p-4 text-sm text-text-muted`}>
+        <p
+          className={`${card} text-text-muted flex items-center justify-between gap-3 p-4 text-sm`}
+        >
           Showing the quotes linked to one shipment.
-          <Link href="/platform/admin/logistics/quotes" className={secondaryButton}>
+          <Link
+            href="/platform/admin/logistics/quotes"
+            className={secondaryButton}
+          >
             Show all freight quotes
           </Link>
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
-          {tiles.map((tile) => {
-            const active = focus === tile.key;
-            const TileIcon = tile.icon;
-            return (
-              <button
-                key={tile.key}
-                type="button"
-                onClick={() => setFocus(active ? '' : tile.key)}
-                className={`rounded-xl border bg-gradient-to-b to-transparent px-3 py-2.5 text-center shadow-sm transition hover:-translate-y-px hover:shadow-md ${tile.tone} ${
-                  active ? 'ring-2 ring-text-primary ring-offset-1 ring-offset-surface-primary' : ''
-                }`}
-              >
-                <span className={`mx-auto mb-1 flex size-6 items-center justify-center rounded-md ${tile.iconTone}`}>
-                  <TileIcon size={13} />
-                </span>
-                <span
-                  className={`block text-lg font-bold leading-tight tabular-nums ${
-                    tile.value === 0 ? 'text-text-muted' : (tile.valueTone ?? '')
+        <div
+          className={`grid grid-cols-2 gap-2.5 ${standalone.length ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}
+        >
+          {/* Quotes now always belong to a job; the older ones show only while there are any */}
+          {tiles
+            .filter((t) => t.key !== 'standalone' || t.value > 0)
+            .map((tile) => {
+              const active = focus === tile.key;
+              const TileIcon = tile.icon;
+              return (
+                <button
+                  key={tile.key}
+                  type="button"
+                  onClick={() => {
+                    setFocus(active ? '' : tile.key);
+                  }}
+                  className={`rounded-xl border bg-gradient-to-b to-transparent px-3 py-2.5 text-center shadow-sm transition hover:-translate-y-px hover:shadow-md ${tile.tone} ${
+                    active
+                      ? 'ring-text-primary ring-offset-surface-primary ring-2 ring-offset-1'
+                      : ''
                   }`}
                 >
-                  {tile.value}
-                </span>
-                <span className="block text-[11px] text-text-muted">{tile.label}</span>
-                <span className="block text-[10px] text-text-muted/80">{tile.sub}</span>
-              </button>
-            );
-          })}
+                  <span
+                    className={`mx-auto mb-1 flex size-6 items-center justify-center rounded-md ${tile.iconTone}`}
+                  >
+                    <TileIcon size={13} />
+                  </span>
+                  <span
+                    className={`block text-lg font-bold tabular-nums leading-tight ${
+                      tile.value === 0
+                        ? 'text-text-muted'
+                        : (tile.valueTone ?? '')
+                    }`}
+                  >
+                    {tile.value}
+                  </span>
+                  <span className="text-text-muted block text-[11px]">
+                    {tile.label}
+                  </span>
+                  <span className="text-text-muted/80 block text-[10px]">
+                    {tile.sub}
+                  </span>
+                </button>
+              );
+            })}
         </div>
       )}
 
       <div className="relative">
-        <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+        <IconSearch className="text-text-muted pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search requests by number, route or cargo, and quotes by number or forwarder"
-          className="h-11 w-full rounded-xl border border-border-muted bg-surface-primary pl-10 pr-3 text-sm text-text-primary shadow-sm placeholder:text-text-muted focus:border-text-primary focus:outline-none"
+          placeholder="Search by client, route, request or quote number"
+          className="border-border-muted bg-surface-primary text-text-primary placeholder:text-text-muted focus:border-text-primary h-11 w-full rounded-xl border pl-10 pr-3 text-sm shadow-sm focus:outline-none"
         />
       </div>
 
-      {!shipmentId && focus !== 'standalone' && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          <button type="button" className={pill(status === '')} onClick={() => setStatus('')}>
-            All requests
-            <span className="ml-1.5 tabular-nums opacity-60">{requests.length}</span>
-          </button>
-          {(Object.keys(requestStatusLabel) as RequestStatus[]).map((s) => (
-            <button key={s} type="button" className={pill(status === s)} onClick={() => setStatus(status === s ? '' : s)}>
-              {requestStatusLabel[s]}
-              <span className="ml-1.5 tabular-nums opacity-60">{requests.filter((r) => r.status === s).length}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {!shipmentId && <UaeArrivalCostsCard />}
 
-      {/* Requests, each with its quotes beneath it */}
+      {/* Requests: one line each — who and where, what it waits on, the best price */}
       {!shipmentId && focus !== 'standalone' && (
         <div className={card}>
-          <div className="flex items-center gap-2 border-b border-border-muted px-4 py-3">
-            <span className={sectionHeading}>Requests</span>
-            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
+          <div className="border-border-muted flex items-center gap-2 border-b px-4 py-3">
+            <span className={sectionHeading}>
+              {focus ? tiles.find((t) => t.key === focus)?.label : 'All requests'}
+            </span>
+            <span className="bg-surface-muted text-text-muted rounded-full px-2 py-0.5 text-[11px] font-medium">
               {shownRequests.length}
             </span>
+            {focus && (
+              <button
+                type="button"
+                onClick={() => setFocus('')}
+                className="text-text-muted hover:text-text-primary ml-auto text-xs"
+              >
+                Show all
+              </button>
+            )}
           </div>
 
           {requestsLoading ? (
-            <p className="py-12 text-center text-sm text-text-muted">Loading requests…</p>
+            <p className="text-text-muted py-12 text-center text-sm">
+              Loading requests…
+            </p>
           ) : shownRequests.length === 0 ? (
-            <p className="py-12 text-center text-sm text-text-muted">
+            <p className="text-text-muted py-12 text-center text-sm">
               {focus === 'action' && requests.length
                 ? 'Nothing needs action. Every request is with forwarders or the client.'
                 : requests.length
@@ -351,134 +418,89 @@ const FreightQuotesPage = () => {
                   : 'No quote requests yet. Open the first with New request.'}
             </p>
           ) : (
-            <ul className="divide-y divide-border-muted">
+            <ul className="divide-border-muted divide-y">
               {shownRequests.map((r) => {
                 const live = r.quotes.filter((q) => isLive(q.status));
                 const best = live[0];
                 const step = nextStepLabel[r.nextStep];
-                const pendingCount = r.quotes.filter((q) => q.status === 'pending').length;
-                const compareIds = (live.length >= 2 ? live : r.quotes).slice(0, MAX_COMPARE).map((q) => q.id);
-                const href = `/platform/admin/logistics/requests/${r.id}`;
-                const cargo = [
-                  titleCase(r.productType),
-                  r.totalCases ? `${r.totalCases} cases` : null,
-                  r.totalPallets ? `${r.totalPallets} pallets` : null,
-                  r.totalWeightKg ? `${r.totalWeightKg.toFixed(0)} kg` : null,
-                  r.transportMode ? modeLabel[r.transportMode] : null,
+                const quoted = r.recipients.filter((x) => x.outcome === 'quoted').length;
+                const meta = [
+                  r.job?.shipmentNumber,
+                  r.bottles ? `${r.bottles.toLocaleString('en-GB')} btl` : r.totalCases ? `${r.totalCases} cs` : null,
+                  r.recipients.length
+                    ? `${quoted} of ${r.recipients.length} forwarder${r.recipients.length === 1 ? '' : 's'} quoted`
+                    : null,
+                  formatDistanceToNow(new Date(r.createdAt), { addSuffix: true }),
                 ].filter(Boolean);
 
                 return (
-                  <li key={r.id} className="px-4 py-3">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
-                      <Link href={href} className="group min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-sm font-semibold text-text-primary group-hover:underline">
-                            {r.requestNumber}
+                  <li key={r.id}>
+                    <Link
+                      href={`/platform/admin/logistics/requests/${r.id}`}
+                      className="hover:bg-surface-secondary/50 flex items-center gap-4 px-4 py-3 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-text-primary truncate text-sm font-semibold">
+                            {r.clientName || 'No client'}
                           </span>
-                          {step ? (
-                            <span className={pillClass(step.tone)}>{step.text}</span>
-                          ) : (
-                            <span className={pillClass(requestStatusTone[r.status])}>{requestStatusLabel[r.status]}</span>
-                          )}
-                          {(r.priority === 'high' || r.priority === 'urgent') && (
-                            <span className={pillClass(r.priority === 'urgent' ? 'red' : 'amber')}>
-                              {titleCase(r.priority)}
-                            </span>
-                          )}
-                          {r.requiresThermalLiner && (
-                            <span className={pillClass('slate')}>
-                              <IconSnowflake size={11} /> Liner
-                            </span>
-                          )}
-                          {r.requiresTracker && (
-                            <span className={pillClass('slate')}>
-                              <IconThermometer size={11} /> Tracker
-                            </span>
+                          {r.priority === 'urgent' && (
+                            <span className={pillClass('red')}>Urgent</span>
                           )}
                         </div>
-                        <p className="mt-0.5 truncate text-sm text-text-primary">
-                          {r.originCity || r.originCountry} → {r.destinationCity || r.destinationCountry}
-                        </p>
-                        <p className="truncate text-xs text-text-muted">
-                          {cargo.join(' · ')}
-                          {r.requester ? ` · ${r.requester.name || r.requester.email}` : ''}
-                          {' · '}
-                          {formatDistanceToNow(new Date(r.createdAt), { addSuffix: true })}
-                        </p>
-                      </Link>
-                      <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-                        <span className="text-xs text-text-muted">
-                          {r.quotes.length === 0
-                            ? 'No quotes yet'
-                            : `${r.quotes.length} quote${r.quotes.length === 1 ? '' : 's'}`}
-                          {best && r.quotes.length > 0
-                            ? ` · best ${best.per75clUsd != null ? `${usd(best.per75clUsd)} per 75cl` : money(best.totalPrice, best.currency)}`
-                            : ''}
-                          {pendingCount > 0 ? ` · ${pendingCount} pending` : ''}
-                          {r.marginUsd != null ? ` · margin ${usd(r.marginUsd)}` : ''}
-                        </span>
-                        {compareIds.length >= 2 && (
-                          <Link
-                            href={`/platform/admin/logistics/quotes/compare?ids=${compareIds.join(',')}`}
-                            className={secondaryButton}
-                          >
-                            <IconGitCompare size={15} /> Compare
-                          </Link>
-                        )}
-                        {isOpen(r.status) && (
-                          <Link
-                            href={`/platform/admin/logistics/quotes/new?requestId=${r.id}`}
-                            className={secondaryButton}
-                          >
-                            <IconPlus size={15} /> Add quote
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-
-                    {r.recipients.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {r.recipients.map((x) => (
-                          <span
-                            key={x.forwarderId}
-                            className={pillClass(
-                              x.outcome === 'quoted' ? 'emerald' : x.outcome === 'declined' ? 'slate' : x.sentAt ? 'blue' : 'amber',
-                            )}
-                          >
-                            {x.name}
-                            {' · '}
-                            {x.outcome === 'quoted' ? 'quoted' : x.outcome === 'declined' ? 'not chosen' : x.sentAt ? 'asked' : 'not sent'}
+                        {/* The service on its own line, so it no longer reads as part of the client's name */}
+                        <div className="mt-1 flex items-center gap-2">
+                          {r.transportMode && (
+                            <span className={pillClass('slate')}>{modeLabel[r.transportMode]}</span>
+                          )}
+                          <span className="text-text-secondary truncate text-sm">
+                            {r.originCity || r.originCountry} → {r.destinationCity || r.destinationCountry}
                           </span>
-                        ))}
+                        </div>
+                        <p className="text-text-muted mt-1 flex items-center gap-1.5 truncate text-xs">
+                          <span className="font-mono">{r.requestNumber}</span>
+                          {meta.map((m) => (
+                            <span key={m} className="truncate">· {m}</span>
+                          ))}
+                          {r.requiresThermalLiner && <IconSnowflake size={12} aria-label="Thermal liner" />}
+                          {r.requiresTracker && <IconThermometer size={12} aria-label="Temperature tracker" />}
+                        </p>
                       </div>
-                    )}
 
-                    {r.quotes.length > 0 && (
-                      <ul className="mt-2 space-y-1 border-l-2 border-border-muted pl-3">
-                        {r.quotes.map((q) => (
-                          <li key={q.id}>
-                            <Link
-                              href={`/platform/admin/logistics/quotes/${q.id}`}
-                              className="flex items-center gap-3 rounded-md px-2 py-1 text-sm transition-colors hover:bg-surface-secondary/50"
-                            >
-                              <span className="font-mono text-xs text-text-muted">{q.quoteNumber}</span>
-                              <span className="min-w-0 flex-1 truncate text-text-primary">{q.forwarderName}</span>
-                              {q.transitDays ? (
-                                <span className="hidden text-xs text-text-muted sm:inline">{q.transitDays} days</span>
-                              ) : null}
-                              <span className="tabular-nums text-text-primary">{money(q.totalPrice, q.currency)}</span>
-                              {q.per75clUsd != null && (
-                                <span className="hidden tabular-nums text-xs text-text-muted md:inline">{usd(q.per75clUsd)} / 75cl</span>
-                              )}
-                              {best && q.id === best.id && live.length > 1 && (
-                                <span className={pillClass('emerald')}>Best price</span>
-                              )}
-                              <span className={pillClass(quoteStatusTone[q.status])}>{titleCase(q.status)}</span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                      <div className="shrink-0 text-right">
+                        {best ? (
+                          <>
+                            <span className="text-text-primary block text-sm font-semibold tabular-nums">
+                              {best.perBottleUsd != null
+                                ? `${usd(best.perBottleUsd)} / btl`
+                                : money(best.totalPrice, best.currency)}
+                            </span>
+                            <span className="text-text-muted block text-[11px]">
+                              {live.length > 1 ? `best of ${live.length}` : forwarderLabel(best.forwarderName)}
+                            </span>
+                            {best.arrivalPerBottleUsd != null && best.freightPerBottleUsd != null && (
+                              <span className="text-text-muted block text-[11px] tabular-nums">
+                                Freight {best.freightPerBottleUsd.toFixed(2)} · UAE arrival{' '}
+                                {best.arrivalPerBottleUsd.toFixed(2)}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-text-muted text-xs">No quotes yet</span>
+                        )}
+                      </div>
+
+                      <span className="hidden w-44 shrink-0 justify-end sm:flex">
+                        {step ? (
+                          <span className={pillClass(step.tone)}>{step.text}</span>
+                        ) : (
+                          <span className={pillClass(requestStatusTone[r.status])}>
+                            {requestStatusLabel[r.status]}
+                          </span>
+                        )}
+                      </span>
+                      <IconChevronRight size={16} className="text-text-muted shrink-0" />
+                    </Link>
                   </li>
                 );
               })}
@@ -490,15 +512,21 @@ const FreightQuotesPage = () => {
       {/* Quotes entered without a request */}
       {showStandalone && (
         <div className={card}>
-          <div className="flex items-center gap-2 border-b border-border-muted px-4 py-3">
-            <span className={sectionHeading}>{shipmentId ? 'Quotes for this shipment' : 'Quotes without a request'}</span>
-            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
+          <div className="border-border-muted flex items-center gap-2 border-b px-4 py-3">
+            <span className={sectionHeading}>
+              {shipmentId
+                ? 'Quotes for this shipment'
+                : 'Quotes without a request'}
+            </span>
+            <span className="bg-surface-muted text-text-muted rounded-full px-2 py-0.5 text-[11px] font-medium">
               {standalone.length}
             </span>
             {selected.length > 0 && (
               <div className="ml-auto flex items-center gap-2">
-                <span className="text-xs text-text-muted">
-                  {canCompareSelected ? `${selected.length} selected` : `Select 2 to ${MAX_COMPARE} quotes to compare`}
+                <span className="text-text-muted text-xs">
+                  {canCompareSelected
+                    ? `${selected.length} selected`
+                    : `Select 2 to ${MAX_COMPARE} quotes to compare`}
                 </span>
                 {canCompareSelected && (
                   <Link
@@ -513,13 +541,17 @@ const FreightQuotesPage = () => {
           </div>
 
           {quotesLoading ? (
-            <p className="py-12 text-center text-sm text-text-muted">Loading quotes…</p>
+            <p className="text-text-muted py-12 text-center text-sm">
+              Loading quotes…
+            </p>
           ) : standalone.length === 0 ? (
-            <p className="py-8 text-center text-sm text-text-muted">
-              {shipmentId ? 'No quotes are linked to this shipment.' : 'Every quote answers a request.'}
+            <p className="text-text-muted py-8 text-center text-sm">
+              {shipmentId
+                ? 'No quotes are linked to this shipment.'
+                : 'Every quote answers a request.'}
             </p>
           ) : (
-            <ul className="divide-y divide-border-muted">
+            <ul className="divide-border-muted divide-y">
               {standalone.map((q) => (
                 <li key={q.id} className="flex items-center gap-3 px-4 py-3">
                   <input
@@ -534,18 +566,31 @@ const FreightQuotesPage = () => {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-sm font-semibold text-text-primary">{q.quoteNumber}</span>
-                        <span className={pillClass(quoteStatusTone[q.status])}>{titleCase(q.status)}</span>
-                        {q.shipment && <span className={pillClass('blue')}>{q.shipment.shipmentNumber}</span>}
+                        <span className="text-text-primary font-mono text-sm font-semibold">
+                          {q.quoteNumber}
+                        </span>
+                        <span className={pillClass(quoteStatusTone[q.status])}>
+                          {titleCase(q.status)}
+                        </span>
+                        {q.shipment && (
+                          <span className={pillClass('blue')}>
+                            {q.shipment.shipmentNumber}
+                          </span>
+                        )}
                       </div>
-                      <p className="mt-0.5 truncate text-sm text-text-primary">{q.forwarderName}</p>
-                      <p className="truncate text-xs text-text-muted">
-                        {q.originCity || q.originCountry || '—'} → {q.destinationCity || q.destinationCountry || '—'}
-                        {q.transportMode ? ` · ${modeLabel[q.transportMode]}` : ''}
+                      <p className="text-text-primary mt-0.5 truncate text-sm">
+                        {q.forwarderName}
+                      </p>
+                      <p className="text-text-muted truncate text-xs">
+                        {q.originCity || q.originCountry || '—'} →{' '}
+                        {q.destinationCity || q.destinationCountry || '—'}
+                        {q.transportMode
+                          ? ` · ${modeLabel[q.transportMode]}`
+                          : ''}
                         {q.transitDays ? ` · ${q.transitDays} days` : ''}
                       </p>
                     </div>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums text-text-primary">
+                    <span className="text-text-primary shrink-0 text-sm font-semibold tabular-nums">
                       {money(q.totalPrice, q.currency)}
                     </span>
                   </Link>

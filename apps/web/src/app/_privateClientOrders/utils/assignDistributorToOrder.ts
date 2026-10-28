@@ -5,6 +5,7 @@ import db from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
 import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 
+import isCraftCulturePartner from './isCraftCulturePartner';
 import notifyDistributorOfOrderUpdate from './notifyDistributorOfOrderUpdate';
 import notifyPartnerOfOrderUpdate from './notifyPartnerOfOrderUpdate';
 
@@ -87,14 +88,7 @@ const assignDistributorToOrder = async (
   // C&C acts as its own partner on some orders, so there's no external partner
   // to run the client-verification handshake. Detect that so we can skip the
   // awaiting_partner_verification step and record C&C as the verifier.
-  const orderPartner = order.partnerId
-    ? await db.query.partners.findFirst({
-        where: { id: order.partnerId },
-        columns: { businessName: true },
-      })
-    : null;
-  const partnerIsCraftCulture =
-    orderPartner?.businessName?.trim().toLowerCase() === 'craft & culture';
+  const partnerIsCraftCulture = await isCraftCulturePartner(order.partnerId);
 
   // Determine the new status based on whether verification is still needed
   const previousStatus = order.status;

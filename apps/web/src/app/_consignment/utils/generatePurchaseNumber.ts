@@ -1,5 +1,6 @@
-import { desc, like } from 'drizzle-orm';
-
+import nextYearNumber, {
+  type NumberExecutor,
+} from '@/app/_cellar/utils/nextYearNumber';
 import db from '@/database/client';
 import { cellarPurchases } from '@/database/schema';
 
@@ -12,23 +13,11 @@ import { cellarPurchases } from '@/database/schema';
  * @example
  *   await generatePurchaseNumber(); // 'CPO-2026-0007'
  *
+ * @param executor - The database, or the transaction the insert runs in
+ * @param offset - Steps past the next free number, after a clash (see withNumberRetry)
  * @returns A sequential, year-scoped purchase reference
  */
-const generatePurchaseNumber = async () => {
-  const prefix = `CPO-${new Date().getFullYear()}-`;
-
-  const [latest] = await db
-    .select({ purchaseNumber: cellarPurchases.purchaseNumber })
-    .from(cellarPurchases)
-    .where(like(cellarPurchases.purchaseNumber, `${prefix}%`))
-    .orderBy(desc(cellarPurchases.purchaseNumber))
-    .limit(1);
-
-  const next = latest
-    ? parseInt(latest.purchaseNumber.replace(prefix, ''), 10) + 1
-    : 1;
-
-  return `${prefix}${String(next).padStart(4, '0')}`;
-};
+const generatePurchaseNumber = (executor: NumberExecutor = db, offset = 0) =>
+  nextYearNumber(executor, cellarPurchases, cellarPurchases.purchaseNumber, 'CPO', offset);
 
 export default generatePurchaseNumber;

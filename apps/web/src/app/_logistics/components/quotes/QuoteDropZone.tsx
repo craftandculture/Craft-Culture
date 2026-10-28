@@ -2,19 +2,18 @@
 
 import { IconFileUpload, IconLoader2 } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 
 import useTRPC from '@/lib/trpc/browser';
 
-import pendingQuoteDraft from '../../utils/pendingQuoteDraft';
-import type { PendingQuoteDraft } from '../../utils/pendingQuoteDraft';
-import { card, primaryButton, secondaryButton, sectionHeading } from '../exports/exportUi';
+import type { QuoteDraft } from '../../utils/pendingQuoteDraft';
+import { primaryButton, secondaryButton } from '../exports/exportUi';
 
 export interface QuoteDropZoneProps {
-  requestId: string;
+  /** Called with the quote as read, and the document it came from, to open the editor on */
+  onRead: (draft: QuoteDraft | null, file: { base64: string; fileName: string; mimeType: string } | null) => void;
 }
 
 const readBase64 = (file: File) =>
@@ -28,12 +27,12 @@ const readBase64 = (file: File) =>
 /**
  * Add a forwarder's quote by dropping its PDF or pasting its email
  *
- * The quote is read and the quote form opens with it filled in, against this
- * request, for the person to check and save. Nothing is saved here.
+ * The quote is read and handed back to open the quote editor on, filled in,
+ * for the person to check and save. Nothing is saved here. Typing a quote in
+ * by hand opens the editor empty.
  */
-const QuoteDropZone = ({ requestId }: QuoteDropZoneProps) => {
+const QuoteDropZone = ({ onRead }: QuoteDropZoneProps) => {
   const api = useTRPC();
-  const router = useRouter();
   const [pasting, setPasting] = useState(false);
   const [text, setText] = useState('');
 
@@ -42,13 +41,6 @@ const QuoteDropZone = ({ requestId }: QuoteDropZoneProps) => {
     onError: (error) => toast.error(error.message || 'The quote could not be read'),
   });
 
-  const openForm = useCallback(
-    (draft: PendingQuoteDraft) => {
-      pendingQuoteDraft(draft);
-      router.push(`/platform/admin/logistics/quotes/new?requestId=${requestId}&draft=1`);
-    },
-    [requestId, router],
-  );
 
   const onDrop = useCallback(
     async (files: File[]) => {
@@ -65,9 +57,9 @@ const QuoteDropZone = ({ requestId }: QuoteDropZoneProps) => {
       const base64 = await readBase64(file);
       const draft = await extractQuote({ file: { base64, mimeType, fileName: file.name } }).catch(() => null);
 
-      if (draft) openForm({ requestId, draft, file: { base64, fileName: file.name, mimeType } });
+      if (draft) onRead(draft, { base64, fileName: file.name, mimeType });
     },
-    [extractQuote, openForm, requestId],
+    [extractQuote, onRead],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -80,14 +72,20 @@ const QuoteDropZone = ({ requestId }: QuoteDropZoneProps) => {
 
   const readText = async () => {
     const draft = await extractQuote({ text }).catch(() => null);
-    if (draft) openForm({ requestId, draft, file: null });
+    if (draft) {
+      onRead(draft, null);
+      setText('');
+      setPasting(false);
+    }
   };
 
   return (
-    <div className={`${card} space-y-3 p-4`}>
-      <div className="flex items-center gap-2">
-        <span className={sectionHeading}>Add a quote</span>
-        <button type="button" className={`${secondaryButton} ml-auto`} onClick={() => setPasting((p) => !p)}>
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button type="button" className={secondaryButton} onClick={() => onRead(null, null)}>
+          Type it in
+        </button>
+        <button type="button" className={secondaryButton} onClick={() => setPasting((p) => !p)}>
           {pasting ? 'Drop a file instead' : 'Paste an email instead'}
         </button>
       </div>
@@ -113,7 +111,7 @@ const QuoteDropZone = ({ requestId }: QuoteDropZoneProps) => {
       ) : (
         <div
           {...getRootProps()}
-          className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+          className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-4 text-center transition-colors ${
             isDragActive ? 'border-text-primary bg-surface-secondary/50' : 'border-border-muted hover:border-text-primary'
           }`}
         >

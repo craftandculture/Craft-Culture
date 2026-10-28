@@ -14,6 +14,7 @@ import {
   IconLoader2,
   IconPencil,
   IconPercentage,
+  IconRefresh,
   IconReportMoney,
   IconSearch,
   IconSortAscending,
@@ -23,7 +24,6 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 import {
   Fragment,
   createContext,
@@ -36,14 +36,17 @@ import {
 } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
-import Typography from '@/app/_ui/components/Typography/Typography';
 import PricingBandsEditor from '@/app/_wms/components/PricingBandsEditor';
+import pricePricingManagerRow, {
+  type PricingManagerRowInput,
+} from '@/app/_wms/utils/pricePricingManagerRow';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -228,7 +231,7 @@ const PhonePriceField = ({
             inputMode="decimal"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            className="h-11 w-full rounded-lg border border-border-muted bg-fill-primary pl-7 pr-3 text-base tabular-nums text-text-primary focus:border-border-brand focus:outline-none"
+            className="h-11 w-full rounded-lg border border-border-muted bg-fill-primary pl-7 pr-3 text-base tabular-nums text-text-primary focus:border-text-primary focus:outline-none"
           />
         </span>
         <button
@@ -244,6 +247,60 @@ const PhonePriceField = ({
     </label>
   );
 };
+
+/**
+ * A blanket margin % typed straight into a price column's header
+ *
+ * In Bond and PC each carry their own, so changing one never looks like it
+ * changes the other. Clicks stay inside, so a sortable header does not sort.
+ */
+const HeaderPctInput = ({
+  value,
+  onChange,
+  onCommit,
+  title,
+  tone,
+  allowEmpty = false,
+}: {
+  value: number | null;
+  onChange: (v: number | null) => void;
+  onCommit: () => void;
+  title: string;
+  tone: 'blue' | 'violet';
+  allowEmpty?: boolean;
+}) => (
+  <label
+    title={title}
+    onClick={(e) => e.stopPropagation()}
+    className={`flex items-center gap-0.5 rounded border px-1 py-0.5 text-[10px] font-semibold normal-case ${
+      tone === 'blue'
+        ? 'border-blue-200 bg-blue-50 text-blue-700'
+        : 'border-violet-200 bg-violet-50 text-violet-700'
+    }`}
+  >
+    <input
+      type="number"
+      min="0"
+      max="99"
+      step="0.1"
+      placeholder="—"
+      value={value ?? ''}
+      onChange={(e) =>
+        onChange(
+          e.target.value === '' && allowEmpty
+            ? null
+            : Math.max(0, Number(e.target.value) || 0),
+        )
+      }
+      onBlur={onCommit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+      }}
+      className="w-10 bg-transparent text-right tabular-nums focus:outline-none"
+    />
+    %
+  </label>
+);
 
 const PriceCell = ({
   value,
@@ -304,7 +361,7 @@ const PriceCell = ({
           <IconPencil className="h-3 w-3 opacity-0 transition-opacity group-hover/edit:opacity-60" />
         </button>
         {sub && value != null && value > 0 && (
-          <div className="text-[11px] font-medium tabular-nums text-text-muted">
+          <div className="pm-sub text-[11px] font-medium tabular-nums text-text-muted">
             {sub}
           </div>
         )}
@@ -350,7 +407,7 @@ const PriceCell = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:ring-2 focus:ring-border-brand/30 focus:outline-none"
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-text-primary focus:ring-2 focus:ring-text-primary/30 focus:outline-none"
           placeholder="0.00"
           type="number"
           step="0.01"
@@ -375,7 +432,7 @@ const PriceCell = ({
         />
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="rounded bg-text-primary px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-text-primary/90"
         >
           Save
         </button>
@@ -471,7 +528,7 @@ const OverrideCell = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-text-primary focus:outline-none"
           placeholder="0.00"
           type="number"
           step="0.01"
@@ -487,7 +544,7 @@ const OverrideCell = ({
         />
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="rounded bg-text-primary px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-text-primary/90"
         >
           Save
         </button>
@@ -496,7 +553,7 @@ const OverrideCell = ({
   );
 };
 
-// ─── Margin Cell (bespoke per-line margin % over landed — Spirits/RTD) ─────────
+// ─── Margin Cell (per-line margin %; the price follows) ─────────────────────────
 
 const MarginEditCell = ({
   value,
@@ -561,7 +618,7 @@ const MarginEditCell = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-16 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:ring-2 focus:ring-border-brand/30 focus:outline-none"
+          className="w-16 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-text-primary focus:ring-2 focus:ring-text-primary/30 focus:outline-none"
           placeholder="0.0"
           type="number"
           step="0.1"
@@ -580,7 +637,7 @@ const MarginEditCell = ({
         <span className="text-xs text-text-muted">%</span>
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="rounded bg-text-primary px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-text-primary/90"
         >
           Save
         </button>
@@ -676,7 +733,7 @@ const LogisticsCell = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-text-primary focus:outline-none"
           placeholder="0.00"
           type="number"
           step="0.01"
@@ -693,7 +750,7 @@ const LogisticsCell = ({
         />
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="rounded bg-text-primary px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-text-primary/90"
         >
           Save
         </button>
@@ -789,7 +846,7 @@ const TransfersCell = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-text-primary focus:outline-none"
           placeholder="2.50"
           type="number"
           step="0.01"
@@ -806,7 +863,7 @@ const TransfersCell = ({
         />
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="rounded bg-text-primary px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-text-primary/90"
         >
           Save
         </button>
@@ -842,7 +899,7 @@ const KPI_THEMES = {
   green: { text: 'text-emerald-600', chip: 'bg-emerald-50 text-emerald-500', ring: 'ring-emerald-400' },
   amber: { text: 'text-amber-600', chip: 'bg-amber-50 text-amber-500', ring: 'ring-amber-400' },
   red: { text: 'text-red-600', chip: 'bg-red-50 text-red-500', ring: 'ring-red-400' },
-  brand: { text: 'text-text-primary', chip: 'bg-fill-brand/10 text-fill-brand', ring: 'ring-fill-brand' },
+  brand: { text: 'text-text-primary', chip: 'bg-text-primary/10 text-text-primary', ring: 'ring-text-primary' },
 } as const;
 
 const KpiCard = ({
@@ -893,7 +950,7 @@ const KpiCard = ({
       )}
       {subtitle && <p className="mt-0.5 text-[11px] leading-tight text-text-muted">{subtitle}</p>}
       {onClick && (
-        <p className="mt-1.5 text-[10px] font-medium text-fill-brand">
+        <p className="mt-1.5 text-[10px] font-medium text-text-primary">
           {active ? '✓ Filtering — click to clear' : 'Click to filter →'}
         </p>
       )}
@@ -917,24 +974,6 @@ const KpiCard = ({
       )}
     </Card>
   );
-};
-
-// ─── Margin Dot ───────────────────────────────────────────────────────────────
-
-const MarginDot = ({
-  margin,
-  good = 20,
-  ok = 10,
-}: {
-  margin: number | null;
-  good?: number;
-  ok?: number;
-}) => {
-  if (margin == null)
-    return <span className="inline-block h-2 w-2 rounded-full bg-gray-300" />;
-  if (margin >= good) return <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />;
-  if (margin >= ok) return <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />;
-  return <span className="inline-block h-2 w-2 rounded-full bg-red-500" />;
 };
 
 // ─── Header Info (hover tooltip on a small ⓘ icon) ────────────────────────────
@@ -964,13 +1003,118 @@ const HeaderInfo = ({ text }: { text: string }) => (
 
 // ─── Skeleton Row ─────────────────────────────────────────────────────────────
 
+const VENUE_NAMES: Record<string, string> = {
+  bordeaux_index: 'Bordeaux Index',
+  bbx: 'BBX',
+  wine_collector: 'Wine Collector',
+  cult_wines: 'Cult Wines',
+  cultx: 'CultX',
+};
+
+/**
+ * London in-bond market for the row's bottle size, beside our In Bond price
+ *
+ * The lowest ask is what a trade buyer could buy it for in London today, so it
+ * leads; the last trade stands in when nothing is offered. The percentage is
+ * how far our price sits above or below it. A check, never a price we set.
+ */
+/** How far above London our price may sit before it is flagged, in percent */
+const LONDON_PREMIUM_BAND = 30;
+
+const LondonCell = ({
+  market,
+  ours,
+  canAsk,
+  asking,
+  onAsk,
+}: {
+  market?: {
+    bidUsd: number | null;
+    askUsd: number | null;
+    lastUsd: number | null;
+    lastTradedAt: Date | string | null;
+    venues: string[];
+    checkedAt: Date | string;
+  };
+  ours: number | null;
+  /** A 75cl wine with a real LWIN, which the exchanges could list */
+  canAsk: boolean;
+  asking: boolean;
+  onAsk: () => void;
+}) => {
+  const ccy = useContext(CurrencyContext);
+  const lead = market?.askUsd ?? market?.lastUsd ?? null;
+
+  const askButton = canAsk && (
+    <button
+      type="button"
+      onClick={onAsk}
+      disabled={asking}
+      title="Ask Wine Labs for today's London price (15 to 30 credits)"
+      className="inline-flex align-middle text-text-muted/50 hover:text-text-primary disabled:opacity-50"
+    >
+      {asking ? <IconLoader2 size={12} className="animate-spin" /> : <IconRefresh size={12} />}
+    </button>
+  );
+
+  if (!market || lead == null) {
+    return (
+      <td className="px-3 py-2.5 text-right">
+        <span className="text-text-muted/40">—</span>
+        {askButton}
+      </td>
+    );
+  }
+
+  const gap = ours != null && ours > 0 ? Math.round(((ours - lead) / lead) * 100) : null;
+  const traded = market.lastTradedAt
+    ? new Date(market.lastTradedAt).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
+    : null;
+  const title = [
+    market.askUsd != null ? `Lowest ask ${money(market.askUsd, ccy)}` : 'No asks',
+    market.bidUsd != null ? `best bid ${money(market.bidUsd, ccy)}` : 'no bids',
+    market.lastUsd != null ? `last trade ${money(market.lastUsd, ccy)}${traded ? ` (${traded})` : ''}` : 'no trades',
+    `on ${market.venues.map((venue) => VENUE_NAMES[venue] ?? venue).join(', ')}`,
+    `checked ${new Date(market.checkedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+  ].join(', ');
+
+  // Our price carries freight to Dubai, so up to 30% above London is the
+  // normal band and stays grey; below London is a selling point, well above
+  // it is a price a trade buyer will question
+  const tone =
+    gap == null
+      ? ''
+      : gap < 0
+        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+        : gap > LONDON_PREMIUM_BAND
+          ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
+          : 'bg-fill-secondary text-text-muted';
+
+  return (
+    <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums" title={title}>
+      <span className="inline-flex items-center justify-end gap-1.5">
+        <span className="font-medium text-text-primary">{money(lead, ccy, 0)}</span>
+        {market.askUsd == null && (
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-text-muted">last</span>
+        )}
+        {gap != null && (
+          <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${tone}`}>
+            {gap > 0 ? `+${gap}%` : gap < 0 ? `${gap}%` : '0%'}
+          </span>
+        )}
+        {askButton}
+      </span>
+    </td>
+  );
+};
+
 const SkeletonRow = () => (
   <tr>
     <td className="px-3 py-3">
       <div className="h-4 w-40 animate-pulse rounded bg-surface-muted" />
       <div className="mt-1.5 h-3 w-24 animate-pulse rounded bg-surface-muted" />
     </td>
-    {Array.from({ length: 11 }).map((_, i) => (
+    {Array.from({ length: 12 }).map((_, i) => (
       <td key={i} className="px-3 py-3">
         <div className="ml-auto h-4 w-14 animate-pulse rounded bg-surface-muted" />
       </td>
@@ -1012,6 +1156,23 @@ const PricingManagerPage = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState<number>(50);
+  // Compact: one line a wine, so 30 or more fit on a screen. Remembered per browser.
+  const [compact, setCompact] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('pm-density') === 'comfortable') setCompact(false);
+    } catch {
+      // Storage blocked: stay compact
+    }
+  }, []);
+  const changeDensity = (next: boolean) => {
+    setCompact(next);
+    try {
+      localStorage.setItem('pm-density', next ? 'compact' : 'comfortable');
+    } catch {
+      // Storage blocked: the choice lasts this visit
+    }
+  };
 
   // Flat logistics still fed to the bulk "Apply Margin" tool (which prices
   // import + flat logistics for manual-import SKUs). Landed on the table itself
@@ -1290,6 +1451,9 @@ const PricingManagerPage = () => {
   const owners = 'owners' in (ownerData ?? {})
     ? (ownerData as { owners: Array<{ ownerId: string; ownerName: string | null; totalCases: number }> }).owners
     : [];
+  const ownerName = ownerId
+    ? (owners.find((o) => o.ownerId === ownerId)?.ownerName ?? null)
+    : null;
 
   // Query
   const queryInput = useMemo(
@@ -1399,6 +1563,13 @@ const PricingManagerPage = () => {
     ...products,
   ].map((p) => p.lwin18);
 
+  // Ticked lines that are still on screen. A tick survives a search or filter
+  // change, and bulk actions used to apply to lines the user could no longer
+  // see; they now apply to these only.
+  const visibleLwinSet = new Set(visibleLwins);
+  const selectedVisible = [...selected].filter((lwin18) => visibleLwinSet.has(lwin18));
+  const hiddenSelectedCount = selected.size - selectedVisible.length;
+
   const totalCount = pagination?.total ?? 0;
   const totalPages = Math.ceil(totalCount / limit);
 
@@ -1414,6 +1585,33 @@ const PricingManagerPage = () => {
   });
 
   const ownerPriceMap = ownerPricingData?.priceMap ?? {};
+
+  // London in-bond market from the Wine Labs snapshot; reading it spends no credits
+  const visibleKey = visibleLwins.join(',');
+  const londonLwins = useMemo(
+    () => (visibleKey ? [...new Set(visibleKey.split(','))].slice(0, 1000) : []),
+    [visibleKey],
+  );
+  const { data: londonData } = useQuery({
+    ...api.wms.admin.stock.pricing.getLondonInBond.queryOptions({ lwin18s: londonLwins }),
+    enabled: londonLwins.length > 0,
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+  const londonPrices = londonData?.prices ?? {};
+
+  // One wine's London price asked for now, before quoting on it; spends credits
+  const [askingLondon, setAskingLondon] = useState<string | null>(null);
+  const refreshLondonMut = useMutation({
+    ...api.wms.admin.stock.pricing.refreshLondonInBond.mutationOptions(),
+    onMutate: ({ lwin18 }) => setAskingLondon(lwin18),
+    onSettled: () => setAskingLondon(null),
+    onSuccess: ({ status }) => {
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getLondonInBond.queryKey() });
+      toast.success(status === 'priced' ? 'London price updated' : 'Not listed on the London exchanges');
+    },
+    onError: (error) => toast.error(error.message),
+  });
 
   // Active filters for chips
   const activeFilters: Array<{ key: string; label: string; onRemove: () => void }> = [];
@@ -1525,16 +1723,6 @@ const PricingManagerPage = () => {
       toast.success('PC price updated');
     },
     onError: () => toast.error('Failed to update PC price'),
-  });
-
-  const setSellMarginMut = useMutation({
-    ...api.wms.admin.stock.pricing.setSellMargin.mutationOptions(),
-    retry: 2,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
-      toast.success('Margin updated');
-    },
-    onError: () => toast.error('Failed to update margin'),
   });
 
   const setOwnerPricingMut = useMutation({
@@ -1651,47 +1839,26 @@ const PricingManagerPage = () => {
       const aoa: (string | number)[][] = [[
         'Product', 'Producer', 'Vintage', 'Status', 'Pack', 'Cases', 'Bottles', 'Import $/btl', 'Logistics $/btl',
         'Transfer $/btl', 'Override $/btl', 'Landed $/btl', 'Import $/case', 'In Bond $/btl', 'In Bond $/case',
-        'PC Price $/btl', 'PC Price $/case', 'Margin %',
+        'PC Price $/btl', 'PC Price $/case', 'Margin % (PC vs In Bond)', 'Margin % (In Bond vs Landed)',
       ]];
       for (const p of all) {
         const caseConfig = p.caseConfig ?? 12;
         const override = p.costOverridePerBottle ?? null;
-        // Logistics = live system freight/btl; C&C wine with no profile → $22.50.
-        // Transfer = FZ→mainland ($2.50 default).
-        const systemLog = (p as { systemLogistics?: number | null }).systemLogistics ?? 0;
-        const isCcWine =
-          (p as { isCraftCulture?: number }).isCraftCulture === 1 &&
-          (p.category === 'Wine' || p.category == null);
-        const lineLog = (p as { lineLogistics?: number | null }).lineLogistics ?? null;
-        const rowLog =
-          lineLog != null ? lineLog : systemLog > 0 ? systemLog : isCcWine ? 22.5 : 0;
-        const transferDefault =
-          (p as { isZeroTransferOwner?: number }).isZeroTransferOwner === 1 ? 0 : 2.5;
-        const rowTransfer =
-          (p as { transferPricePerBottle?: number | null }).transferPricePerBottle ??
-          transferDefault;
-        const rowInbondDiv = (() => {
-          const pct = ownerId ? effInbondPct : (p.ownerInbondPct ?? inBondMarkupPct);
-          return pct < 100 ? 1 - pct / 100 : null;
-        })();
-        const rowPcDiv = (() => {
-          const pct = ownerId ? effPcPct : (p.ownerPcPct ?? (pcMarginPct > 0 ? pcMarginPct : null));
-          return pct != null && pct < 100 ? 1 - pct / 100 : null;
-        })();
-        const hasCost = (p.importPricePerBottle != null && p.importPricePerBottle > 0) || override != null;
-        const landed = hasCost
-          ? (p.importPricePerBottle ?? 0) + rowLog + rowTransfer + (override ?? 0)
-          : null;
-        const inBond = landed && rowInbondDiv ? landed / rowInbondDiv : null;
-        const ownerP = ownerId ? ownerPrices[p.lwin18] : undefined;
-        const computed =
-          rowPcDiv != null && inBond != null && inBond > 0
-            ? Math.round(inBond * 100) / 100 / rowPcDiv
-            : null;
-        const sell =
-          ownerP != null && ownerP > 0 ? ownerP : computed != null ? computed : p.sellingPricePerBottle;
-        // Margin measured against the in-bond (B2B) price
-        const margin = calcMargin(inBond, sell);
+        // The same function the table uses, so a margin typed on the row is in the sheet too
+        const priced = pricePricingManagerRow(p as PricingManagerRowInput, {
+          ownerSelected: !!ownerId,
+          effInbondPct,
+          effPcPct,
+          inBondMarkupPct,
+          pcMarginPct,
+          ownerPcPrice: ownerId ? ownerPrices[p.lwin18] : null,
+        });
+        const rowLog = priced.logistics;
+        const rowTransfer = priced.transfer;
+        const landed = priced.landed;
+        const inBond = priced.inBond;
+        const sell = priced.sellPrice;
+        const margin = priced.pcMargin;
         const num = (v: number | null | undefined, dp = 2) =>
           v != null ? Number(v.toFixed(dp)) : '';
         aoa.push([
@@ -1713,14 +1880,15 @@ const PricingManagerPage = () => {
           num(sell),
           num(sell != null ? sell * caseConfig : null),
           num(margin, 1),
+          num(priced.inbondMargin, 1),
         ]);
       }
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       ws['!cols'] = [
         { wch: 40 }, { wch: 22 }, { wch: 8 }, { wch: 24 }, { wch: 10 }, { wch: 7 }, { wch: 8 }, { wch: 12 }, { wch: 13 },
-        { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 9 },
+        { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
       ];
-      ws['!autofilter'] = { ref: `A1:R${all.length + 1}` };
+      ws['!autofilter'] = { ref: `A1:S${all.length + 1}` };
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Pricing');
       XLSX.writeFile(wb, `pricing-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -1755,20 +1923,10 @@ const PricingManagerPage = () => {
   return (
     <CurrencyContext.Provider value={currency}>
     <div className="mx-auto max-w-[1400px] space-y-6 p-6">
-      {/* Breadcrumb + Header */}
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-sm text-text-muted">
-          <Link href="/platform/admin/home" className="hover:text-text-primary">
-            <Typography variant="bodySm">Admin</Typography>
-          </Link>
-          <IconChevronRight className="h-4 w-4 text-text-muted" />
-          <Typography variant="bodySm">Pricing Manager</Typography>
-        </div>
-        <Typography variant="h2">Pricing Manager</Typography>
-        <Typography variant="bodySm" className="text-text-muted">
-          Import, in bond (B2B), and private client pricing
-        </Typography>
-      </div>
+      <AdminPageHeader
+        title="Pricing Manager"
+        description="Import, in bond (B2B), and private client pricing"
+      />
 
       {/*
         These read landed stock only, and say so when that is not what is on
@@ -1920,7 +2078,7 @@ const PricingManagerPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search products"
-            className="w-full rounded-xl border-2 border-border-primary bg-background-primary py-3 pl-12 pr-11 text-base font-medium text-text-primary shadow-sm transition-all placeholder:font-normal placeholder:text-text-muted/70 focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-border-brand/25"
+            className="w-full rounded-xl border-2 border-border-primary bg-surface-primary py-3 pl-12 pr-11 text-base font-medium text-text-primary shadow-sm transition-all placeholder:font-normal placeholder:text-text-muted/70 focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/25"
           />
           {search && (
             <button
@@ -1938,7 +2096,7 @@ const PricingManagerPage = () => {
         <select
           value={ownerId ?? ''}
           onChange={(e) => setOwnerId(e.target.value || undefined)}
-          className="rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm text-text-primary transition-colors focus:border-border-brand focus:outline-none"
+          className="rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm text-text-primary transition-colors focus:border-text-primary focus:outline-none"
         >
           <option value="">All Owners</option>
           {owners.map((o) => (
@@ -1952,35 +2110,6 @@ const PricingManagerPage = () => {
           ))}
         </select>
 
-
-        {/* Global rates (when no owner selected) */}
-        {!ownerId && (
-          <>
-            <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
-              <span className="whitespace-nowrap text-xs text-text-muted">In&nbsp;Bond&nbsp;%</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={inBondMarkupPct}
-                onChange={(e) => setInBondMarkupPct(Math.max(0, Number(e.target.value) || 0))}
-                className="w-12 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
-              />
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-border-primary bg-background-primary px-3 py-2">
-              <span className="whitespace-nowrap text-xs text-text-muted">PC&nbsp;%</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                placeholder="—"
-                value={pcMarginPct || ''}
-                onChange={(e) => setPcMarginPct(Math.max(0, Number(e.target.value) || 0))}
-                className="w-12 rounded border border-border-muted bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-border-brand focus:outline-none"
-              />
-            </div>
-          </>
-        )}
 
         <button
           type="button"
@@ -1997,47 +2126,6 @@ const PricingManagerPage = () => {
             ownerName={owners.find((o) => o.ownerId === ownerId)?.ownerName ?? null}
             onClose={() => setShowBands(false)}
           />
-        )}
-
-        {/* Per-owner rates (when an owner is selected) — saved to that owner */}
-        {ownerId && (
-          <div className="flex items-center gap-3 rounded-lg border border-violet-300 bg-violet-50/50 px-3 py-2">
-            <span className="whitespace-nowrap text-xs font-medium text-violet-700">
-              {owners.find((o) => o.ownerId === ownerId)?.ownerName ?? 'Owner'} rates
-            </span>
-            <label className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted">
-              In-Bond&nbsp;%
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                value={ownerDraft.inbondPct}
-                onChange={(e) =>
-                  setOwnerDraft((d) => ({ ...d, inbondPct: Math.max(0, Number(e.target.value) || 0) }))
-                }
-                onBlur={() => saveOwnerSettings(ownerDraft)}
-                className="w-12 rounded border border-violet-200 bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-violet-500 focus:outline-none"
-              />
-            </label>
-            <label className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted">
-              PC&nbsp;%
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                placeholder="—"
-                value={ownerDraft.pcPct ?? ''}
-                onChange={(e) =>
-                  setOwnerDraft((d) => ({
-                    ...d,
-                    pcPct: e.target.value === '' ? null : Math.max(0, Number(e.target.value) || 0),
-                  }))
-                }
-                onBlur={() => saveOwnerSettings(ownerDraft)}
-                className="w-12 rounded border border-violet-200 bg-background-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus:border-violet-500 focus:outline-none"
-              />
-            </label>
-          </div>
         )}
 
         {/* Apply Margin — start of the actions cluster, pushed to the right so
@@ -2066,7 +2154,7 @@ const PricingManagerPage = () => {
                     type="number"
                     value={marginPercent}
                     onChange={(e) => setMarginPercent(e.target.value)}
-                    className="w-full rounded border border-border-primary bg-background-primary px-3 py-1.5 text-sm focus:border-border-brand focus:outline-none"
+                    className="w-full rounded border border-border-primary bg-background-primary px-3 py-1.5 text-sm focus:border-text-primary focus:outline-none"
                     min="0.1"
                     max="99.9"
                     step="0.1"
@@ -2125,7 +2213,7 @@ const PricingManagerPage = () => {
                       });
                     }}
                     disabled={bulkApplyMarginMut.isPending}
-                    className="flex items-center gap-1 rounded bg-fill-brand px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-fill-brand/90 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded bg-text-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-text-primary/90 disabled:opacity-50"
                   >
                     {bulkApplyMarginMut.isPending && (
                       <IconLoader2 className="h-3 w-3 animate-spin" />
@@ -2322,19 +2410,46 @@ const PricingManagerPage = () => {
             </>
           )}
         </span>
-        {totalPages > 1 && (
-          <span>
-            Page {page + 1} of {totalPages}
+        <span className="flex items-center gap-3">
+          <span className="flex items-center gap-0.5 rounded-lg border border-border-muted p-0.5">
+            {[
+              { value: true, label: 'Compact' },
+              { value: false, label: 'Comfortable' },
+            ].map((option) => (
+              <button
+                key={option.label}
+                type="button"
+                onClick={() => changeDensity(option.value)}
+                aria-pressed={compact === option.value}
+                className={`rounded-md px-2.5 py-0.5 font-medium transition-colors ${
+                  compact === option.value
+                    ? 'bg-text-primary text-surface-primary'
+                    : 'hover:bg-surface-muted hover:text-text-primary'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </span>
-        )}
+          {totalPages > 1 && (
+            <span>
+              Page {page + 1} of {totalPages}
+            </span>
+          )}
+        </span>
       </div>
 
       {/* Bulk actions — appears once anything is ticked. One margin and one
           release for a whole shipment, instead of 165 trips through a sheet. */}
       {selected.size > 0 && (
-        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-lg border border-brand-300 bg-brand-50 px-4 py-2.5 shadow-sm">
-          <span className="text-sm font-semibold text-brand-800">
-            {selected.size} selected
+        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-lg border border-text-primary bg-surface-secondary px-4 py-2.5 shadow-sm">
+          <span className="text-sm font-semibold text-text-primary">
+            {selectedVisible.length} selected
+            {hiddenSelectedCount > 0 && (
+              <span className="ml-1 font-normal text-text-muted">
+                ({hiddenSelectedCount} hidden by the current filter, not included)
+              </span>
+            )}
           </span>
 
           <div className="flex items-center gap-1.5">
@@ -2363,22 +2478,25 @@ const PricingManagerPage = () => {
             <button
               type="button"
               disabled={
-                (bulkB2b === '' && bulkPc === '') || setLineMarginsMut.isPending
+                (bulkB2b === '' && bulkPc === '') ||
+                setLineMarginsMut.isPending ||
+                selectedVisible.length === 0
               }
               onClick={() => {
+                const count = selectedVisible.length;
                 setLineMarginsMut.mutate(
                   {
-                    lwin18s: [...selected],
+                    lwin18s: selectedVisible,
                     ...(bulkB2b !== '' ? { b2bMarginPct: Number(bulkB2b) } : {}),
                     ...(bulkPc !== '' ? { pcMarginPct: Number(bulkPc) } : {}),
                   },
                   {
                     onSuccess: () =>
-                      toast.success(`Margin set on ${selected.size} wines`),
+                      toast.success(`Margin set on ${count} wines`),
                   },
                 );
               }}
-              className="rounded bg-brand-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+              className="rounded bg-text-primary px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
             >
               Apply margin
             </button>
@@ -2456,7 +2574,22 @@ const PricingManagerPage = () => {
       <Card className="shadow-sm">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            {/*
+              Compact rows: a wine on one line, case figures dropped (the
+              bottle price is what gets compared down a column), the name cut
+              with the full name on hover. Plain CSS so every cell follows
+              without each one knowing about the setting.
+            */}
+            <style>{`
+              .pm-compact > tbody > tr > td { padding-top: 3px; padding-bottom: 3px; font-size: 13px; line-height: 20px; }
+              .pm-compact .pm-sub, .pm-compact .pm-meta { display: none; }
+              .pm-compact .pm-product { min-width: 340px; }
+              .pm-compact .pm-namerow { flex-wrap: nowrap; gap: 6px; max-width: 420px; }
+              .pm-compact .pm-namerow > * { flex-shrink: 0; white-space: nowrap; }
+              .pm-compact .pm-namerow > button { flex-shrink: 1; min-width: 0; }
+              .pm-compact .pm-name { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+            `}</style>
+            <table className={`w-full text-sm ${compact ? 'pm-compact' : ''}`}>
               <thead className="sticky top-0 z-10 hidden bg-surface-muted md:table-header-group shadow-[0_1px_0_rgba(0,0,0,0.06),0_4px_8px_-4px_rgba(0,0,0,0.08)]">
                 {/* Group row */}
                 <tr className="text-[10px] font-semibold uppercase tracking-wide">
@@ -2474,8 +2607,9 @@ const PricingManagerPage = () => {
                     Cost
                   </th>
                   <th
-                    title="In-bond (B2B) selling price tier for trade"
+                    title="In-bond (B2B) selling price tier for trade, beside the London in-bond market"
                     className="border-l-2 border-blue-300 bg-blue-50 px-3 pb-1.5 pt-2.5 text-center text-blue-600"
+                    colSpan={2}
                   >
                     In&nbsp;Bond · B2B
                   </th>
@@ -2499,7 +2633,10 @@ const PricingManagerPage = () => {
                     <input
                       type="checkbox"
                       title="Select every line shown"
-                      checked={selected.size > 0 && selected.size >= visibleLwins.length}
+                      checked={
+                        visibleLwins.length > 0 &&
+                        selectedVisible.length >= visibleLwinSet.size
+                      }
                       onChange={(e) =>
                         setSelected(
                           e.target.checked ? new Set(visibleLwins) : new Set(),
@@ -2581,15 +2718,26 @@ const PricingManagerPage = () => {
                           header or a panel that appears when an owner is
                           picked — neither of which reads as "change the
                           margin". Make it a button that says so. */}
-                      <button
-                        type="button"
-                        onClick={() => setShowBands(true)}
-                        title="Set the margin tiers"
-                        className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100"
-                      >
-                        {ownerId ? `${effInbondPct}% ▾` : 'set margins ▾'}
-                      </button>
+                      {/* The blanket In Bond rate sits on its own column, apart
+                          from PC: PC stays put while the In Bond rate moves */}
+                      <HeaderPctInput
+                        tone="blue"
+                        title={ownerId ? `${ownerName ?? 'Owner'} In Bond margin %` : 'In Bond margin % for all wines'}
+                        value={ownerId ? ownerDraft.inbondPct : inBondMarkupPct}
+                        onChange={(v) =>
+                          ownerId
+                            ? setOwnerDraft((d) => ({ ...d, inbondPct: v ?? 0 }))
+                            : setInBondMarkupPct(v ?? 0)
+                        }
+                        onCommit={() => ownerId && saveOwnerSettings(ownerDraft)}
+                      />
                       <HeaderInfo text="In-Bond (B2B) price = Landed / (1 − margin). The margin comes from the tiers (by landed cost), an owner's own rate, or a per-wine override." />
+                    </span>
+                  </th>
+                  <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
+                    <span className="flex items-center justify-end gap-1">
+                      London
+                      <HeaderInfo text="London in-bond market for the bottle size of the row (a magnum priced as a magnum), from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not Liv-ex): the lowest ask, or the last trade when nothing is offered, and how far our In Bond price sits from it. Our price carries freight to Dubai, so expect it above London: green is below London, grey up to 30% above, red more than 30% above. LAST means no one is offering it and the last trade is shown. Refreshed from the Wine Labs page." />
                     </span>
                   </th>
                   <th
@@ -2598,17 +2746,18 @@ const PricingManagerPage = () => {
                   >
                     <span className="flex items-center justify-end gap-1 text-violet-600">
                       PC Price {renderSortIcon('sellingPrice')}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowBands(true);
-                        }}
-                        title="Set the margin tiers"
-                        className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 hover:bg-violet-100"
-                      >
-                        set margins ▾
-                      </button>
+                      <HeaderPctInput
+                        tone="violet"
+                        allowEmpty
+                        title={ownerId ? `${ownerName ?? 'Owner'} PC margin %` : 'PC margin % for all wines (empty keeps stored prices)'}
+                        value={ownerId ? ownerDraft.pcPct : pcMarginPct || null}
+                        onChange={(v) =>
+                          ownerId
+                            ? setOwnerDraft((d) => ({ ...d, pcPct: v }))
+                            : setPcMarginPct(v ?? 0)
+                        }
+                        onCommit={() => ownerId && saveOwnerSettings(ownerDraft)}
+                      />
                       <HeaderInfo text="Private Client price = Landed / (1 − PC margin), taken over landed cost in its own right rather than stacked on the B2B price. Click a cell to type a fixed price instead." />
                     </span>
                   </th>
@@ -2634,7 +2783,7 @@ const PricingManagerPage = () => {
                           className={`px-1.5 py-0.5 ${
                             marginBasis === 'ibLanded'
                               ? 'bg-emerald-600 text-white'
-                              : 'bg-white text-emerald-700 hover:bg-emerald-50'
+                              : 'bg-surface-primary text-emerald-700 hover:bg-emerald-50'
                           }`}
                         >
                           IB·Landed
@@ -2646,7 +2795,7 @@ const PricingManagerPage = () => {
                           className={`border-l border-emerald-300 px-1.5 py-0.5 ${
                             marginBasis === 'pcIb'
                               ? 'bg-emerald-600 text-white'
-                              : 'bg-white text-emerald-700 hover:bg-emerald-50'
+                              : 'bg-surface-primary text-emerald-700 hover:bg-emerald-50'
                           }`}
                         >
                           PC·IB
@@ -2676,7 +2825,7 @@ const PricingManagerPage = () => {
                 ) : products.length === 0 &&
                   !(includeInbound && (data?.inbound?.length ?? 0) > 0) ? (
                   <tr>
-                    <td colSpan={13} className="py-20 text-center text-text-muted">
+                    <td colSpan={14} className="py-20 text-center text-text-muted">
                       {/*
                         An owner holding nothing but wine in transit reads as an
                         owner holding nothing, unless the screen says which of
@@ -2697,7 +2846,7 @@ const PricingManagerPage = () => {
                               <button
                                 type="button"
                                 onClick={() => setIncludeInbound(true)}
-                                className="font-medium text-text-brand hover:underline"
+                                className="font-medium text-text-primary hover:underline"
                               >
                                 Show inbound stock
                               </button>
@@ -2724,7 +2873,7 @@ const PricingManagerPage = () => {
                               <button
                                 type="button"
                                 onClick={() => setPriceFilters([])}
-                                className="font-medium text-text-brand hover:underline"
+                                className="font-medium text-text-primary hover:underline"
                               >
                                 Clear these filters
                               </button>
@@ -2748,115 +2897,37 @@ const PricingManagerPage = () => {
                     const costOverride =
                       (product as { costOverridePerBottle?: number | null }).costOverridePerBottle ??
                       null;
-                    // Rates: a selected owner's rates apply to all rows; in "All Owners" each row
-                    // uses ITS owner's own rates (falling back to the global toolbar values).
-                    const orow = product as {
-                      ownerLogistics?: number | null;
-                      ownerInbondPct?: number | null;
-                      ownerPcPct?: number | null;
-                    };
-                    // Logistics = live group/shipment freight per bottle (from the
-                    // system; read-only). C&C-owned wine with no freight profile
-                    // (old imports) falls back to $22.50. Transfers = FZ→mainland
-                    // fee ($2.50 default, editable per SKU).
-                    const systemLog =
-                      (product as { systemLogistics?: number | null }).systemLogistics ?? 0;
-                    const isCcWine =
-                      (product as { isCraftCulture?: number }).isCraftCulture === 1 &&
-                      (product.category === 'Wine' || product.category == null);
-                    // Per-line override beats live system freight / the C&C fallback
+                    // Kept for the cells that edit them
                     const lineLogistics =
                       (product as { lineLogistics?: number | null }).lineLogistics ?? null;
-                    const rowLogistics =
-                      lineLogistics != null
-                        ? lineLogistics
-                        : systemLog > 0
-                          ? systemLog
-                          : isCcWine
-                            ? 22.5
-                            : 0;
                     const transferStored =
                       (product as { transferPricePerBottle?: number | null })
                         .transferPricePerBottle ?? null;
-                    // Cru Wine / Crurated default to $0 transfer; everyone else $2.50
-                    const transferDefault =
-                      (product as { isZeroTransferOwner?: number }).isZeroTransferOwner === 1
-                        ? 0
-                        : 2.5;
-                    const rowTransfer = transferStored ?? transferDefault;
-                    // A margin typed on THIS row wins over the owner's rate and
-                    // the toolbar default — otherwise saving one changed the
-                    // stored value and nothing on screen, which reads as the
-                    // save having failed.
-                    const lineB2bPct =
-                      (product as { b2bMarginPct?: number | null }).b2bMarginPct ?? null;
-                    const linePcPct =
-                      (product as { pcMarginPct?: number | null }).pcMarginPct ?? null;
-                    const rowInbondPct =
-                      lineB2bPct ??
-                      (ownerId ? effInbondPct : (orow.ownerInbondPct ?? inBondMarkupPct));
-                    const rowInbondDivisor = rowInbondPct < 100 ? 1 - rowInbondPct / 100 : null;
-                    const rowPcPct =
-                      linePcPct ??
-                      (ownerId
-                        ? effPcPct
-                        : (orow.ownerPcPct ?? (pcMarginPct > 0 ? pcMarginPct : null)));
-                    const rowPcDivisor =
-                      rowPcPct != null && rowPcPct < 100 ? 1 - rowPcPct / 100 : null;
-                    // Landed = import (paid) + logistics + transfer + manual override
-                    const hasCost = (importPrice != null && importPrice > 0) || costOverride != null;
-                    const landed = hasCost
-                      ? (importPrice ?? 0) + rowLogistics + rowTransfer + (costOverride ?? 0)
-                      : null;
-                    // Spirits & RTD are priced solely by a bespoke per-line margin
-                    // over landed — the global in-bond/PC % never applies to them.
-                    const isSpiritOrRtd =
-                      product.category === 'Spirits' || product.category === 'RTD';
-                    const bespokeMargin =
-                      (product as { sellMarginPct?: number | null }).sellMarginPct ?? null;
-
-                    const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
-                    const storedOwnerPrice =
-                      ownerId != null && ownerPcPrice != null && ownerPcPrice > 0 ? ownerPcPrice : null;
-
-                    let inBondPrice: number | null;
-                    let sellPrice: number | null;
-                    let isSuggestedPc: boolean;
-                    let hasOwnerPrice: boolean;
-                    let margin: number | null;
-
-                    if (isSpiritOrRtd) {
-                      // One sell price: sell = landed / (1 - margin/100); no B2B/PC split
-                      const bespokeSell =
-                        bespokeMargin != null && landed != null && bespokeMargin < 100
-                          ? landed / (1 - bespokeMargin / 100)
-                          : product.sellingPricePerBottle;
-                      sellPrice = bespokeSell;
-                      inBondPrice = bespokeSell;
-                      isSuggestedPc = false;
-                      hasOwnerPrice = false;
-                      margin = bespokeMargin;
-                    } else {
-                      inBondPrice =
-                        landed != null && rowInbondDivisor ? landed / rowInbondDivisor : null;
-                      // PC precedence: an ACTIVE PC% drives the price and beats stored prices;
-                      // else stored owner price, then default. PC is a margin on the IN-BOND
-                      // price (which already reflects the override via landed).
-                      const computedPc =
-                        rowPcDivisor != null && inBondPrice != null && inBondPrice > 0
-                          ? Math.round(inBondPrice * 100) / 100 / rowPcDivisor
-                          : null;
-                      sellPrice =
-                        computedPc != null
-                          ? computedPc
-                          : (storedOwnerPrice ?? product.sellingPricePerBottle);
-                      isSuggestedPc = computedPc != null;
-                      hasOwnerPrice = computedPc == null && storedOwnerPrice != null;
-                      // Margin measured against the in-bond (B2B) price
-                      margin = calcMargin(inBondPrice, sellPrice);
-                    }
+                    /*
+                      One definition of every price on the row, shared with the
+                      Excel export so the sheet always says what the screen says.
+                      A selected owner's rates apply to all rows; in "All Owners"
+                      each row uses its owner's rates, then the toolbar. A margin
+                      typed on this row beats both.
+                    */
+                    const priced = pricePricingManagerRow(product as PricingManagerRowInput, {
+                      ownerSelected: !!ownerId,
+                      effInbondPct,
+                      effPcPct,
+                      inBondMarkupPct,
+                      pcMarginPct,
+                      ownerPcPrice: ownerId ? ownerPriceMap[product.lwin18] : null,
+                    });
+                    const rowLogistics = priced.logistics;
+                    const rowTransfer = priced.transfer;
+                    const landed = priced.landed;
+                    const inBondPrice = priced.inBond;
+                    const sellPrice = priced.sellPrice;
+                    const isSuggestedPc = priced.computedPc != null;
+                    const hasOwnerPrice = priced.computedPc == null && priced.storedOwnerPrice != null;
+                    // Margin measured against the in-bond (B2B) price
+                    const margin = priced.pcMargin;
                     const marginPerBottle =
-                      !isSpiritOrRtd &&
                       inBondPrice &&
                       sellPrice &&
                       inBondPrice > 0 &&
@@ -2873,15 +2944,10 @@ const PricingManagerPage = () => {
                     // Margin the green column shows, per the header toggle.
                     // 'ibLanded' = In-Bond vs Landed (B2B margin over cost, varies
                     // by owner); 'pcIb' = the existing PC-vs-In-Bond margin.
-                    // Spirits/RTD keep their single bespoke margin either way.
-                    const displayMargin = isSpiritOrRtd
-                      ? margin
-                      : marginBasis === 'pcIb'
-                        ? margin
-                        : calcMargin(landed, inBondPrice);
-                    const displayMarginPerBottle = isSpiritOrRtd
-                      ? marginPerBottle
-                      : marginBasis === 'pcIb'
+                    const displayMargin =
+                      marginBasis === 'pcIb' ? margin : calcMargin(landed, inBondPrice);
+                    const displayMarginPerBottle =
+                      marginBasis === 'pcIb'
                         ? marginPerBottle
                         : inBondPrice != null && landed != null && inBondPrice > 0
                           ? inBondPrice - landed
@@ -2932,7 +2998,10 @@ const PricingManagerPage = () => {
                     // The two prices a phone can change too; one definition for both layouts.
                     // In bond: the margin the typed price implies is what gets stored.
                     const saveInBond = (price: number) => {
-                      if (landed == null || landed <= 0) return;
+                      if (landed == null || landed <= 0) {
+                        toast.error('This wine has no landed cost yet, so an In Bond price cannot be set. Add the cost first.');
+                        return;
+                      }
                       const pct = ((price - landed) / price) * 100;
                       setLineMarginsMut.mutate({
                         lwin18s: [product.lwin18],
@@ -3007,11 +3076,11 @@ const PricingManagerPage = () => {
 
                         {/* Product — pinned; see the header for why */}
                         <td
-                          className={`sticky left-8 z-10 border-l-4 bg-inherit px-3 py-2.5 ${
+                          className={`pm-product sticky left-8 z-10 border-l-4 bg-inherit px-3 py-2.5 ${
                             ownerCue?.style.border ?? 'border-l-transparent'
                           }`}
                         >
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="pm-namerow flex flex-wrap items-center gap-2">
                             <button
                               type="button"
                               onClick={() =>
@@ -3019,18 +3088,27 @@ const PricingManagerPage = () => {
                                   cur === product.lwin18 ? null : product.lwin18,
                                 )
                               }
-                              title="Show last sold price"
-                              className="flex items-center gap-1 text-left"
+                              title={`${product.productName}: show last sold price`}
+                              className="flex min-w-0 items-center gap-1 text-left"
                             >
                               <IconChevronRight
                                 className={`h-3.5 w-3.5 shrink-0 transition-transform ${
                                   isExpanded ? 'rotate-90 text-text-secondary' : 'text-text-muted/60'
                                 }`}
                               />
-                              <span className="text-[15px] font-semibold leading-tight tracking-tight text-text-primary">
+                              <span className="pm-name text-[15px] font-semibold leading-tight tracking-tight text-text-primary">
                                 {product.productName}
                               </span>
                             </button>
+                            {/* Vintage and a non-standard size ride in the pinned
+                                column, so a row still reads as one wine when the
+                                table is scrolled across to the prices */}
+                            <span className="text-[13px] font-semibold tabular-nums text-text-secondary">
+                              {product.vintage || 'NV'}
+                              {product.bottleSize && !/^75\s?cl$|^750\s?ml$/i.test(product.bottleSize) && (
+                                <span className="ml-1 font-normal text-text-muted">{product.bottleSize}</span>
+                              )}
+                            </span>
                             {ownerCue && (
                               <span
                                 title={
@@ -3161,10 +3239,10 @@ const PricingManagerPage = () => {
                           })()}
                           </div>
                           {product.producer && (
-                            <p className="text-xs text-text-muted">{product.producer}</p>
+                            <p className="pm-meta text-xs text-text-muted">{product.producer}</p>
                           )}
                           {isInbound && (
-                            <p className="text-[10px] text-amber-600">
+                            <p className="pm-meta text-[10px] text-amber-600">
                               {eta
                                 ? `ETA ${new Date(eta).toLocaleDateString('en-GB')}`
                                 : 'In transit'}
@@ -3186,7 +3264,7 @@ const PricingManagerPage = () => {
                           <div className="font-medium tabular-nums text-text-primary">
                             {product.totalCases}
                           </div>
-                          <div className="text-[10px] tabular-nums text-text-muted/70">
+                          <div className="pm-sub text-[10px] tabular-nums text-text-muted/70">
                             {caseConfig}×{product.bottleSize ?? '75cl'}
                           </div>
                         </td>
@@ -3250,7 +3328,7 @@ const PricingManagerPage = () => {
                             {landed != null ? money(landed, currency) : '—'}
                           </div>
                           {landed != null && (
-                            <div className="text-[11px] font-medium text-text-muted">
+                            <div className="pm-sub text-[11px] font-medium text-text-muted">
                               {casePrice(landed, caseConfig, currency)}
                             </div>
                           )}
@@ -3273,6 +3351,13 @@ const PricingManagerPage = () => {
                           hintFor={inBondHint}
                           onSave={saveInBond}
                         />
+                        <LondonCell
+                          market={londonPrices[product.lwin18]}
+                          ours={inBondPrice}
+                          canAsk={/^[1-8]\d{6}-?\d{4}-?\d{2}-?\d{5}$/.test(product.lwin18 ?? '')}
+                          asking={askingLondon === product.lwin18}
+                          onAsk={() => refreshLondonMut.mutate({ lwin18: product.lwin18 })}
+                        />
 
                         {/* PC Price (editable) — Private Client group */}
                         <PriceCell
@@ -3293,45 +3378,18 @@ const PricingManagerPage = () => {
                             It was read-only for wine, so the only way to move a
                             price was a cost override, which is the wrong lever:
                             it falsifies the cost to reach a price. */}
-                        {!isSpiritOrRtd ? (
-                          <MarginEditCell
-                            value={displayMargin}
-                            tdClassName="border-l-2 border-emerald-300"
-                            onSave={(pct) =>
-                              setLineMarginsMut.mutate({
-                                lwin18s: [product.lwin18],
-                                ...(marginBasis === 'pcIb'
-                                  ? { pcMarginPct: pct }
-                                  : { b2bMarginPct: pct }),
-                              })
-                            }
-                          />
-                        ) : isSpiritOrRtd && !isInbound ? (
-                          <MarginEditCell
-                            value={bespokeMargin}
-                            tdClassName="border-l-2 border-emerald-300"
-                            onSave={(pct) => {
-                              const sell =
-                                landed != null && pct < 100
-                                  ? Math.round((landed / (1 - pct / 100)) * 100) / 100
-                                  : null;
-                              setSellMarginMut.mutate({
-                                lwin18: product.lwin18,
-                                sellMarginPct: pct,
-                                sellingPricePerBottle: sell,
-                              });
-                            }}
-                          />
-                        ) : (
-                          <td className="border-l-2 border-emerald-300 px-3 py-2.5 text-right">
-                            <div className="flex items-center justify-end gap-1.5 tabular-nums">
-                              <MarginDot margin={displayMargin} good={marginGood} ok={marginOk} />
-                              <span className={marginColor}>
-                                {displayMargin != null ? `${displayMargin.toFixed(1)}%` : '—'}
-                              </span>
-                            </div>
-                          </td>
-                        )}
+                        <MarginEditCell
+                          value={displayMargin}
+                          tdClassName="border-l-2 border-emerald-300"
+                          onSave={(pct) =>
+                            setLineMarginsMut.mutate({
+                              lwin18s: [product.lwin18],
+                              ...(marginBasis === 'pcIb'
+                                ? { pcMarginPct: pct }
+                                : { b2bMarginPct: pct }),
+                            })
+                          }
+                        />
 
                         {/* Profit — money, in both units the wine is sold in */}
                         <td className="px-3 py-2.5 text-right">
@@ -3349,7 +3407,7 @@ const PricingManagerPage = () => {
                                   /btl
                                 </span>
                               </div>
-                              <div className="text-[11px] font-medium tabular-nums text-text-muted">
+                              <div className="pm-sub text-[11px] font-medium tabular-nums text-text-muted">
                                 $
                                 {Math.round(
                                   displayMarginPerBottle * caseConfig,
@@ -3364,7 +3422,7 @@ const PricingManagerPage = () => {
                       </tr>
                       {isExpanded && (
                         <tr className="hidden bg-surface-muted/40 md:table-row">
-                          <td colSpan={13} className="border-l-4 border-l-transparent px-3 py-3">
+                          <td colSpan={14} className="border-l-4 border-l-transparent px-3 py-3">
                             {/*
                               What the line is worth if it all sells at the
                               current price. Per bottle and per case answer "is
@@ -3457,7 +3515,7 @@ const PricingManagerPage = () => {
                       )}
                       {/* The phone's version of this row: the figures that matter, a tap for the rest */}
                       <tr className="md:hidden">
-                        <td colSpan={13} className="border-b border-border-muted p-0">
+                        <td colSpan={14} className="border-b border-border-muted p-0">
                           <button
                             type="button"
                             onClick={() => setExpandedLwin((cur) => (cur === product.lwin18 ? null : product.lwin18))}
@@ -3512,7 +3570,7 @@ const PricingManagerPage = () => {
                                   ? `Last sold at $${lastSold.pricePerBottle.toFixed(2)}/btl · ${lastSold.tier === 'PC' ? 'Private Client' : 'B2B'} · ${lastSold.ref}`
                                   : 'No recorded sale yet for this wine.'}
                               </p>
-                              {!isSpiritOrRtd && landed != null && landed > 0 ? (
+                              {landed != null && landed > 0 ? (
                                 <PhonePriceField label="In bond per bottle (USD)" value={inBondPrice} onSave={saveInBond} hint={inBondHint} />
                               ) : null}
                               <PhonePriceField label="Private client per bottle (USD)" value={sellPrice} onSave={savePc} />

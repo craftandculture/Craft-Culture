@@ -7,6 +7,8 @@ import db from '@/database/client';
 import { partners } from '@/database/schema';
 import serverConfig from '@/server.config';
 
+import { queueDeliveryQuoted, queueDeliverySentBack } from '../data/queueCellarEmails';
+
 export type ReleaseEvent = 'submitted' | 'quoted' | 'revision' | 'accepted';
 
 export interface NotifyReleaseUpdateParams {
@@ -121,6 +123,10 @@ const notifyReleaseUpdate = async ({
         metadata: { requestNumber, totalUsd },
       });
     }
+
+    /* The member's email, queued for the member-emails cron and its switch */
+    if (event === 'quoted') await queueDeliveryQuoted({ partnerId, requestId, requestNumber });
+    if (event === 'revision') await queueDeliverySentBack({ partnerId, requestId, requestNumber, adminNotes });
   } catch (error) {
     console.error('Failed to notify on release update', {
       requestNumber,

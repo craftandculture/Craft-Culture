@@ -30,7 +30,7 @@ const adminEncryptIdentityDocuments = staffAdminProcedure.mutation(async () => {
       encrypted: 0,
       alreadyEncrypted: 0,
       failed: 0,
-      message: 'IDENTITY_ENCRYPTION_KEY is not set — nothing was changed.',
+      message: 'IDENTITY_ENCRYPTION_KEY is not set, so nothing was changed.',
     };
   }
 

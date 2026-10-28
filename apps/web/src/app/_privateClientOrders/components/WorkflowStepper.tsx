@@ -169,7 +169,7 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
       {/* Progress bar for mobile */}
       <div className="mb-3 h-1 overflow-hidden rounded-full bg-border-muted sm:hidden">
         <div
-          className="h-full bg-fill-brand transition-all duration-300"
+          className="h-full bg-text-primary transition-all duration-300"
           style={{ width: `${progressPercent}%` }}
         />
       </div>
@@ -187,7 +187,7 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
                 {index > 0 && (
                   <div
                     className={`hidden h-0.5 flex-1 sm:block ${
-                      status === 'pending' ? 'bg-border-muted' : 'bg-fill-brand'
+                      status === 'pending' ? 'bg-border-muted' : 'bg-text-primary'
                     }`}
                   />
                 )}
@@ -198,9 +198,9 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
                     compact ? 'h-6 w-6' : 'h-6 w-6 sm:h-8 sm:w-8'
                   } ${
                     status === 'completed'
-                      ? 'bg-fill-brand text-white'
+                      ? 'bg-text-primary text-white'
                       : status === 'current'
-                        ? 'border-2 border-fill-brand bg-background-primary'
+                        ? 'border-2 border-text-primary bg-background-primary'
                         : order.status === 'cancelled' && step.id !== 'delivered'
                           ? 'border-2 border-fill-danger bg-background-primary'
                           : 'border-2 border-border-muted bg-background-primary'
@@ -222,7 +222,7 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
                 {index < steps.length - 1 && (
                   <div
                     className={`hidden h-0.5 flex-1 sm:block ${
-                      status === 'completed' ? 'bg-fill-brand' : 'bg-border-muted'
+                      status === 'completed' ? 'bg-text-primary' : 'bg-border-muted'
                     }`}
                   />
                 )}

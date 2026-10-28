@@ -138,6 +138,8 @@ const adminExtractQuote = adminProcedure
       ...extracted,
       currency: extracted.currency.trim().toUpperCase().slice(0, 3),
       validUntil,
+      /** A validity already gone is usually the quote date misread; the person is asked to check it */
+      validUntilInPast: !!validUntil && validUntil < new Date().toISOString().slice(0, 10),
       forwarderId: byName?.id ?? null,
       /** The name on file when matched, so the person sees which forwarder it went to */
       matchedForwarderName: byName?.name ?? null,

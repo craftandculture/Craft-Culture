@@ -1,11 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { del } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
 import { logisticsDocuments } from '@/database/schema';
+import { deleteStoredFile } from '@/lib/blob/privateFiles';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 import logger from '@/utils/logger';
 
 const deleteDocumentSchema = z.object({
@@ -15,7 +16,11 @@ const deleteDocumentSchema = z.object({
 /**
  * Delete a document from a logistics shipment
  *
- * Removes the file from Vercel Blob and deletes the database record.
+ * Deletes the database record, then removes the file from our Blob store.
+ * A document synced from Hillebrand points at Hillebrand's own download link,
+ * which is not ours to delete, so only the record goes (the next Hillebrand
+ * sync brings it back if Hillebrand still lists it). A file that cannot be
+ * removed from Blob does not stop the record being deleted.
  */
 const adminDeleteDocument = adminProcedure.input(deleteDocumentSchema).mutation(async ({ input, ctx }) => {
   const { documentId } = input;
@@ -46,13 +51,17 @@ const adminDeleteDocument = adminProcedure.input(deleteDocumentSchema).mutation(
   }
 
   try {
-    // Delete from Vercel Blob
-    if (document.fileUrl) {
-      await del(document.fileUrl);
-    }
-
-    // Delete from database
     await db.delete(logisticsDocuments).where(eq(logisticsDocuments.id, documentId));
+
+    // Only files in our own store; never a Hillebrand link or someone else's file
+    if (document.fileUrl && isVercelBlobUrl(document.fileUrl)) {
+      await deleteStoredFile(document.fileUrl).catch((error: unknown) => {
+        logger.error('Document record deleted but its file could not be removed', {
+          documentId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
 
     logger.info('Logistics document deleted', {
       documentId,
@@ -63,7 +72,6 @@ const adminDeleteDocument = adminProcedure.input(deleteDocumentSchema).mutation(
     return { success: true };
   } catch (error) {
     logger.error('Error deleting logistics document:', {
-      error,
       documentId,
       userId: user.id,
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
@@ -71,7 +79,7 @@ const adminDeleteDocument = adminProcedure.input(deleteDocumentSchema).mutation(
 
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: `Failed to delete document: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: 'Failed to delete the document. Please try again.',
     });
   }
 });

@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -196,27 +197,11 @@ const ZohoSalesOrdersPage = () => {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Link
-                href="/platform/admin"
-                className="text-text-muted hover:text-text-primary"
-              >
-                <Typography variant="bodySm">Admin</Typography>
-              </Link>
-              <IconChevronRight className="h-4 w-4 text-text-muted" />
-              <Typography variant="bodySm">Zoho Sales Orders</Typography>
-            </div>
-            <Typography variant="headingLg" className="mb-1">
-              Zoho Sales Orders
-            </Typography>
-            <Typography variant="bodySm" colorRole="muted">
-              Manage synced sales orders from Zoho Books
-            </Typography>
-          </div>
-          <div className="flex items-center gap-2">
+        <AdminPageHeader
+          title="Zoho Sales Orders"
+          description="Manage synced sales orders from Zoho Books"
+          actions={
+            <>
             <Button
               variant="outline"
               size="sm"
@@ -247,8 +232,9 @@ const ZohoSalesOrdersPage = () => {
                 {isFetching ? 'Refreshing...' : 'Refresh'}
               </ButtonContent>
             </Button>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {/* Draft orders whose wine is held while the client finishes them */}
         <DraftHoldsPanel />
@@ -339,7 +325,7 @@ const ZohoSalesOrdersPage = () => {
               {outstanding.map((order) => (
                 <div
                   key={order.id}
-                  className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800/60 dark:bg-background-primary"
+                  className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-surface-primary p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800/60 dark:bg-background-primary"
                 >
                   <div className="min-w-0">
                     <Typography variant="bodySm" className="font-semibold">

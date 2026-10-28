@@ -1,10 +1,14 @@
 'use client';
 
 import { IconGitCompare, IconPaperclip } from '@tabler/icons-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
+import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
+import fileHref from '@/utils/fileHref';
 
 import { card, money, pillClass, secondaryButton, sectionHeading } from '../exports/exportUi';
 
@@ -15,6 +19,12 @@ export interface QuoteRankingProps {
   request: Request;
   selectedQuoteId: string | null;
   onSelect: (quoteId: string) => void;
+  /** Open the quote editor on this quote */
+  onEdit: (quoteId: string) => void;
+  /** Open the request's details at the bottle count */
+  onAddBottles: () => void;
+  /** The add-a-quote control, shown at the top of the card while quotes can still come in */
+  addQuote?: React.ReactNode;
 }
 
 const usd2 = (n: number | null) =>
@@ -25,7 +35,7 @@ const day = (d: Date | null) => (d ? d.toLocaleDateString('en-GB', { day: 'numer
 const statusPill = (q: Quote) => {
   if (q.status === 'accepted') return <span className={pillClass('emerald')}>Accepted</span>;
   if (q.status === 'rejected') return <span className={pillClass('slate')}>Not chosen</span>;
-  if (q.isExpired) return <span className={pillClass('red')}>Expired</span>;
+  if (q.isExpired || q.status === 'expired') return <span className={pillClass('red')}>Expired</span>;
   return null;
 };
 
@@ -34,9 +44,21 @@ const statusPill = (q: Quote) => {
  *
  * Every price is shown in the forwarder's currency and in USD, per bottle and
  * per 75cl equivalent, so quotes in different currencies and for loads with
- * magnums compare directly. Choosing one prices the client on it.
+ * magnums compare directly. Choosing one prices the client on it. Each quote
+ * can be edited in place, or set aside as not being used; one past its
+ * validity says so and offers to fix the date.
  */
-const QuoteRanking = ({ request, selectedQuoteId, onSelect }: QuoteRankingProps) => {
+const QuoteRanking = ({ request, selectedQuoteId, onSelect, onEdit, onAddBottles, addQuote }: QuoteRankingProps) => {
+  const api = useTRPC();
+  const queryClient = useQueryClient();
+  const setAside = useMutation({
+    ...api.logistics.admin.quotes.reject.mutationOptions(),
+    onSuccess: () => {
+      toast.success('Quote set aside');
+      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'requests']] });
+    },
+    onError: (error) => toast.error(error.message || 'The quote was not changed'),
+  });
   const live = request.quotes.filter((q) => q.status === 'pending' && !q.isExpired);
   const compareIds = (live.length >= 2 ? live : request.quotes).slice(0, 5).map((q) => q.id);
 
@@ -47,8 +69,10 @@ const QuoteRanking = ({ request, selectedQuoteId, onSelect }: QuoteRankingProps)
         <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
           {request.quotes.length}
         </span>
-        {!request.totalBottles && request.quotes.length > 0 && (
-          <span className="text-xs text-amber-600">Add the bottle count to see prices per bottle</span>
+        {!request.bottles && request.quotes.length > 0 && (
+          <button type="button" className="text-xs text-amber-700 hover:underline dark:text-amber-300" onClick={onAddBottles}>
+            Add the bottle count to see prices per bottle
+          </button>
         )}
         {compareIds.length >= 2 && (
           <Link
@@ -60,10 +84,10 @@ const QuoteRanking = ({ request, selectedQuoteId, onSelect }: QuoteRankingProps)
         )}
       </div>
 
+      {addQuote && <div className="border-b border-border-muted px-4 py-3">{addQuote}</div>}
+
       {request.quotes.length === 0 ? (
-        <p className="px-4 py-8 text-center text-sm text-text-muted">
-          No quotes yet. Drop a forwarder&apos;s quote above when it arrives.
-        </p>
+        <p className="px-4 py-6 text-center text-sm text-text-muted">No quotes yet. Add each one as it arrives.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -72,16 +96,26 @@ const QuoteRanking = ({ request, selectedQuoteId, onSelect }: QuoteRankingProps)
                 <th className="px-4 py-2 font-medium">Forwarder</th>
                 <th className="px-2 py-2 text-right font-medium">Quoted</th>
                 <th className="px-2 py-2 text-right font-medium">USD</th>
-                <th className="px-2 py-2 text-right font-medium">Per bottle</th>
-                <th className="px-2 py-2 text-right font-medium">Per 75cl</th>
+                <th className="px-2 py-2 text-right font-medium" title="UAE customs and handling from the rate card">
+                  + UAE arrival
+                </th>
+                <th className="px-2 py-2 text-right font-medium" title="Freight plus UAE arrival">
+                  All-in / bottle
+                </th>
+                <th className="px-2 py-2 text-right font-medium" title="Freight plus UAE arrival">
+                  All-in / 75cl
+                </th>
                 <th className="px-2 py-2 text-right font-medium">Transit</th>
                 <th className="px-2 py-2 font-medium">Valid to</th>
-                <th className="px-4 py-2 text-right font-medium">Client price on</th>
+                <th className="px-2 py-2 text-right font-medium">Price on</th>
+                <th className="px-4 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border-muted">
               {request.quotes.map((q, i) => {
                 const choosable = q.status === 'pending' && !q.isExpired;
+                const lapsed = q.status === 'expired' || (q.status === 'pending' && q.isExpired);
+                const editable = q.status === 'pending' || q.status === 'expired' || q.status === 'draft';
                 const best = i === 0 && choosable && live.length > 1;
 
                 return (
@@ -99,7 +133,7 @@ const QuoteRanking = ({ request, selectedQuoteId, onSelect }: QuoteRankingProps)
                         {q.attachments.map((a) => (
                           <a
                             key={a.id}
-                            href={a.fileUrl}
+                            href={fileHref(a.fileUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             title={a.fileName}
@@ -112,11 +146,34 @@ const QuoteRanking = ({ request, selectedQuoteId, onSelect }: QuoteRankingProps)
                     </td>
                     <td className="px-2 py-2.5 text-right tabular-nums">{money(q.totalPrice, q.currency.toUpperCase())}</td>
                     <td className="px-2 py-2.5 text-right tabular-nums">{usd2(q.totalUsd)}</td>
+                    <td
+                      className="px-2 py-2.5 text-right tabular-nums"
+                      title={
+                        q.arrivalCoveredByQuote.length
+                          ? `The quote already includes ${q.arrivalCoveredByQuote.join(' and ')}, so that part is not added`
+                          : undefined
+                      }
+                    >
+                      {q.arrivalUsd == null ? '—' : usd2(q.arrivalUsd)}
+                      {q.arrivalCoveredByQuote.length > 0 && <span className="text-text-muted">*</span>}
+                    </td>
                     <td className="px-2 py-2.5 text-right tabular-nums">{usd2(q.perBottleUsd)}</td>
                     <td className="px-2 py-2.5 text-right font-semibold tabular-nums text-text-primary">{usd2(q.per75clUsd)}</td>
                     <td className="px-2 py-2.5 text-right tabular-nums">{q.transitDays ? `${q.transitDays} days` : '—'}</td>
-                    <td className="px-2 py-2.5">{day(q.validUntil) ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-2 py-2.5">
+                      {lapsed ? (
+                        <button
+                          type="button"
+                          className="text-left text-red-700 hover:underline dark:text-red-300"
+                          onClick={() => onEdit(q.id)}
+                        >
+                          {day(q.validUntil) ?? 'Expired'}: fix
+                        </button>
+                      ) : (
+                        (day(q.validUntil) ?? '—')
+                      )}
+                    </td>
+                    <td className="px-2 py-2.5 text-right">
                       {choosable ? (
                         <input
                           type="radio"
@@ -126,6 +183,23 @@ const QuoteRanking = ({ request, selectedQuoteId, onSelect }: QuoteRankingProps)
                           onChange={() => onSelect(q.id)}
                         />
                       ) : null}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-right text-xs">
+                      {editable && (
+                        <>
+                          <button type="button" className="text-text-primary hover:underline" onClick={() => onEdit(q.id)}>
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="ml-3 text-text-muted hover:text-text-primary hover:underline"
+                            disabled={setAside.isPending}
+                            onClick={() => setAside.mutate({ quoteId: q.id, reason: 'Not used for this request' })}
+                          >
+                            Not using
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );

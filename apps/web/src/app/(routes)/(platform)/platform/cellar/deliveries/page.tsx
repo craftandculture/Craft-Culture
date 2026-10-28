@@ -1,10 +1,13 @@
 'use client';
 
-import { IconArrowRight, IconTruckDelivery } from '@tabler/icons-react';
+import { IconArrowRight, IconBottle, IconPackage, IconTruckDelivery } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
+import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
+import CellarState from '@/app/_cellar/components/CellarState';
 import DeliveriesPanel from '@/app/_cellar/components/DeliveriesPanel';
+import FirstStepsCard from '@/app/_cellar/components/FirstStepsCard';
 import useTRPC from '@/lib/trpc/browser';
 
 /** Requests still being arranged; accepted ones are shown by the panel itself */
@@ -19,25 +22,24 @@ const IN_PROGRESS = ['submitted', 'under_review', 'revision_requested', 'quoted'
  */
 const DeliveriesPage = () => {
   const api = useTRPC();
-  const { data, isLoading } = useQuery(api.cellar.member.getReleases.queryOptions());
+  const { data, isLoading, isError } = useQuery(api.cellar.member.getReleases.queryOptions());
 
   const requests = data?.requests ?? [];
   const arranging = requests.filter((request) => IN_PROGRESS.includes(request.status));
   const accepted = requests.filter((request) => request.status === 'confirmed');
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4">
-      <div>
-        <h1 className="text-text-primary text-2xl font-semibold tracking-tight">Deliveries</h1>
-        <p className="text-text-muted mt-1 text-sm">
-          Wine on its way to you, and deliveries already made. To request one, open a wine in Your cellar.
-        </p>
-      </div>
+    <div className="flex w-full flex-col gap-4 pb-8">
+      <CellarPageHeader
+        title="Deliveries"
+        description="Deliveries in progress and those already completed. To arrange a new delivery, choose the wines in Your cellar."
+        className="mb-1"
+      />
 
       {arranging.length > 0 && (
         <Link
           href="/platform/cellar"
-          className="flex items-center justify-between gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm dark:bg-emerald-500/10"
+          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm shadow-sm dark:border-emerald-900 dark:bg-emerald-500/10"
         >
           <span className="text-text-primary">
             {arranging.length === 1 ? 'One delivery request is' : `${arranging.length} delivery requests are`} being
@@ -50,23 +52,33 @@ const DeliveriesPage = () => {
       )}
 
       {isLoading ? (
-        <p className="text-text-muted py-10 text-center text-sm">Loading your deliveries…</p>
+        <CellarState kind="loading" />
+      ) : isError ? (
+        <CellarState kind="error" />
       ) : accepted.length === 0 && arranging.length === 0 ? (
-        <div className="border-border-muted flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-12 text-center">
-          <span className="grid size-12 place-items-center rounded-2xl bg-black/[0.05] dark:bg-white/[0.08]">
-            <IconTruckDelivery size={24} className="text-text-primary" />
-          </span>
-          <p className="text-text-primary text-sm font-medium">No deliveries yet</p>
-          <p className="text-text-muted max-w-xs text-sm">
-            When you request a delivery from your cellar, you can follow it here until it reaches you.
-          </p>
-          <Link
-            href="/platform/cellar"
-            className="bg-text-primary text-surface-primary mt-1 rounded-lg px-4 py-2.5 text-sm font-semibold"
-          >
-            Go to your cellar
-          </Link>
-        </div>
+        <FirstStepsCard
+          eyebrow="Your first delivery"
+          title="Bring your wine home"
+          message="Choose the wine you would like delivered and we will arrange the rest. You can follow every delivery here until it reaches you."
+          steps={[
+            {
+              icon: IconBottle,
+              title: 'Choose your wines',
+              text: 'In your cellar, select the bottles and press Request delivery.',
+            },
+            {
+              icon: IconPackage,
+              title: 'We prepare them',
+              text: 'You approve the final cost, then we prepare your wine in our bonded warehouse.',
+            },
+            {
+              icon: IconTruckDelivery,
+              title: 'Delivered to you',
+              text: 'City Drinks contacts you to agree a time and brings your wine to your door.',
+            },
+          ]}
+          action={{ href: '/platform/cellar', label: 'Choose wines in your cellar' }}
+        />
       ) : (
         <>
           <DeliveriesPanel requests={requests} section="live" />

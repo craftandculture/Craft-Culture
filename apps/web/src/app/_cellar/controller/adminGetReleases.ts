@@ -7,6 +7,7 @@ import {
   cellarReleaseRequestItems,
   cellarReleaseRequests,
   partners,
+  privateClientOrders,
 } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
@@ -48,9 +49,16 @@ const adminGetReleases = staffAdminProcedure
         request: cellarReleaseRequests,
         partnerName: partners.businessName,
         partnerType: partners.type,
+        /* The PCO the release became, so the two can be found from each other */
+        orderNumber: privateClientOrders.orderNumber,
+        zohoSalesOrderNumber: privateClientOrders.zohoSalesOrderNumber,
       })
       .from(cellarReleaseRequests)
       .leftJoin(partners, eq(partners.id, cellarReleaseRequests.partnerId))
+      .leftJoin(
+        privateClientOrders,
+        eq(privateClientOrders.id, cellarReleaseRequests.privateClientOrderId),
+      )
       .where(
         status === 'all'
           ? undefined
@@ -121,6 +129,7 @@ const adminGetReleases = staffAdminProcedure
         const costByLwin = await getMemberValuePerBottle(
           row.request.partnerId,
           [...new Set(items.map((item) => item.lwin18))],
+          { sharedFallback: true },
         );
 
         const suggested = await computeReleaseQuote(
@@ -131,8 +140,7 @@ const adminGetReleases = staffAdminProcedure
             openBottles: item.stockId
               ? (openByStock.get(item.stockId) ?? 0)
               : 0,
-            costPerBottle:
-              costByLwin.get(lwinPakKeyOf(item.lwin18)) ?? null,
+            costPerBottle: costByLwin.get(lwinPakKeyOf(item.lwin18)) ?? null,
           })),
         );
 
@@ -140,6 +148,8 @@ const adminGetReleases = staffAdminProcedure
           ...row.request,
           partnerName: row.partnerName,
           partnerType: row.partnerType,
+          orderNumber: row.orderNumber,
+          zohoSalesOrderNumber: row.zohoSalesOrderNumber,
           items,
           suggested,
           delivery: detailsByRequest.get(row.request.id) ?? null,

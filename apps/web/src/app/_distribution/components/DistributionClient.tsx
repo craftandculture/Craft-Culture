@@ -179,6 +179,16 @@ const DistributionClient = () => {
     }),
   );
 
+  const linkOwner = useMutation(
+    api.distribution.admin.setOwnerPartner.mutationOptions({
+      onSuccess: async () => {
+        toast.success('Owner linked to its account');
+        await invalidate();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   const setOwner = useMutation(
     api.distribution.admin.setWineOwner.mutationOptions({
       onSuccess: async () => {
@@ -394,7 +404,7 @@ const DistributionClient = () => {
                 type="button"
                 onClick={() => setOwnerId(ownerId === owner.id ? '' : owner.id)}
                 className={`rounded-full px-2.5 py-1 text-xs transition ${colourOf(owner.id).chip} ${
-                  ownerId === owner.id ? 'ring-border-brand ring-2' : ''
+                  ownerId === owner.id ? 'ring-text-primary ring-2' : ''
                 }`}
               >
                 {owner.name}
@@ -404,6 +414,41 @@ const DistributionClient = () => {
               </button>
             ))}
           </div>
+
+          {/*
+            An owner not yet linked to its partner account: its consignment
+            sales cannot reach that account's portal or statement.
+          */}
+          {(setup.data?.owners ?? []).some((owner) => !owner.partnerId) ? (
+            <div className="border-border-primary flex flex-col gap-2 border-t pt-2">
+              <Typography variant="bodyXs" colorRole="muted" asChild>
+                <p>Link each owner to its account, so its sales reach its portal and statement.</p>
+              </Typography>
+              {(setup.data?.owners ?? [])
+                .filter((owner) => !owner.partnerId)
+                .map((owner) => (
+                  <label key={owner.id} className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="min-w-28 font-medium">{owner.name}</span>
+                    <select
+                      defaultValue=""
+                      disabled={linkOwner.isPending}
+                      onChange={(event) =>
+                        event.target.value &&
+                        linkOwner.mutate({ ownerId: owner.id, partnerId: event.target.value })
+                      }
+                      className="border-border-primary bg-background-primary rounded-md border px-2 py-1 text-xs"
+                    >
+                      <option value="">Choose its account…</option>
+                      {(setup.data?.partnerOptions ?? []).map((partner) => (
+                        <option key={partner.id} value={partner.id}>
+                          {partner.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+            </div>
+          ) : null}
 
           {(summary?.unmatched ?? 0) > 0 ? (
             <div className="border-border-primary flex flex-wrap gap-x-6 gap-y-1 border-t pt-2">
@@ -431,13 +476,13 @@ const DistributionClient = () => {
         */}
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="relative">
-            <span className="bg-fill-brand text-text-brand-on-fill absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
+            <span className="bg-text-primary text-surface-primary absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
               1
             </span>
             <SalesUpload outletId={outletId} onImported={invalidate} />
           </div>
           <div className="relative">
-            <span className="bg-fill-brand text-text-brand-on-fill absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
+            <span className="bg-text-primary text-surface-primary absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
               2
             </span>
             <StatementPanel
@@ -510,7 +555,7 @@ const DistributionClient = () => {
                 ownerId: bulkOwner,
               })
             }
-            className="bg-fill-brand text-text-on-brand hover:bg-fill-brand/90 rounded px-2 py-1 text-xs font-medium disabled:opacity-50"
+            className="bg-text-primary text-text-on-brand hover:bg-text-primary/90 rounded px-2 py-1 text-xs font-medium disabled:opacity-50"
           >
             Set them
           </button>
@@ -556,7 +601,7 @@ const DistributionClient = () => {
               onClick={() => setView(key)}
               className={`rounded-full border px-2.5 py-1 text-xs transition ${
                 view === key
-                  ? 'border-border-brand bg-fill-brand/10 text-text-brand'
+                  ? 'border-text-primary bg-text-primary/10 text-text-primary'
                   : urgent && count > 0
                     ? 'border-border-primary text-text-warning hover:bg-fill-muted/30'
                     : 'border-border-primary text-text-muted hover:bg-fill-muted/30'

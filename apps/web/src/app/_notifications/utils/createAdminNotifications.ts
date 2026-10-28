@@ -1,3 +1,4 @@
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { notifications } from '@/database/schema';
 import logger from '@/utils/logger';
@@ -27,7 +28,7 @@ interface CreateAdminNotificationsParams {
 }
 
 /**
- * Creates in-app notifications for all admin users
+ * Creates in-app notifications for every C&C staff admin
  *
  * @param params - Notification parameters
  * @returns Array of created notifications
@@ -35,12 +36,14 @@ interface CreateAdminNotificationsParams {
 const createAdminNotifications = async (params: CreateAdminNotificationsParams) => {
   const { type, title, message, entityType, entityId, actionUrl, metadata } = params;
 
-  // Get all admin users
-  const adminUsers = await db.query.users.findMany({
-    where: {
-      role: 'admin',
-    },
-  });
+  // Admins on the C&C team only; a partner holding an admin role is never told
+  const adminUsers = (
+    await db.query.users.findMany({
+      where: {
+        role: 'admin',
+      },
+    })
+  ).filter((user) => isTeamMember(user));
 
   if (adminUsers.length === 0) {
     logger.warn('No admin users found to notify');

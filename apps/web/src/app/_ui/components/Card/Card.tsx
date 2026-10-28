@@ -8,7 +8,7 @@ export const cardStyles = tv({
       primary: 'border-border-primary bg-surface-primary',
       muted: 'border-border-muted bg-surface-muted',
       tertiary: 'border-border-tertiary bg-surface-tertiary',
-      brand: 'text-text-brand-on-fill border-border-brand bg-fill-brand',
+      brand: 'text-surface-primary border-text-primary bg-text-primary',
     },
     variant: {
       ghost: null,
@@ -27,7 +27,8 @@ export const cardStyles = tv({
   defaultVariants: {
     colorRole: 'primary',
     variant: 'outline',
-    shadow: 'sm',
+    // Tone and edge define a card on the stone canvas; a shadow made each one float
+    shadow: 'none',
   },
 });
 

@@ -1,5 +1,4 @@
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
 import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -12,6 +11,7 @@ import {
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
+import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import generateDeliveryNoteNumber from '../utils/generateDeliveryNoteNumber';
@@ -181,11 +181,7 @@ const adminGenerateDeliveryNote = wmsOperatorProcedure
 
     // Upload PDF to Vercel Blob
     const blobFilename = `wms/delivery-notes/${batchId}/${deliveryNoteNumber}.pdf`;
-    const blob = await put(blobFilename, pdfBuffer, {
-      access: 'public',
-      contentType: 'application/pdf',
-      addRandomSuffix: true,
-    });
+    const blob = await putPrivateFile(blobFilename, pdfBuffer, 'application/pdf');
 
     // Create delivery note record
     const [deliveryNote] = await db

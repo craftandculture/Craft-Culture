@@ -1,10 +1,21 @@
 'use client';
 
-import { IconChevronDown, IconTruckDelivery } from '@tabler/icons-react';
+import {
+  IconBottle,
+  IconCalendar,
+  IconCheck,
+  IconChevronDown,
+  IconGift,
+  IconHome,
+  IconTruckDelivery,
+} from '@tabler/icons-react';
 import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import bottleName from '@/app/_cellar/utils/bottleName';
+import collectorWineName from '@/app/_cellar/utils/collectorWineName';
+import deliveryStage, { DELIVERY_STAGES } from '@/app/_cellar/utils/deliveryStage';
 import describePreferredDelivery from '@/app/_cellar/utils/describePreferredDelivery';
 import type { AppRouter } from '@/trpc-router';
 
@@ -15,102 +26,104 @@ export interface DeliveriesPanelProps {
   requests: Request[];
   /** Deliveries under way sit above the wine; ones already made sit below it */
   section: 'live' | 'past';
+  /** Lets the member fold live deliveries to one line; remembered on the device */
+  collapsible?: boolean;
 }
 
-/** Where an accepted delivery has got to, in the member's words */
-const stageOf = (request: Request) => {
-  switch (request.orderStatus) {
-    case 'delivered':
-      return {
-        label: 'Delivered',
-        tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900',
-      };
-    case 'stock_in_transit':
-    case 'with_distributor':
-    case 'out_for_delivery':
-      return {
-        label: 'On its way to you',
-        tone: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-900',
-      };
-    case 'delivery_scheduled':
-      return {
-        label: 'Delivery arranged',
-        tone: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-900',
-      };
-    default:
-      return {
-        label: 'Being prepared',
-        tone: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-900',
-      };
-  }
-};
+/** How far a delivery has got, from the warehouse's own stages */
+const stepOf = (request: Request) => deliveryStage(request);
+
+/** When each stage was reached, where the Index records it */
+const reachedAt = (request: Request): (Date | null)[] =>
+  [
+    request.confirmedAt,
+    request.pickStartedAt,
+    request.packedAt,
+    request.collectedAt,
+    null,
+    request.deliveredAt,
+  ].map((value) => (value ? new Date(value) : null));
+
+const stamp = (date: Date) => format(date, 'd MMM, HH:mm');
 
 /*
-  The four steps a member recognises, in order. The order's own statuses are
-  finer than this — approvals, invoicing, stock moving to the distributor — and
-  none of that is the member's concern.
+  One step per stage of the team's own process: confirmed, picked, packed,
+  collected, out for delivery, delivered. Done steps carry a tick and the time
+  they happened; the current one is ringed. On a phone only the current stage
+  is named, or six labels would not fit.
 */
-const STEPS = ['Being prepared', 'Delivery arranged', 'On its way', 'Delivered'];
+const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }) => (
+  <ol className="grid grid-cols-6" aria-label="Delivery progress">
+    {DELIVERY_STAGES.map(({ label }, index) => {
+      const done = index < step || (index === step && step === DELIVERY_STAGES.length - 1);
+      const current = index === step && !done;
+      const time = index <= step ? times[index] : null;
 
-const stepOf = (request: Request) => {
-  switch (request.orderStatus) {
-    case 'delivered':
-      return 3;
-    case 'stock_in_transit':
-    case 'with_distributor':
-    case 'out_for_delivery':
-      return 2;
-    case 'delivery_scheduled':
-      return 1;
-    default:
-      return 0;
-  }
-};
-
-/** Four segments, filled to where the delivery has got */
-const ProgressStrip = ({ step }: { step: number }) => (
-  <ol className="mt-2.5 grid grid-cols-4 gap-1" aria-label="Delivery progress">
-    {STEPS.map((label, index) => (
-      <li key={label} className="min-w-0">
-        <span
-          className={`block h-1 rounded-full ${
-            index <= step
-              ? 'bg-emerald-600 dark:bg-emerald-400'
-              : 'bg-fill-muted'
-          }`}
-        />
-        <span
-          className={`mt-1 block truncate text-[10px] ${
-            index === step
-              ? 'text-text-primary font-semibold'
-              : 'text-text-muted'
-          }`}
-          aria-current={index === step ? 'step' : undefined}
-        >
-          {label}
-        </span>
-      </li>
-    ))}
+      return (
+        <li key={label} className="min-w-0" aria-current={current ? 'step' : undefined}>
+          <div className="flex items-center">
+            <span
+              className={`flex size-6 flex-shrink-0 items-center justify-center rounded-full ${
+                done
+                  ? 'bg-emerald-600 text-white dark:bg-emerald-400 dark:text-black'
+                  : current
+                    ? 'bg-surface-primary ring-2 ring-emerald-600 shadow-[0_0_0_6px_rgba(16,185,129,0.15)] dark:ring-emerald-400'
+                    : 'bg-fill-muted'
+              }`}
+            >
+              {done && <IconCheck size={12} stroke={3} />}
+              {current && <span className="size-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />}
+            </span>
+            {index < DELIVERY_STAGES.length - 1 && (
+              <span
+                className={`mx-1.5 h-1 flex-1 rounded-full ${
+                  index < step ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-fill-muted'
+                }`}
+              />
+            )}
+          </div>
+          <p
+            className={`mt-2.5 truncate pr-2 text-[13px] ${
+              index === step
+                ? 'block font-semibold text-emerald-700 dark:text-emerald-300'
+                : index < step
+                  ? 'text-text-secondary hidden sm:block'
+                  : 'text-text-muted hidden sm:block'
+            }`}
+          >
+            {label}
+          </p>
+          {time && (
+            <p
+              className={`text-text-muted truncate pr-2 text-[11px] tabular-nums ${
+                index === step ? 'block' : 'hidden sm:block'
+              }`}
+            >
+              {stamp(time)}
+            </p>
+          )}
+        </li>
+      );
+    })}
   </ol>
 );
 
 const isFinished = (request: Request) =>
   request.orderStatus === 'delivered' || request.orderStatus === 'cancelled';
 
-/** The wines on a delivery, the first two by name */
-const winesOf = (request: Request) => {
-  const names = request.items.map((item) =>
-    item.vintage ? `${item.productName} ${item.vintage}` : item.productName,
-  );
-  const shown = names.slice(0, 2).join(', ');
+/*
+  How many wines a delivery shows before folding the rest away. Run together
+  in one line, five catalogue names with their sizes and strengths could not
+  be read; one wine per line, three at a time, can.
+*/
+const WINES_SHOWN = 6;
 
-  return names.length > 2 ? `${shown} and ${names.length - 2} more` : shown;
-};
-
-const bottlesOf = (request: Request) => {
+/** "5 wines · 6 bottles", the delivery at a glance */
+const summaryOf = (request: Request) => {
+  const wines = request.items.length;
   const bottles = request.items.reduce((sum, item) => sum + item.bottles, 0);
 
-  return `${bottles} ${bottles === 1 ? 'bottle' : 'bottles'}`;
+  return `${wines} ${wines === 1 ? 'wine' : 'wines'} · ${bottles} ${bottles === 1 ? 'bottle' : 'bottles'}`;
 };
 
 const PAST_SHOWN = 5;
@@ -126,9 +139,40 @@ const PAST_SHOWN = 5;
  * left the cellar, and listing it under "Past deliveries" told a member wine
  * had gone that was still on the shelf.
  */
-const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
+const COLLAPSED_KEY = 'cc-cellar-deliveries-collapsed';
+
+const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesPanelProps) => {
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!collapsible) return;
+    try {
+      setCollapsed(window.localStorage.getItem(COLLAPSED_KEY) === '1');
+    } catch {
+      // Storage blocked: start open
+    }
+  }, [collapsible]);
+
+  const toggleCollapsed = () =>
+    setCollapsed((current) => {
+      try {
+        window.localStorage.setItem(COLLAPSED_KEY, current ? '0' : '1');
+      } catch {
+        // Remembered for this visit only
+      }
+      return !current;
+    });
   const [showPast, setShowPast] = useState(false);
   const [showAllPast, setShowAllPast] = useState(false);
+  const [openWines, setOpenWines] = useState<Set<string>>(new Set());
+
+  const toggleWines = (id: string) =>
+    setOpenWines((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const accepted = requests.filter((request) => request.status === 'confirmed');
   const live =
@@ -141,7 +185,6 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
   if (live.length === 0 && past.length === 0) return null;
 
   const row = (request: Request) => {
-    const stage = stageOf(request);
     const when =
       request.orderStatus === 'delivered' && request.deliveredAt
         ? `Delivered ${format(new Date(request.deliveredAt), 'd MMM yyyy')}`
@@ -164,42 +207,175 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
         ? `To ${request.delivery.addressLabel}`
         : null;
 
+    const isOpen = openWines.has(request.id);
+    const wines = isOpen ? request.items : request.items.slice(0, WINES_SHOWN);
+    const hidden = request.items.length - WINES_SHOWN;
+
+    const step = stepOf(request);
+    const stage = DELIVERY_STAGES[step];
+    const details = [
+      { icon: IconBottle, text: summaryOf(request) },
+      recipient && { icon: request.delivery?.isGift ? IconGift : IconHome, text: recipient },
+      when && { icon: IconCalendar, text: when },
+      preferred && { icon: IconCalendar, text: `You asked for ${preferred}` },
+    ].filter(Boolean) as { icon: typeof IconBottle; text: string }[];
+    const isLive = section === 'live';
+
     return (
-      <li key={request.id} className="px-4 py-3">
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">{winesOf(request)}</p>
-            <p className="text-text-muted mt-0.5 text-xs">
-              {bottlesOf(request)}
-              {recipient ? ` · ${recipient}` : ''}
-              {when ? ` · ${when}` : ''}
-              {preferred ? ` · You asked for ${preferred}` : ''}
-              <span className="text-text-muted/70"> · {request.requestNumber}</span>
-            </p>
+      <li
+        key={request.id}
+        className={
+          isLive
+            ? 'bg-background-primary overflow-hidden rounded-xl border border-black/[0.07] shadow-sm dark:border-white/10 dark:bg-white/[0.03]'
+            : 'px-4 py-5 sm:px-6'
+        }
+      >
+        <div
+          className={
+            isLive
+              ? 'border-border-muted border-b bg-gradient-to-r from-emerald-50/80 to-transparent px-4 py-4 sm:px-5 dark:from-emerald-500/[0.08]'
+              : ''
+          }
+        >
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <p className="text-text-primary text-lg font-semibold">
+                {step === 5 && request.deliveredAt
+                  ? `Delivered ${format(new Date(request.deliveredAt), 'd MMMM')}`
+                  : stage?.headline}
+              </p>
+              {isLive && (
+                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white tabular-nums dark:bg-emerald-500">
+                  Step {step + 1} of {DELIVERY_STAGES.length}
+                </span>
+              )}
+            </div>
+            <span className="text-text-muted flex-shrink-0 font-mono text-[11px]">
+              {request.requestNumber}
+              {request.orderNumber ? ` · ${request.orderNumber}` : ''}
+            </span>
           </div>
-          <span className={`w-fit flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${stage.tone}`}>
-            {stage.label}
-          </span>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {details.map((detail) => (
+              <span
+                key={detail.text}
+                className="bg-background-primary/80 text-text-secondary inline-flex items-center gap-1.5 rounded-full border border-black/[0.06] px-2.5 py-1 text-xs font-medium dark:border-white/10 dark:bg-white/[0.04]"
+              >
+                <detail.icon size={13} className="text-text-muted" />
+                {detail.text}
+              </span>
+            ))}
+          </div>
         </div>
-        {section === 'live' && <ProgressStrip step={stepOf(request)} />}
+
+        <div className={isLive ? 'px-4 pt-5 pb-4 sm:px-5' : ''}>
+        {isLive && <ProgressSteps step={step} times={reachedAt(request)} />}
+
+        {/*
+          The wine in a compact grid, so a delivery of thirty bottles stays on
+          one screen: the name as a collector reads it, its vintage and bottle
+          underneath, and how many on the right. Two columns on a laptop,
+          three on a wide screen, one on a phone.
+        */}
+        <div className={isLive ? 'mt-5' : 'mt-4'}>
+          <p className="text-text-muted mb-2 text-[11px] font-semibold tracking-[0.1em] uppercase">In this delivery</p>
+          <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {wines.map((item, index) => (
+              <li
+                key={`${item.productName}-${index}`}
+                className="bg-surface-muted/60 flex min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2.5 dark:bg-white/[0.04]"
+              >
+                <div className="min-w-0">
+                  <p
+                    className="text-text-primary truncate text-sm font-medium"
+                    title={collectorWineName(item.productName)}
+                  >
+                    {collectorWineName(item.productName)}
+                  </p>
+                  <p className="text-text-muted text-xs tabular-nums">
+                    {item.vintage ?? 'NV'} · {bottleName(item.bottleSize)}
+                  </p>
+                </div>
+                <span className="text-text-secondary flex-shrink-0 text-xs font-semibold whitespace-nowrap tabular-nums">
+                  {item.bottles} {item.bottles === 1 ? 'bottle' : 'bottles'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {hidden > 0 && (
+            <button
+              type="button"
+              onClick={() => toggleWines(request.id)}
+              aria-expanded={isOpen}
+              className="text-text-muted hover:text-text-primary mt-3 inline-flex items-center gap-1 text-sm font-semibold"
+            >
+              {isOpen ? 'Show fewer' : `Show all ${request.items.length} wines`}
+              <IconChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+        </div>
+        </div>
       </li>
     );
   };
 
   return (
     <section
-      className={`border-border-muted bg-surface-primary overflow-hidden rounded-xl border shadow-sm ${section === 'live' ? 'mb-5' : 'mt-6'}`}
+      className={`border-border-muted bg-surface-quiet overflow-hidden rounded-xl border ${section === 'live' ? 'mb-5' : 'mt-6'}`}
     >
       {live.length > 0 && (
         <>
-          <header className="border-border-muted flex items-center gap-2 border-b px-4 py-2.5">
-            <IconTruckDelivery size={15} className="text-text-muted" />
-            <p className="text-text-primary text-[11px] font-semibold uppercase tracking-wider">Your deliveries</p>
-            <span className="bg-surface-muted text-text-muted rounded-full px-1.5 text-[10px] font-semibold tabular-nums">
-              {live.length}
-            </span>
-          </header>
-          <ul className="divide-border-muted divide-y">{live.map(row)}</ul>
+          {(() => {
+            const heading = (
+              <>
+                <IconTruckDelivery size={18} className="text-text-muted flex-shrink-0" />
+                <p className="text-text-primary text-base font-semibold">In progress</p>
+                <span className="bg-surface-muted text-text-muted rounded-full px-2 text-xs font-semibold tabular-nums">
+                  {live.length}
+                </span>
+                {/* Folded, the line still says where the delivery is */}
+                {collapsible && collapsed && (
+                  <span className="text-text-muted min-w-0 truncate text-sm">
+                    ·{' '}
+                    {/* One mention per stage: two deliveries at the same stage read as a stutter */}
+                    {[
+                      ...new Set(
+                        live
+                          .map((request) => DELIVERY_STAGES[stepOf(request)]?.headline)
+                          .filter(Boolean),
+                      ),
+                    ].join(' · ')}
+                  </span>
+                )}
+              </>
+            );
+            return collapsible ? (
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                aria-expanded={!collapsed}
+                className={`hover:bg-surface-muted/50 flex w-full items-center gap-2 px-4 py-3 text-left transition-colors sm:px-6 ${
+                  collapsed ? '' : 'border-border-muted border-b'
+                }`}
+              >
+                {heading}
+                <span className="text-text-muted ml-auto flex flex-shrink-0 items-center gap-1 text-sm font-medium">
+                  {collapsed ? 'Show' : 'Hide'}
+                  <IconChevronDown
+                    size={16}
+                    className={`transition-transform ${collapsed ? '' : 'rotate-180'}`}
+                  />
+                </span>
+              </button>
+            ) : (
+              <header className="border-border-muted flex items-center gap-2 border-b px-4 py-3 sm:px-6">
+                {heading}
+              </header>
+            );
+          })()}
+          {!(collapsible && collapsed) && (
+            <ul className="bg-surface-muted/40 flex flex-col gap-4 p-3 sm:p-4 dark:bg-transparent">{live.map(row)}</ul>
+          )}
         </>
       )}
 
@@ -209,7 +385,7 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
             type="button"
             onClick={() => setShowPast((value) => !value)}
             aria-expanded={showPast}
-            className="text-text-muted hover:text-text-primary flex w-full items-center justify-between px-4 py-2.5 text-xs font-semibold"
+            className="text-text-muted hover:text-text-primary flex w-full items-center justify-between px-4 py-3 text-sm font-semibold sm:px-6"
           >
             <span>
               Past deliveries <span className="tabular-nums">({past.length})</span>
@@ -225,7 +401,7 @@ const DeliveriesPanel = ({ requests, section }: DeliveriesPanelProps) => {
                 <button
                   type="button"
                   onClick={() => setShowAllPast(true)}
-                  className="text-text-muted hover:text-text-primary border-border-muted w-full border-t px-4 py-2 text-xs font-semibold"
+                  className="text-text-muted hover:text-text-primary border-border-muted w-full border-t px-4 py-2.5 text-sm font-semibold"
                 >
                   Show all {past.length}
                 </button>

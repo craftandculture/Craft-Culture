@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import { privateClientContacts } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 /**
  * Mark a client as verified with the distributor network, or withdraw it.
@@ -29,7 +29,7 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
  * @param input - The client, and whether they are verified
  * @returns The updated client
  */
-const adminSetVerified = wmsOperatorProcedure
+const adminSetVerified = adminProcedure
   .input(
     z.object({
       id: z.string().uuid(),

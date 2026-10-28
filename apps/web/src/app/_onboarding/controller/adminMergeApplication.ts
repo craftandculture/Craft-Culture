@@ -48,6 +48,18 @@ const adminMergeApplication = staffAdminProcedure
     const [target] = await db.select().from(partners).where(eq(partners.id, targetId)).limit(1);
     if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'The matched collector no longer exists' });
 
+    /*
+      Only ever into a private cellar. The name match runs across every
+      partner, so it can point at a trade partner or distributor — and merging
+      would make the applicant an owner of that business.
+    */
+    if (target.type !== 'private_collector') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `${target.businessName} is not a private cellar, so this application cannot be merged into it.`,
+      });
+    }
+
     const ownId = application.partnerId && application.partnerId !== targetId ? application.partnerId : null;
     const [own] = ownId
       ? await db.select().from(partners).where(eq(partners.id, ownId)).limit(1)

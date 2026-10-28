@@ -3,10 +3,10 @@ import { and, desc, eq, gte, inArray, isNull, notInArray, sql } from 'drizzle-or
 import db from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
 import {
-  partners,
   privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
 import {
@@ -16,6 +16,8 @@ import {
   DISTRIBUTOR_VISIBLE_STATUSES,
 } from '../constants';
 import distributorOrderView from '../utils/distributorOrderView';
+import distributorPartnerView from '../utils/distributorPartnerView';
+import getCraftCulturePartnerId from '../utils/getCraftCulturePartnerId';
 
 /**
  * The distributor's dashboard: what is waiting on them, where their orders
@@ -40,14 +42,14 @@ const distributorDashboard = distributorProcedure.query(
 
     const bottlesSql = sql<number>`coalesce(sum(${privateClientOrderItems.quantity} * coalesce(${privateClientOrderItems.caseConfig}, 1)), 0)`;
 
-    const [statusCounts, [totals], [monthlyTotals], [monthlyBottles], recentOrders, ordersByPartner, [skuMissing]] =
+    const [statusCounts, [totals], [monthlyTotals], [monthlyBottles], recentOrders, craftCulturePartnerId, [skuMissing]] =
       await Promise.all([
         db
           .select({
             status: privateClientOrders.status,
             count: sql<number>`count(*)`,
             valueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-            valueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+            valueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
             oldestUpdatedAt: sql<string | null>`min(${privateClientOrders.updatedAt})`,
             idle: sql<number>`count(*) filter (where ${privateClientOrders.updatedAt} < now() - interval '7 days')`,
             lastWeek: sql<number>`count(*) filter (where ${privateClientOrders.updatedAt} >= now() - interval '7 days')`,
@@ -60,7 +62,7 @@ const distributorDashboard = distributorProcedure.query(
           .select({
             totalOrders: sql<number>`count(*)`,
             totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
           })
           .from(privateClientOrders)
           .where(mine),
@@ -69,7 +71,7 @@ const distributorDashboard = distributorProcedure.query(
           .select({
             totalOrders: sql<number>`count(*)`,
             totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
           })
           .from(privateClientOrders)
           .where(and(mine, gte(privateClientOrders.distributorAssignedAt, thirtyDaysAgo))),
@@ -84,35 +86,14 @@ const distributorDashboard = distributorProcedure.query(
           .where(and(mine, gte(privateClientOrders.distributorAssignedAt, thirtyDaysAgo))),
 
         db
-          .select({
-            order: privateClientOrders,
-            partner: {
-              id: partners.id,
-              businessName: partners.businessName,
-              logoUrl: partners.logoUrl,
-            },
-          })
+          .select({ order: privateClientOrders })
           .from(privateClientOrders)
-          .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
           .where(mine)
           .orderBy(desc(privateClientOrders.distributorAssignedAt))
           .limit(6),
 
-        db
-          .select({
-            partnerId: partners.id,
-            partnerName: partners.businessName,
-            partnerLogoUrl: partners.logoUrl,
-            orderCount: sql<number>`count(*)`,
-            activeCount: sql<number>`count(*) filter (where ${privateClientOrders.status} <> 'delivered')`,
-            totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-            totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
-          })
-          .from(privateClientOrders)
-          .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
-          .where(mine)
-          .groupBy(partners.id, partners.businessName, partners.logoUrl)
-          .orderBy(sql`coalesce(sum(${privateClientOrders.totalUsd}), 0) desc`),
+        // The wine partner is never named to the distributor
+        getCraftCulturePartnerId(),
 
         // Only asked of distributors who record a bundle SKU on each order
         partner.requiresOrderSku
@@ -188,16 +169,7 @@ const distributorDashboard = distributorProcedure.query(
       },
       recentOrders: recentOrders.map((row) => ({
         ...distributorOrderView(row.order),
-        partner: row.partner,
-      })),
-      ordersByPartner: ordersByPartner.map((p) => ({
-        partnerId: p.partnerId,
-        partnerName: p.partnerName ?? 'Unknown Partner',
-        partnerLogoUrl: p.partnerLogoUrl,
-        orderCount: Number(p.orderCount),
-        activeCount: Number(p.activeCount),
-        totalValueUsd: Number(p.totalValueUsd),
-        totalValueAed: Number(p.totalValueAed),
+        partner: distributorPartnerView(row.order.partnerId, craftCulturePartnerId),
       })),
     };
   },
