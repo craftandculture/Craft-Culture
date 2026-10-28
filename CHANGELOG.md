@@ -1,3 +1,13 @@
+## [2.1.8](https://github.com/craftandculture/Craft-Culture/compare/v2.1.7...v2.1.8) (2026-10-28)
+
+### Features
+
+* the Private Cellar can count wine in bottles, naming a case only where a case is sealed, shown to staff first ([2d6c50a](https://github.com/craftandculture/Craft-Culture/commit/2d6c50a225a0f7b65872811e781d6e2c99cba201))
+
+### Bug Fixes
+
+* a take-out recorded this month can have its date corrected, however far back it is dated ([92151cb](https://github.com/craftandculture/Craft-Culture/commit/92151cbe78953f497be59ffe21a20fbc7be26b4b))
+
 ## [2.1.7](https://github.com/craftandculture/Craft-Culture/compare/v2.1.6...v2.1.7) (2026-10-28)
 
 ### Bug Fixes
