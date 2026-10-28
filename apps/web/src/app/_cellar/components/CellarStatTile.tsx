@@ -69,7 +69,7 @@ const CellarStatTile = ({
   className = '',
 }: CellarStatTileProps) => {
   const colours = TONES[tone];
-  const classes = `bg-surface-primary to-surface-primary rounded-xl border bg-gradient-to-b px-3 py-3 text-center shadow-sm ${colours.tile} ${
+  const classes = `bg-surface-quiet to-surface-quiet rounded-xl border bg-gradient-to-b px-3 py-3 text-center ${colours.tile} ${
     isActive ? 'ring-text-primary ring-2' : ''
   } ${className}`;
 

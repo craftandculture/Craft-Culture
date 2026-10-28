@@ -77,6 +77,8 @@ html {
   --color-background-muted: #eceee9;
   /* Cards are a soft white, not paper white: pure white on the canvas glared */
   --color-surface-soft: #fcfcfa;
+  /* Summary panels (KPI tiles, folded bars): between the canvas and a card */
+  --color-surface-quiet: #f7f8f5;
 
   --color-fill-primary: var(--color-surface-soft);
   --color-fill-primary-hover: color-mix(in oklch, var(--color-gray-50) 97%, black);
@@ -450,6 +452,7 @@ html {
     --color-border-info-selected: color-mix(in oklch, var(--color-indigo-500) 95%, white);
 
     --color-surface-primary: var(--color-gray-900);
+    --color-surface-quiet: color-mix(in oklch, var(--color-gray-900) 60%, var(--color-gray-950));
     --color-surface-primary-hover: color-mix(in oklch, var(--color-gray-900) 97%, white);
     --color-surface-primary-active: color-mix(in oklch, var(--color-gray-900) 95%, white);
     --color-surface-primary-selected: color-mix(in oklch, var(--color-gray-900) 95%, white);

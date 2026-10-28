@@ -1884,7 +1884,7 @@ const CellarPage = () => {
 
       <div className="border-border-muted hidden overflow-x-auto rounded-xl border sm:max-h-[72vh] sm:overflow-auto md:block">
         <table className="w-full text-sm">
-          <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
+          <thead className="bg-surface-quiet border-border-muted sticky top-0 z-10 border-b">
             <tr>
               <th className="w-8 px-2 py-2.5" />
               <th className={`${th} min-w-[220px] text-left`}>{sortHeading('wine', 'Wine')}</th>
@@ -3188,52 +3188,6 @@ const CellarPage = () => {
           </div>
         </SheetContent>
       </Sheet>
-
-      {/*
-        One place to edit an account detail, and this is not it. The panel
-        summarises and links; two editors for one address is how they end up
-        disagreeing.
-      */}
-      <section className="border-border-muted mt-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-4">
-        <div className="min-w-0">
-          <Typography variant="bodySm" className="font-semibold">
-            Delivery details
-          </Typography>
-          {profile?.deliveryAddress ? (
-            <>
-              <Typography
-                variant="bodyXs"
-                colorRole="muted"
-                className="mt-0.5 block"
-              >
-                {profile.deliveryAddress}
-              </Typography>
-              {/*
-                A licensed delivery cannot be made without it, so it is a
-                blocker rather than a detail mentioned in passing.
-              */}
-              {profile.documents.length === 0 && (
-                <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                  Identification is required before we can deliver
-                </span>
-              )}
-            </>
-          ) : (
-            <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-              Save a delivery address and it will be used each time you
-              request a delivery.
-            </Typography>
-          )}
-        </div>
-        <Link href="/platform/cellar/profile">
-          <Button variant="outline" size="sm">
-            <ButtonContent>
-              {profile?.deliveryAddress ? 'Edit details' : 'Add address'}
-            </ButtonContent>
-          </Button>
-        </Link>
-      </section>
 
       <SellWinesDialog
         wines={sellingWines}

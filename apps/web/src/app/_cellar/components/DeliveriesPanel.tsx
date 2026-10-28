@@ -321,7 +321,7 @@ const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesP
 
   return (
     <section
-      className={`border-border-muted bg-surface-primary overflow-hidden rounded-xl border shadow-sm ${section === 'live' ? 'mb-5' : 'mt-6'}`}
+      className={`border-border-muted bg-surface-quiet overflow-hidden rounded-xl border ${section === 'live' ? 'mb-5' : 'mt-6'}`}
     >
       {live.length > 0 && (
         <>
@@ -337,10 +337,14 @@ const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesP
                 {collapsible && collapsed && (
                   <span className="text-text-muted min-w-0 truncate text-sm">
                     ·{' '}
-                    {live
-                      .map((request) => DELIVERY_STAGES[stepOf(request)]?.headline)
-                      .filter(Boolean)
-                      .join(' · ')}
+                    {/* One mention per stage: two deliveries at the same stage read as a stutter */}
+                    {[
+                      ...new Set(
+                        live
+                          .map((request) => DELIVERY_STAGES[stepOf(request)]?.headline)
+                          .filter(Boolean),
+                      ),
+                    ].join(' · ')}
                   </span>
                 )}
               </>
