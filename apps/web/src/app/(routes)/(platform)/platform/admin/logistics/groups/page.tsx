@@ -1,12 +1,13 @@
 'use client';
 
-import { IconChevronRight, IconLayersLinked, IconLoader2, IconPlus } from '@tabler/icons-react';
+import { IconChevronRight, IconLoader2, IconPlus } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -45,22 +46,16 @@ const ShipmentGroupsPage = () => {
     <main className="container py-6 md:py-10">
       <div className="mx-auto w-full max-w-4xl space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-fill-secondary">
-              <IconLayersLinked className="h-5 w-5 text-text-muted" />
-            </div>
-            <div>
-              <Typography variant="headingMd">Consolidation Groups</Typography>
-              <Typography variant="bodyXs" colorRole="muted">
-                Group shipments on one freight invoice and spread the cost across every bottle
-              </Typography>
-            </div>
-          </div>
-          <Button variant="outline" onClick={() => setCreating((v) => !v)}>
-            <ButtonContent iconLeft={IconPlus}>New group</ButtonContent>
-          </Button>
-        </div>
+        <AdminPageHeader
+          title="Consolidation Groups"
+          description="Group shipments on one freight invoice and spread the cost across every bottle"
+          crumbs={[{ label: 'Logistics', href: '/platform/admin/logistics' }]}
+          actions={
+            <Button variant="outline" onClick={() => setCreating((v) => !v)}>
+              <ButtonContent iconLeft={IconPlus}>New group</ButtonContent>
+            </Button>
+          }
+        />
 
         {/* Create form */}
         {creating && (

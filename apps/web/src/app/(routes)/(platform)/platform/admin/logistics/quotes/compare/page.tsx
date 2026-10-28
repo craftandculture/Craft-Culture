@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  IconArrowLeft,
   IconCheck,
   IconClock,
   IconCurrencyDollar,
@@ -12,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -117,19 +117,14 @@ const QuoteComparePage = () => {
     <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/platform/admin/logistics/quotes">
-              <Icon icon={IconArrowLeft} size="sm" />
-            </Link>
-          </Button>
-          <div>
-            <Typography variant="headingLg">Compare Quotes</Typography>
-            <Typography variant="bodySm" colorRole="muted">
-              Comparing {quotes.length} freight quotes side-by-side
-            </Typography>
-          </div>
-        </div>
+        <AdminPageHeader
+          title="Compare Quotes"
+          description={`Comparing ${quotes.length} freight quotes side-by-side`}
+          crumbs={[
+            { label: 'Logistics', href: '/platform/admin/logistics' },
+            { label: 'Freight quotes', href: '/platform/admin/logistics/quotes' },
+          ]}
+        />
 
         {/* Quick Summary */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -20,6 +20,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import {
   input as inputClass,
   label as labelClass,
@@ -292,22 +293,21 @@ const QuoteDetailPage = () => {
     <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={backHref}>
-                <Icon icon={IconArrowLeft} size="sm" />
-              </Link>
-            </Button>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <Typography variant="headingLg">{quote.quoteNumber}</Typography>
-                <Badge colorRole={statusBadgeVariants[quote.status]}>
-                  <Icon icon={StatusIcon} size="xs" className="mr-1" />
-                  {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-                </Badge>
-              </div>
-              <Typography variant="bodySm" colorRole="muted">
+        <AdminPageHeader
+          title={quote.quoteNumber}
+          crumbs={[
+            { label: 'Logistics', href: '/platform/admin/logistics' },
+            quote.request
+              ? { label: quote.request.requestNumber, href: backHref }
+              : { label: 'Freight quotes', href: backHref },
+          ]}
+          description={
+            <span className="flex flex-wrap items-center gap-3">
+              <Badge colorRole={statusBadgeVariants[quote.status]}>
+                <Icon icon={StatusIcon} size="xs" className="mr-1" />
+                {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+              </Badge>
+              <span>
                 Created {formatDistanceToNow(new Date(quote.createdAt), { addSuffix: true })}
                 {quote.request && (
                   <>
@@ -320,28 +320,30 @@ const QuoteDetailPage = () => {
                     </Link>
                   </>
                 )}
-              </Typography>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {(isEditable || quote.status === 'expired') && quote.requestId && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/platform/admin/logistics/requests/${quote.requestId}?editQuote=${quote.id}`}>
-                  <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
-                </Link>
-              </Button>
-            )}
-            {others.length > 0 && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/platform/admin/logistics/quotes/compare?ids=${compareIds.join(',')}`}>
-                  <ButtonContent iconLeft={IconGitCompare}>
-                    Compare with other quotes ({others.length})
-                  </ButtonContent>
-                </Link>
-              </Button>
-            )}
-          </div>
-        </div>
+              </span>
+            </span>
+          }
+          actions={
+            <>
+              {(isEditable || quote.status === 'expired') && quote.requestId && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/platform/admin/logistics/requests/${quote.requestId}?editQuote=${quote.id}`}>
+                    <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
+                  </Link>
+                </Button>
+              )}
+              {others.length > 0 && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/platform/admin/logistics/quotes/compare?ids=${compareIds.join(',')}`}>
+                    <ButtonContent iconLeft={IconGitCompare}>
+                      Compare with other quotes ({others.length})
+                    </ButtonContent>
+                  </Link>
+                </Button>
+              )}
+            </>
+          }
+        />
 
         {/* Actions for pending quotes */}
         {canAcceptReject && !showAcceptPanel && (

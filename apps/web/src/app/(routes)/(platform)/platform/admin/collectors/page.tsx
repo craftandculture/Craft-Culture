@@ -14,6 +14,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useState } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import PartnerRowActions from '@/app/_partners/components/PartnerRowActions';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -202,148 +203,144 @@ const CollectorsPage = () => {
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div>
-            <Typography variant="headingLg" className="mb-2">
-              Private Collectors
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Members of the Private Cellar programme, and the wine they hold with us
-            </Typography>
-          </div>
-          <div className="flex items-center gap-3">
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="default" colorRole="brand">
-                  <ButtonContent iconLeft={IconPlus}>Add Collector</ButtonContent>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Add Collector</DialogTitle>
-                  <DialogDescription>
-                    A member of the Private Cellar programme
-                  </DialogDescription>
-                </DialogHeader>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleCreatePartner();
-                  }}
-                  className="space-y-6 mt-4"
-                >
-                  {/* Business Details Section */}
-                  <div className="space-y-4">
-                    <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
-                      <IconBuilding className="h-4 w-4" />
-                      Their details
-                    </Typography>
+        <AdminPageHeader
+          title="Private Collectors"
+          description="Members of the Private Cellar programme, and the wine they hold with us"
+          actions={
+            <>
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" colorRole="brand">
+                    <ButtonContent iconLeft={IconPlus}>Add Collector</ButtonContent>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add Collector</DialogTitle>
+                    <DialogDescription>
+                      A member of the Private Cellar programme
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleCreatePartner();
+                    }}
+                    className="space-y-6 mt-4"
+                  >
+                    {/* Business Details Section */}
+                    <div className="space-y-4">
+                      <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                        <IconBuilding className="h-4 w-4" />
+                        Their details
+                      </Typography>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Full name *
-                        </label>
-                        <input
-                          type="text"
-                          value={newPartner.businessName}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessName: e.target.value })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                          required
-                        />
-                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Full name *
+                          </label>
+                          <input
+                            type="text"
+                            value={newPartner.businessName}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessName: e.target.value })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                            required
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Emirates ID or TRN &mdash; optional
-                        </label>
-                        <input
-                          type="text"
-                          value={newPartner.taxId}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, taxId: e.target.value })
-                          }
-                          placeholder="Leave blank for an individual"
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Emirates ID or TRN &mdash; optional
+                          </label>
+                          <input
+                            type="text"
+                            value={newPartner.taxId}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, taxId: e.target.value })
+                            }
+                            placeholder="Leave blank for an individual"
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Address &mdash; optional
-                        </label>
-                        <textarea
-                          value={newPartner.businessAddress}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessAddress: e.target.value })
-                          }
-                          rows={2}
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Address &mdash; optional
+                          </label>
+                          <textarea
+                            value={newPartner.businessAddress}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessAddress: e.target.value })
+                            }
+                            rows={2}
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={newPartner.businessEmail}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessEmail: e.target.value })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            value={newPartner.businessEmail}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessEmail: e.target.value })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Phone
-                        </label>
-                        <input
-                          type="tel"
-                          value={newPartner.businessPhone}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessPhone: e.target.value })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Phone
+                          </label>
+                          <input
+                            type="tel"
+                            value={newPartner.businessPhone}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessPhone: e.target.value })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/*
-                    No branding block. A private collector is a person; a logo
-                    field on their record is the clearest sign this form was
-                    cloned from one written for companies.
-                  */}
+                    {/*
+                      No branding block. A private collector is a person; a logo
+                      field on their record is the clearest sign this form was
+                      cloned from one written for companies.
+                    */}
 
-                  <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsCreateDialogOpen(false)}
-                    >
-                      <ButtonContent>Cancel</ButtonContent>
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="default"
-                      colorRole="brand"
-                      isDisabled={isCreating}
-                    >
-                      <ButtonContent>
-                        {isCreating ? 'Creating...' : 'Add Collector'}
-                      </ButtonContent>
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
+                    <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsCreateDialogOpen(false)}
+                      >
+                        <ButtonContent>Cancel</ButtonContent>
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="default"
+                        colorRole="brand"
+                        isDisabled={isCreating}
+                      >
+                        <ButtonContent>
+                          {isCreating ? 'Creating...' : 'Add Collector'}
+                        </ButtonContent>
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
+          }
+        />
 
         {/* Filters */}
         <Card>

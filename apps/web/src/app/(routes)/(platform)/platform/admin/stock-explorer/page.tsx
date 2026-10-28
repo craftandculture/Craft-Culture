@@ -51,6 +51,7 @@ import {
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -2783,91 +2784,77 @@ const StockExplorerPage = () => {
     <div className="container mx-auto max-w-[2000px] px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-5">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Link
-                href="/platform/admin"
-                className="text-text-muted hover:text-text-primary transition-colors"
+        <AdminPageHeader
+          title="Stock Explorer"
+          description="Full warehouse inventory — search, filter, analyze, and export"
+          actions={
+            <>
+              {/* Wine that missed receiving, booked in on the day it arrived */}
+              <Button
+                variant={addingStock ? 'outline' : 'default'}
+                size="sm"
+                onClick={() => setAddingStock((v) => !v)}
               >
-                <Typography variant="bodySm">Admin</Typography>
-              </Link>
-              <IconChevronRight className="text-text-muted h-4 w-4" />
-              <Typography variant="bodySm">Stock Explorer</Typography>
-            </div>
-            <Typography variant="headingLg" className="mb-1">
-              Stock Explorer
-            </Typography>
-            <Typography variant="bodySm" colorRole="muted">
-              Full warehouse inventory — search, filter, analyze, and export
-            </Typography>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Wine that missed receiving, booked in on the day it arrived */}
-            <Button
-              variant={addingStock ? 'outline' : 'default'}
-              size="sm"
-              onClick={() => setAddingStock((v) => !v)}
-            >
-              <IconPlus className="h-4 w-4" />
-              {addingStock ? 'Cancel' : 'Add to stock'}
-            </Button>
+                <IconPlus className="h-4 w-4" />
+                {addingStock ? 'Cancel' : 'Add to stock'}
+              </Button>
 
-            {/* Density toggle */}
-            <div className="border-border-muted flex items-center rounded-lg border">
-              {(['compact', 'normal', 'relaxed'] as RowDensity[]).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDensity(d)}
-                  className={`px-3 py-2 transition-colors ${
-                    density === d
-                      ? 'bg-text-primary/10 text-text-primary'
-                      : 'text-text-muted hover:text-text-primary'
-                  }`}
-                  title={`${d} density`}
-                >
-                  <IconLayoutRows
-                    className="h-4 w-4"
-                    strokeWidth={
-                      d === 'compact' ? 2.5 : d === 'normal' ? 2 : 1.5
-                    }
-                  />
-                </button>
-              ))}
-            </div>
+              {/* Density toggle */}
+              <div className="border-border-muted flex items-center rounded-lg border">
+                {(['compact', 'normal', 'relaxed'] as RowDensity[]).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setDensity(d)}
+                    className={`px-3 py-2 transition-colors ${
+                      density === d
+                        ? 'bg-text-primary/10 text-text-primary'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                    title={`${d} density`}
+                  >
+                    <IconLayoutRows
+                      className="h-4 w-4"
+                      strokeWidth={
+                        d === 'compact' ? 2.5 : d === 'normal' ? 2 : 1.5
+                      }
+                    />
+                  </button>
+                ))}
+              </div>
 
-            {/* Column toggle */}
-            <ColumnToggle
-              columns={visibleColumns}
-              onChange={setVisibleColumns}
-            />
+              {/* Column toggle */}
+              <ColumnToggle
+                columns={visibleColumns}
+                onChange={setVisibleColumns}
+              />
 
-            {/* Export — all filtered rows to Excel */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExport}
-              disabled={
-                isExporting ||
-                (isInboundView
-                  ? !inboundProducts.length
-                  : !products.length && !showZeroQty)
-              }
-              title={
-                isInboundView
-                  ? 'Export all inbound rows to Excel'
-                  : 'Export all filtered rows to Excel'
-              }
-            >
-              {isExporting ? (
-                <IconLoader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <IconDownload className="h-4 w-4" />
-              )}
-              {isExporting ? 'Exporting…' : 'Export Excel'}
-            </Button>
-          </div>
-        </div>
+              {/* Export — all filtered rows to Excel */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={
+                  isExporting ||
+                  (isInboundView
+                    ? !inboundProducts.length
+                    : !products.length && !showZeroQty)
+                }
+                title={
+                  isInboundView
+                    ? 'Export all inbound rows to Excel'
+                    : 'Export all filtered rows to Excel'
+                }
+              >
+                {isExporting ? (
+                  <IconLoader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <IconDownload className="h-4 w-4" />
+                )}
+                {isExporting ? 'Exporting…' : 'Export Excel'}
+              </Button>
+            </>
+          }
+        />
 
         {addingStock && <AddToStockPanel onClose={() => setAddingStock(false)} />}
 

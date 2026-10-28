@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
 import getOutletReorderList from '@/app/_distribution/data/getOutletReorderList';
 import type { ReorderLine } from '@/app/_distribution/data/getOutletReorderList';
@@ -111,19 +112,10 @@ const ReorderWatchPage = async () => {
 
   return (
     <main className="container space-y-8 py-8">
-      <div>
-        <Typography variant="headingLg" asChild>
-          <h1>Reorder watch</h1>
-        </Typography>
-        <Typography variant="bodySm" colorRole="muted" asChild>
-          <p className="mt-1 max-w-3xl">
-            Wines the distributor is out of (sold in the last 30 days) or has under 14 days of stock
-            for, from their latest count. To send: we, or the consignor, hold it or have it inbound.
-            To source: nobody holds it, then one-offs that sold this quarter but not this month.
-            C&amp;C staff only.
-          </p>
-        </Typography>
-      </div>
+      <AdminPageHeader
+        title="Reorder watch"
+        description="Wines the distributor is out of (sold in the last 30 days) or has under 14 days of stock for, from their latest count. To send: we, or the consignor, hold it or have it inbound. To source: nobody holds it, then one-offs that sold this quarter but not this month. C&C staff only."
+      />
 
       {lists.map(({ outlet, takenAt, lines }) => {
         const toSend = lines.filter(canSend);
