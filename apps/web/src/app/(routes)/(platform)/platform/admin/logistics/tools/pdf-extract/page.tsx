@@ -28,6 +28,7 @@ import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
+import tryCatch from '@/utils/tryCatch';
 
 type DocumentType =
   | 'freight_invoice'
@@ -228,7 +229,15 @@ const PdfExtractPage = () => {
   const handleExportExcel = async () => {
     if (!extractedData) return;
 
-    const { default: ExcelJS } = await import('exceljs');
+    const [excelModule, importError] = await tryCatch(import('exceljs'));
+
+    if (importError) {
+      console.error('Error loading Excel export', { importError });
+      toast.error('The Excel file could not be created. Please try again.');
+      return;
+    }
+
+    const ExcelJS = excelModule.default;
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Craft & Culture';
     workbook.created = new Date();
