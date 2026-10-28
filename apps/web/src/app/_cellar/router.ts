@@ -15,6 +15,7 @@ import adminGetMemberStatement from './controller/adminGetMemberStatement';
 import adminGetPaymentDetails from './controller/adminGetPaymentDetails';
 import adminGetReleaseRates from './controller/adminGetReleaseRates';
 import adminGetReleases from './controller/adminGetReleases';
+import adminGetRepacks from './controller/adminGetRepacks';
 import adminGetUkMoves from './controller/adminGetUkMoves';
 import adminGetUkRates from './controller/adminGetUkRates';
 import adminGetUkStock from './controller/adminGetUkStock';
@@ -114,6 +115,8 @@ const adminRouter = createTRPCRouter({
   encryptIdentityDocuments: adminEncryptIdentityDocuments,
   getPaymentDetails: adminGetPaymentDetails,
   setPaymentDetails: adminSetPaymentDetails,
+  // Packages built for members' own deliveries, billed on the monthly invoice
+  getRepacks: adminGetRepacks,
   getReleaseRates: adminGetReleaseRates,
   setReleaseRates: adminSetReleaseRates,
   // Member emails: the off/shadow/live switch and the outbox

@@ -78,14 +78,11 @@ const formFromRequest = (request: Release) => ({
     ? String(request.suggested.serviceFeeUsd)
     : '',
   /*
-    The repack has to land in a field or it never reaches the
-    member. clearanceTotalUsd is duty, VAT, transfer and the
-    distributor — deliberately not this — so the breakdown
-    showed a repack the quote then dropped. The additional
-    charge is where a named pass-through belongs, and it
-    arrives with its own explanation.
+    Repack is billed on the member's monthly warehouse invoice, per package
+    built, and is never part of a delivery quote. The field stays so a
+    quote's figures keep their shape; it is always empty.
   */
-  repack: request.suggested?.priced ? String(request.suggested.repackUsd) : '',
+  repack: '',
   extra: '',
   extraLabel: '',
   goods: request.suggested?.priced
@@ -854,7 +851,6 @@ const CellarReleasesPage = () => {
                                     service: String(
                                       request.suggested.serviceFeeUsd,
                                     ),
-                                    repack: String(request.suggested.repackUsd),
                                     goods: String(
                                       request.suggested.goodsValueUsd,
                                     ),
@@ -931,22 +927,13 @@ const CellarReleasesPage = () => {
                                 note: 'the drive',
                                 value: request.suggested.deliveryUsd,
                               },
-                              {
-                                label: 'Repack',
-                                note:
-                                  Number(form.repack) > 0
-                                    ? 'added to this quote'
-                                    : 'not charged',
-                                value: Number(form.repack) || 0,
-                                muted: !(Number(form.repack) > 0),
-                              },
                             ].map((line) => (
                               <div
                                 key={line.label}
                                 className="flex items-baseline justify-between gap-3"
                               >
                                 <dt
-                                  className={`text-xs ${line.muted ? 'text-text-muted/60' : 'text-text-muted'}`}
+                                  className="text-text-muted text-xs"
                                 >
                                   {line.label}
                                   <span className="text-text-muted/70 ml-1.5 text-[11px]">
@@ -954,7 +941,7 @@ const CellarReleasesPage = () => {
                                   </span>
                                 </dt>
                                 <dd
-                                  className={`m-0 text-xs tabular-nums ${line.muted ? 'text-text-muted/60' : 'text-text-primary'}`}
+                                  className="text-text-primary m-0 text-xs tabular-nums"
                                 >
                                   {line.value.toFixed(2)}
                                 </dd>
@@ -962,77 +949,7 @@ const CellarReleasesPage = () => {
                             ))}
                           </dl>
 
-                          {/*
-                            Repack is offered, never added by itself. The rate
-                            card used to put it in every time the request
-                            opened, so deleting it did not stick.
-                          */}
-                          {request.suggested.repackOffer.cases > 0 && (
-                            <div className="border-border-muted flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2">
-                              <Typography variant="bodyXs" colorRole="muted">
-                                {request.suggested.repackOffer.cases}{' '}
-                                {request.suggested.repackOffer.cases === 1
-                                  ? 'case'
-                                  : 'cases'}{' '}
-                                would be opened. Repack at the rate card is $
-                                {request.suggested.repackOffer.repackUsd.toFixed(
-                                  2,
-                                )}{' '}
-                                plus $
-                                {request.suggested.repackOffer.vatUsd.toFixed(
-                                  2,
-                                )}{' '}
-                                VAT.
-                              </Typography>
-                              {Number(form.repack) > 0 ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setIsOverridden(true);
-                                    setForm((current) => ({
-                                      ...current,
-                                      repack: '0',
-                                      clearance: String(
-                                        Math.round(
-                                          ((Number(current.clearance) || 0) -
-                                            request.suggested.repackOffer
-                                              .vatUsd) *
-                                            100,
-                                        ) / 100,
-                                      ),
-                                    }));
-                                  }}
-                                  className="text-text-muted text-xs font-medium hover:text-red-700"
-                                >
-                                  Remove repack
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setIsOverridden(true);
-                                    setForm((current) => ({
-                                      ...current,
-                                      repack: String(
-                                        request.suggested.repackOffer.repackUsd,
-                                      ),
-                                      clearance: String(
-                                        Math.round(
-                                          ((Number(current.clearance) || 0) +
-                                            request.suggested.repackOffer
-                                              .vatUsd) *
-                                            100,
-                                        ) / 100,
-                                      ),
-                                    }));
-                                  }}
-                                  className="text-text-brand text-xs font-semibold hover:underline"
-                                >
-                                  Add repack
-                                </button>
-                              )}
-                            </div>
-                          )}
+                          
 
                           <div className="border-border-muted bg-fill-muted/40 flex items-baseline justify-between gap-3 border-t px-4 py-2">
                             <Typography
@@ -1059,7 +976,6 @@ const CellarReleasesPage = () => {
                           },
                           { key: 'delivery', label: 'Delivery $' },
                           { key: 'service', label: 'Service fee $' },
-                          { key: 'repack', label: 'Repack $' },
                           { key: 'extra', label: 'Additional charge $' },
                           /*
                             Text, not money. Both of these were getting the
@@ -1126,7 +1042,7 @@ const CellarReleasesPage = () => {
                             colorRole="muted"
                             className="block"
                           >
-                            Clearance, delivery, repack, our fee
+                            Clearance, delivery, our fee
                             {Number(form.extra) ? ' and the extra' : ''}
                           </Typography>
                         </div>
@@ -1139,7 +1055,6 @@ const CellarReleasesPage = () => {
                             (Number(form.clearance) || 0) +
                             (Number(form.delivery) || 0) +
                             (Number(form.service) || 0) +
-                            (Number(form.repack) || 0) +
                             (Number(form.extra) || 0)
                           ).toFixed(2)}
                         </Typography>
@@ -1171,7 +1086,6 @@ const CellarReleasesPage = () => {
                                 (Number(form.clearance) || 0) +
                                 (Number(form.delivery) || 0) +
                                 (Number(form.service) || 0) +
-                                (Number(form.repack) || 0) +
                                 (Number(form.extra) || 0)
                               ).toLocaleString('en-US', {
                                 maximumFractionDigits: 0,
@@ -1190,7 +1104,6 @@ const CellarReleasesPage = () => {
                               clearance: moneyOf(form.clearance),
                               delivery: moneyOf(form.delivery),
                               service: moneyOf(form.service),
-                              repack: moneyOf(form.repack),
                               extra: moneyOf(form.extra),
                               goods: moneyOf(form.goods),
                             };
@@ -1210,11 +1123,6 @@ const CellarReleasesPage = () => {
                               clearanceCostUsd: figures.clearance!,
                               deliveryCostUsd: figures.delivery!,
                               serviceFeeUsd: figures.service!,
-                              repackCostUsd: figures.repack!,
-                              repackCases:
-                                figures.repack! > 0
-                                  ? (request.suggested?.repackOffer.cases ?? 0)
-                                  : 0,
                               additionalChargeUsd: figures.extra!,
                               additionalChargeLabel:
                                 form.extraLabel || undefined,

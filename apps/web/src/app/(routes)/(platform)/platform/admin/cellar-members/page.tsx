@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 import AttentionQueue from '@/app/_cellar/components/admin/AttentionQueue';
+import RepacksList from '@/app/_cellar/components/admin/RepacksList';
 import SharedAccessList from '@/app/_cellar/components/admin/SharedAccessList';
 import UkBondList from '@/app/_cellar/components/admin/UkBondList';
 import UkMovesList from '@/app/_cellar/components/admin/UkMovesList';
@@ -65,6 +66,7 @@ const CellarMembersPage = () => {
       {tab === 'storage' && (
         <div className="space-y-8">
           <StorageList />
+          <RepacksList />
           <UkStorageList />
         </div>
       )}

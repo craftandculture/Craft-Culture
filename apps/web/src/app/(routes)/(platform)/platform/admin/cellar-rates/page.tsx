@@ -72,11 +72,11 @@ const FIELD_GROUPS: {
     hint: 'Moving it out of the free zone, then the run itself',
     fields: [
       { key: 'transferPerBottle', label: 'Transfer, per bottle', suffix: '$' },
-      {
-        key: 'repackPerCase',
-        label: 'Repack, per case opened (AED 25)',
-        suffix: '$',
-      },
+      /*
+        No repack here. Packages built for a member's deliveries are billed on
+        their monthly warehouse invoice (Cellar members → Storage → Repacks),
+        never on a delivery quote. The stored figure is kept, untouched.
+      */
       { key: 'deliveryFlat', label: 'Delivery call-out, flat', suffix: '$' },
       { key: 'deliveryPerCase', label: 'Delivery, per case', suffix: '$' },
     ],
@@ -140,15 +140,11 @@ const CellarRatesPage = () => {
     Cases are rounded up from bottles exactly as the quote does it — half a
     case still gets opened, handled and carried.
   */
-  /*
-    The preview assumes a whole number of cases, so it shows no repack. Type a
-    quantity that is not a multiple of the case and the fee appears, which is
-    the only way to see what it does before saving the card.
-  */
+  // A delivery quote carries no repack; it is billed monthly instead
   const volume = {
     bottles,
     cases: Math.ceil(bottles / caseConfig),
-    repackCases: caseConfig > 1 && bottles % caseConfig !== 0 ? 1 : 0,
+    repackCases: 0,
     goodsValueUsd: bottles * perBottle,
   };
 
