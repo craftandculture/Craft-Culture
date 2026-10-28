@@ -29,7 +29,7 @@ const AdminSectionTabs = ({ userRole, isStaff = false }: AdminSectionTabsProps) 
   if (!tabs?.length) return null;
 
   return (
-    <div className="border-b border-border-muted bg-white dark:bg-background-secondary">
+    <div className="border-b border-border-muted bg-surface-primary dark:bg-background-secondary">
       <div className="container">
         <nav className="-mb-px flex gap-0 overflow-x-auto">
           {tabs.map((tab) => {

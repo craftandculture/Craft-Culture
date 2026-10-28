@@ -2759,7 +2759,7 @@ const PricingManagerPage = () => {
                           className={`px-1.5 py-0.5 ${
                             marginBasis === 'ibLanded'
                               ? 'bg-emerald-600 text-white'
-                              : 'bg-white text-emerald-700 hover:bg-emerald-50'
+                              : 'bg-surface-primary text-emerald-700 hover:bg-emerald-50'
                           }`}
                         >
                           IB·Landed
@@ -2771,7 +2771,7 @@ const PricingManagerPage = () => {
                           className={`border-l border-emerald-300 px-1.5 py-0.5 ${
                             marginBasis === 'pcIb'
                               ? 'bg-emerald-600 text-white'
-                              : 'bg-white text-emerald-700 hover:bg-emerald-50'
+                              : 'bg-surface-primary text-emerald-700 hover:bg-emerald-50'
                           }`}
                         >
                           PC·IB

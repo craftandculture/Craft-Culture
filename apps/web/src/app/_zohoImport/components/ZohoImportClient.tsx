@@ -555,7 +555,7 @@ const ZohoImportClient = () => {
                         <select
                           value={item.caseConfig}
                           onChange={(e) => handleCaseConfigChange(item.id, parseInt(e.target.value, 10))}
-                          className="w-full px-1 py-1 text-xs border border-border-muted rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-1 py-1 text-xs border border-border-muted rounded bg-surface-primary focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           {CASE_SIZES.map((size) => (
                             <option key={size} value={size}>

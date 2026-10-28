@@ -1148,7 +1148,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     Your quote has been confirmed. Please submit your Purchase Order to proceed.
                   </Typography>
                   {quote.deliveryLeadTime && (
-                    <div className="mb-4 rounded-lg border border-border-brand bg-white p-3">
+                    <div className="mb-4 rounded-lg border border-border-brand bg-surface-primary p-3">
                       <div className="flex items-center gap-2">
                         <Icon icon={IconTruck} size="xs" className="text-text-brand" />
                         <Typography variant="bodyXs" className="font-semibold text-text-brand">

@@ -1721,7 +1721,7 @@ const ProductRow = ({
               />
               <button
                 type="button"
-                className="text-text-primary absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg"
+                className="text-text-primary absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-surface-primary shadow-lg"
                 onClick={() => setLightboxPhotos(null)}
               >
                 <IconX className="h-4 w-4" />

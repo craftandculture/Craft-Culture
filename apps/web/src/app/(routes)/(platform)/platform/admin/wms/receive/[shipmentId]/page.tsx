@@ -1839,7 +1839,7 @@ const WMSReceiveShipmentPage = () => {
                               }`}
                             >
                               <div
-                                className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                                className={`h-5 w-5 rounded-full bg-surface-primary shadow transition-transform ${
                                   isPalletMode ? 'translate-x-5' : 'translate-x-0.5'
                                 }`}
                               />

@@ -70,7 +70,7 @@ const OrphanOrderBackfill = () => {
           type="button"
           disabled={backfill.isPending}
           onClick={() => backfill.mutate({ apply: false })}
-          className="flex-none rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-[13px] font-medium text-amber-900 hover:bg-amber-50 disabled:opacity-50"
+          className="flex-none rounded-lg border border-amber-300 bg-surface-primary px-3 py-1.5 text-[13px] font-medium text-amber-900 hover:bg-amber-50 disabled:opacity-50"
         >
           {backfill.isPending && !preview ? 'Checking…' : 'Check'}
         </button>
@@ -84,7 +84,7 @@ const OrphanOrderBackfill = () => {
             client{preview.clients === 1 ? '' : 's'}
           </p>
 
-          <div className="mt-2 max-h-56 overflow-auto rounded-lg border border-amber-200 bg-white">
+          <div className="mt-2 max-h-56 overflow-auto rounded-lg border border-amber-200 bg-surface-primary">
             <table className="w-full text-[12.5px]">
               <tbody className="divide-y divide-amber-100">
                 {preview.details.map((row) => (

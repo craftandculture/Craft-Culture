@@ -73,10 +73,12 @@ html {
     A soft stone canvas rather than near-white, so white cards, tables and
     panels read as surfaces on it. It matches the cellar's theme colour.
   */
-  --color-background-primary: #f5f6f4;
-  --color-background-muted: #eef0ed;
+  --color-background-primary: #f2f3f0;
+  --color-background-muted: #eceee9;
+  /* Cards are a soft white, not paper white: pure white on the canvas glared */
+  --color-surface-soft: #fcfcfa;
 
-  --color-fill-primary: var(--color-white);
+  --color-fill-primary: var(--color-surface-soft);
   --color-fill-primary-hover: color-mix(in oklch, var(--color-gray-50) 97%, black);
   --color-fill-primary-active: color-mix(in oklch, var(--color-gray-50) 95%, black);
   --color-fill-primary-selected: color-mix(in oklch, var(--color-gray-50) 97%, black);
@@ -182,10 +184,10 @@ html {
   --color-border-info-active: color-mix(in oklch, var(--color-indigo-600) 85%, black);
   --color-border-info-selected: color-mix(in oklch, var(--color-indigo-600) 85%, black);
 
-  --color-surface-primary: var(--color-white);
-  --color-surface-primary-hover: color-mix(in oklch, var(--color-white) 97%, black);
-  --color-surface-primary-active: color-mix(in oklch, var(--color-white) 95%, black);
-  --color-surface-primary-selected: color-mix(in oklch, var(--color-white) 95%, black);
+  --color-surface-primary: var(--color-surface-soft);
+  --color-surface-primary-hover: color-mix(in oklch, var(--color-surface-soft) 97%, black);
+  --color-surface-primary-active: color-mix(in oklch, var(--color-surface-soft) 95%, black);
+  --color-surface-primary-selected: color-mix(in oklch, var(--color-surface-soft) 95%, black);
 
   --color-surface-info: var(--color-riptide-50);
   --color-surface-info-hover: color-mix(in oklch, var(--color-riptide-50) 97%, black);

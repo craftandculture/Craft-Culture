@@ -764,7 +764,7 @@ const QuoteApprovalDialog = ({
                     onClick={() => setDisplayCurrency('USD')}
                     className={`px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-md font-semibold text-xs sm:text-sm transition-all duration-200 ${
                       displayCurrency === 'USD'
-                        ? 'bg-white text-text-brand shadow-sm border border-border-muted'
+                        ? 'bg-surface-primary text-text-brand shadow-sm border border-border-muted'
                         : 'text-text-muted hover:text-text'
                     }`}
                   >
@@ -774,7 +774,7 @@ const QuoteApprovalDialog = ({
                     onClick={() => setDisplayCurrency('AED')}
                     className={`px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-md font-semibold text-xs sm:text-sm transition-all duration-200 ${
                       displayCurrency === 'AED'
-                        ? 'bg-white text-text-brand shadow-sm border border-border-muted'
+                        ? 'bg-surface-primary text-text-brand shadow-sm border border-border-muted'
                         : 'text-text-muted hover:text-text'
                     }`}
                   >
@@ -1051,7 +1051,7 @@ const QuoteApprovalDialog = ({
                         className={`rounded-lg border p-4 transition-all ${
                           isIncluded
                             ? 'bg-fill-success/5 border-border-success'
-                            : 'bg-white border-amber-200'
+                            : 'bg-surface-primary border-amber-200'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -1208,14 +1208,14 @@ const QuoteApprovalDialog = ({
                 {/* Licensed Partner Selection - B2C only */}
                 {isB2C && (
                   <>
-                    <div className="rounded-lg bg-white p-5 border border-border-muted">
+                    <div className="rounded-lg bg-surface-primary p-5 border border-border-muted">
                       <Typography variant="bodySm" className="mb-2 font-semibold">
                         Licensed Partner <span className="text-text-danger text-base">*</span>
                       </Typography>
                       <select
                         value={selectedPartnerId}
                         onChange={(e) => setSelectedPartnerId(e.target.value)}
-                        className="w-full rounded-lg border-2 border-border-muted bg-white px-4 py-2.5 text-sm font-medium focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                        className="w-full rounded-lg border-2 border-border-muted bg-surface-primary px-4 py-2.5 text-sm font-medium focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
                       >
                         <option value="">Select a partner...</option>
                         {partnersData?.map((partner) => {
@@ -1263,7 +1263,7 @@ const QuoteApprovalDialog = ({
                                 alt={selectedPartner.businessName}
                                 width={48}
                                 height={48}
-                                className="h-12 w-12 object-contain rounded-lg bg-white border border-border-muted p-1"
+                                className="h-12 w-12 object-contain rounded-lg bg-surface-primary border border-border-muted p-1"
                                 unoptimized
                               />
                             )}
@@ -1288,7 +1288,7 @@ const QuoteApprovalDialog = ({
 
                           {/* Payment Method Selection - Only show if both methods available */}
                           {hasBothMethods && (
-                            <div className="mb-4 p-4 rounded-lg bg-white border border-border-muted">
+                            <div className="mb-4 p-4 rounded-lg bg-surface-primary border border-border-muted">
                               <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-3">
                                 Select Payment Method for this Quote
                               </Typography>
@@ -1335,7 +1335,7 @@ const QuoteApprovalDialog = ({
 
                           {/* Bank Transfer Details */}
                           {paymentMethod === 'bank_transfer' && hasBankTransfer && (
-                            <div className="rounded-lg bg-white p-4 border border-border-muted space-y-2">
+                            <div className="rounded-lg bg-surface-primary p-4 border border-border-muted space-y-2">
                               <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide">
                                 Bank Account Details
                               </Typography>
@@ -1370,7 +1370,7 @@ const QuoteApprovalDialog = ({
 
                           {/* Payment Link Details */}
                           {paymentMethod === 'link' && hasPaymentLink && (
-                            <div className="rounded-lg bg-white p-4 border border-border-muted">
+                            <div className="rounded-lg bg-surface-primary p-4 border border-border-muted">
                               <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-2">
                                 Payment Link
                               </Typography>
@@ -1421,7 +1421,7 @@ const QuoteApprovalDialog = ({
                 )}
 
                 {/* Delivery Lead Time */}
-                <div className="rounded-lg bg-white p-5 border border-border-muted">
+                <div className="rounded-lg bg-surface-primary p-5 border border-border-muted">
                   <div className="mb-4">
                     <Typography variant="bodySm" className="mb-2 font-semibold">
                       Delivery Lead Time <span className="text-text-danger text-base">*</span>
@@ -1456,7 +1456,7 @@ const QuoteApprovalDialog = ({
 
             {/* PO Information - Always Visible */}
             {quote.status === 'po_submitted' && (
-              <div className="rounded-xl bg-white p-6 shadow-sm border border-border-muted space-y-6">
+              <div className="rounded-xl bg-surface-primary p-6 shadow-sm border border-border-muted space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
                     <span className="text-base">📦</span>
@@ -1485,7 +1485,7 @@ const QuoteApprovalDialog = ({
                           href={safeHref(fileHref(quote.poAttachmentUrl))}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-text-brand hover:bg-fill-brand/10 font-semibold transition-all border border-border-muted"
+                          className="inline-flex items-center gap-2 rounded-lg bg-surface-primary px-4 py-2 text-text-brand hover:bg-fill-brand/10 font-semibold transition-all border border-border-muted"
                         >
                           <span>📄</span>
                           View Document
@@ -1532,7 +1532,7 @@ const QuoteApprovalDialog = ({
             )}
 
             {/* Workflow Progress - Always Visible */}
-            <div className="rounded-lg border border-border-muted bg-white dark:bg-background-secondary p-6 shadow-sm">
+            <div className="rounded-lg border border-border-muted bg-surface-primary dark:bg-background-secondary p-6 shadow-sm">
               <div className="mb-6">
                 <Typography variant="bodyLg" className="font-semibold mb-2">
                   Order Progress
@@ -1707,7 +1707,7 @@ const QuoteApprovalDialog = ({
 
                 {/* Payment Details Summary with Bank Details */}
                 {quote.paymentMethod && (
-                  <div className="mb-5 rounded-lg bg-white p-4 border border-border-muted space-y-3">
+                  <div className="mb-5 rounded-lg bg-surface-primary p-4 border border-border-muted space-y-3">
                     {/* Partner info with logo */}
                     {confirmedPartnerInfo && (
                       <div className="flex items-center gap-3 pb-3 border-b border-border-muted">
@@ -1890,7 +1890,7 @@ const QuoteApprovalDialog = ({
                 </div>
 
                 {/* Order Summary */}
-                <div className="mb-5 rounded-lg bg-white p-4 border border-border-muted">
+                <div className="mb-5 rounded-lg bg-surface-primary p-4 border border-border-muted">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-1">

@@ -882,7 +882,7 @@ const WMSRepackPage = () => {
                   Take the case from the shelf
                 </Typography>
 
-                <div className="rounded-lg bg-white p-4 dark:bg-fill-secondary">
+                <div className="rounded-lg bg-surface-primary p-4 dark:bg-fill-secondary">
                   <Typography variant="bodyXs" colorRole="muted">
                     Remove from
                   </Typography>
@@ -933,7 +933,7 @@ const WMSRepackPage = () => {
                 </Typography>
 
                 {repackMode === 'even' ? (
-                  <div className="rounded-lg bg-white p-4 dark:bg-fill-secondary">
+                  <div className="rounded-lg bg-surface-primary p-4 dark:bg-fill-secondary">
                     <div className="flex items-center justify-center gap-4">
                       <div className="text-center">
                         <Icon icon={IconBox} size="lg" colorRole="muted" className="mx-auto mb-1" />
@@ -955,7 +955,7 @@ const WMSRepackPage = () => {
                     </div>
                   </div>
                 ) : repackMode === 'combine' ? (
-                  <div className="rounded-lg bg-white p-4 dark:bg-fill-secondary">
+                  <div className="rounded-lg bg-surface-primary p-4 dark:bg-fill-secondary">
                     <div className="flex items-center justify-center gap-4">
                       <div className="text-center">
                         <Icon icon={IconBox} size="lg" colorRole="muted" className="mx-auto mb-1" />
@@ -977,7 +977,7 @@ const WMSRepackPage = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-lg bg-white p-4 dark:bg-fill-secondary">
+                  <div className="rounded-lg bg-surface-primary p-4 dark:bg-fill-secondary">
                     <div className="flex items-center justify-center gap-4">
                       <div className="text-center">
                         <Icon icon={IconBox} size="lg" colorRole="muted" className="mx-auto mb-1" />

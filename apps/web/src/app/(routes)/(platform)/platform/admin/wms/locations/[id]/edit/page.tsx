@@ -299,7 +299,7 @@ const LocationEditPage = () => {
                     onClick={() => setRequiresForklift(!requiresForklift)}
                   >
                     <div
-                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface-primary shadow transition-transform ${
                         requiresForklift ? 'translate-x-5' : 'translate-x-0.5'
                       }`}
                     />
@@ -330,7 +330,7 @@ const LocationEditPage = () => {
                     onClick={() => setIsActive(!isActive)}
                   >
                     <div
-                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface-primary shadow transition-transform ${
                         isActive ? 'translate-x-5' : 'translate-x-0.5'
                       }`}
                     />

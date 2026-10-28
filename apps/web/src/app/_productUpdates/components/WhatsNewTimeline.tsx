@@ -133,7 +133,7 @@ const WhatsNewTimeline = ({ updates, seenAt, preview }: WhatsNewTimelineProps) =
                   <div key={update.id} className="relative">
                     <span
                       aria-hidden
-                      className={`absolute top-6 -left-[27px] size-3 rounded-full border-2 bg-white sm:-left-[35px] dark:bg-neutral-950 ${MARKER[update.type]}`}
+                      className={`absolute top-6 -left-[27px] size-3 rounded-full border-2 bg-surface-primary sm:-left-[35px] dark:bg-neutral-950 ${MARKER[update.type]}`}
                     />
                   <UpdateCard
                     type={update.type}

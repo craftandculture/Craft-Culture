@@ -832,7 +832,7 @@ const WMSStockImportPage = () => {
                                             <button
                                               key={c.lwin}
                                               onClick={() => handleSelectLwin(i, c)}
-                                              className="rounded-md border border-amber-300 bg-white px-2 py-1 text-xs transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-amber-600 dark:bg-amber-900/30 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/30"
+                                              className="rounded-md border border-amber-300 bg-surface-primary px-2 py-1 text-xs transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-amber-600 dark:bg-amber-900/30 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/30"
                                             >
                                               <span className="font-mono text-[10px] text-text-muted">{c.lwin}</span>{' '}
                                               <span>{c.displayName}</span>
@@ -845,7 +845,7 @@ const WMSStockImportPage = () => {
                                               setLwinSearchQuery('');
                                               setLwinSearchResults([]);
                                             }}
-                                            className="rounded-md border border-border-primary bg-white px-2 py-1 text-xs text-text-muted hover:bg-fill-secondary dark:bg-transparent"
+                                            className="rounded-md border border-border-primary bg-surface-primary px-2 py-1 text-xs text-text-muted hover:bg-fill-secondary dark:bg-transparent"
                                           >
                                             Search...
                                           </button>
@@ -854,13 +854,13 @@ const WMSStockImportPage = () => {
                                               setManualLwinRowIndex(i);
                                               setManualLwinValue('');
                                             }}
-                                            className="rounded-md border border-border-primary bg-white px-2 py-1 text-xs text-text-muted hover:bg-fill-secondary dark:bg-transparent"
+                                            className="rounded-md border border-border-primary bg-surface-primary px-2 py-1 text-xs text-text-muted hover:bg-fill-secondary dark:bg-transparent"
                                           >
                                             Enter LWIN
                                           </button>
                                           <button
                                             onClick={() => handleMarkAsSpirit(i)}
-                                            className="rounded-md border border-blue-300 bg-white px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:bg-transparent dark:hover:bg-blue-900/30"
+                                            className="rounded-md border border-blue-300 bg-surface-primary px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:bg-transparent dark:hover:bg-blue-900/30"
                                           >
                                             Not a wine
                                           </button>
@@ -879,7 +879,7 @@ const WMSStockImportPage = () => {
                                             setLwinSearchQuery(item.productName);
                                             void handleLwinSearch(item.productName);
                                           }}
-                                          className="rounded-md border border-border-primary bg-white px-2 py-1 text-xs hover:bg-fill-secondary dark:bg-transparent"
+                                          className="rounded-md border border-border-primary bg-surface-primary px-2 py-1 text-xs hover:bg-fill-secondary dark:bg-transparent"
                                         >
                                           Search LWIN
                                         </button>
@@ -888,13 +888,13 @@ const WMSStockImportPage = () => {
                                             setManualLwinRowIndex(i);
                                             setManualLwinValue('');
                                           }}
-                                          className="rounded-md border border-border-primary bg-white px-2 py-1 text-xs hover:bg-fill-secondary dark:bg-transparent"
+                                          className="rounded-md border border-border-primary bg-surface-primary px-2 py-1 text-xs hover:bg-fill-secondary dark:bg-transparent"
                                         >
                                           Enter LWIN
                                         </button>
                                         <button
                                           onClick={() => handleMarkAsSpirit(i)}
-                                          className="rounded-md border border-blue-300 bg-white px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:bg-transparent dark:hover:bg-blue-900/30"
+                                          className="rounded-md border border-blue-300 bg-surface-primary px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:bg-transparent dark:hover:bg-blue-900/30"
                                         >
                                           Not a wine
                                         </button>
@@ -914,7 +914,7 @@ const WMSStockImportPage = () => {
                                             if (e.key === 'Escape') { setManualLwinRowIndex(null); setManualLwinValue(''); }
                                           }}
                                           placeholder="e.g. 1870592 or full LWIN18"
-                                          className="w-56 rounded-md border border-border-primary bg-white px-2.5 py-1.5 font-mono text-xs focus:border-border-brand focus:outline-none dark:bg-transparent"
+                                          className="w-56 rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 font-mono text-xs focus:border-border-brand focus:outline-none dark:bg-transparent"
                                           autoFocus
                                         />
                                         <button
@@ -942,7 +942,7 @@ const WMSStockImportPage = () => {
                                             value={lwinSearchQuery}
                                             onChange={(e) => handleLwinSearch(e.target.value)}
                                             placeholder="Search LWIN database..."
-                                            className="flex-1 rounded-md border border-border-primary bg-white px-2.5 py-1.5 text-xs focus:border-border-brand focus:outline-none dark:bg-transparent"
+                                            className="flex-1 rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 text-xs focus:border-border-brand focus:outline-none dark:bg-transparent"
                                             autoFocus
                                           />
                                           <button
@@ -967,7 +967,7 @@ const WMSStockImportPage = () => {
                                               <button
                                                 key={c.lwin}
                                                 onClick={() => handleSelectLwin(i, c)}
-                                                className="rounded-md border border-border-primary bg-white px-2 py-1 text-xs transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:bg-transparent dark:hover:border-emerald-500 dark:hover:bg-emerald-900/30"
+                                                className="rounded-md border border-border-primary bg-surface-primary px-2 py-1 text-xs transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:bg-transparent dark:hover:border-emerald-500 dark:hover:bg-emerald-900/30"
                                               >
                                                 <span className="font-mono text-[10px] text-text-muted">{c.lwin}</span>{' '}
                                                 <span>{c.displayName}</span>

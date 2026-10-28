@@ -413,7 +413,7 @@ const PartnerConfirmationsPage = () => {
                               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                 action === 'confirm'
                                   ? 'bg-green-600 text-white shadow-md'
-                                  : 'bg-white border border-green-300 text-green-700 hover:bg-green-50'
+                                  : 'bg-surface-primary border border-green-300 text-green-700 hover:bg-green-50'
                               }`}
                             >
                               <IconCheck className="h-4 w-4" />
@@ -425,7 +425,7 @@ const PartnerConfirmationsPage = () => {
                               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                 action === 'update'
                                   ? 'bg-amber-500 text-white shadow-md'
-                                  : 'bg-white border border-amber-300 text-amber-700 hover:bg-amber-50'
+                                  : 'bg-surface-primary border border-amber-300 text-amber-700 hover:bg-amber-50'
                               }`}
                             >
                               <IconAlertTriangle className="h-4 w-4" />
@@ -437,7 +437,7 @@ const PartnerConfirmationsPage = () => {
                               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                 action === 'reject'
                                   ? 'bg-red-600 text-white shadow-md'
-                                  : 'bg-white border border-red-300 text-red-700 hover:bg-red-50'
+                                  : 'bg-surface-primary border border-red-300 text-red-700 hover:bg-red-50'
                               }`}
                             >
                               <IconX className="h-4 w-4" />
@@ -464,7 +464,7 @@ const PartnerConfirmationsPage = () => {
                                       onChange={(e) => setConfirmation(quote.quoteId, {
                                         updatedPriceUsd: parseFloat(e.target.value) || undefined,
                                       })}
-                                      className="w-full rounded border border-amber-300 bg-white pl-6 pr-2 py-2 text-sm"
+                                      className="w-full rounded border border-amber-300 bg-surface-primary pl-6 pr-2 py-2 text-sm"
                                     />
                                   </div>
                                 </div>
@@ -480,7 +480,7 @@ const PartnerConfirmationsPage = () => {
                                     onChange={(e) => setConfirmation(quote.quoteId, {
                                       updatedAvailableQty: parseInt(e.target.value) || undefined,
                                     })}
-                                    className="w-full rounded border border-amber-300 bg-white px-2 py-2 text-sm"
+                                    className="w-full rounded border border-amber-300 bg-surface-primary px-2 py-2 text-sm"
                                   />
                                 </div>
                               </div>
@@ -493,7 +493,7 @@ const PartnerConfirmationsPage = () => {
                                   placeholder="e.g., Supplier price increase, stock reduced"
                                   value={conf?.reason || ''}
                                   onChange={(e) => setConfirmation(quote.quoteId, { reason: e.target.value })}
-                                  className="w-full rounded border border-amber-300 bg-white px-2 py-2 text-sm"
+                                  className="w-full rounded border border-amber-300 bg-surface-primary px-2 py-2 text-sm"
                                 />
                               </div>
                             </div>
@@ -510,7 +510,7 @@ const PartnerConfirmationsPage = () => {
                                 placeholder="e.g., Stock sold, item discontinued"
                                 value={conf?.reason || ''}
                                 onChange={(e) => setConfirmation(quote.quoteId, { reason: e.target.value })}
-                                className="w-full rounded border border-red-300 bg-white px-2 py-2 text-sm"
+                                className="w-full rounded border border-red-300 bg-surface-primary px-2 py-2 text-sm"
                               />
                             </div>
                           )}
@@ -526,7 +526,7 @@ const PartnerConfirmationsPage = () => {
                                 placeholder="Any additional notes..."
                                 value={conf?.notes || ''}
                                 onChange={(e) => setConfirmation(quote.quoteId, { notes: e.target.value })}
-                                className="w-full rounded border border-green-300 bg-white px-2 py-2 text-sm"
+                                className="w-full rounded border border-green-300 bg-surface-primary px-2 py-2 text-sm"
                               />
                             </div>
                           )}

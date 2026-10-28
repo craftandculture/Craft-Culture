@@ -160,7 +160,7 @@ const UploadStep = ({ onUploadComplete }: UploadStepProps) => {
           <div className="w-full border-t border-border-muted" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-white px-3 text-sm text-text-muted dark:bg-background-primary">
+          <span className="bg-surface-primary px-3 text-sm text-text-muted dark:bg-background-primary">
             or
           </span>
         </div>

@@ -238,8 +238,8 @@ const ShipmentTracker = ({
                     event.isCompleted
                       ? 'border-fill-brand bg-fill-brand text-white'
                       : isCurrent
-                        ? 'border-fill-brand bg-white dark:bg-surface-primary'
-                        : 'border-border-muted bg-white dark:bg-surface-primary'
+                        ? 'border-fill-brand bg-surface-primary dark:bg-surface-primary'
+                        : 'border-border-muted bg-surface-primary dark:bg-surface-primary'
                   }`}
                 >
                   {event.isCompleted ? (

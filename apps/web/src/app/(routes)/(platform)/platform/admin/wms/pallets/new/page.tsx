@@ -150,7 +150,7 @@ const NewPalletPage = () => {
                         }`}
                       >
                         {selectedOwnerId === partner.id && (
-                          <div className="h-2 w-2 rounded-full bg-white" />
+                          <div className="h-2 w-2 rounded-full bg-surface-primary" />
                         )}
                       </div>
                     </div>

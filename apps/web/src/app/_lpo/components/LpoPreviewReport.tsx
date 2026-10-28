@@ -497,7 +497,7 @@ const LpoPreviewReport = ({
                             onClick={() =>
                               onChooseVintage?.(at, String(row.vintage))
                             }
-                            className="rounded-md border border-amber-300 bg-white px-2 py-0.5 text-[12px] font-medium tabular-nums hover:border-amber-500 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-md border border-amber-300 bg-surface-primary px-2 py-0.5 text-[12px] font-medium tabular-nums hover:border-amber-500 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {row.vintage}{' '}
                             <span className="font-normal text-text-muted">

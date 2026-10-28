@@ -510,7 +510,7 @@ const QuoteExcelUpload = ({
 
                       {/* Editing Form */}
                       {isEditing && (
-                        <div className="mt-3 p-3 bg-white border border-border-muted rounded space-y-3">
+                        <div className="mt-3 p-3 bg-surface-primary border border-border-muted rounded space-y-3">
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="block text-[10px] font-medium text-text-muted mb-0.5">

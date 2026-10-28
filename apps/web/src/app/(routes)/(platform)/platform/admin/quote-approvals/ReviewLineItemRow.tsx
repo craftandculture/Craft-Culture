@@ -126,7 +126,7 @@ const AlternativesSection = ({
   };
 
   return (
-    <div className="rounded-lg border border-border-muted bg-white p-3">
+    <div className="rounded-lg border border-border-muted bg-surface-primary p-3">
       <Typography variant="bodyXs" className="font-semibold mb-2 flex items-center gap-1">
         <span>💡</span> Suggest Alternatives
         {alternatives.length > 0 && (
@@ -257,8 +257,8 @@ const ReviewLineItemRow = ({
   return (
     <div className={`rounded-lg border-2 transition-all duration-200 ${
       isExpanded
-        ? 'border-border-brand bg-white shadow-md'
-        : 'border-border-muted bg-white hover:border-border-brand/50 hover:shadow-sm'
+        ? 'border-border-brand bg-surface-primary shadow-md'
+        : 'border-border-muted bg-surface-primary hover:border-border-brand/50 hover:shadow-sm'
     }`}>
       {/* Mobile Card Layout */}
       <div className="md:hidden px-3 py-3 space-y-3" onClick={onToggle}>

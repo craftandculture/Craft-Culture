@@ -339,7 +339,7 @@ const ZohoSalesOrdersPage = () => {
               {outstanding.map((order) => (
                 <div
                   key={order.id}
-                  className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800/60 dark:bg-background-primary"
+                  className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-surface-primary p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800/60 dark:bg-background-primary"
                 >
                   <div className="min-w-0">
                     <Typography variant="bodySm" className="font-semibold">

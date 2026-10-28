@@ -733,7 +733,7 @@ const DispatchWizardPage = () => {
                     }`}
                   >
                     <span
-                      className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-surface-primary shadow transition-transform ${
                         generateDN ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />

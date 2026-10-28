@@ -1784,7 +1784,7 @@ const ColdChainTab = () => (
       </Typography>
 
       {/* Thermal Label Mockup */}
-      <div className="mx-auto max-w-lg rounded-xl bg-white p-6 shadow-lg">
+      <div className="mx-auto max-w-lg rounded-xl bg-surface-primary p-6 shadow-lg">
         {/* Logo */}
         <img
           src="/images/cc-logo-cropped.png"

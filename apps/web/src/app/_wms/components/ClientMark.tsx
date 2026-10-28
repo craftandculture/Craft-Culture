@@ -34,7 +34,7 @@ const ClientMark = ({
   const [failed, setFailed] = useState(false);
   return logoUrl && !failed ? (
     <span
-      className={`flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1.5 ring-1 ring-border-muted`}
+      className={`flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-primary p-1.5 ring-1 ring-border-muted`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- partner logos come from Blob at any size */}
       <img

@@ -479,12 +479,12 @@ const QuotesList = () => {
       ) : (
         <>
           {/* Desktop Table */}
-          <div className="hidden rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm md:block">
+          <div className="hidden rounded-lg border border-border-muted bg-surface-primary dark:bg-background-secondary shadow-sm md:block">
             <DataTable columns={columns} data={filteredQuotes} />
           </div>
 
           {/* Mobile Cards */}
-          <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm md:hidden">
+          <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted bg-surface-primary dark:bg-background-secondary shadow-sm md:hidden">
             {filteredQuotes.map((quote) => (
               <div
                 key={quote.id}

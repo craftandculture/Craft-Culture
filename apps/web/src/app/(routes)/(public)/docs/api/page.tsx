@@ -37,7 +37,7 @@ const Endpoint = ({
   path: string;
   description: string;
 }) => (
-  <div className="border-border-muted dark:bg-background-secondary flex items-start gap-3 rounded-lg border bg-white p-4">
+  <div className="border-border-muted dark:bg-background-secondary flex items-start gap-3 rounded-lg border bg-surface-primary p-4">
     <span className="rounded bg-green-100 px-2 py-1 text-xs font-bold text-green-700 dark:bg-green-900/30 dark:text-green-400">
       {method}
     </span>

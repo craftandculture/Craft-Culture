@@ -678,7 +678,7 @@ const PartnerRfqDetailPage = () => {
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                         showUnquotedOnly
                           ? 'bg-blue-600 text-white shadow-md'
-                          : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 shadow-sm'
+                          : 'bg-surface-primary text-slate-700 border border-slate-300 hover:bg-slate-50 shadow-sm'
                       }`}
                     >
                       <IconFilter className="h-4 w-4" />
@@ -901,7 +901,7 @@ const PartnerRfqDetailPage = () => {
                       ? 'bg-green-50/50'
                       : status === 'na'
                         ? 'bg-red-50/50'
-                        : 'bg-white'
+                        : 'bg-surface-primary'
                   }`}
                 >
                   {/* Compact row - always visible */}
@@ -1191,7 +1191,7 @@ const PartnerRfqDetailPage = () => {
                                 className={`px-2 py-0.5 rounded text-xs transition-all ${
                                   firstQuote.notAvailableReason === reason.label
                                     ? 'bg-red-600 text-white'
-                                    : 'bg-white border border-red-200 text-red-700 hover:bg-red-100'
+                                    : 'bg-surface-primary border border-red-200 text-red-700 hover:bg-red-100'
                                 }`}
                               >
                                 {reason.label}
@@ -1202,7 +1202,7 @@ const PartnerRfqDetailPage = () => {
                               placeholder="Other..."
                               value={NA_REASONS.some((r) => r.label === firstQuote.notAvailableReason) ? '' : firstQuote.notAvailableReason || ''}
                               onChange={(e) => handleQuoteChange(item.id, firstQuote.id, 'notAvailableReason', e.target.value)}
-                              className="flex-1 min-w-[100px] px-2 py-0.5 rounded border border-red-200 bg-white text-xs"
+                              className="flex-1 min-w-[100px] px-2 py-0.5 rounded border border-red-200 bg-surface-primary text-xs"
                             />
                           </div>
                         </div>
@@ -1212,7 +1212,7 @@ const PartnerRfqDetailPage = () => {
                       {!isNA && itemQuotes.map((quote, quoteIndex) => (
                         <div
                           key={quote.id}
-                          className="rounded-lg border border-slate-200 bg-white overflow-hidden"
+                          className="rounded-lg border border-slate-200 bg-surface-primary overflow-hidden"
                         >
                           {/* Quote Header */}
                           <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
@@ -1226,7 +1226,7 @@ const PartnerRfqDetailPage = () => {
                                   maxLength={4}
                                   value={quote.quotedVintage || ''}
                                   onChange={(e) => handleQuoteChange(item.id, quote.id, 'quotedVintage', e.target.value)}
-                                  className="w-16 rounded border border-slate-300 bg-white px-2 py-1 text-sm font-semibold text-center focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                                  className="w-16 rounded border border-slate-300 bg-surface-primary px-2 py-1 text-sm font-semibold text-center focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                                 />
                               </div>
                               {quote.costPricePerCaseUsd && quote.costPricePerCaseUsd > 0 && (
@@ -1265,7 +1265,7 @@ const PartnerRfqDetailPage = () => {
                                     } ${
                                       quote.quoteType === option.value
                                         ? option.color
-                                        : 'bg-white text-text-muted hover:bg-fill-muted'
+                                        : 'bg-surface-primary text-text-muted hover:bg-fill-muted'
                                     }`}
                                   >
                                     {option.label}
@@ -1287,7 +1287,7 @@ const PartnerRfqDetailPage = () => {
                                     placeholder="0.00"
                                     value={quote.costPricePerCaseUsd || ''}
                                     onChange={(e) => handleQuoteChange(item.id, quote.id, 'costPricePerCaseUsd', parseFloat(e.target.value) || 0)}
-                                    className="w-full rounded border border-border-primary bg-white pl-5 pr-1 py-1.5 text-xs text-right font-medium"
+                                    className="w-full rounded border border-border-primary bg-surface-primary pl-5 pr-1 py-1.5 text-xs text-right font-medium"
                                   />
                                 </div>
                               </div>
@@ -1296,7 +1296,7 @@ const PartnerRfqDetailPage = () => {
                                 <select
                                   value={quote.caseConfig || ''}
                                   onChange={(e) => handleQuoteChange(item.id, quote.id, 'caseConfig', e.target.value)}
-                                  className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
+                                  className="w-full rounded border border-border-primary bg-surface-primary px-1 py-1.5 text-xs"
                                 >
                                   <option value="">-</option>
                                   {CASE_CONFIGS.slice(0, 4).map((c) => (
@@ -1309,7 +1309,7 @@ const PartnerRfqDetailPage = () => {
                                 <select
                                   value={quote.bottleSize || ''}
                                   onChange={(e) => handleQuoteChange(item.id, quote.id, 'bottleSize', e.target.value)}
-                                  className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
+                                  className="w-full rounded border border-border-primary bg-surface-primary px-1 py-1.5 text-xs"
                                 >
                                   <option value="">-</option>
                                   {BOTTLE_SIZES.map((b) => (
@@ -1325,7 +1325,7 @@ const PartnerRfqDetailPage = () => {
                                   placeholder="qty"
                                   value={quote.availableQuantity || ''}
                                   onChange={(e) => handleQuoteChange(item.id, quote.id, 'availableQuantity', parseInt(e.target.value) || 0)}
-                                  className="w-full rounded border border-border-primary bg-white px-1.5 py-1.5 text-xs"
+                                  className="w-full rounded border border-border-primary bg-surface-primary px-1.5 py-1.5 text-xs"
                                 />
                               </div>
                               <div>
@@ -1333,7 +1333,7 @@ const PartnerRfqDetailPage = () => {
                                 <select
                                   value={quote.stockLocation || ''}
                                   onChange={(e) => handleQuoteChange(item.id, quote.id, 'stockLocation', e.target.value)}
-                                  className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
+                                  className="w-full rounded border border-border-primary bg-surface-primary px-1 py-1.5 text-xs"
                                 >
                                   <option value="">-</option>
                                   {STOCK_LOCATIONS.slice(0, 5).map((l) => (
@@ -1346,7 +1346,7 @@ const PartnerRfqDetailPage = () => {
                                 <select
                                   value={quote.stockCondition || ''}
                                   onChange={(e) => handleQuoteChange(item.id, quote.id, 'stockCondition', e.target.value)}
-                                  className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
+                                  className="w-full rounded border border-border-primary bg-surface-primary px-1 py-1.5 text-xs"
                                 >
                                   <option value="">-</option>
                                   {STOCK_CONDITIONS.map((c) => (
@@ -1359,7 +1359,7 @@ const PartnerRfqDetailPage = () => {
                                 <select
                                   value={quote.leadTimeDays ?? ''}
                                   onChange={(e) => handleQuoteChange(item.id, quote.id, 'leadTimeDays', e.target.value === '' ? undefined : parseInt(e.target.value))}
-                                  className="w-full rounded border border-border-primary bg-white px-1 py-1.5 text-xs"
+                                  className="w-full rounded border border-border-primary bg-surface-primary px-1 py-1.5 text-xs"
                                 >
                                   <option value="">-</option>
                                   {LEAD_TIMES.map((lt) => (
@@ -1378,7 +1378,7 @@ const PartnerRfqDetailPage = () => {
                                   placeholder="Reason (optional)"
                                   value={quote.alternativeReason || ''}
                                   onChange={(e) => handleQuoteChange(item.id, quote.id, 'alternativeReason', e.target.value)}
-                                  className="flex-1 rounded border border-blue-200 bg-white px-2 py-1 text-xs"
+                                  className="flex-1 rounded border border-blue-200 bg-surface-primary px-2 py-1 text-xs"
                                 />
                               </div>
                             )}
@@ -1398,7 +1398,7 @@ const PartnerRfqDetailPage = () => {
                                       placeholder="e.g. Château Margaux"
                                       value={quote.alternativeProductName || ''}
                                       onChange={(e) => handleQuoteChange(item.id, quote.id, 'alternativeProductName', e.target.value)}
-                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
+                                      className="w-full rounded border border-amber-300 bg-surface-primary px-2 py-1.5 text-xs"
                                     />
                                   </div>
                                   <div>
@@ -1409,7 +1409,7 @@ const PartnerRfqDetailPage = () => {
                                       maxLength={4}
                                       value={quote.alternativeVintage || ''}
                                       onChange={(e) => handleQuoteChange(item.id, quote.id, 'alternativeVintage', e.target.value)}
-                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs text-center"
+                                      className="w-full rounded border border-amber-300 bg-surface-primary px-2 py-1.5 text-xs text-center"
                                     />
                                   </div>
                                   <div>
@@ -1419,7 +1419,7 @@ const PartnerRfqDetailPage = () => {
                                       placeholder="Producer"
                                       value={quote.alternativeProducer || ''}
                                       onChange={(e) => handleQuoteChange(item.id, quote.id, 'alternativeProducer', e.target.value)}
-                                      className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
+                                      className="w-full rounded border border-amber-300 bg-surface-primary px-2 py-1.5 text-xs"
                                     />
                                   </div>
                                 </div>
@@ -1430,7 +1430,7 @@ const PartnerRfqDetailPage = () => {
                                     placeholder="e.g. Requested vintage sold out"
                                     value={quote.alternativeReason || ''}
                                     onChange={(e) => handleQuoteChange(item.id, quote.id, 'alternativeReason', e.target.value)}
-                                    className="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs"
+                                    className="w-full rounded border border-amber-300 bg-surface-primary px-2 py-1.5 text-xs"
                                   />
                                 </div>
                               </div>
@@ -1444,7 +1444,7 @@ const PartnerRfqDetailPage = () => {
                                 placeholder="Item notes (packaging, condition, etc.)"
                                 value={quote.notes || ''}
                                 onChange={(e) => handleQuoteChange(item.id, quote.id, 'notes', e.target.value)}
-                                className="flex-1 rounded border border-border-primary bg-white px-2 py-1 text-xs"
+                                className="flex-1 rounded border border-border-primary bg-surface-primary px-2 py-1 text-xs"
                               />
                             </div>
                           </div>
@@ -1528,7 +1528,7 @@ const PartnerRfqDetailPage = () => {
                 onChange={(e) => setPartnerNotes(e.target.value)}
                 placeholder="E.g., 5% discount available for orders over 10 cases. All prices Ex-Works UK. Payment terms: 30 days net."
                 rows={4}
-                className="w-full rounded-lg border border-border-primary bg-white px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-border-primary bg-surface-primary px-3 py-2 text-sm"
               />
             </CardContent>
           </Card>
@@ -1555,7 +1555,7 @@ const PartnerRfqDetailPage = () => {
                   onChange={(e) => setDeclineReason(e.target.value)}
                   placeholder="Products not available, pricing not competitive, etc."
                   rows={3}
-                  className="w-full rounded-lg border border-border-primary bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-border-primary bg-surface-primary px-3 py-2 text-sm"
                 />
               </div>
             </div>
@@ -1579,7 +1579,7 @@ const PartnerRfqDetailPage = () => {
 
       {/* Mobile sticky action bar */}
       {canSubmit && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border-primary p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:hidden z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-surface-primary border-t border-border-primary p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:hidden z-50">
           <div className="flex items-center gap-2 max-w-4xl mx-auto">
             <button
               type="button"
