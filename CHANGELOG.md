@@ -1,3 +1,9 @@
+## [2.1.22](https://github.com/craftandculture/Craft-Culture/compare/v2.1.21...v2.1.22) (2026-10-28)
+
+### Bug Fixes
+
+* **winelabs:** LWIN fix list no longer flags wines the register lists twice, or a premier cru against its village code ([0e5d2ee](https://github.com/craftandculture/Craft-Culture/commit/0e5d2eeb288be6c82e0d93915b5ea4f830c1d14f))
+
 ## [2.1.21](https://github.com/craftandculture/Craft-Culture/compare/v2.1.20...v2.1.21) (2026-10-28)
 
 ### Features
