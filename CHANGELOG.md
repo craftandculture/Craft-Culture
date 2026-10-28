@@ -1,3 +1,9 @@
+## [2.1.13](https://github.com/craftandculture/Craft-Culture/compare/v2.1.12...v2.1.13) (2026-10-28)
+
+### Features
+
+* **cellar:** staff can open any member's statement line by line ([9cf4327](https://github.com/craftandculture/Craft-Culture/commit/9cf4327ce3975eeb0408c9e08d0944a544eb778b))
+
 ## [2.1.12](https://github.com/craftandculture/Craft-Culture/compare/v2.1.11...v2.1.12) (2026-10-28)
 
 ### Features
