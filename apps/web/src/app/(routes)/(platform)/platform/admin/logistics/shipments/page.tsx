@@ -89,7 +89,8 @@ const ShipmentsList = () => {
   const sort = params.get('sort') === 'eta' ? 'eta' : 'newest';
   const page = Math.max(0, Number(params.get('page') ?? 0) || 0);
   const search = params.get('q') ?? '';
-  const mine = params.get('owner') === 'me';
+  const owner = params.get('owner') ?? undefined;
+  const mine = owner === 'me';
   const noNews = params.get('news') === 'none';
 
   const [typed, setTyped] = useState(search);
@@ -127,7 +128,7 @@ const ShipmentsList = () => {
       stage,
       type,
       sort,
-      owner: mine ? 'me' : undefined,
+      owner,
       noNews: noNews || undefined,
     }),
     placeholderData: (prev) => prev,
@@ -208,12 +209,12 @@ const ShipmentsList = () => {
           {/* An owner's own list, and what has gone quiet: the board the team keeps each day */}
           <button
             type="button"
-            onClick={() => setParam({ owner: mine ? null : 'me' })}
+            onClick={() => setParam({ owner: owner ? null : 'me' })}
             className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
-              mine ? 'bg-text-primary text-surface-primary' : 'bg-surface-secondary hover:text-text-primary'
+              owner ? 'bg-text-primary text-surface-primary' : 'bg-surface-secondary hover:text-text-primary'
             }`}
           >
-            My actions
+            {owner && !mine ? 'One person’s actions ×' : 'My actions'}
           </button>
           <button
             type="button"
@@ -299,8 +300,8 @@ const ShipmentsList = () => {
             </div>
           ) : shipments.length === 0 ? (
             <p className="px-4 py-12 text-center text-sm text-text-muted">
-              {mine
-                ? 'Nothing is waiting on you.'
+              {owner
+                ? `Nothing is waiting on ${mine ? 'you' : 'them'}.`
                 : search || stage || type || noNews ? 'No shipments match. Clear a filter or change the search.' : 'No shipments yet.'}
             </p>
           ) : (

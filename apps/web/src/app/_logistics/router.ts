@@ -55,6 +55,7 @@ import adminGetRouteOptions from './controller/adminGetRouteOptions';
 import adminGetShipmentGroup from './controller/adminGetShipmentGroup';
 import adminGetShipmentGroups from './controller/adminGetShipmentGroups';
 import adminGetTeam from './controller/adminGetTeam';
+import adminGetTeamBoard from './controller/adminGetTeamBoard';
 import adminGetUaeArrivalRateCard from './controller/adminGetUaeArrivalRateCard';
 import adminImportExtractedItems from './controller/adminImportExtractedItems';
 import adminImportForwarders from './controller/adminImportForwarders';
@@ -111,6 +112,8 @@ const adminRouter = createTRPCRouter({
   logUpdate: adminLogUpdate,
   // Who can own a next action
   getTeam: adminGetTeam,
+  // Board health, no news, arriving and next actions per owner, at a glance
+  getTeamBoard: adminGetTeamBoard,
   delete: adminDeleteShipment,
 
   // Items

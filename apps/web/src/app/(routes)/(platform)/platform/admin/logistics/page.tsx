@@ -29,6 +29,7 @@ import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
 import ShipmentPartyMark from '@/app/_logistics/components/ShipmentPartyMark';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentTypeBadge, { type ShipmentType, shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
+import TeamBoardStrip from '@/app/_logistics/components/TeamBoardStrip';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -206,6 +207,9 @@ const LogisticsDashboardPage = () => {
             The dashboard figures could not be loaded, so the counts below are not real: {error.message}
           </p>
         ) : null}
+
+        {/* The team's board at a glance: kept current, gone quiet, landing soon, who holds what */}
+        <TeamBoardStrip />
 
         {/* Status strip */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

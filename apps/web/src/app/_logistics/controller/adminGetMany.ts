@@ -48,8 +48,8 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     conditions.push(eq(logisticsShipments.partnerId, partnerId));
   }
 
-  if (owner === 'me') {
-    conditions.push(eq(logisticsShipments.nextActionOwnerId, ctx.user.id));
+  if (owner) {
+    conditions.push(eq(logisticsShipments.nextActionOwnerId, owner === 'me' ? ctx.user.id : owner));
   }
 
   if (noNews) {
@@ -164,7 +164,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     .where(whereClause)
     .orderBy(
       // An owner's own list leads with what has gone quietest
-      ...(owner === 'me' ? [asc(lastNewsSql)] : []),
+      ...(owner ? [asc(lastNewsSql)] : []),
       ...(sort === 'eta'
         ? [sql`${logisticsShipments.eta} IS NULL`, asc(logisticsShipments.eta)]
         : [desc(logisticsShipments.createdAt)]),
