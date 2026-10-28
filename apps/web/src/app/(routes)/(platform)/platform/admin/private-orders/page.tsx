@@ -376,7 +376,7 @@ const AdminPrivateOrdersPage = () => {
               onClick={chip.apply}
               className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
                 chip.active
-                  ? 'border-border-brand bg-fill-brand/10 text-text-primary'
+                  ? 'border-text-primary bg-text-primary/10 text-text-primary'
                   : 'border-border-muted bg-fill-primary text-text-muted hover:text-text-primary'
               }`}
             >
@@ -396,7 +396,7 @@ const AdminPrivateOrdersPage = () => {
             <button
               type="button"
               onClick={() => setStageFilter(null)}
-              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+              className="flex items-center gap-1.5 rounded-full border border-text-primary bg-text-primary/10 px-3 py-1.5 text-sm text-text-primary"
             >
               Stage: {STAGE_LABELS[stageFilter]} <span className="text-text-muted">×</span>
             </button>
@@ -405,7 +405,7 @@ const AdminPrivateOrdersPage = () => {
             <button
               type="button"
               onClick={() => setIdleFilter(false)}
-              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+              className="flex items-center gap-1.5 rounded-full border border-text-primary bg-text-primary/10 px-3 py-1.5 text-sm text-text-primary"
             >
               No change in 7 days <span className="text-text-muted">×</span>
             </button>
@@ -414,7 +414,7 @@ const AdminPrivateOrdersPage = () => {
             <button
               type="button"
               onClick={() => setInvoiceFilter(null)}
-              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+              className="flex items-center gap-1.5 rounded-full border border-text-primary bg-text-primary/10 px-3 py-1.5 text-sm text-text-primary"
             >
               Delivered – Invoiced <span className="text-text-muted">×</span>
             </button>
@@ -432,7 +432,7 @@ const AdminPrivateOrdersPage = () => {
             <button
               type="button"
               onClick={() => setSkuMissingFilter(false)}
-              className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/10 px-3 py-1.5 text-sm text-text-primary"
+              className="flex items-center gap-1.5 rounded-full border border-text-primary bg-text-primary/10 px-3 py-1.5 text-sm text-text-primary"
             >
               CD SKU missing <span className="text-text-muted">×</span>
             </button>
@@ -635,7 +635,7 @@ const AdminPrivateOrdersPage = () => {
                                     </span>
                                   )}
                                   {formatSubscriptionBox(order) && (
-                                    <span className="whitespace-nowrap rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                                    <span className="whitespace-nowrap rounded-full bg-text-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-text-primary">
                                       {formatSubscriptionBox(order)}
                                     </span>
                                   )}
@@ -883,7 +883,7 @@ const AdminPrivateOrdersPage = () => {
                                 </span>
                               )}
                               {formatSubscriptionBox(order) && (
-                                <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                                <span className="rounded-full bg-text-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-text-primary">
                                   {formatSubscriptionBox(order)}
                                 </span>
                               )}

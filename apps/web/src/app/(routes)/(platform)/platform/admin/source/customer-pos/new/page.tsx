@@ -175,8 +175,8 @@ const NewCustomerPoPage = () => {
               </div>
 
               {selectedRfq && (
-                <div className="p-3 bg-fill-brand/5 border border-border-brand rounded-lg">
-                  <Typography variant="bodySm" className="font-medium text-text-brand">
+                <div className="p-3 bg-text-primary/5 border border-text-primary rounded-lg">
+                  <Typography variant="bodySm" className="font-medium text-text-primary">
                     Linked RFQ: {selectedRfq.rfqNumber}
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted">

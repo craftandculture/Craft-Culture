@@ -207,11 +207,11 @@ const NewRfqPage = () => {
                     onClick={() => setInputType('email_text')}
                     className={`p-4 rounded-lg border-2 transition-colors text-left ${
                       inputType === 'email_text'
-                        ? 'border-border-brand bg-fill-brand/5'
+                        ? 'border-text-primary bg-text-primary/5'
                         : 'border-border-primary hover:border-border-muted'
                     }`}
                   >
-                    <IconMail className={`h-6 w-6 mb-2 ${inputType === 'email_text' ? 'text-text-brand' : 'text-text-muted'}`} />
+                    <IconMail className={`h-6 w-6 mb-2 ${inputType === 'email_text' ? 'text-text-primary' : 'text-text-muted'}`} />
                     <Typography variant="bodySm" className="font-medium">
                       Email / Text
                     </Typography>
@@ -224,11 +224,11 @@ const NewRfqPage = () => {
                     onClick={() => setInputType('excel')}
                     className={`p-4 rounded-lg border-2 transition-colors text-left ${
                       inputType === 'excel'
-                        ? 'border-border-brand bg-fill-brand/5'
+                        ? 'border-text-primary bg-text-primary/5'
                         : 'border-border-primary hover:border-border-muted'
                     }`}
                   >
-                    <IconFileSpreadsheet className={`h-6 w-6 mb-2 ${inputType === 'excel' ? 'text-text-brand' : 'text-text-muted'}`} />
+                    <IconFileSpreadsheet className={`h-6 w-6 mb-2 ${inputType === 'excel' ? 'text-text-primary' : 'text-text-muted'}`} />
                     <Typography variant="bodySm" className="font-medium">
                       Excel / CSV
                     </Typography>
@@ -241,11 +241,11 @@ const NewRfqPage = () => {
                     onClick={() => setInputType('manual')}
                     className={`p-4 rounded-lg border-2 transition-colors text-left ${
                       inputType === 'manual'
-                        ? 'border-border-brand bg-fill-brand/5'
+                        ? 'border-text-primary bg-text-primary/5'
                         : 'border-border-primary hover:border-border-muted'
                     }`}
                   >
-                    <IconUpload className={`h-6 w-6 mb-2 ${inputType === 'manual' ? 'text-text-brand' : 'text-text-muted'}`} />
+                    <IconUpload className={`h-6 w-6 mb-2 ${inputType === 'manual' ? 'text-text-primary' : 'text-text-muted'}`} />
                     <Typography variant="bodySm" className="font-medium">
                       Manual Entry
                     </Typography>
@@ -262,7 +262,7 @@ const NewRfqPage = () => {
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-2 mb-4">
-                    <IconSparkles className="h-5 w-5 text-text-brand" />
+                    <IconSparkles className="h-5 w-5 text-text-primary" />
                     <Typography variant="headingSm">
                       {inputType === 'email_text' ? 'Paste Email Content' : 'Upload File'}
                     </Typography>
@@ -299,7 +299,7 @@ const NewRfqPage = () => {
                       {fileName && (
                         <div className="flex items-center justify-between gap-2 p-3 bg-fill-muted rounded-lg">
                           <div className="flex items-center gap-2">
-                            <IconFileSpreadsheet className="h-5 w-5 text-text-brand" />
+                            <IconFileSpreadsheet className="h-5 w-5 text-text-primary" />
                             <Typography variant="bodySm">{fileName}</Typography>
                           </div>
                           <button

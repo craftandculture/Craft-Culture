@@ -252,7 +252,7 @@ const DeliveryPhotoUpload = ({
             ? 'border-fill-success/50 bg-fill-success/5'
             : orderStatus === 'delivered'
               ? 'border-fill-muted bg-surface-secondary'
-              : 'border-fill-brand/50 bg-fill-brand/5'
+              : 'border-text-primary/50 bg-text-primary/5'
         }`}
       >
         <CardContent className="p-6">
@@ -272,7 +272,7 @@ const DeliveryPhotoUpload = ({
                   ? 'bg-fill-success/20'
                   : orderStatus === 'delivered'
                     ? 'bg-fill-muted/20'
-                    : 'bg-fill-brand/20'
+                    : 'bg-text-primary/20'
               }`}
             >
               <Icon
@@ -283,7 +283,7 @@ const DeliveryPhotoUpload = ({
                     ? 'text-fill-success'
                     : orderStatus === 'delivered'
                       ? 'text-text-muted'
-                      : 'text-fill-brand'
+                      : 'text-text-primary'
                 }
               />
             </div>

@@ -203,10 +203,10 @@ const PartnerDocumentUpload = ({
           {...getRootProps()}
           className={`relative rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
             isDragActive
-              ? 'border-border-brand bg-surface-brand/5'
+              ? 'border-text-primary bg-surface-brand/5'
               : isUploading
                 ? 'cursor-wait border-border-muted bg-fill-muted/50'
-                : 'cursor-pointer border-border-muted hover:border-border-brand hover:bg-fill-muted/50'
+                : 'cursor-pointer border-border-muted hover:border-text-primary hover:bg-fill-muted/50'
           }`}
         >
           <input {...getInputProps()} />

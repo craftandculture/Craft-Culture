@@ -404,7 +404,7 @@ const DistributionClient = () => {
                 type="button"
                 onClick={() => setOwnerId(ownerId === owner.id ? '' : owner.id)}
                 className={`rounded-full px-2.5 py-1 text-xs transition ${colourOf(owner.id).chip} ${
-                  ownerId === owner.id ? 'ring-border-brand ring-2' : ''
+                  ownerId === owner.id ? 'ring-text-primary ring-2' : ''
                 }`}
               >
                 {owner.name}
@@ -476,13 +476,13 @@ const DistributionClient = () => {
         */}
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="relative">
-            <span className="bg-fill-brand text-text-brand-on-fill absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
+            <span className="bg-text-primary text-surface-primary absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
               1
             </span>
             <SalesUpload outletId={outletId} onImported={invalidate} />
           </div>
           <div className="relative">
-            <span className="bg-fill-brand text-text-brand-on-fill absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
+            <span className="bg-text-primary text-surface-primary absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
               2
             </span>
             <StatementPanel
@@ -555,7 +555,7 @@ const DistributionClient = () => {
                 ownerId: bulkOwner,
               })
             }
-            className="bg-fill-brand text-text-on-brand hover:bg-fill-brand/90 rounded px-2 py-1 text-xs font-medium disabled:opacity-50"
+            className="bg-text-primary text-text-on-brand hover:bg-text-primary/90 rounded px-2 py-1 text-xs font-medium disabled:opacity-50"
           >
             Set them
           </button>
@@ -601,7 +601,7 @@ const DistributionClient = () => {
               onClick={() => setView(key)}
               className={`rounded-full border px-2.5 py-1 text-xs transition ${
                 view === key
-                  ? 'border-border-brand bg-fill-brand/10 text-text-brand'
+                  ? 'border-text-primary bg-text-primary/10 text-text-primary'
                   : urgent && count > 0
                     ? 'border-border-primary text-text-warning hover:bg-fill-muted/30'
                     : 'border-border-primary text-text-muted hover:bg-fill-muted/30'

@@ -261,7 +261,7 @@ const CloneOrderDialog = ({
             <DialogTitle>
               Clone {orderNumber}
               {boxLabel && (
-                <span className="ml-2 inline-flex items-center rounded-full bg-fill-brand/10 px-2 py-0.5 align-middle text-sm font-medium text-text-brand">
+                <span className="ml-2 inline-flex items-center rounded-full bg-text-primary/10 px-2 py-0.5 align-middle text-sm font-medium text-text-primary">
                   {boxLabel}
                 </span>
               )}
@@ -305,7 +305,7 @@ const CloneOrderDialog = ({
                           ? `/platform/admin/private-orders/${o.id}`
                           : `/platform/private-orders/${o.id}`
                       }
-                      className="text-sm text-text-brand hover:underline"
+                      className="text-sm text-text-primary hover:underline"
                     >
                       {o.orderNumber}
                     </Link>
@@ -369,7 +369,7 @@ const CloneOrderDialog = ({
                           className={`flex items-center gap-3 border-b border-border-muted px-3 py-2 last:border-b-0 ${
                             existing
                               ? 'cursor-not-allowed opacity-60'
-                              : `cursor-pointer hover:bg-fill-muted/40 ${isSelected ? 'bg-fill-brand/5' : ''}`
+                              : `cursor-pointer hover:bg-fill-muted/40 ${isSelected ? 'bg-text-primary/5' : ''}`
                           }`}
                         >
                           <Checkbox
@@ -429,7 +429,7 @@ const CloneOrderDialog = ({
                   <button
                     type="button"
                     onClick={() => setShowPaste(true)}
-                    className="flex items-center gap-1.5 self-start text-sm text-text-brand hover:underline"
+                    className="flex items-center gap-1.5 self-start text-sm text-text-primary hover:underline"
                   >
                     <Icon icon={IconPlus} size="sm" />
                     Add clients not on the list

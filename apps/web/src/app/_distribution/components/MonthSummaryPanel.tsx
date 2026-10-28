@@ -97,7 +97,7 @@ const MonthSummaryPanel = ({ outletId, month }: MonthSummaryPanelProps) => {
           onClick={() =>
             exportAll.mutate({ outletId, ownerId: null, month })
           }
-          className="bg-fill-brand text-text-on-brand hover:bg-fill-brand/90 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+          className="bg-text-primary text-text-on-brand hover:bg-text-primary/90 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
         >
           {exportAll.isPending ? 'Building…' : 'Export all partners'}
         </button>

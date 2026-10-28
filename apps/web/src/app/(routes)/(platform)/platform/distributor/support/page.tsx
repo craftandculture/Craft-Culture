@@ -90,10 +90,10 @@ const DistributorSupportPage = () => {
         {/* Flow Diagrams Link */}
         <Link
           href="/platform/support/flows"
-          className="mb-6 flex items-center justify-between rounded-xl border border-border-brand bg-fill-brand/5 p-4 transition-colors hover:bg-fill-brand/10"
+          className="mb-6 flex items-center justify-between rounded-xl border border-text-primary bg-text-primary/5 p-4 transition-colors hover:bg-text-primary/10"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-text-primary/10">
               <Icon icon={IconChartDots} size="md" colorRole="brand" />
             </div>
             <div>
@@ -153,8 +153,8 @@ const DistributorSupportPage = () => {
               Before collecting payment, you must verify each client:
             </Typography>
 
-            <div className="mt-4 rounded-lg border border-border-brand bg-fill-brand/5 p-4">
-              <Typography variant="bodyXs" className="font-medium text-text-brand">
+            <div className="mt-4 rounded-lg border border-text-primary bg-text-primary/5 p-4">
+              <Typography variant="bodyXs" className="font-medium text-text-primary">
                 Why Verification Matters
               </Typography>
               <Typography variant="bodyXs" className="mt-1 text-text-muted">
@@ -171,7 +171,7 @@ const DistributorSupportPage = () => {
 
               <ol className="space-y-3">
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-text-primary text-xs font-medium text-white">
                     1
                   </span>
                   <div>
@@ -185,7 +185,7 @@ const DistributorSupportPage = () => {
                 </li>
 
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-text-primary text-xs font-medium text-white">
                     2
                   </span>
                   <div>
@@ -199,7 +199,7 @@ const DistributorSupportPage = () => {
                 </li>
 
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-text-primary text-xs font-medium text-white">
                     3
                   </span>
                   <div>
@@ -213,7 +213,7 @@ const DistributorSupportPage = () => {
                 </li>
 
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-text-primary text-xs font-medium text-white">
                     4
                   </span>
                   <div>
@@ -270,7 +270,7 @@ const DistributorSupportPage = () => {
                 },
               ].map((step, index) => (
                 <li key={step.title} className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-text-primary text-xs font-medium text-white">
                     {index + 1}
                   </span>
                   <div>
@@ -452,7 +452,7 @@ const DistributorSupportPage = () => {
               Need help? The Craft & Culture team is here to assist.
             </Typography>
 
-            <div className="mt-4 rounded-lg border border-border-brand bg-fill-brand/5 p-5">
+            <div className="mt-4 rounded-lg border border-text-primary bg-text-primary/5 p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <Typography variant="bodySm" className="font-medium">
@@ -464,7 +464,7 @@ const DistributorSupportPage = () => {
                 </div>
                 <Link
                   href="mailto:support@craftculture.xyz"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-fill-brand px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-fill-brand-hover"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-text-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-text-primary/90"
                 >
                   <Icon icon={IconMail} size="sm" />
                   support@craftculture.xyz

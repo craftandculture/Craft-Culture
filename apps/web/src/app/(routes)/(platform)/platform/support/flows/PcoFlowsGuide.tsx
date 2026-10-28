@@ -2041,7 +2041,7 @@ const PcoFlowsGuide = ({ showAdminTab = false }: PcoFlowsGuideProps) => {
         {/* Header */}
         <div className="mb-8">
           <div className="mb-4 flex items-center gap-3">
-            <div className="bg-fill-brand rounded-lg p-2">
+            <div className="bg-text-primary rounded-lg p-2">
               <Icon icon={IconUsers} size="md" className="text-white" />
             </div>
             <div>
@@ -2066,7 +2066,7 @@ const PcoFlowsGuide = ({ showAdminTab = false }: PcoFlowsGuideProps) => {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-fill-brand text-white'
+                  ? 'bg-text-primary text-white'
                   : 'text-text-secondary hover:bg-fill-secondary hover:text-text-primary'
               }`}
             >
@@ -2085,7 +2085,7 @@ const PcoFlowsGuide = ({ showAdminTab = false }: PcoFlowsGuideProps) => {
             Need help? Contact us at{' '}
             <a
               href="mailto:support@craftculture.xyz"
-              className="text-text-brand font-medium hover:underline"
+              className="text-text-primary font-medium hover:underline"
             >
               support@craftculture.xyz
             </a>
@@ -2095,7 +2095,7 @@ const PcoFlowsGuide = ({ showAdminTab = false }: PcoFlowsGuideProps) => {
           </Typography>
           <button
             onClick={() => window.print()}
-            className="bg-fill-brand hover:bg-fill-brand/90 mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors print:hidden"
+            className="bg-text-primary hover:bg-text-primary/90 mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors print:hidden"
           >
             🖨️ Print / Save PDF
           </button>

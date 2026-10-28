@@ -227,7 +227,7 @@ const CatalogBrowser = ({
             value={catalogSearch}
             onChange={(e) => setCatalogSearch(e.target.value)}
             placeholder="Search catalogue..."
-            className="h-10 w-full rounded-lg border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] placeholder:text-text-muted/60 hover:border-border-primary focus:border-border-brand focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-border-brand/20"
+            className="h-10 w-full rounded-lg border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] placeholder:text-text-muted/60 hover:border-border-primary focus:border-text-primary focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-text-primary/20"
           />
         </div>
 
@@ -277,7 +277,7 @@ const CatalogBrowser = ({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="h-10 rounded-lg border border-border-muted bg-background-primary px-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-border-primary focus:border-border-brand focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-border-brand/20"
+            className="h-10 rounded-lg border border-border-muted bg-background-primary px-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-border-primary focus:border-text-primary focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-text-primary/20"
           >
             <option value="name-asc">Name (A-Z)</option>
             <option value="name-desc">Name (Z-A)</option>

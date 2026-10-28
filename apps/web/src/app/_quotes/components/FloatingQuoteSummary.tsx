@@ -66,8 +66,8 @@ const FloatingQuoteSummary = ({
         <div className="container flex items-center justify-between gap-4 py-3 md:py-4">
           {/* Quote Summary */}
           <div className="flex items-center gap-3 md:gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-fill-brand/10">
-              <IconShoppingCart className="h-5 w-5 text-text-brand" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-text-primary/10">
+              <IconShoppingCart className="h-5 w-5 text-text-primary" />
             </div>
             <div className="flex flex-col">
               <Typography variant="bodySm" className="font-semibold">

@@ -130,7 +130,7 @@ const PrivateOrdersList = () => {
               </span>
             )}
             {formatSubscriptionBox(row.original) && (
-              <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+              <span className="rounded-full bg-text-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-text-primary">
                 {formatSubscriptionBox(row.original)}
               </span>
             )}
@@ -212,7 +212,7 @@ const PrivateOrdersList = () => {
               onClick={() => setStatusFilter(filter.value)}
               className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-fill-brand text-white'
+                  ? 'bg-text-primary text-white'
                   : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
               }`}
             >
@@ -340,7 +340,7 @@ const PrivateOrdersList = () => {
                     </span>
                   )}
                   {formatSubscriptionBox(order) && (
-                    <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                    <span className="rounded-full bg-text-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-text-primary">
                       {formatSubscriptionBox(order)}
                     </span>
                   )}

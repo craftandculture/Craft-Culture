@@ -127,7 +127,7 @@ const NewExportInvoiceClient = ({ shipmentId }: { shipmentId?: string }) => {
       <section className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">1 · Consignee</p>
         {consignee && (
-          <div className="flex items-center justify-between rounded-xl border border-border-brand bg-fill-brand/10 px-3 py-2.5 lg:hidden">
+          <div className="flex items-center justify-between rounded-xl border border-text-primary bg-text-primary/10 px-3 py-2.5 lg:hidden">
             <span className="text-sm font-medium">{consignee.displayName}</span>
             <Button size="xs" variant="ghost" onClick={() => setCustomerId('')}>Change</Button>
           </div>
@@ -155,13 +155,13 @@ const NewExportInvoiceClient = ({ shipmentId }: { shipmentId?: string }) => {
                   onClick={() => chooseConsignee(c.zohoCustomerId)}
                   className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${
                     c.zohoCustomerId === customerId
-                      ? 'border-border-brand bg-fill-brand/10'
+                      ? 'border-text-primary bg-text-primary/10'
                       : 'border-border-muted bg-fill-primary hover:bg-fill-muted/40'
                   }`}
                 >
                   <span>{c.displayName}</span>
                   {c.hasProfile && (
-                    <span className="shrink-0 rounded-full bg-fill-brand/15 px-2 py-0.5 text-[10px] font-medium text-text-brand">Set up</span>
+                    <span className="shrink-0 rounded-full bg-text-primary/15 px-2 py-0.5 text-[10px] font-medium text-text-primary">Set up</span>
                   )}
                 </button>
               </li>
@@ -179,7 +179,7 @@ const NewExportInvoiceClient = ({ shipmentId }: { shipmentId?: string }) => {
               type="button"
               onClick={() => refresh.mutate()}
               disabled={refresh.isPending}
-              className="text-xs text-text-brand hover:underline disabled:opacity-60"
+              className="text-xs text-text-primary hover:underline disabled:opacity-60"
               title="Pull the latest invoices from Zoho"
             >
               {refresh.isPending ? 'Refreshing…' : 'Refresh from Zoho'}
@@ -220,7 +220,7 @@ const NewExportInvoiceClient = ({ shipmentId }: { shipmentId?: string }) => {
                 const checked = selected.includes(inv.zohoInvoiceId);
                 return (
                   <Fragment key={inv.zohoInvoiceId}>
-                    <li className={`flex items-center gap-3 px-3 py-2.5 ${checked ? 'bg-fill-brand/5' : ''}`}>
+                    <li className={`flex items-center gap-3 px-3 py-2.5 ${checked ? 'bg-text-primary/5' : ''}`}>
                       <input
                         type="checkbox"
                         aria-label={`Include ${inv.invoiceNumber}`}

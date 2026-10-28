@@ -135,7 +135,7 @@ const CollectorsPage = () => {
     switch (status) {
       case 'active':
         return (
-          <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+          <span className="bg-text-primary/10 text-text-primary border border-text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
             Active
           </span>
         );
@@ -622,7 +622,7 @@ const CollectorsPage = () => {
                           href={`/api/cellar/identity?type=${document.documentType}&partnerId=${editingPartner.id}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs font-medium text-text-brand hover:underline"
+                          className="text-xs font-medium text-text-primary hover:underline"
                         >
                           {document.documentType
                             .replace(/_/g, ' ')

@@ -208,7 +208,7 @@ const WMSDeviceLabelsContent = () => {
             onClick={() => { setActiveTab('totem'); setSelectedLabels(new Set()); }}
             className={`flex-1 rounded-lg px-6 py-4 text-lg font-medium transition-colors ${
               activeTab === 'totem'
-                ? 'bg-fill-brand text-white'
+                ? 'bg-text-primary text-white'
                 : 'bg-fill-secondary text-text-muted'
             }`}
           >
@@ -221,7 +221,7 @@ const WMSDeviceLabelsContent = () => {
             onClick={() => { setActiveTab('location'); setSelectedLabels(new Set()); }}
             className={`flex-1 rounded-lg px-6 py-4 text-lg font-medium transition-colors ${
               activeTab === 'location'
-                ? 'bg-fill-brand text-white'
+                ? 'bg-text-primary text-white'
                 : 'bg-fill-secondary text-text-muted'
             }`}
           >
@@ -262,7 +262,7 @@ const WMSDeviceLabelsContent = () => {
                     onClick={() => toggleLabel(totemKey)}
                     className={`rounded-xl p-6 text-left transition-all ${
                       isSelected
-                        ? 'bg-fill-brand text-white ring-4 ring-border-brand'
+                        ? 'bg-text-primary text-white ring-4 ring-text-primary'
                         : 'bg-fill-secondary hover:bg-fill-muted'
                     }`}
                   >
@@ -299,7 +299,7 @@ const WMSDeviceLabelsContent = () => {
                     onClick={() => toggleLabel(location.id)}
                     className={`rounded-xl p-6 text-left transition-all ${
                       isSelected
-                        ? 'bg-fill-brand text-white ring-4 ring-border-brand'
+                        ? 'bg-text-primary text-white ring-4 ring-text-primary'
                         : 'bg-fill-secondary hover:bg-fill-muted'
                     }`}
                   >

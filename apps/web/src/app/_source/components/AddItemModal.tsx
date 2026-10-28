@@ -148,8 +148,8 @@ const AddItemModal = ({
 
         <div className="space-y-4 py-4">
           {/* LWIN Search - Prominent */}
-          <div className="relative bg-fill-brand/5 border border-border-brand rounded-lg p-4">
-            <label className="block text-sm font-semibold text-text-brand mb-2">
+          <div className="relative bg-text-primary/5 border border-text-primary rounded-lg p-4">
+            <label className="block text-sm font-semibold text-text-primary mb-2">
               Search LWIN Database
             </label>
             <div className="relative">
@@ -163,7 +163,7 @@ const AddItemModal = ({
                   setShowLwinResults(true);
                 }}
                 onFocus={() => setShowLwinResults(true)}
-                className="w-full rounded-lg border border-border-brand bg-surface-primary pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-text-primary bg-surface-primary pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               {isSearchingLwin && (
                 <IconLoader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted animate-spin" />

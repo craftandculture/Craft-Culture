@@ -107,7 +107,7 @@ const PayoutsPage = () => {
             </Typography>
             <Typography
               variant="headingMd"
-              className="text-text-brand mt-0.5 block tabular-nums"
+              className="text-text-primary mt-0.5 block tabular-nums"
             >
               {money(waiting.owedUsd)}
             </Typography>
@@ -177,7 +177,7 @@ const PayoutsPage = () => {
                 <div className="min-w-0">
                   <Typography variant="bodySm" className="font-semibold">
                     <span className="font-mono text-xs">{run.runNumber}</span>
-                    <span className="text-text-brand ml-2 tabular-nums">
+                    <span className="text-text-primary ml-2 tabular-nums">
                       {money(run.totalUsd)}
                     </span>
                   </Typography>

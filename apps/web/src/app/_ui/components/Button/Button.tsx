@@ -9,8 +9,12 @@ export const buttonStyles = tv({
         'ring-border-primary-selected hover:border-border-primary-hover hover:bg-fill-primary-hover active:bg-fill-primary-active data-[state=open]:border-border-primary-selected data-[state=open]:bg-fill-primary-selected data-[state=open]:hover:border-border-primary-hover data-[state=open]:hover:bg-fill-primary-hover data-[state=open]:active:bg-fill-primary-active border-border-primary bg-fill-primary text-text-primary',
       muted:
         'ring-border-muted-selected hover:border-border-muted-hover hover:bg-fill-muted-hover active:bg-fill-muted-active data-[state=open]:border-border-muted-selected data-[state=open]:bg-fill-muted-selected data-[state=open]:hover:border-border-muted-hover data-[state=open]:hover:bg-fill-muted-hover data-[state=open]:active:bg-fill-muted-active border-border-muted bg-fill-muted text-text-muted',
+      /*
+        Named "brand" for history: the house primary is near-black, not teal
+        (the top nav highlight is the only teal left in page UI).
+      */
       brand:
-        'fill-text-brand-on-fill text-text-brand-on-fill ring-border-brand-selected hover:border-border-brand-hover hover:bg-fill-brand-hover active:bg-fill-brand-active data-[state=open]:border-border-brand-selected data-[state=open]:bg-fill-brand-selected data-[state=open]:hover:border-border-brand-hover data-[state=open]:hover:bg-fill-brand-hover data-[state=open]:active:bg-fill-brand-active border-border-brand bg-fill-brand',
+        'fill-surface-primary text-surface-primary ring-text-primary/30 hover:border-text-primary/90 hover:bg-text-primary/90 active:bg-text-primary/80 data-[state=open]:border-text-primary data-[state=open]:bg-text-primary/90 border-text-primary bg-text-primary',
       bold: 'border-border-bold ring-border-bold-selected hover:border-border-bold-hover data-[state=open]:border-border-bold-selected data-[state=open]:hover:border-border-bold-hover bg-fill-bold text-text-bold-on-fill hover:bg-fill-bold-hover active:bg-fill-bold-active data-[state=open]:bg-fill-bold-selected data-[state=open]:hover:bg-fill-bold-hover data-[state=open]:active:bg-fill-bold-active',
       danger:
         'text-text-danger-on-fill ring-border-danger-selected hover:border-border-danger-hover hover:bg-fill-danger-hover active:bg-fill-danger-active data-[state=open]:border-border-danger-selected data-[state=open]:bg-fill-danger-selected data-[state=open]:hover:border-border-danger-hover data-[state=open]:hover:bg-fill-danger-hover data-[state=open]:active:bg-fill-danger-active border-border-danger bg-fill-danger',

@@ -482,7 +482,7 @@ const WMSDispatchBatchDetailPage = () => {
                         href={fileHref(dn.pdfUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-medium text-brand-600 hover:underline"
+                        className="text-sm font-medium text-text-primary hover:underline"
                       >
                         View PDF
                       </a>
@@ -560,7 +560,7 @@ const WMSDispatchBatchDetailPage = () => {
                           isAlreadyInBatch
                             ? 'bg-fill-secondary opacity-50 cursor-not-allowed'
                             : isSelected
-                              ? 'bg-brand-100 border-2 border-brand-500 dark:bg-brand-900/30'
+                              ? 'bg-surface-secondary border-2 border-text-primary dark:bg-surface-secondary'
                               : 'bg-fill-secondary hover:bg-fill-secondary/70'
                         }`}
                       >
@@ -579,7 +579,7 @@ const WMSDispatchBatchDetailPage = () => {
                             <div
                               className={`h-6 w-6 rounded border-2 ${
                                 isSelected
-                                  ? 'border-brand-500 bg-brand-500'
+                                  ? 'border-text-primary bg-surface-secondary0'
                                   : 'border-border-primary'
                               }`}
                             >

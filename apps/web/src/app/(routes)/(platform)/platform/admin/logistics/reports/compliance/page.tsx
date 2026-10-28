@@ -248,7 +248,7 @@ const ComplianceReportPage = () => {
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/platform/admin/logistics/shipments/${shipment.shipmentId}`}
-                            className="font-mono font-medium hover:text-brand-primary print:text-black"
+                            className="font-mono font-medium hover:text-text-primary print:text-black"
                           >
                             {shipment.shipmentNumber}
                           </Link>

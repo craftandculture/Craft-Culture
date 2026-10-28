@@ -58,7 +58,7 @@ const HsCodeSelect = ({ value, onSave, disabled }: HsCodeSelectProps) => {
           onBlur={commit}
           inputMode="numeric"
           placeholder="6–10 digits"
-          className={`w-full rounded border bg-fill-primary px-1.5 py-0.5 font-mono text-[11px] ${valid || !custom ? 'border-border-brand' : 'border-border-danger'}`}
+          className={`w-full rounded border bg-fill-primary px-1.5 py-0.5 font-mono text-[11px] ${valid || !custom ? 'border-text-primary' : 'border-border-danger'}`}
         />
         {!valid && custom && <span className="text-[10px] text-text-danger">6–10 digits</span>}
       </div>
@@ -80,7 +80,7 @@ const HsCodeSelect = ({ value, onSave, disabled }: HsCodeSelectProps) => {
           setMode('view');
         }}
         onBlur={() => setMode((m) => (m === 'pick' ? 'view' : m))}
-        className="w-full rounded border border-border-brand bg-fill-primary px-1 py-0.5 text-[11px]"
+        className="w-full rounded border border-text-primary bg-fill-primary px-1 py-0.5 text-[11px]"
       >
         {hsCodeOptions.map((o) => (
           <option key={o.code} value={o.code}>

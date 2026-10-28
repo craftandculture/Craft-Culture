@@ -189,7 +189,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
         ))}
       </ol>
       {data.versions.length > 3 && (
-        <button type="button" onClick={() => setShowAllHistory((v) => !v)} className="mt-3 text-xs font-medium text-text-brand hover:underline">
+        <button type="button" onClick={() => setShowAllHistory((v) => !v)} className="mt-3 text-xs font-medium text-text-primary hover:underline">
           {showAllHistory ? 'Show fewer' : `Show all ${data.versions.length} versions`}
         </button>
       )}
@@ -208,7 +208,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
           <span className="font-semibold">{data.number}</span>
           <span className="block text-xs text-text-muted">Latest PDF</span>
         </span>
-        <span className="text-xs font-medium text-text-brand">Open ↗</span>
+        <span className="text-xs font-medium text-text-primary">Open ↗</span>
       </a>
       {pdfVersions.length > 1 && (
         <p className="mt-2 text-xs text-text-muted">{pdfVersions.length} PDF versions — earlier ones are in History.</p>

@@ -124,7 +124,7 @@ const ShipmentGroupsPage = () => {
           <div className="space-y-2">
             {groups.map((g) => (
               <Link key={g.id} href={`/platform/admin/logistics/groups/${g.id}`}>
-                <Card className="transition-colors hover:border-border-brand">
+                <Card className="transition-colors hover:border-text-primary">
                   <CardContent className="flex-row items-center justify-between gap-4 p-4">
                     <div className="min-w-0">
                       <Typography variant="labelMd" className="truncate">

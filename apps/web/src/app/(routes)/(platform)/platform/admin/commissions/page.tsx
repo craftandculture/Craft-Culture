@@ -240,7 +240,7 @@ const CommissionsPage = () => {
                               </Typography>
                             </td>
                             <td className="px-6 py-4">
-                              <Typography variant="bodySm" className="font-semibold text-fill-brand">
+                              <Typography variant="bodySm" className="font-semibold text-text-primary">
                                 {formatPrice(item.commissionAmount, 'USD')}
                               </Typography>
                               {!item.commissionVerified && (
@@ -435,7 +435,7 @@ const CommissionsPage = () => {
                             </div>
                           </div>
                           <div className="text-right">
-                            <Typography variant="bodySm" className="font-semibold text-fill-brand">
+                            <Typography variant="bodySm" className="font-semibold text-text-primary">
                               {formatPrice(item.commissionAmount, 'USD')}
                             </Typography>
                             {!item.commissionVerified && (

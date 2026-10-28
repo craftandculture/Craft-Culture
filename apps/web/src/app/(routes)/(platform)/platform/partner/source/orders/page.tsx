@@ -155,7 +155,7 @@ const PartnerSupplierOrdersPage = () => {
                   className="block"
                 >
                   <Card
-                    className={`hover:border-border-brand transition-all cursor-pointer active:scale-[0.99] ${
+                    className={`hover:border-text-primary transition-all cursor-pointer active:scale-[0.99] ${
                       needsAction ? 'border-l-4 border-l-amber-500' : ''
                     }`}
                   >

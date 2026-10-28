@@ -228,7 +228,7 @@ const ZohoCodesClient = () => {
                   key={t.kind}
                   type="button"
                   onClick={() => setTab(t.kind)}
-                  className={`px-3 py-2.5 text-left ${tab === t.kind ? 'bg-fill-brand/10' : 'bg-surface-primary hover:bg-fill-muted/50'}`}
+                  className={`px-3 py-2.5 text-left ${tab === t.kind ? 'bg-text-primary/10' : 'bg-surface-primary hover:bg-fill-muted/50'}`}
                 >
                   <p className="text-[11px] uppercase tracking-wide text-text-muted">{t.label}</p>
                   <p className="text-lg font-semibold tabular-nums text-text-primary">{c.all}</p>
@@ -335,7 +335,7 @@ const ZohoCodesClient = () => {
                   </button>
                   <button
                     type="button"
-                    className="rounded-lg bg-fill-brand px-3 py-1.5 text-sm font-medium text-text-brand-on-fill hover:bg-fill-brand-hover"
+                    className="rounded-lg bg-text-primary px-3 py-1.5 text-sm font-medium text-surface-primary hover:bg-text-primary/90"
                     onClick={() => void run(queue)}
                   >
                     Write {queue.length} to Zoho
@@ -355,7 +355,7 @@ const ZohoCodesClient = () => {
                   <button
                     type="button"
                     disabled={!!running || queue.length === 0}
-                    className="rounded-lg bg-fill-brand px-3 py-1.5 text-sm font-medium text-text-brand-on-fill hover:bg-fill-brand-hover disabled:opacity-50"
+                    className="rounded-lg bg-text-primary px-3 py-1.5 text-sm font-medium text-surface-primary hover:bg-text-primary/90 disabled:opacity-50"
                     onClick={() => setConfirming(true)}
                   >
                     Apply {queue.length}

@@ -229,7 +229,7 @@ const DistributorsPage = () => {
     switch (status) {
       case 'active':
         return (
-          <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+          <span className="bg-text-primary/10 text-text-primary border border-text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
             Active
           </span>
         );
@@ -560,7 +560,7 @@ const DistributorsPage = () => {
                               enableBankTransfer: e.target.checked,
                             })
                           }
-                          className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                          className="h-4 w-4 rounded border-border-primary text-text-primary focus:ring-text-primary"
                         />
                         <span className="text-sm font-medium">Bank Transfer</span>
                       </label>
@@ -576,7 +576,7 @@ const DistributorsPage = () => {
                               enablePaymentLink: e.target.checked,
                             })
                           }
-                          className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                          className="h-4 w-4 rounded border-border-primary text-text-primary focus:ring-text-primary"
                         />
                         <span className="text-sm font-medium">Payment Link</span>
                       </label>
@@ -829,7 +829,7 @@ const DistributorsPage = () => {
                       {partner.paymentDetails && (
                         <div className="flex items-center gap-2 flex-wrap">
                           {(partner.paymentDetails.bankName || partner.paymentDetails.iban || partner.paymentDetails.accountNumber) && (
-                            <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+                            <span className="bg-text-primary/10 text-text-primary border border-text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
                               Bank Transfer
                             </span>
                           )}
@@ -1292,7 +1292,7 @@ const DistributorsPage = () => {
                             paymentDetails: editingPartner.paymentDetails || {},
                           })
                         }
-                        className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                        className="h-4 w-4 rounded border-border-primary text-text-primary focus:ring-text-primary"
                       />
                       <span className="text-sm font-medium">Bank Transfer</span>
                     </label>
@@ -1309,7 +1309,7 @@ const DistributorsPage = () => {
                             paymentDetails: editingPartner.paymentDetails || {},
                           })
                         }
-                        className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                        className="h-4 w-4 rounded border-border-primary text-text-primary focus:ring-text-primary"
                       />
                       <span className="text-sm font-medium">Payment Link</span>
                     </label>

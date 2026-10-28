@@ -552,7 +552,7 @@ const RfqDetailPage = () => {
 
         {/* Next Steps Workflow Panel - Shows when quotes can be selected */}
         {canSelectQuotes && selectedCount > 0 && (
-          <Card className="border-border-brand bg-gradient-to-r from-fill-brand/5 to-fill-brand/10">
+          <Card className="border-text-primary bg-gradient-to-r from-text-primary/5 to-text-primary/10">
             <CardContent className="p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 {/* Progress Steps */}
@@ -562,7 +562,7 @@ const RfqDetailPage = () => {
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       selectedCount === totalItems
                         ? 'bg-fill-success text-white'
-                        : 'bg-fill-brand text-white'
+                        : 'bg-text-primary text-white'
                     }`}>
                       {selectedCount === totalItems ? (
                         <IconCircleCheck className="w-5 h-5" />
@@ -586,7 +586,7 @@ const RfqDetailPage = () => {
                       isFinalized
                         ? 'bg-fill-success text-white'
                         : selectedCount > 0
-                          ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
+                          ? 'bg-text-primary/20 text-text-primary border-2 border-text-primary'
                           : 'bg-fill-muted text-text-muted'
                     }`}>
                       {isFinalized ? (
@@ -609,7 +609,7 @@ const RfqDetailPage = () => {
                   {!isFinalized && (
                     <>
                       <div className="text-right hidden sm:block">
-                        <Typography variant="bodySm" className="font-medium text-text-brand">
+                        <Typography variant="bodySm" className="font-medium text-text-primary">
                           Ready to finalize?
                         </Typography>
                         <Typography variant="bodyXs" colorRole="muted">
@@ -672,7 +672,7 @@ const RfqDetailPage = () => {
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       isPendingClientApproval
-                        ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
+                        ? 'bg-text-primary/20 text-text-primary border-2 border-text-primary'
                         : 'bg-fill-success text-white'
                     }`}>
                       {isPendingClientApproval ? (
@@ -697,7 +697,7 @@ const RfqDetailPage = () => {
                       isPendingClientApproval
                         ? 'bg-fill-muted text-text-muted'
                         : isClientApproved
-                          ? 'bg-fill-brand/20 text-fill-brand border-2 border-fill-brand'
+                          ? 'bg-text-primary/20 text-text-primary border-2 border-text-primary'
                           : 'bg-fill-success text-white'
                     }`}>
                       <span className="text-sm font-bold">3</span>
@@ -802,7 +802,7 @@ const RfqDetailPage = () => {
                 <div className="flex items-center gap-2">
                   <div className="w-16 sm:w-24 h-1.5 bg-fill-muted rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-fill-brand rounded-full transition-all duration-300"
+                      className="h-full bg-text-primary rounded-full transition-all duration-300"
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
@@ -860,7 +860,7 @@ const RfqDetailPage = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowUnselectedOnly(!showUnselectedOnly)}
-                    className={showUnselectedOnly ? 'bg-fill-brand/10' : ''}
+                    className={showUnselectedOnly ? 'bg-text-primary/10' : ''}
                   >
                     <ButtonContent iconLeft={showUnselectedOnly ? IconFilterOff : IconFilter}>
                       <span className="hidden sm:inline">{showUnselectedOnly ? 'Show All' : 'Unselected'}</span>
@@ -872,8 +872,8 @@ const RfqDetailPage = () => {
 
             {rfq.items.length === 0 ? (
               <div className="p-8 text-center">
-                <div className="w-12 h-12 rounded-full bg-fill-brand/10 flex items-center justify-center mx-auto mb-4">
-                  <IconPlus className="h-6 w-6 text-text-brand" />
+                <div className="w-12 h-12 rounded-full bg-text-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <IconPlus className="h-6 w-6 text-text-primary" />
                 </div>
                 <Typography variant="headingSm" className="mb-2">
                   No items yet
@@ -948,7 +948,7 @@ const RfqDetailPage = () => {
                               type="button"
                               onClick={() => handleOpenItemEditor(item)}
                               className={`w-full text-left min-w-0 group overflow-hidden ${
-                                canSendToPartners ? 'cursor-pointer hover:bg-fill-brand/5 rounded px-1 -mx-1' : ''
+                                canSendToPartners ? 'cursor-pointer hover:bg-text-primary/5 rounded px-1 -mx-1' : ''
                               }`}
                               disabled={!canSendToPartners && !canSelectQuotes}
                             >
@@ -963,13 +963,13 @@ const RfqDetailPage = () => {
                                   </span>
                                 )}
                                 <span
-                                  className="text-xs font-semibold truncate group-hover:text-text-brand transition-colors"
+                                  className="text-xs font-semibold truncate group-hover:text-text-primary transition-colors"
                                   title={item.productName || ''}
                                 >
                                   {item.productName}
                                 </span>
                                 {item.vintage && (
-                                  <span className="text-xs text-text-brand font-medium shrink-0">
+                                  <span className="text-xs text-text-primary font-medium shrink-0">
                                     {item.vintage}
                                   </span>
                                 )}
@@ -1031,7 +1031,7 @@ const RfqDetailPage = () => {
                                     !displayBottleSize && !displayCaseConfig
                                       ? 'bg-fill-warning/10 border border-border-warning hover:bg-fill-warning/20 text-text-warning'
                                       : isFromQuote
-                                        ? 'bg-fill-brand/10 border border-border-brand hover:bg-fill-brand/20 text-text-brand'
+                                        ? 'bg-text-primary/10 border border-text-primary hover:bg-text-primary/20 text-text-primary'
                                         : 'hover:bg-fill-muted'
                                   }`}
                                   title={isFromQuote ? 'Format from partner quote (click to set)' : 'Click to edit format'}
@@ -1168,7 +1168,7 @@ const RfqDetailPage = () => {
                                         disabled={!canSelectQuotes || isSelectingQuote}
                                         className={`px-3 py-1 rounded text-center transition-all min-w-[90px] ${
                                           isSelected
-                                            ? 'bg-fill-brand text-text-on-brand ring-2 ring-border-brand'
+                                            ? 'bg-text-primary text-text-on-brand ring-2 ring-text-primary'
                                             : isBestPrice
                                               ? 'bg-fill-success/10 text-text-success hover:bg-fill-success/20 dark:bg-fill-success/20 dark:hover:bg-fill-success/30'
                                               : isHighestPrice
@@ -1227,10 +1227,10 @@ const RfqDetailPage = () => {
                                             isSelected
                                               ? 'text-text-on-brand'
                                               : isAltVintage
-                                                ? 'text-text-brand'
+                                                ? 'text-text-primary'
                                                 : isAltProduct
                                                   ? 'text-text-warning'
-                                                  : 'text-text-brand'
+                                                  : 'text-text-primary'
                                           }`}>
                                             {displayVintage}
                                           </span>
@@ -1266,7 +1266,7 @@ const RfqDetailPage = () => {
                                         if (e.key === 'Enter') handleSavePrice(item.id);
                                         if (e.key === 'Escape') handleCancelEdit();
                                       }}
-                                      className="w-16 px-1 py-0.5 text-xs border border-border-brand rounded bg-surface-primary focus:outline-none"
+                                      className="w-16 px-1 py-0.5 text-xs border border-text-primary rounded bg-surface-primary focus:outline-none"
                                     />
                                     <button
                                       onClick={() => handleSavePrice(item.id)}
@@ -1289,7 +1289,7 @@ const RfqDetailPage = () => {
                                     }
                                     className={`text-xs font-semibold ${
                                       item.priceAdjustedBy
-                                        ? 'text-fill-brand'
+                                        ? 'text-text-primary'
                                         : 'text-text-success'
                                     } ${canSelectQuotes ? 'hover:underline cursor-pointer' : ''}`}
                                     title={canSelectQuotes ? 'Click to edit' : undefined}
@@ -1482,7 +1482,7 @@ const RfqDetailPage = () => {
 
               {/* Show selected partner info when quotes are parsed */}
               {parsedPartnerQuotes && selectedPartnerId && (
-                <div className="p-3 bg-fill-brand/5 border border-border-brand rounded-lg">
+                <div className="p-3 bg-text-primary/5 border border-text-primary rounded-lg">
                   <Typography variant="bodyMd" className="font-medium">
                     Submitting for: {rfq.partners.find((p) => p.partnerId === selectedPartnerId)?.partner.businessName}
                   </Typography>
@@ -1525,7 +1525,7 @@ const RfqDetailPage = () => {
                               quote.quoteType === 'exact'
                                 ? 'bg-fill-success/20 text-text-success'
                                 : quote.quoteType === 'alt_vintage'
-                                  ? 'bg-fill-brand/20 text-text-brand'
+                                  ? 'bg-text-primary/20 text-text-primary'
                                   : quote.quoteType === 'alternative'
                                     ? 'bg-fill-warning/20 text-text-warning'
                                     : 'bg-fill-danger/20 text-text-danger'

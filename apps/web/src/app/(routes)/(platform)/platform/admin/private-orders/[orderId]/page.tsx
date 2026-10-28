@@ -2151,7 +2151,7 @@ const AdminPrivateOrderDetailPage = () => {
                         onChange={(event) => setEditingNote({ key, text: event.target.value })}
                         rows={5}
                         autoFocus
-                        className="border-border-muted bg-surface-primary text-text-primary focus:border-border-brand w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                        className="border-border-muted bg-surface-primary text-text-primary focus:border-text-primary w-full rounded-lg border px-3 py-2 text-sm outline-none"
                       />
                       <div className="flex items-center gap-2">
                         <Button
@@ -2201,7 +2201,7 @@ const AdminPrivateOrderDetailPage = () => {
                     onClick={() => setActivityFilter(filter)}
                     className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                       activityFilter === filter
-                        ? 'bg-fill-brand text-white'
+                        ? 'bg-text-primary text-white'
                         : 'bg-surface-secondary text-text-muted hover:bg-surface-muted'
                     }`}
                   >

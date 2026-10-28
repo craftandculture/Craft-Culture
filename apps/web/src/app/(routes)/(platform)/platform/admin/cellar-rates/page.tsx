@@ -311,10 +311,10 @@ const CellarRatesPage = () => {
               </div>
             ))}
             <div className="border-border-muted mt-1 flex justify-between border-t pt-1">
-              <dt className="text-text-brand text-xs font-semibold">
+              <dt className="text-text-primary text-xs font-semibold">
                 C&amp;C service fee
               </dt>
-              <dd className="text-text-brand text-xs font-semibold tabular-nums">
+              <dd className="text-text-primary text-xs font-semibold tabular-nums">
                 {money(preview.serviceFeeUsd)}
               </dd>
             </div>

@@ -423,8 +423,8 @@ const PdfExtractPage = () => {
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                   isDragActive
-                    ? 'border-brand-primary bg-brand-primary/5'
-                    : 'border-border-muted hover:border-brand-primary'
+                    ? 'border-text-primary bg-text-primary/10'
+                    : 'border-border-muted hover:border-text-primary'
                 }`}
               >
                 <input {...getInputProps()} />

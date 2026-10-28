@@ -268,7 +268,7 @@ const QuoteExcelUpload = ({
     <div className="space-y-4">
       {/* Download Template Button */}
       {showDownloadTemplate && !isAdminMode && !parsedQuotes && (
-        <div className="flex items-center justify-between p-3 bg-fill-brand/5 border border-border-brand rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-text-primary/5 border border-text-primary rounded-lg">
           <div>
             <Typography variant="bodyMd" className="font-medium">
               Download Quote Template
@@ -427,7 +427,7 @@ const QuoteExcelUpload = ({
                 >
                   <div className="flex items-start gap-3">
                     {/* Line Number */}
-                    <span className="flex-shrink-0 w-6 h-6 rounded bg-fill-brand/10 text-text-brand text-xs font-bold flex items-center justify-center">
+                    <span className="flex-shrink-0 w-6 h-6 rounded bg-text-primary/10 text-text-primary text-xs font-bold flex items-center justify-center">
                       {quote.lineNumber}
                     </span>
 

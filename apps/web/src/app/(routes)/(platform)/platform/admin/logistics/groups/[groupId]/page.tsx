@@ -94,7 +94,7 @@ interface PendingConfirm {
 }
 
 const selectCls =
-  'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-border-brand focus:outline-none';
+  'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-text-primary focus:outline-none';
 
 // USD-pegged currencies convert at a fixed rate; floating ones default to 1
 // and must be set manually.
@@ -195,7 +195,7 @@ const InvoiceVendorField = ({
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Supplier name"
           autoFocus
-          className="border-border-primary bg-background-primary focus:border-border-brand w-52 rounded border px-1.5 py-0.5 text-sm focus:outline-none"
+          className="border-border-primary bg-background-primary focus:border-text-primary w-52 rounded border px-1.5 py-0.5 text-sm focus:outline-none"
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               setDraft(vendor ?? '');
@@ -205,7 +205,7 @@ const InvoiceVendorField = ({
         />
         <button
           type="submit"
-          className="bg-fill-brand hover:bg-fill-brand/90 rounded px-2 py-0.5 text-[11px] font-medium text-white"
+          className="bg-text-primary hover:bg-text-primary/90 rounded px-2 py-0.5 text-[11px] font-medium text-white"
         >
           Save
         </button>
@@ -665,7 +665,7 @@ const ShipmentGroupDetailPage = () => {
                     if (e.key === 'Enter') commitName();
                     if (e.key === 'Escape') setEditingName(false);
                   }}
-                  className="border-border-primary bg-background-primary focus:border-border-brand w-full min-w-[18rem] rounded border px-2 py-0.5 text-lg font-semibold focus:outline-none"
+                  className="border-border-primary bg-background-primary focus:border-text-primary w-full min-w-[18rem] rounded border px-2 py-0.5 text-lg font-semibold focus:outline-none"
                   aria-label="Group name"
                 />
               ) : (
@@ -676,7 +676,7 @@ const ShipmentGroupDetailPage = () => {
                     setNameDraft(group.name);
                     setEditingName(true);
                   }}
-                  className="hover:bg-surface-muted focus-visible:ring-border-brand -mx-1 rounded px-1 text-left focus:outline-none focus-visible:ring-2"
+                  className="hover:bg-surface-muted focus-visible:ring-text-primary -mx-1 rounded px-1 text-left focus:outline-none focus-visible:ring-2"
                 >
                   <Typography variant="headingSm">{group.name}</Typography>
                 </button>
@@ -693,7 +693,7 @@ const ShipmentGroupDetailPage = () => {
                       if (e.key === 'Escape') setEditingRef(false);
                     }}
                     placeholder="AWB / container reference"
-                    className="border-border-primary bg-background-primary focus:border-border-brand w-56 rounded border px-1.5 py-0.5 text-xs focus:outline-none"
+                    className="border-border-primary bg-background-primary focus:border-text-primary w-56 rounded border px-1.5 py-0.5 text-xs focus:outline-none"
                     aria-label="Group reference"
                   />
                 ) : (
@@ -937,7 +937,7 @@ const ShipmentGroupDetailPage = () => {
                       href={fileHref(d.fileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-text-brand min-w-0 truncate text-sm hover:underline"
+                      className="text-text-primary min-w-0 truncate text-sm hover:underline"
                     >
                       &#x1F4C4; {d.fileName}
                     </a>

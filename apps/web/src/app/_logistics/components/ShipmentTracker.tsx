@@ -210,7 +210,7 @@ const ShipmentTracker = ({
                 {destinationWarehouse ?? destinationCity ?? 'Destination'}
               </Typography>
             </div>
-            <Icon icon={IconMapPin} size="md" className="text-fill-brand" />
+            <Icon icon={IconMapPin} size="md" className="text-text-primary" />
           </div>
         </div>
 
@@ -227,7 +227,7 @@ const ShipmentTracker = ({
                 {!isLast && (
                   <div
                     className={`absolute left-4 top-8 w-0.5 h-full -ml-px ${
-                      event.isCompleted ? 'bg-fill-brand' : 'bg-border-muted'
+                      event.isCompleted ? 'bg-text-primary' : 'bg-border-muted'
                     }`}
                   />
                 )}
@@ -236,16 +236,16 @@ const ShipmentTracker = ({
                 <div
                   className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 ${
                     event.isCompleted
-                      ? 'border-fill-brand bg-fill-brand text-white'
+                      ? 'border-text-primary bg-text-primary text-white'
                       : isCurrent
-                        ? 'border-fill-brand bg-surface-primary dark:bg-surface-primary'
+                        ? 'border-text-primary bg-surface-primary dark:bg-surface-primary'
                         : 'border-border-muted bg-surface-primary dark:bg-surface-primary'
                   }`}
                 >
                   {event.isCompleted ? (
                     <Icon icon={IconCheck} size="sm" />
                   ) : (
-                    <Icon icon={EventIcon} size="sm" className={isCurrent ? 'text-fill-brand' : 'text-text-muted'} />
+                    <Icon icon={EventIcon} size="sm" className={isCurrent ? 'text-text-primary' : 'text-text-muted'} />
                   )}
                 </div>
 

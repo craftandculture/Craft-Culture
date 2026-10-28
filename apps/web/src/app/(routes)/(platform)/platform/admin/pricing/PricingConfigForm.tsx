@@ -369,7 +369,7 @@ const PricingConfigForm = () => {
               onClick={() => setActiveTab(tab)}
               className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
                 activeTab === tab
-                  ? 'border-fill-brand text-fill-brand'
+                  ? 'border-text-primary text-text-primary'
                   : 'border-transparent text-text-muted hover:border-border-muted hover:text-text-primary'
               }`}
             >

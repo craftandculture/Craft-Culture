@@ -243,7 +243,7 @@ const ActivityTimeline = ({ activities, maxItems }: ActivityTimelineProps) => {
               <div
                 className={`absolute left-0 top-0 flex h-4 w-4 items-center justify-center rounded-full ${
                   isFirst
-                    ? 'bg-fill-brand'
+                    ? 'bg-text-primary'
                     : colorRole === 'success'
                       ? 'bg-fill-success'
                       : colorRole === 'warning'

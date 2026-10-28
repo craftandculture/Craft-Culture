@@ -558,7 +558,7 @@ const LpoPreviewReport = ({
           <button
             type="button"
             onClick={() => setRemoved(new Set())}
-            className="text-[13px] font-medium text-text-brand hover:underline"
+            className="text-[13px] font-medium text-text-primary hover:underline"
           >
             Put them all back
           </button>
@@ -687,7 +687,7 @@ const LpoPreviewReport = ({
                       <button
                         type="button"
                         onClick={() => setPicking(index)}
-                        className="mt-0.5 text-[11px] text-text-brand hover:underline"
+                        className="mt-0.5 text-[11px] text-text-primary hover:underline"
                       >
                         change wine
                       </button>

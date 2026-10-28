@@ -252,7 +252,7 @@ const CycleCountDetailPage = () => {
           onKeyDown={(e) => {
             if (e.key === 'Enter') void handleCorrect();
           }}
-          className="h-12 w-24 rounded-lg border border-border-muted bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
+          className="h-12 w-24 rounded-lg border border-border-muted bg-fill-primary px-3 text-center text-lg font-semibold focus:border-text-primary focus:outline-none"
         />
         <Typography variant="bodySm" colorRole="muted">
           {unitOf(item)}
@@ -271,7 +271,7 @@ const CycleCountDetailPage = () => {
           e.stopPropagation();
           setCorrecting({ itemId: item.id, value: String(item.countedQuantity ?? '') });
         }}
-        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-teal hover:underline"
+        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-text-primary hover:underline"
       >
         <Icon icon={IconPencil} size="xs" />
         Edit count
@@ -481,7 +481,7 @@ const CycleCountDetailPage = () => {
                             if (e.key === 'Enter') void handleSaveItem(item.id);
                           }}
                           placeholder="Qty"
-                          className="h-12 w-24 rounded-lg border border-border-muted bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
+                          className="h-12 w-24 rounded-lg border border-border-muted bg-fill-primary px-3 text-center text-lg font-semibold focus:border-text-primary focus:outline-none"
                         />
                         <Typography variant="bodySm" colorRole="muted">
                           {unitOf(item)}
@@ -492,7 +492,7 @@ const CycleCountDetailPage = () => {
                           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${
                             hasBeenCounted
                               ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-fill-brand text-white'
+                              : 'bg-text-primary text-white'
                           }`}
                         >
                           {isSaving ? (
@@ -554,7 +554,7 @@ const CycleCountDetailPage = () => {
                   </Typography>
                   <button
                     onClick={toggleAllApprovals}
-                    className="text-xs font-medium text-brand-teal hover:underline"
+                    className="text-xs font-medium text-text-primary hover:underline"
                   >
                     {discrepancyItems.every((i) => approvals[i.id]) ? 'Deselect All' : 'Select All'}
                   </button>
@@ -567,7 +567,7 @@ const CycleCountDetailPage = () => {
                     return (
                       <Card
                         key={item.id}
-                        className={`cursor-pointer transition-colors ${approvals[item.id] ? 'border-brand-teal' : ''}`}
+                        className={`cursor-pointer transition-colors ${approvals[item.id] ? 'border-text-primary' : ''}`}
                         onClick={() => toggleApproval(item.id)}
                       >
                         <CardContent className="p-4">
@@ -576,7 +576,7 @@ const CycleCountDetailPage = () => {
                               type="checkbox"
                               checked={approvals[item.id] ?? false}
                               onChange={() => toggleApproval(item.id)}
-                              className="h-5 w-5 rounded border-gray-300 text-brand-teal focus:ring-brand-teal"
+                              className="h-5 w-5 rounded border-gray-300 text-text-primary focus:ring-text-primary"
                             />
                             <div className="flex-1">
                               <Typography variant="bodySm" className="font-medium">

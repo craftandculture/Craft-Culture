@@ -151,7 +151,7 @@ const LandedCostReportPage = () => {
               <Typography variant="bodyXs" colorRole="muted">
                 Avg Cost/Bottle
               </Typography>
-              <Typography variant="headingMd" className="text-brand-primary">
+              <Typography variant="headingMd" className="text-text-primary">
                 {formatPrice(report?.summary.averageCostPerBottle ?? 0, 'USD')}
               </Typography>
             </CardContent>
@@ -232,7 +232,7 @@ const LandedCostReportPage = () => {
                       <td className="py-3 pr-4">
                         <Link
                           href={`/platform/admin/logistics/shipments/${shipment.shipmentId}`}
-                          className="font-mono text-sm hover:text-brand-primary"
+                          className="font-mono text-sm hover:text-text-primary"
                         >
                           {shipment.shipmentNumber}
                         </Link>
@@ -252,7 +252,7 @@ const LandedCostReportPage = () => {
                       <td className="py-3 pr-4 text-right font-medium">
                         {formatPrice(shipment.costs.totalLanded, 'USD')}
                       </td>
-                      <td className="py-3 text-right font-medium text-brand-primary">
+                      <td className="py-3 text-right font-medium text-text-primary">
                         {formatPrice(shipment.costs.perBottle, 'USD')}
                       </td>
                     </tr>

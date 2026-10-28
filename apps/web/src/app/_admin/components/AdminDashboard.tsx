@@ -575,7 +575,7 @@ const AdminDashboard = () => {
                       </div>
                       <div className="relative h-2 overflow-hidden rounded-full bg-surface-secondary">
                         <div
-                          className="absolute left-0 top-0 h-full rounded-full bg-fill-brand transition-all"
+                          className="absolute left-0 top-0 h-full rounded-full bg-text-primary transition-all"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>

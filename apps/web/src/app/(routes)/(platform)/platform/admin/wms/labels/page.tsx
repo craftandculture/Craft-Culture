@@ -425,7 +425,7 @@ const WMSLabelsPage = () => {
             onClick={() => setActiveTab('case')}
             className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'case'
-                ? 'border-border-brand text-text-brand'
+                ? 'border-text-primary text-text-primary'
                 : 'border-transparent text-text-muted hover:text-text-primary'
             }`}
           >
@@ -439,7 +439,7 @@ const WMSLabelsPage = () => {
             onClick={() => setActiveTab('bay')}
             className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'bay'
-                ? 'border-border-brand text-text-brand'
+                ? 'border-text-primary text-text-primary'
                 : 'border-transparent text-text-muted hover:text-text-primary'
             }`}
           >
@@ -453,7 +453,7 @@ const WMSLabelsPage = () => {
             onClick={() => setActiveTab('location')}
             className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'location'
-                ? 'border-border-brand text-text-brand'
+                ? 'border-text-primary text-text-primary'
                 : 'border-transparent text-text-muted hover:text-text-primary'
             }`}
           >
@@ -467,7 +467,7 @@ const WMSLabelsPage = () => {
             onClick={() => setActiveTab('totem')}
             className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'totem'
-                ? 'border-border-brand text-text-brand'
+                ? 'border-text-primary text-text-primary'
                 : 'border-transparent text-text-muted hover:text-text-primary'
             }`}
           >
@@ -481,7 +481,7 @@ const WMSLabelsPage = () => {
             onClick={() => setActiveTab('area')}
             className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'area'
-                ? 'border-border-brand text-text-brand'
+                ? 'border-text-primary text-text-primary'
                 : 'border-transparent text-text-muted hover:text-text-primary'
             }`}
           >
@@ -552,7 +552,7 @@ const WMSLabelsPage = () => {
                     <Card
                       className={`cursor-pointer transition-colors print:border-2 print:border-black ${
                         selectedLabels.has(label.id)
-                          ? 'border-border-brand ring-1 ring-border-brand'
+                          ? 'border-text-primary ring-1 ring-text-primary'
                           : 'hover:border-border-muted'
                       }`}
                       onClick={() => toggleLabel(label.id)}
@@ -641,7 +641,7 @@ const WMSLabelsPage = () => {
                     <Card
                       className={`cursor-pointer transition-colors print:border-2 print:border-black ${
                         selectedLabels.has(location.id)
-                          ? 'border-border-brand ring-1 ring-border-brand'
+                          ? 'border-text-primary ring-1 ring-text-primary'
                           : 'hover:border-border-muted'
                       }`}
                       onClick={() => toggleLabel(location.id)}
@@ -785,7 +785,7 @@ const WMSLabelsPage = () => {
                               onChange={(e) => setEditForkliftFrom(e.target.value)}
                               placeholder="01"
                               maxLength={2}
-                              className="w-20 rounded-lg border border-border-primary bg-fill-primary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                              className="w-20 rounded-lg border border-border-primary bg-fill-primary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-text-primary"
                             />
                             <Typography variant="bodySm" colorRole="muted">
                               Level {editForkliftFrom} and above require forklift
@@ -825,10 +825,10 @@ const WMSLabelsPage = () => {
                           onClick={() => selectAllInAisle(aisle)}
                           className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
                             allSelected
-                              ? 'border-brand-primary bg-brand-primary text-white'
+                              ? 'border-text-primary bg-text-primary text-white'
                               : someSelected
-                                ? 'border-brand-primary bg-brand-primary/20'
-                                : 'border-border-primary hover:border-brand-primary'
+                                ? 'border-text-primary bg-text-primary/10'
+                                : 'border-border-primary hover:border-text-primary'
                           }`}
                         >
                           {allSelected && <IconCheck className="h-4 w-4" />}
@@ -854,8 +854,8 @@ const WMSLabelsPage = () => {
                                   isEditing
                                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
                                     : isSelected
-                                      ? 'border-brand-primary bg-fill-brand-secondary'
-                                      : 'border-border-primary hover:border-brand-primary'
+                                      ? 'border-text-primary bg-text-primary-secondary'
+                                      : 'border-border-primary hover:border-text-primary'
                                 }`}
                               >
                                 <Typography variant="headingSm" className="font-mono">
@@ -907,7 +907,7 @@ const WMSLabelsPage = () => {
                         onClick={() => setBayLabelSize('4x6')}
                         className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                           bayLabelSize === '4x6'
-                            ? 'bg-fill-brand-secondary text-text-brand'
+                            ? 'bg-text-primary-secondary text-text-primary'
                             : 'text-text-muted hover:text-text-primary'
                         }`}
                       >
@@ -917,7 +917,7 @@ const WMSLabelsPage = () => {
                         onClick={() => setBayLabelSize('4x2')}
                         className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                           bayLabelSize === '4x2'
-                            ? 'bg-fill-brand-secondary text-text-brand'
+                            ? 'bg-text-primary-secondary text-text-primary'
                             : 'text-text-muted hover:text-text-primary'
                         }`}
                       >
@@ -998,7 +998,7 @@ const WMSLabelsPage = () => {
                     <Card
                       className={`cursor-pointer transition-colors ${
                         selectedLabels.has(location.id)
-                          ? 'border-border-brand ring-1 ring-border-brand'
+                          ? 'border-text-primary ring-1 ring-text-primary'
                           : 'hover:border-border-muted'
                       }`}
                       onClick={() => toggleLabel(location.id)}
@@ -1093,7 +1093,7 @@ const WMSLabelsPage = () => {
                       <Card
                         className={`cursor-pointer transition-colors ${
                           selectedLabels.has(totemKey)
-                            ? 'border-border-brand ring-1 ring-border-brand'
+                            ? 'border-text-primary ring-1 ring-text-primary'
                             : 'hover:border-border-muted'
                         }`}
                         onClick={() => toggleLabel(totemKey)}

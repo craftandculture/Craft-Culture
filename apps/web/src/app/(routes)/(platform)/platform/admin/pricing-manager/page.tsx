@@ -232,7 +232,7 @@ const PhonePriceField = ({
             inputMode="decimal"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            className="h-11 w-full rounded-lg border border-border-muted bg-fill-primary pl-7 pr-3 text-base tabular-nums text-text-primary focus:border-border-brand focus:outline-none"
+            className="h-11 w-full rounded-lg border border-border-muted bg-fill-primary pl-7 pr-3 text-base tabular-nums text-text-primary focus:border-text-primary focus:outline-none"
           />
         </span>
         <button
@@ -408,7 +408,7 @@ const PriceCell = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:ring-2 focus:ring-border-brand/30 focus:outline-none"
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-text-primary focus:ring-2 focus:ring-text-primary/30 focus:outline-none"
           placeholder="0.00"
           type="number"
           step="0.01"
@@ -433,7 +433,7 @@ const PriceCell = ({
         />
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="rounded bg-text-primary px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-text-primary/90"
         >
           Save
         </button>
@@ -529,7 +529,7 @@ const OverrideCell = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-text-primary focus:outline-none"
           placeholder="0.00"
           type="number"
           step="0.01"
@@ -545,7 +545,7 @@ const OverrideCell = ({
         />
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="rounded bg-text-primary px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-text-primary/90"
         >
           Save
         </button>
@@ -619,7 +619,7 @@ const MarginEditCell = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-16 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:ring-2 focus:ring-border-brand/30 focus:outline-none"
+          className="w-16 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-text-primary focus:ring-2 focus:ring-text-primary/30 focus:outline-none"
           placeholder="0.0"
           type="number"
           step="0.1"
@@ -638,7 +638,7 @@ const MarginEditCell = ({
         <span className="text-xs text-text-muted">%</span>
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="rounded bg-text-primary px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-text-primary/90"
         >
           Save
         </button>
@@ -734,7 +734,7 @@ const LogisticsCell = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-text-primary focus:outline-none"
           placeholder="0.00"
           type="number"
           step="0.01"
@@ -751,7 +751,7 @@ const LogisticsCell = ({
         />
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="rounded bg-text-primary px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-text-primary/90"
         >
           Save
         </button>
@@ -847,7 +847,7 @@ const TransfersCell = ({
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-border-brand focus:outline-none"
+          className="w-20 rounded border border-border-primary bg-background-primary px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:border-text-primary focus:outline-none"
           placeholder="2.50"
           type="number"
           step="0.01"
@@ -864,7 +864,7 @@ const TransfersCell = ({
         />
         <button
           type="submit"
-          className="rounded bg-fill-brand px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-fill-brand/90"
+          className="rounded bg-text-primary px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-text-primary/90"
         >
           Save
         </button>
@@ -900,7 +900,7 @@ const KPI_THEMES = {
   green: { text: 'text-emerald-600', chip: 'bg-emerald-50 text-emerald-500', ring: 'ring-emerald-400' },
   amber: { text: 'text-amber-600', chip: 'bg-amber-50 text-amber-500', ring: 'ring-amber-400' },
   red: { text: 'text-red-600', chip: 'bg-red-50 text-red-500', ring: 'ring-red-400' },
-  brand: { text: 'text-text-primary', chip: 'bg-fill-brand/10 text-fill-brand', ring: 'ring-fill-brand' },
+  brand: { text: 'text-text-primary', chip: 'bg-text-primary/10 text-text-primary', ring: 'ring-text-primary' },
 } as const;
 
 const KpiCard = ({
@@ -951,7 +951,7 @@ const KpiCard = ({
       )}
       {subtitle && <p className="mt-0.5 text-[11px] leading-tight text-text-muted">{subtitle}</p>}
       {onClick && (
-        <p className="mt-1.5 text-[10px] font-medium text-fill-brand">
+        <p className="mt-1.5 text-[10px] font-medium text-text-primary">
           {active ? '✓ Filtering — click to clear' : 'Click to filter →'}
         </p>
       )}
@@ -2089,7 +2089,7 @@ const PricingManagerPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search products"
-            className="w-full rounded-xl border-2 border-border-primary bg-surface-primary py-3 pl-12 pr-11 text-base font-medium text-text-primary shadow-sm transition-all placeholder:font-normal placeholder:text-text-muted/70 focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-border-brand/25"
+            className="w-full rounded-xl border-2 border-border-primary bg-surface-primary py-3 pl-12 pr-11 text-base font-medium text-text-primary shadow-sm transition-all placeholder:font-normal placeholder:text-text-muted/70 focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/25"
           />
           {search && (
             <button
@@ -2107,7 +2107,7 @@ const PricingManagerPage = () => {
         <select
           value={ownerId ?? ''}
           onChange={(e) => setOwnerId(e.target.value || undefined)}
-          className="rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm text-text-primary transition-colors focus:border-border-brand focus:outline-none"
+          className="rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm text-text-primary transition-colors focus:border-text-primary focus:outline-none"
         >
           <option value="">All Owners</option>
           {owners.map((o) => (
@@ -2165,7 +2165,7 @@ const PricingManagerPage = () => {
                     type="number"
                     value={marginPercent}
                     onChange={(e) => setMarginPercent(e.target.value)}
-                    className="w-full rounded border border-border-primary bg-background-primary px-3 py-1.5 text-sm focus:border-border-brand focus:outline-none"
+                    className="w-full rounded border border-border-primary bg-background-primary px-3 py-1.5 text-sm focus:border-text-primary focus:outline-none"
                     min="0.1"
                     max="99.9"
                     step="0.1"
@@ -2224,7 +2224,7 @@ const PricingManagerPage = () => {
                       });
                     }}
                     disabled={bulkApplyMarginMut.isPending}
-                    className="flex items-center gap-1 rounded bg-fill-brand px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-fill-brand/90 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded bg-text-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-text-primary/90 disabled:opacity-50"
                   >
                     {bulkApplyMarginMut.isPending && (
                       <IconLoader2 className="h-3 w-3 animate-spin" />
@@ -2453,8 +2453,8 @@ const PricingManagerPage = () => {
       {/* Bulk actions — appears once anything is ticked. One margin and one
           release for a whole shipment, instead of 165 trips through a sheet. */}
       {selected.size > 0 && (
-        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-lg border border-brand-300 bg-brand-50 px-4 py-2.5 shadow-sm">
-          <span className="text-sm font-semibold text-brand-800">
+        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 rounded-lg border border-text-primary bg-surface-secondary px-4 py-2.5 shadow-sm">
+          <span className="text-sm font-semibold text-text-primary">
             {selectedVisible.length} selected
             {hiddenSelectedCount > 0 && (
               <span className="ml-1 font-normal text-text-muted">
@@ -2507,7 +2507,7 @@ const PricingManagerPage = () => {
                   },
                 );
               }}
-              className="rounded bg-brand-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+              className="rounded bg-text-primary px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
             >
               Apply margin
             </button>
@@ -2857,7 +2857,7 @@ const PricingManagerPage = () => {
                               <button
                                 type="button"
                                 onClick={() => setIncludeInbound(true)}
-                                className="font-medium text-text-brand hover:underline"
+                                className="font-medium text-text-primary hover:underline"
                               >
                                 Show inbound stock
                               </button>
@@ -2884,7 +2884,7 @@ const PricingManagerPage = () => {
                               <button
                                 type="button"
                                 onClick={() => setPriceFilters([])}
-                                className="font-medium text-text-brand hover:underline"
+                                className="font-medium text-text-primary hover:underline"
                               >
                                 Clear these filters
                               </button>

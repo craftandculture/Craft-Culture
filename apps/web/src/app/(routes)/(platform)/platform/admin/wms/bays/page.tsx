@@ -341,7 +341,7 @@ const BayConfigurationPage = () => {
                     onChange={(e) => setNewAisle(e.target.value.toUpperCase())}
                     placeholder="A"
                     maxLength={3}
-                    className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-text-primary"
                   />
                 </div>
                 <div>
@@ -352,7 +352,7 @@ const BayConfigurationPage = () => {
                     onChange={(e) => setNewBay(e.target.value)}
                     placeholder="05"
                     maxLength={3}
-                    className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-text-primary"
                   />
                 </div>
               </div>
@@ -364,7 +364,7 @@ const BayConfigurationPage = () => {
                   value={newLevels}
                   onChange={(e) => setNewLevels(e.target.value)}
                   placeholder="00,01,02,03"
-                  className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-text-primary"
                 />
                 <p className="mt-1 text-xs text-text-muted">00 = ground level (no forklift)</p>
               </div>
@@ -408,7 +408,7 @@ const BayConfigurationPage = () => {
                   onChange={(e) => setForkliftFromLevel(e.target.value)}
                   placeholder="01"
                   maxLength={2}
-                  className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-text-primary"
                 />
                 <p className="mt-1 text-xs text-text-muted">Levels at or above this require forklift</p>
               </div>
@@ -517,7 +517,7 @@ const BayConfigurationPage = () => {
                         onChange={(e) => setEditForkliftFrom(e.target.value)}
                         placeholder="01"
                         maxLength={2}
-                        className="w-20 rounded-lg border border-border-primary bg-fill-primary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        className="w-20 rounded-lg border border-border-primary bg-fill-primary px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-text-primary"
                       />
                       <Typography variant="bodySm" colorRole="muted">
                         Level {editForkliftFrom} and above require forklift
@@ -601,10 +601,10 @@ const BayConfigurationPage = () => {
                       onClick={() => selectAllInAisle(aisle)}
                       className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
                         allSelected
-                          ? 'border-brand-primary bg-brand-primary text-white'
+                          ? 'border-text-primary bg-text-primary text-white'
                           : someSelected
-                            ? 'border-brand-primary bg-brand-primary/20'
-                            : 'border-border-primary hover:border-brand-primary'
+                            ? 'border-text-primary bg-text-primary/10'
+                            : 'border-border-primary hover:border-text-primary'
                       }`}
                     >
                       {allSelected && <IconCheck className="h-4 w-4" />}
@@ -631,8 +631,8 @@ const BayConfigurationPage = () => {
                               isEditing
                                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
                                 : isSelected
-                                  ? 'border-brand-primary bg-fill-brand-secondary'
-                                  : 'border-border-primary hover:border-brand-primary'
+                                  ? 'border-text-primary bg-text-primary-secondary'
+                                  : 'border-border-primary hover:border-text-primary'
                             }`}
                           >
                             <Typography variant="headingSm" className="font-mono">

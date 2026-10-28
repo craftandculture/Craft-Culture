@@ -607,7 +607,7 @@ const LogisticsDocumentUpload = ({
             <input
               value={customTitle}
               onChange={(e) => setCustomTitle(e.target.value)}
-              className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-2 text-sm focus:border-border-brand focus:outline-none"
+              className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none"
               placeholder="e.g. Warehouse Receipt, Inspection Report..."
               maxLength={200}
             />
@@ -619,10 +619,10 @@ const LogisticsDocumentUpload = ({
           {...getRootProps()}
           className={`relative rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
             isDragActive
-              ? 'border-border-brand bg-surface-brand/5'
+              ? 'border-text-primary bg-surface-brand/5'
               : isUploading
                 ? 'cursor-wait border-border-muted bg-fill-muted/50'
-                : 'cursor-pointer border-border-muted hover:border-border-brand hover:bg-fill-muted/50'
+                : 'cursor-pointer border-border-muted hover:border-text-primary hover:bg-fill-muted/50'
           }`}
         >
           <input {...getInputProps()} />
@@ -731,7 +731,7 @@ const LogisticsDocumentUpload = ({
 
       {/* Extraction Results Panel */}
       {extractionResult && extractionResult.lineItems && extractionResult.lineItems.length > 0 && (
-        <div className="rounded-lg border border-border-brand bg-surface-brand/5 p-4">
+        <div className="rounded-lg border border-text-primary bg-surface-brand/5 p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Icon icon={IconSparkles} size="md" colorRole="brand" />

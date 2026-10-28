@@ -325,7 +325,7 @@ const AdvisorBrief = () => {
                     <Typography variant="bodyXs" colorRole="muted" className="mt-1.5">
                       {risk.description}
                     </Typography>
-                    <Typography variant="bodyXs" className="mt-1.5 font-medium text-text-brand">
+                    <Typography variant="bodyXs" className="mt-1.5 font-medium text-text-primary">
                       Action: {risk.suggestedAction}
                     </Typography>
                   </div>
@@ -362,7 +362,7 @@ const AdvisorBrief = () => {
                         Impact: ~${opp.estimatedImpactUsd.toLocaleString()}
                       </Typography>
                     </div>
-                    <Typography variant="bodyXs" className="mt-1 font-medium text-text-brand">
+                    <Typography variant="bodyXs" className="mt-1 font-medium text-text-primary">
                       Action: {opp.suggestedAction}
                     </Typography>
                   </div>

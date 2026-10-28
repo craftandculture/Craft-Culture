@@ -1031,7 +1031,7 @@ const PrivateOrderDetailPage = () => {
 
             {/* Add Item Form - ProductPicker with stock search */}
             {isAddingItem && (
-              <div className="mb-4 rounded-lg border-2 border-border-brand bg-fill-brand-muted/20 p-3">
+              <div className="mb-4 rounded-lg border-2 border-text-primary bg-text-primary-muted/20 p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <Typography variant="labelMd">Add New Item</Typography>
                   <Button variant="ghost" size="xs" onClick={() => setIsAddingItem(false)}>
@@ -1111,7 +1111,7 @@ const PrivateOrderDetailPage = () => {
 
                       if (isEditing && editingItem) {
                         return (
-                          <tr key={item.id} className="bg-fill-brand/5">
+                          <tr key={item.id} className="bg-text-primary/5">
                             <td className="px-2 py-1.5">
                               <span className="text-xs font-medium">{item.productName}</span>
                             </td>
@@ -1191,7 +1191,7 @@ const PrivateOrderDetailPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleEditItem(item)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-md bg-fill-brand/10 text-text-brand transition-colors hover:bg-fill-brand/20"
+                                  className="flex h-7 w-7 items-center justify-center rounded-md bg-text-primary/10 text-text-primary transition-colors hover:bg-text-primary/20"
                                   title="Edit item"
                                 >
                                   <Icon icon={IconEdit} size="xs" />

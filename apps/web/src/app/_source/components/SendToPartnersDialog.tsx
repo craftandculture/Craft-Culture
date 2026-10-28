@@ -192,7 +192,7 @@ const SendToPartnersDialog = ({
                 <label
                   className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-fill-brand/5 border-border-brand'
+                      ? 'bg-text-primary/5 border-text-primary'
                       : 'hover:bg-fill-muted'
                   }`}
                 >
@@ -213,7 +213,7 @@ const SendToPartnersDialog = ({
                     )}
                   </div>
                   {isSelected && selectedContactIds.length > 0 && (
-                    <span className="text-xs bg-fill-brand/10 text-text-brand px-2 py-0.5 rounded">
+                    <span className="text-xs bg-text-primary/10 text-text-primary px-2 py-0.5 rounded">
                       {selectedContactIds.length} contact{selectedContactIds.length !== 1 ? 's' : ''}
                     </span>
                   )}
@@ -237,7 +237,7 @@ const SendToPartnersDialog = ({
                               : partnerContacts.map((c) => c.id),
                           )
                         }
-                        className="text-xs text-text-brand hover:underline"
+                        className="text-xs text-text-primary hover:underline"
                       >
                         {selectedContactIds.length === partnerContacts.length
                           ? 'Deselect all'
@@ -249,7 +249,7 @@ const SendToPartnersDialog = ({
                         key={contact.id}
                         className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
                           selectedContactIds.includes(contact.id)
-                            ? 'bg-fill-brand/10'
+                            ? 'bg-text-primary/10'
                             : 'hover:bg-fill-secondary'
                         }`}
                       >
@@ -263,7 +263,7 @@ const SendToPartnersDialog = ({
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium truncate">{contact.name}</span>
                             {contact.isPrimary && (
-                              <span className="text-xs bg-fill-brand/10 text-text-brand px-1 rounded">
+                              <span className="text-xs bg-text-primary/10 text-text-primary px-1 rounded">
                                 Primary
                               </span>
                             )}
@@ -295,7 +295,7 @@ const SendToPartnersDialog = ({
                   <button
                     type="button"
                     onClick={() => setExpandedPartnerId(partner.id)}
-                    className="w-full text-xs text-text-brand hover:bg-fill-muted p-2 text-center border-t border-border-muted"
+                    className="w-full text-xs text-text-primary hover:bg-fill-muted p-2 text-center border-t border-border-muted"
                   >
                     Select contacts to notify →
                   </button>

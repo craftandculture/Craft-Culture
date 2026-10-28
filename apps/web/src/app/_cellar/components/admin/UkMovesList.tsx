@@ -156,7 +156,7 @@ const QuoteForm = ({ move, onDone }: QuoteFormProps) => {
           <input className={field} inputMode="decimal" value={freight} onChange={(event) => setFreight(event.target.value)} />
           <a
             href={`/platform/admin/logistics/requests/new?sourceType=uk_move&sourceId=${move.id}`}
-            className="text-text-brand mt-0.5 block font-normal hover:underline"
+            className="text-text-primary mt-0.5 block font-normal hover:underline"
           >
             Get forwarder quotes for this move
           </a>
@@ -168,7 +168,7 @@ const QuoteForm = ({ move, onDone }: QuoteFormProps) => {
             <button
               type="button"
               onClick={() => setLcb((fromCard.gbp * fromCard.rate).toFixed(2))}
-              className="text-text-brand mt-0.5 block text-left font-normal hover:underline"
+              className="text-text-primary mt-0.5 block text-left font-normal hover:underline"
             >
               From UK rates: {moveCases} cases out + paperwork = £{fromCard.gbp.toFixed(2)} ≈ $
               {(fromCard.gbp * fromCard.rate).toFixed(2)}. Use it

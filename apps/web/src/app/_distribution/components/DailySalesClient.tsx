@@ -384,7 +384,7 @@ const DailySalesClient = () => {
                 type="button"
                 aria-pressed={display === c}
                 onClick={() => setDisplay(c)}
-                className={`px-3 py-1 font-medium ${display === c ? 'bg-fill-brand text-text-brand-on-fill' : 'text-text-muted hover:text-text-primary'}`}
+                className={`px-3 py-1 font-medium ${display === c ? 'bg-text-primary text-surface-primary' : 'text-text-muted hover:text-text-primary'}`}
               >
                 {c}
               </button>
@@ -417,7 +417,7 @@ const DailySalesClient = () => {
             onClick={() => toggleType(c.key)}
             className={`rounded-full border px-3 py-1 text-sm transition-colors ${
               (c.key === 'all' ? types.length === 0 : types.includes(c.key))
-                ? 'border-border-brand bg-fill-brand/10 text-text-brand font-medium'
+                ? 'border-text-primary bg-text-primary/10 text-text-primary font-medium'
                 : 'border-border-primary text-text-muted hover:text-text-primary'
             }`}
           >
@@ -477,7 +477,7 @@ const DailySalesClient = () => {
                     onClick={() => setPeriod(p)}
                     className={`rounded-full border px-3 py-1 text-xs ${
                       period === p
-                        ? 'border-border-brand bg-fill-brand/10 text-text-brand font-medium'
+                        ? 'border-text-primary bg-text-primary/10 text-text-primary font-medium'
                         : 'border-border-primary text-text-muted hover:text-text-primary'
                     }`}
                   >
@@ -671,7 +671,7 @@ const DailySalesClient = () => {
                     <button
                       type="button"
                       onClick={() => setLinking(linking === `held-${w.outletCode}` ? null : `held-${w.outletCode}`)}
-                      className={`text-xs hover:underline ${!w.linked || !w.ownerName ? 'text-text-brand font-medium' : 'text-text-muted hover:text-text-brand'}`}
+                      className={`text-xs hover:underline ${!w.linked || !w.ownerName ? 'text-text-primary font-medium' : 'text-text-muted hover:text-text-primary'}`}
                     >
                       {!w.linked ? 'Link' : !w.ownerName ? 'Fix' : 'Change'}
                     </button>
@@ -711,7 +711,7 @@ const DailySalesClient = () => {
               <button
                 type="button"
                 onClick={() => setAllWines(!allWines)}
-                className="text-text-brand border-border-primary w-full border-t px-4 py-2 text-left text-xs font-medium hover:underline"
+                className="text-text-primary border-border-primary w-full border-t px-4 py-2 text-left text-xs font-medium hover:underline"
               >
                 {allWines ? 'Show the top 10' : `Show all ${heldWines.length} wines`}
               </button>
@@ -743,7 +743,7 @@ const DailySalesClient = () => {
           </Typography>
           <div className="text-text-muted flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1.5">
-              <span className="bg-fill-brand inline-block size-2.5 rounded-sm" /> Consigned
+              <span className="bg-text-primary inline-block size-2.5 rounded-sm" /> Consigned
             </span>
             <span className="flex items-center gap-1.5">
               <span className="bg-text-muted inline-block size-2.5 rounded-sm opacity-60" /> Bought
@@ -792,7 +792,7 @@ const DailySalesClient = () => {
                     onMouseLeave={() => setHovered(null)}
                     onFocus={() => setHovered(d.closedAt)}
                     onBlur={() => setHovered(null)}
-                    className={`group relative flex h-full min-w-0 flex-1 flex-col items-center justify-end rounded-t-md outline-none focus-visible:ring-2 focus-visible:ring-border-brand ${
+                    className={`group relative flex h-full min-w-0 flex-1 flex-col items-center justify-end rounded-t-md outline-none focus-visible:ring-2 focus-visible:ring-text-primary ${
                       isOn ? 'bg-fill-muted/60' : 'hover:bg-fill-muted/40'
                     }`}
                   >
@@ -806,7 +806,7 @@ const DailySalesClient = () => {
                       style={{ height: pct(d.bought.bottles) }}
                     />
                     <span
-                      className={`bg-fill-brand w-3/5 max-w-8 ${d.bought.bottles > 0 ? 'mt-0.5' : 'rounded-t-[4px]'} ${dim}`}
+                      className={`bg-text-primary w-3/5 max-w-8 ${d.bought.bottles > 0 ? 'mt-0.5' : 'rounded-t-[4px]'} ${dim}`}
                       style={{ height: pct(d.consigned.bottles) }}
                     />
                   </button>
@@ -894,7 +894,7 @@ const DailySalesClient = () => {
                             <button
                               type="button"
                               onClick={() => setLinking(linking === line.outletCode ? null : line.outletCode)}
-                              className="text-text-muted text-xs hover:text-text-brand hover:underline"
+                              className="text-text-muted text-xs hover:text-text-primary hover:underline"
                             >
                               Change
                             </button>
@@ -905,7 +905,7 @@ const DailySalesClient = () => {
                             <button
                               type="button"
                               onClick={() => setLinking(linking === `fix-${line.outletCode}` ? null : `fix-${line.outletCode}`)}
-                              className="text-text-brand text-xs font-medium hover:underline"
+                              className="text-text-primary text-xs font-medium hover:underline"
                             >
                               Fix
                             </button>
@@ -916,7 +916,7 @@ const DailySalesClient = () => {
                             <button
                               type="button"
                               onClick={() => setLinking(linking === line.outletCode ? null : line.outletCode)}
-                              className="text-text-brand text-xs font-medium hover:underline"
+                              className="text-text-primary text-xs font-medium hover:underline"
                             >
                               Link
                             </button>
@@ -1051,7 +1051,7 @@ const DailySalesClient = () => {
       ) : null}
 
       {preview ? (
-        <div className="border-border-brand space-y-3 rounded-xl border px-4 py-3">
+        <div className="border-text-primary space-y-3 rounded-xl border px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Typography variant="labelSm" asChild>
               <h2>

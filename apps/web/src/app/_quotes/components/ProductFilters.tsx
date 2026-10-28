@@ -318,7 +318,7 @@ const ProductFilters = ({
                   value={countrySearch}
                   onChange={(e) => setCountrySearch(e.target.value)}
                   placeholder="Search..."
-                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent"
+                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-sm transition-colors placeholder:text-text-muted focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-fill-accent"
                 />
               </div>
             )}
@@ -386,7 +386,7 @@ const ProductFilters = ({
                   value={regionSearch}
                   onChange={(e) => setRegionSearch(e.target.value)}
                   placeholder="Search..."
-                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent"
+                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-sm transition-colors placeholder:text-text-muted focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-fill-accent"
                 />
               </div>
             )}
@@ -454,7 +454,7 @@ const ProductFilters = ({
                   value={producerSearch}
                   onChange={(e) => setProducerSearch(e.target.value)}
                   placeholder="Search..."
-                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent"
+                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-sm transition-colors placeholder:text-text-muted focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-fill-accent"
                 />
               </div>
             )}
@@ -522,7 +522,7 @@ const ProductFilters = ({
                   value={vintageSearch}
                   onChange={(e) => setVintageSearch(e.target.value)}
                   placeholder="Search..."
-                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-sm transition-colors placeholder:text-text-muted focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-fill-accent"
+                  className="h-10 w-full rounded-md border border-border-muted bg-background-primary pl-8 pr-2.5 text-sm transition-colors placeholder:text-text-muted focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-fill-accent"
                 />
               </div>
             )}

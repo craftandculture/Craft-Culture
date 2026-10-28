@@ -57,10 +57,10 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import AddToStockPanel from '@/app/_wms/components/AddToStockPanel';
 import PackBadge from '@/app/_wms/components/PackBadge';
 import ProductMovementHistory from '@/app/_wms/components/ProductMovementHistory';
 import StockForSaleToggle from '@/app/_wms/components/StockForSaleToggle';
-import AddToStockPanel from '@/app/_wms/components/AddToStockPanel';
 import TakeOutOfStockPanel from '@/app/_wms/components/TakeOutOfStockPanel';
 import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
@@ -263,7 +263,7 @@ const OwnerBadge = ({ name }: { name: string }) => {
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
         isCnC
-          ? 'bg-fill-brand/10 text-text-brand'
+          ? 'bg-text-primary/10 text-text-primary'
           : 'bg-surface-muted text-text-secondary'
       }`}
     >
@@ -314,7 +314,7 @@ const PrintCell = ({ maxQty, defaultQty, onPrint }: PrintCellProps) => {
             setQty(initialQty);
             setEditing(true);
           }}
-          className="text-text-muted hover:bg-surface-muted hover:text-text-brand rounded p-1 transition-colors"
+          className="text-text-muted hover:bg-surface-muted hover:text-text-primary rounded p-1 transition-colors"
           title="Print labels"
         >
           <IconPrinter className="h-4 w-4" />
@@ -335,7 +335,7 @@ const PrintCell = ({ maxQty, defaultQty, onPrint }: PrintCellProps) => {
             setQty(Math.max(1, Math.min(maxQty, Number(e.target.value) || 1)))
           }
           onClick={(e) => e.stopPropagation()}
-          className="border-border-primary bg-background-primary focus:border-border-brand w-12 rounded border px-1.5 py-0.5 text-center text-xs tabular-nums focus:outline-none"
+          className="border-border-primary bg-background-primary focus:border-text-primary w-12 rounded border px-1.5 py-0.5 text-center text-xs tabular-nums focus:outline-none"
         />
         <button
           onClick={(e) => {
@@ -343,7 +343,7 @@ const PrintCell = ({ maxQty, defaultQty, onPrint }: PrintCellProps) => {
             onPrint(qty);
             setEditing(false);
           }}
-          className="bg-fill-brand hover:bg-fill-brand/90 rounded px-2 py-0.5 text-[11px] font-medium text-white transition-colors"
+          className="bg-text-primary hover:bg-text-primary/90 rounded px-2 py-0.5 text-[11px] font-medium text-white transition-colors"
         >
           Print
         </button>
@@ -408,7 +408,7 @@ const BoeCell = ({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onClick={(e) => e.stopPropagation()}
-          className="border-border-primary bg-background-primary focus:border-border-brand w-28 rounded border px-1.5 py-0.5 font-mono text-xs focus:outline-none"
+          className="border-border-primary bg-background-primary focus:border-text-primary w-28 rounded border px-1.5 py-0.5 font-mono text-xs focus:outline-none"
           placeholder="RE BOE"
           autoFocus
           onKeyDown={(e) => {
@@ -421,7 +421,7 @@ const BoeCell = ({
         <button
           type="submit"
           onClick={(e) => e.stopPropagation()}
-          className="bg-fill-brand hover:bg-fill-brand/90 rounded px-2 py-0.5 text-[11px] font-medium text-white transition-colors"
+          className="bg-text-primary hover:bg-text-primary/90 rounded px-2 py-0.5 text-[11px] font-medium text-white transition-colors"
         >
           Save
         </button>
@@ -480,7 +480,7 @@ const ImportPriceCell = ({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onClick={(e) => e.stopPropagation()}
-          className="border-border-primary bg-background-primary focus:border-border-brand w-20 rounded border px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:outline-none"
+          className="border-border-primary bg-background-primary focus:border-text-primary w-20 rounded border px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:outline-none"
           placeholder="0.00"
           type="number"
           step="0.01"
@@ -496,7 +496,7 @@ const ImportPriceCell = ({
         <button
           type="submit"
           onClick={(e) => e.stopPropagation()}
-          className="bg-fill-brand hover:bg-fill-brand/90 rounded px-2 py-0.5 text-[11px] font-medium text-white transition-colors"
+          className="bg-text-primary hover:bg-text-primary/90 rounded px-2 py-0.5 text-[11px] font-medium text-white transition-colors"
         >
           Save
         </button>
@@ -814,7 +814,7 @@ const ProductRow = ({
         {/* Expand chevron */}
         <td className={`${tdClass} text-text-muted w-8`}>
           <IconChevronDown
-            className={`h-4 w-4 transition-transform ${isExpanded ? 'text-text-brand' : '-rotate-90'}`}
+            className={`h-4 w-4 transition-transform ${isExpanded ? 'text-text-primary' : '-rotate-90'}`}
           />
         </td>
 
@@ -832,7 +832,7 @@ const ProductRow = ({
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="border-border-muted bg-background-primary text-text-primary focus:border-border-brand h-7 w-full rounded border px-2 text-sm focus:outline-none"
+                  className="border-border-muted bg-background-primary text-text-primary focus:border-text-primary h-7 w-full rounded border px-2 text-sm focus:outline-none"
                   placeholder="Product name"
                   autoFocus
                 />
@@ -840,7 +840,7 @@ const ProductRow = ({
                   type="text"
                   value={editProducer}
                   onChange={(e) => setEditProducer(e.target.value)}
-                  className="border-border-muted bg-background-primary text-text-muted focus:border-border-brand h-7 w-full rounded border px-2 text-xs focus:outline-none"
+                  className="border-border-muted bg-background-primary text-text-muted focus:border-text-primary h-7 w-full rounded border px-2 text-xs focus:outline-none"
                   placeholder="Producer"
                 />
               </div>
@@ -911,7 +911,7 @@ const ProductRow = ({
                   setEditProducer(product.producer ?? '');
                   onStartEditName(product.lwin18);
                 }}
-                className="text-text-muted/40 hover:bg-surface-muted hover:text-text-brand hidden shrink-0 rounded p-0.5 transition-colors group-hover/name:inline-flex"
+                className="text-text-muted/40 hover:bg-surface-muted hover:text-text-primary hidden shrink-0 rounded p-0.5 transition-colors group-hover/name:inline-flex"
               >
                 <IconPencil className="h-3.5 w-3.5" />
               </button>
@@ -979,7 +979,7 @@ const ProductRow = ({
             <span
               className={
                 product.availableCases > 0
-                  ? 'text-text-brand font-semibold'
+                  ? 'text-text-primary font-semibold'
                   : 'text-text-muted'
               }
             >
@@ -1235,7 +1235,7 @@ const ProductRow = ({
                         availPercent === 100
                           ? 'bg-emerald-500'
                           : availPercent >= 50
-                            ? 'bg-fill-brand'
+                            ? 'bg-text-primary'
                             : availPercent > 0
                               ? 'bg-amber-500'
                               : 'bg-gray-300';
@@ -1265,7 +1265,7 @@ const ProductRow = ({
                                 : undefined
                             }
                           >
-                            <td className="text-text-brand px-3 py-2 font-mono text-xs font-medium">
+                            <td className="text-text-primary px-3 py-2 font-mono text-xs font-medium">
                               {loc.locationCode}
                             </td>
                             <td className="px-3 py-2">
@@ -1328,7 +1328,7 @@ const ProductRow = ({
                                     setTransferPutOnSale(false);
                                     setAdjustingStockId(null);
                                   }}
-                                  className="text-text-muted/40 hover:bg-surface-muted hover:text-text-brand hidden shrink-0 rounded p-0.5 transition-colors group-hover/owner:inline-flex"
+                                  className="text-text-muted/40 hover:bg-surface-muted hover:text-text-primary hidden shrink-0 rounded p-0.5 transition-colors group-hover/owner:inline-flex"
                                   title="Change owner"
                                 >
                                   <IconPencil className="h-3 w-3" />
@@ -1407,7 +1407,7 @@ const ProductRow = ({
                                           ),
                                         )
                                       }
-                                      className="border-border-primary bg-background-primary focus:border-border-brand h-8 w-16 rounded border text-center text-sm font-medium tabular-nums focus:outline-none"
+                                      className="border-border-primary bg-background-primary focus:border-text-primary h-8 w-16 rounded border text-center text-sm font-medium tabular-nums focus:outline-none"
                                     />
                                     <button
                                       type="button"
@@ -1432,7 +1432,7 @@ const ProductRow = ({
                                       setAdjustReason(e.target.value)
                                     }
                                     placeholder="Reason (required)"
-                                    className="border-border-primary bg-background-primary focus:border-border-brand h-8 min-w-[200px] flex-1 rounded border px-2 text-sm focus:outline-none"
+                                    className="border-border-primary bg-background-primary focus:border-text-primary h-8 min-w-[200px] flex-1 rounded border px-2 text-sm focus:outline-none"
                                   />
                                   <button
                                     type="button"
@@ -1441,7 +1441,7 @@ const ProductRow = ({
                                       !adjustReason.trim() ||
                                       isAdjusting
                                     }
-                                    className="bg-fill-brand hover:bg-fill-brand/90 flex h-8 items-center gap-1 rounded px-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
+                                    className="bg-text-primary hover:bg-text-primary/90 flex h-8 items-center gap-1 rounded px-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
                                     onClick={() => {
                                       onAdjustStock(
                                         loc.stockId,
@@ -1496,7 +1496,7 @@ const ProductRow = ({
                                         ),
                                       )
                                     }
-                                    className="border-border-primary bg-background-primary focus:border-border-brand h-8 w-16 rounded border text-center text-sm font-medium tabular-nums focus:outline-none"
+                                    className="border-border-primary bg-background-primary focus:border-text-primary h-8 w-16 rounded border text-center text-sm font-medium tabular-nums focus:outline-none"
                                   />
                                   {packConfig !== (product.caseConfig ?? 0) && (
                                     <span className="text-text-muted text-xs font-medium">
@@ -1524,7 +1524,7 @@ const ProductRow = ({
                                       setPackReason(e.target.value)
                                     }
                                     placeholder="Reason (required)"
-                                    className="border-border-primary bg-background-primary focus:border-border-brand h-8 min-w-[200px] flex-1 rounded border px-2 text-sm focus:outline-none"
+                                    className="border-border-primary bg-background-primary focus:border-text-primary h-8 min-w-[200px] flex-1 rounded border px-2 text-sm focus:outline-none"
                                   />
                                   <button
                                     type="button"
@@ -1536,7 +1536,7 @@ const ProductRow = ({
                                       !packReason.trim() ||
                                       isCorrectingPack
                                     }
-                                    className="bg-fill-brand hover:bg-fill-brand/90 flex h-8 items-center gap-1 rounded px-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
+                                    className="bg-text-primary hover:bg-text-primary/90 flex h-8 items-center gap-1 rounded px-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
                                     onClick={() => {
                                       onCorrectPack(
                                         loc.stockId,
@@ -1582,7 +1582,7 @@ const ProductRow = ({
                                       );
                                     }}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="border-border-primary bg-background-primary focus:border-border-brand h-8 rounded border px-2 text-sm focus:outline-none"
+                                    className="border-border-primary bg-background-primary focus:border-text-primary h-8 rounded border px-2 text-sm focus:outline-none"
                                   >
                                     <option value="">Select owner...</option>
                                     {partners
@@ -1625,7 +1625,7 @@ const ProductRow = ({
                                         )
                                       }
                                       onClick={(e) => e.stopPropagation()}
-                                      className="border-border-primary bg-background-primary focus:border-border-brand h-8 w-16 rounded border text-center text-sm font-medium tabular-nums focus:outline-none"
+                                      className="border-border-primary bg-background-primary focus:border-text-primary h-8 w-16 rounded border text-center text-sm font-medium tabular-nums focus:outline-none"
                                     />
                                     <button
                                       type="button"
@@ -1653,7 +1653,7 @@ const ProductRow = ({
                                     }
                                     onClick={(e) => e.stopPropagation()}
                                     placeholder="Notes (optional)"
-                                    className="border-border-primary bg-background-primary focus:border-border-brand h-8 min-w-[160px] flex-1 rounded border px-2 text-sm focus:outline-none"
+                                    className="border-border-primary bg-background-primary focus:border-text-primary h-8 min-w-[160px] flex-1 rounded border px-2 text-sm focus:outline-none"
                                   />
                                   {loc.notForSale && (
                                     <label
@@ -2007,7 +2007,7 @@ const InboundProductRow = ({
                           <Link
                             href={`/platform/admin/logistics/shipments/${s.shipmentId}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-text-brand font-medium hover:underline"
+                            className="text-text-primary font-medium hover:underline"
                           >
                             {s.shipmentNumber}
                           </Link>
@@ -2107,7 +2107,7 @@ const ColumnToggle = ({ columns, onChange }: ColumnToggleProps) => {
                   const next = { ...columns, [key]: e.target.checked };
                   onChange(next);
                 }}
-                className="border-border-primary accent-fill-brand rounded"
+                className="border-border-primary accent-text-primary rounded"
               />
               {label}
             </label>
@@ -2761,7 +2761,7 @@ const StockExplorerPage = () => {
   };
 
   const thBase =
-    'text-xs font-medium uppercase tracking-wider text-text-muted cursor-pointer select-none transition-colors hover:text-text-brand';
+    'text-xs font-medium uppercase tracking-wider text-text-muted cursor-pointer select-none transition-colors hover:text-text-primary';
   const dc = DENSITY_CLASSES[density];
 
   // Quick filter definitions
@@ -2821,7 +2821,7 @@ const StockExplorerPage = () => {
                   onClick={() => setDensity(d)}
                   className={`px-3 py-2 transition-colors ${
                     density === d
-                      ? 'bg-fill-brand/10 text-text-brand'
+                      ? 'bg-text-primary/10 text-text-primary'
                       : 'text-text-muted hover:text-text-primary'
                   }`}
                   title={`${d} density`}
@@ -3349,7 +3349,7 @@ const StockExplorerPage = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search product, producer, LWIN18..."
-              className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-border-brand focus:ring-border-brand w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1"
+              className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-text-primary focus:ring-text-primary w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1"
             />
           </div>
 
@@ -3359,7 +3359,7 @@ const StockExplorerPage = () => {
             <select
               value={ownerId}
               onChange={(e) => setOwnerId(e.target.value)}
-              className="border-border-primary bg-background-primary text-text-primary focus:border-border-brand flex-1 rounded-lg border px-3 py-2.5 text-sm focus:outline-none sm:flex-none"
+              className="border-border-primary bg-background-primary text-text-primary focus:border-text-primary flex-1 rounded-lg border px-3 py-2.5 text-sm focus:outline-none sm:flex-none"
             >
               <option value="">All Owners</option>
               {owners.map((o) => (
@@ -3378,7 +3378,7 @@ const StockExplorerPage = () => {
                 placeholder="From"
                 min={1900}
                 max={2100}
-                className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-border-brand w-20 rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+                className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-text-primary w-20 rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
               />
               <span className="text-text-muted">—</span>
               <input
@@ -3388,7 +3388,7 @@ const StockExplorerPage = () => {
                 placeholder="To"
                 min={1900}
                 max={2100}
-                className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-border-brand w-20 rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+                className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-text-primary w-20 rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -3429,7 +3429,7 @@ const StockExplorerPage = () => {
                 quickFilter === qf.key
                   ? qf.key === 'inbound'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-fill-brand text-white'
+                    : 'bg-text-primary text-white'
                   : qf.key === 'inbound'
                     ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                     : 'bg-surface-muted text-text-secondary hover:bg-fill-primary-hover hover:text-text-primary'
@@ -3570,7 +3570,7 @@ const StockExplorerPage = () => {
                           }
                           className={`ml-1 rounded p-0.5 transition-colors ${
                             fullNames
-                              ? 'text-text-brand'
+                              ? 'text-text-primary'
                               : 'text-text-muted/50 hover:text-text-primary'
                           }`}
                         >

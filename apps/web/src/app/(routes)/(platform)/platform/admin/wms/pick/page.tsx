@@ -183,7 +183,7 @@ const WMSPickListsPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search client or number"
-            className="h-12 w-full rounded-xl border border-border-muted bg-fill-primary pl-12 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none"
+            className="h-12 w-full rounded-xl border border-border-muted bg-fill-primary pl-12 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-text-primary focus:outline-none"
           />
         </div>
 
@@ -221,7 +221,7 @@ const WMSPickListsPage = () => {
                 return (
                   <Link key={pickList.id} href={`/platform/admin/wms/pick/${pickList.id}`}>
                     <Card
-                      className={`h-full transition-shadow hover:border-border-brand hover:shadow-md ${
+                      className={`h-full transition-shadow hover:border-text-primary hover:shadow-md ${
                         pickList.soModifiedAfterRelease ? 'border-amber-400 ring-1 ring-amber-300' : ''
                       }`}
                     >
@@ -259,7 +259,7 @@ const WMSPickListsPage = () => {
 
                         <div className="mt-3 flex items-center gap-3">
                           <div className="h-2 flex-1 rounded-full bg-border-muted">
-                            <div className="h-2 rounded-full bg-brand-600" style={{ width: `${percent}%` }} />
+                            <div className="h-2 rounded-full bg-text-primary" style={{ width: `${percent}%` }} />
                           </div>
                           <Typography variant="bodyXs" className="shrink-0 font-medium tabular-nums">
                             {pickList.pickedItems}/{pickList.totalItems} picked

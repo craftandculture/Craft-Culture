@@ -268,7 +268,7 @@ const CellarReleasesPage = () => {
             onClick={() => setStatus(filter.id)}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               status === filter.id
-                ? 'bg-fill-brand text-text-on-brand'
+                ? 'bg-text-primary text-text-on-brand'
                 : 'border-border-muted text-text-muted hover:text-text-primary border'
             }`}
           >
@@ -857,7 +857,7 @@ const CellarReleasesPage = () => {
                                     rateVersion: request.suggested.version,
                                   }));
                                 }}
-                                className="text-text-brand text-xs font-medium hover:underline"
+                                className="text-text-primary text-xs font-medium hover:underline"
                               >
                                 Restore rate card
                               </button>
@@ -954,13 +954,13 @@ const CellarReleasesPage = () => {
                           <div className="border-border-muted bg-fill-muted/40 flex items-baseline justify-between gap-3 border-t px-4 py-2">
                             <Typography
                               variant="bodyXs"
-                              className="text-text-brand font-semibold uppercase tracking-[0.08em]"
+                              className="text-text-primary font-semibold uppercase tracking-[0.08em]"
                             >
                               Craft &amp; Culture earns
                             </Typography>
                             <Typography
                               variant="bodySm"
-                              className="text-text-brand font-semibold tabular-nums"
+                              className="text-text-primary font-semibold tabular-nums"
                             >
                               {request.suggested.ccMarginUsd.toFixed(2)}
                             </Typography>
@@ -1048,7 +1048,7 @@ const CellarReleasesPage = () => {
                         </div>
                         <Typography
                           variant="headingSm"
-                          className="text-text-brand tabular-nums"
+                          className="text-text-primary tabular-nums"
                         >
                           $
                           {(

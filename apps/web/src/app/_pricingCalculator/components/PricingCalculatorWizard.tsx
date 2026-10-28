@@ -127,7 +127,7 @@ const PricingCalculatorWizard = () => {
                 index < currentStep
                   ? 'bg-green-500 text-white'
                   : index === currentStep
-                    ? 'bg-fill-brand text-white'
+                    ? 'bg-text-primary text-white'
                     : 'bg-surface-secondary text-text-muted'
               }`}
             >

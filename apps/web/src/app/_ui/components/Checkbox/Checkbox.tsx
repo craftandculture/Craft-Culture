@@ -9,7 +9,7 @@ import Icon from '../Icon/Icon';
 export const checkboxStyles = tv({
   slots: {
     checkbox:
-      'hover:border-border-primary-hover data-[state=checked]:hover:border-border-brand-hover focus-visible:outline-hidden data-[state=checked]:text-text-brand-on-fill border-border-primary bg-fill-primary ring-offset-border-primary focus-visible:ring-border-primary data-[state=checked]:bg-fill-brand data-[state=indeterminate]:bg-fill-brand data-[state=indeterminate]:text-text-brand-on-fill data-[state=indeterminate]:hover:border-border-brand-hover peer static flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-sm border transition-all focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-transparent data-[state=indeterminate]:border-transparent',
+      'hover:border-border-primary-hover data-[state=checked]:hover:border-text-primary focus-visible:outline-hidden data-[state=checked]:text-surface-primary border-border-primary bg-fill-primary ring-offset-border-primary focus-visible:ring-border-primary data-[state=checked]:bg-text-primary data-[state=indeterminate]:bg-text-primary data-[state=indeterminate]:text-surface-primary data-[state=indeterminate]:hover:border-text-primary peer static flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-sm border transition-all focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-transparent data-[state=indeterminate]:border-transparent',
     indicator:
       'group flex items-center justify-center overflow-hidden text-current',
   },

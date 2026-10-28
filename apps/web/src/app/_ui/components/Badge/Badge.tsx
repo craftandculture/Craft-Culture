@@ -7,7 +7,7 @@ export const badgeStyles = tv({
       primary: 'border-border-primary bg-fill-primary',
       muted: 'border-border-primary bg-fill-muted/50 text-text-primary',
       info: 'border-border-info/10 bg-fill-info/10 text-text-info',
-      brand: 'border-border-brand/10 bg-fill-brand/10 text-text-brand',
+      brand: 'border-border-muted bg-surface-secondary text-text-primary',
       success: 'border-border-success/10 bg-fill-success/10 text-text-success',
       danger: 'border-border-danger/10 bg-fill-danger/10 text-text-danger',
       warning: 'border-border-warning/10 bg-fill-warning/10 text-text-warning',

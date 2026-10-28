@@ -59,14 +59,14 @@ const DistributorNav = () => {
                 href={item.href}
                 className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'border-border-brand text-text-brand'
+                    ? 'border-text-primary text-text-primary'
                     : 'border-transparent text-text-muted hover:border-border-muted hover:text-text-primary'
                 }`}
               >
                 <Icon
                   icon={item.icon}
                   size="sm"
-                  className={isActive ? 'text-text-brand' : 'text-text-muted'}
+                  className={isActive ? 'text-text-primary' : 'text-text-muted'}
                 />
                 <span>{item.label}</span>
               </Link>
@@ -93,7 +93,7 @@ const DistributorNav = () => {
                 href="/docs/pco-flows"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary transition-colors hover:bg-fill-muted"
               >
-                <Icon icon={IconBook} size="sm" className="text-text-brand" />
+                <Icon icon={IconBook} size="sm" className="text-text-primary" />
                 <div>
                   <div className="font-medium">Process Flow Guide</div>
                   <div className="text-xs text-text-muted">End-to-end PCO workflow</div>

@@ -103,7 +103,7 @@ const WMSCycleCountsPage = () => {
               onClick={() => setStatusFilter(f.id)}
               className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 statusFilter === f.id
-                  ? 'bg-fill-brand text-white'
+                  ? 'bg-text-primary text-white'
                   : 'bg-fill-secondary text-text-muted hover:bg-fill-tertiary'
               }`}
             >
@@ -144,7 +144,7 @@ const WMSCycleCountsPage = () => {
                 key={count.id}
                 href={`/platform/admin/wms/cycle-count/${count.id}`}
               >
-                <Card className="cursor-pointer transition-colors hover:border-border-brand">
+                <Card className="cursor-pointer transition-colors hover:border-text-primary">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">

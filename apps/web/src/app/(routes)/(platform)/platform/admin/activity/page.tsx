@@ -66,13 +66,13 @@ const ActivityFeedPage = () => {
 
   const getActivityIcon = (action: string) => {
     const iconClass = 'h-4 w-4';
-    if (action.includes('signin')) return <IconLogin className={`${iconClass} text-text-brand`} />;
+    if (action.includes('signin')) return <IconLogin className={`${iconClass} text-text-primary`} />;
     if (action.includes('signup'))
-      return <IconUserPlus className={`${iconClass} text-text-brand`} />;
+      return <IconUserPlus className={`${iconClass} text-text-primary`} />;
     if (action.includes('download'))
-      return <IconDownload className={`${iconClass} text-text-brand`} />;
+      return <IconDownload className={`${iconClass} text-text-primary`} />;
     if (action === 'quote.created')
-      return <IconFileText className={`${iconClass} text-text-brand`} />;
+      return <IconFileText className={`${iconClass} text-text-primary`} />;
     if (action === 'quote.submitted') return <IconSend className={`${iconClass} text-blue-500`} />;
     if (action === 'quote.approved') return <IconCheck className={`${iconClass} text-green-500`} />;
     if (action === 'quote.revision_requested')

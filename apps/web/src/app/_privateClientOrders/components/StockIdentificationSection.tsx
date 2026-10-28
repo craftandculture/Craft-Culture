@@ -160,12 +160,12 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
   }
 
   return (
-    <Card className="border-2 border-fill-brand/30 bg-fill-brand/5">
+    <Card className="border-2 border-text-primary/30 bg-text-primary/5">
       <CardContent className="p-4">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-brand/20">
-              <Icon icon={IconBox} size="sm" className="text-fill-brand" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-text-primary/20">
+              <Icon icon={IconBox} size="sm" className="text-text-primary" />
             </div>
             <div>
               <Typography variant="headingSm">Stock Identification</Typography>

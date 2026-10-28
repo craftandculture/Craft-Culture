@@ -222,7 +222,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                     type="button"
                     className={`pb-2 text-xs font-medium transition-colors ${
                       activeTab === 'b2b'
-                        ? 'border-b-2 border-fill-brand text-text-primary'
+                        ? 'border-b-2 border-text-primary text-text-primary'
                         : 'text-text-muted hover:text-text-primary'
                     }`}
                     onClick={() => setActiveTab('b2b')}
@@ -233,7 +233,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                     type="button"
                     className={`pb-2 text-xs font-medium transition-colors ${
                       activeTab === 'd2c'
-                        ? 'border-b-2 border-fill-brand text-text-primary'
+                        ? 'border-b-2 border-text-primary text-text-primary'
                         : 'text-text-muted hover:text-text-primary'
                     }`}
                     onClick={() => setActiveTab('d2c')}
@@ -253,7 +253,7 @@ const SessionDetailView = ({ session: initialSession }: SessionDetailViewProps) 
                       max={400}
                       value={productColWidth}
                       onChange={(e) => setProductColWidth(parseInt(e.target.value, 10))}
-                      className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-border-muted accent-fill-brand"
+                      className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-border-muted accent-text-primary"
                     />
                   </div>
                   {/* Search */}

@@ -654,7 +654,7 @@ const QuoteDetailPage = () => {
               <CardTitle>Total Price</CardTitle>
             </div>
             <CardContent>
-              <Typography variant="headingLg" className="text-text-brand">
+              <Typography variant="headingLg" className="text-text-primary">
                 {formatCurrency(quote.totalPrice, quote.currency)}
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mt-2">
@@ -676,7 +676,7 @@ const QuoteDetailPage = () => {
             <CardContent>
               <Link
                 href={`/platform/admin/logistics/shipments/${quote.shipment.id}`}
-                className="flex items-center justify-between rounded-lg border border-border-primary p-4 hover:border-border-brand transition-colors"
+                className="flex items-center justify-between rounded-lg border border-border-primary p-4 hover:border-text-primary transition-colors"
               >
                 <div>
                   <Typography variant="bodySm" className="font-mono text-text-muted">
@@ -762,7 +762,7 @@ const QuoteDetailPage = () => {
                 ))}
                 <div className="flex items-center justify-end gap-4 border-t border-border-primary pt-4">
                   <Typography variant="headingSm">Grand Total:</Typography>
-                  <Typography variant="headingMd" className="text-text-brand">
+                  <Typography variant="headingMd" className="text-text-primary">
                     {formatCurrency(quote.totalPrice, quote.currency)}
                   </Typography>
                 </div>

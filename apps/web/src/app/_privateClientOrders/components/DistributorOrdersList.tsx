@@ -312,7 +312,7 @@ const DistributorOrdersList = () => {
           type="checkbox"
           checked={orders.length > 0 && selectedOrderIds.size === orders.length}
           onChange={toggleSelectAll}
-          className="h-5 w-5 rounded border-border-muted accent-fill-brand"
+          className="h-5 w-5 rounded border-border-muted accent-text-primary"
         />
       ),
       cell: ({ row }) => (
@@ -321,7 +321,7 @@ const DistributorOrdersList = () => {
           checked={selectedOrderIds.has(row.original.id)}
           onChange={() => toggleOrderSelection(row.original.id)}
           onClick={(e) => e.stopPropagation()}
-          className="h-5 w-5 rounded border-border-muted accent-fill-brand"
+          className="h-5 w-5 rounded border-border-muted accent-text-primary"
         />
       ),
     },
@@ -476,7 +476,7 @@ const DistributorOrdersList = () => {
               }}
               className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-fill-brand text-white'
+                  ? 'bg-text-primary text-white'
                   : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
               }`}
             >
@@ -632,7 +632,7 @@ const DistributorOrdersList = () => {
                   type="checkbox"
                   checked={selectedOrderIds.has(order.id)}
                   onChange={() => toggleOrderSelection(order.id)}
-                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-border-muted accent-fill-brand"
+                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-border-muted accent-text-primary"
                 />
                 <Link
                   href={`/platform/distributor/orders/${order.id}`}

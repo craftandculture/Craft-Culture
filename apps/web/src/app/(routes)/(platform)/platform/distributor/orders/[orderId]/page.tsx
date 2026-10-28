@@ -563,11 +563,11 @@ const DistributorOrderDetailPage = () => {
 
         {/* Unlock Suspended Order - shown when verification was previously suspended */}
         {order.status === 'verification_suspended' && (
-          <Card className="border-2 border-fill-brand/50 bg-fill-brand/5">
+          <Card className="border-2 border-text-primary/50 bg-text-primary/5">
             <CardContent className="p-6">
               <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/20">
-                  <Icon icon={IconShieldCheck} size="lg" className="text-fill-brand" />
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-text-primary/20">
+                  <Icon icon={IconShieldCheck} size="lg" className="text-text-primary" />
                 </div>
                 <div className="flex-1">
                   <Typography variant="headingSm" className="mb-1">
@@ -640,11 +640,11 @@ const DistributorOrderDetailPage = () => {
 
         {/* Payment Reference Display - shown when order has a payment reference */}
         {order.paymentReference && order.status === 'awaiting_client_payment' && (
-          <Card className="border-2 border-fill-brand/50 bg-fill-brand/5">
+          <Card className="border-2 border-text-primary/50 bg-text-primary/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/20">
-                  <Icon icon={IconCheck} size="md" className="text-fill-brand" />
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-text-primary/20">
+                  <Icon icon={IconCheck} size="md" className="text-text-primary" />
                 </div>
                 <div>
                   <Typography variant="labelSm" colorRole="muted">
@@ -673,12 +673,12 @@ const DistributorOrderDetailPage = () => {
           order.status === 'awaiting_partner_payment' ||
           order.status === 'partner_paid' ||
           order.status === 'scheduling_delivery') && (
-          <Card className="border-2 border-fill-brand/50 bg-fill-brand/5">
+          <Card className="border-2 border-text-primary/50 bg-text-primary/5">
             <CardContent className="p-6">
               <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/20">
-                    <Icon icon={IconPhone} size="lg" className="text-fill-brand" />
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-text-primary/20">
+                    <Icon icon={IconPhone} size="lg" className="text-text-primary" />
                   </div>
                   <div className="flex-1">
                     <Typography variant="headingSm" className="mb-1">

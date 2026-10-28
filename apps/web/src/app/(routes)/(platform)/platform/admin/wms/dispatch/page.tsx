@@ -200,7 +200,7 @@ const WMSDispatchBatchesPage = () => {
             ) : (
               data.batches.map((batch) => (
                 <Link key={batch.id} href={`/platform/admin/wms/dispatch/${batch.id}`}>
-                  <Card className="transition-shadow hover:shadow-md hover:border-border-brand">
+                  <Card className="transition-shadow hover:shadow-md hover:border-text-primary">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">

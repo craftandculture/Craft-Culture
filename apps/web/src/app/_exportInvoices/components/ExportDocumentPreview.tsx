@@ -94,7 +94,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
           !l.boe && l.boeCandidates.length
             ? 'border-border-danger/40 bg-fill-danger/10 text-text-danger'
             : openLine === l.id
-              ? 'border-border-brand bg-fill-brand/15 text-text-brand'
+              ? 'border-text-primary bg-text-primary/15 text-text-primary'
               : 'border-border-muted text-text-muted hover:border-border-primary hover:text-text-primary'
         }`}
       >
@@ -115,7 +115,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                   ?.querySelector(`[data-section="${section.id}"]:not([hidden])`)
                   ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }
-              className="shrink-0 rounded-full border border-border-muted bg-fill-primary px-3 py-1 text-[11px] font-medium text-text-muted hover:border-border-brand hover:text-text-primary"
+              className="shrink-0 rounded-full border border-border-muted bg-fill-primary px-3 py-1 text-[11px] font-medium text-text-muted hover:border-text-primary hover:text-text-primary"
             >
               {section.refs.length > 1 ? `${section.refs[0]?.invoiceNumber} +${section.refs.length - 1}` : section.refs[0]?.invoiceNumber}
               <span className="ml-1.5 tabular-nums text-text-muted">{sectionTotals(section.id).lines}</span>
