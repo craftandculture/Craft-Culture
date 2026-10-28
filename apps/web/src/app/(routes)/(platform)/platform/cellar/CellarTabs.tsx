@@ -24,24 +24,28 @@ import useTRPC from '@/lib/trpc/browser';
 
 import CellarPhoneTabs from './CellarPhoneTabs';
 
-/** The places a member works in: their wine, getting it home, selling it and buying more */
+/**
+ * The places a member works in: their wine, buying more, getting it home and
+ * selling it. The same four, in the same order, as the phone's bottom bar.
+ */
 const coreTabs = [
   { href: '/platform/cellar', label: 'Your cellar', icon: IconBottle },
-  {
-    href: '/platform/cellar/deliveries',
-    label: 'Deliveries',
-    icon: IconTruckDelivery,
-  },
-  { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
   /*
     "The pool" was our word for it, not a member's. What they want to know is
-    what they can add to their cellar today, so the tab says that.
+    what they can add to their cellar today, so the tab says that. The name is
+    "C&C Cellar List"; the phone's bottom bar has room only for "C&C List".
   */
   {
     href: '/platform/cellar/available',
     label: 'C&C Cellar List',
     icon: IconSparkles,
   },
+  {
+    href: '/platform/cellar/deliveries',
+    label: 'Deliveries',
+    icon: IconTruckDelivery,
+  },
+  { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
 ];
 
 /** Paperwork about the account, kept apart from the places so the tabs stay short */
@@ -81,7 +85,8 @@ const isOn = (pathname: string, href: string) =>
  *
  * Two tiers: the four places a member works in as tabs on the left, and
  * their account (statements, invoices, purchases, activity, details) as
- * smaller links on the right. On a phone the bottom bar takes over.
+ * smaller links on the right. On a phone the bottom bar takes over. The only
+ * mark is one dot on What's New while an update is unread.
  *
  * Exact matching on the cellar root, because every other tab sits beneath
  * it and a prefix test would light them all at once.
@@ -141,9 +146,6 @@ const CellarTabs = () => {
               >
                 <Icon icon={tab.icon} size="sm" />
                 {tab.label}
-                {whatsNew.isNewScreen(tab.href) && (
-                  <span className={`rounded-full px-1.5 text-[10px] leading-4 font-semibold tracking-wide uppercase ${active ? 'bg-emerald-400 text-neutral-950' : 'bg-emerald-600 text-white'}`}>New</span>
-                )}
               </Link>
             );
           })}
@@ -167,32 +169,29 @@ const CellarTabs = () => {
                 >
                   <link.icon size={14} />
                   {link.label}
-                  {whatsNew.isNewScreen(link.href) && (
-                    <span className="rounded-full bg-emerald-600 px-1.5 text-[10px] leading-4 font-semibold tracking-wide text-white uppercase">
-                      New
-                    </span>
-                  )}
                 </Link>
               );
             })}
           {whatsNew.enabled && (
             <>
               <span className="bg-border-muted mx-1.5 h-5 w-px" aria-hidden />
+              {/* As quiet as the paperwork; a single dot says something is unread */}
               <Link
                 href={WHATS_NEW_HREF}
                 aria-current={isOn(pathname, WHATS_NEW_HREF) ? 'page' : undefined}
-                className={`flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-xs font-semibold transition-colors ${
+                className={`flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs transition-colors ${
                   isOn(pathname, WHATS_NEW_HREF)
-                    ? 'border-emerald-700 bg-emerald-700 text-white dark:border-emerald-500 dark:bg-emerald-600'
-                    : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20'
+                    ? 'bg-surface-muted text-text-primary font-semibold'
+                    : 'text-text-muted hover:text-text-primary font-medium'
                 }`}
               >
-                <IconStars size={15} />
+                <IconStars size={14} />
                 What&rsquo;s New
                 {whatsNew.hasNew && !isOn(pathname, WHATS_NEW_HREF) && (
-                  <span className="min-w-[18px] rounded-full bg-emerald-600 px-1.5 text-center text-[11px] leading-[18px] font-semibold text-white tabular-nums">
-                    {whatsNew.count}
-                  </span>
+                  <span
+                    className="size-1.5 rounded-full bg-emerald-500"
+                    aria-label="New updates"
+                  />
                 )}
               </Link>
             </>

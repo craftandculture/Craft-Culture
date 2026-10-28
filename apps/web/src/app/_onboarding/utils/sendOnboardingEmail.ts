@@ -24,7 +24,7 @@ const sendOnboardingEmail = async (
   const transactionalId = loopsTemplates[email];
 
   if (!transactionalId) {
-    logger.warn(`Onboarding email "${email}" skipped — no Loops template id yet`, {
+    logger.warn(`Onboarding email "${email}" skipped: no Loops template id yet`, {
       to,
     });
     return false;

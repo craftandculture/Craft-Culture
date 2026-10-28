@@ -49,22 +49,22 @@ const ActivationReturn = () => {
   }, [params, complete, refreshMembership, router]);
 
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-24 text-center">
+    <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-16 text-center">
       {outcome === 'working' && <IconLoader2 className="text-text-muted animate-spin" size={28} />}
       {outcome === 'active' && (
         <span className="flex size-12 items-center justify-center rounded-full bg-emerald-500 text-white">
           <IconCheck size={26} stroke={3} />
         </span>
       )}
-      <h1 className="text-text-primary text-xl font-semibold tracking-tight">
+      <h2 className="text-text-primary text-xl font-semibold tracking-tight">
         {outcome === 'working' && 'Confirming your membership…'}
         {outcome === 'active' && 'Your cellar is active'}
         {outcome === 'pending' && 'We are waiting to hear from the payment provider'}
-      </h1>
+      </h2>
       <p className="text-text-muted text-sm leading-6">
         {outcome === 'active' && 'Taking you back to carry on where you left off.'}
         {outcome === 'pending' &&
-          'This can take a minute. Your cellar will open as soon as the payment is confirmed — you can go back now and try again shortly.'}
+          'This can take a minute. Your cellar will open as soon as the payment is confirmed. You can go back now and try again shortly.'}
       </p>
       {outcome === 'pending' && (
         <button

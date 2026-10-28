@@ -417,11 +417,13 @@ const SellingPage = () => {
     </>
   );
 
+  const awaitingReview = mandates.filter((mandate) => mandate.status === 'offered').length;
+
   return (
     <div className="w-full pb-8">
       <CellarPageHeader
         title="Selling"
-        description="Wine you have offered for sale through Craft & Culture. You receive your asking price in full; our commission is added to it, never deducted."
+        description="Wine you have offered for sale through Craft & Culture."
       />
 
       {!isLoading && !isError && current.length > 0 && (
@@ -429,13 +431,15 @@ const SellingPage = () => {
           {[
             {
               label: 'Bottles offered',
+              amount: openBottles,
               value: String(openBottles),
               detail: `across ${current.length} ${current.length === 1 ? 'offer' : 'offers'}`,
               icon: IconBottle,
-              tone: 'blue' as const,
+              tone: 'plain' as const,
             },
             {
               label: 'You receive if it sells',
+              amount: openValue,
               value: money(openValue),
               detail: 'at your asking price',
               icon: IconCoin,
@@ -443,21 +447,24 @@ const SellingPage = () => {
             },
             {
               label: 'Listed for sale',
+              amount: live.length,
               value: String(live.length),
               detail: live.length === 1 ? 'offer live' : 'offers live',
               icon: IconTag,
-              tone: 'indigo' as const,
+              tone: 'plain' as const,
             },
             {
               label: 'Awaiting review',
-              value: String(
-                mandates.filter((mandate) => mandate.status === 'offered').length,
-              ),
+              amount: awaitingReview,
+              value: String(awaitingReview),
               detail: 'with us now',
               icon: IconClock,
-              tone: 'amber' as const,
+              tone: 'plain' as const,
             },
-          ].map((stat) => (
+          ]
+            // A tile that reads 0 says nothing a member needs to know
+            .filter((stat) => stat.amount > 0)
+            .map((stat) => (
             <CellarStatTile
               key={stat.label}
               label={stat.label}

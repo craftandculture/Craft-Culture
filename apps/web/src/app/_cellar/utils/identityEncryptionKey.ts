@@ -18,7 +18,7 @@ const identityEncryptionKey = () => {
   const raw = process.env.IDENTITY_ENCRYPTION_KEY;
 
   if (!raw) {
-    logger.warn('IDENTITY_ENCRYPTION_KEY is not set — identity documents are stored unencrypted');
+    logger.warn('IDENTITY_ENCRYPTION_KEY is not set; identity documents are stored unencrypted');
     return null;
   }
 

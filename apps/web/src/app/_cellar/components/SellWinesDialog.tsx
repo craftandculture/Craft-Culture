@@ -177,8 +177,7 @@ const SellWinesDialog = ({
             {wines.length === 1 ? 'Sell this wine' : `Sell ${wines.length} wines`}
           </DialogTitle>
           <DialogDescription>
-            Set how many bottles and the price you want to receive for each. Our
-            commission is added on top, never taken from your price.
+            Set how many bottles and the price you want to receive for each.
           </DialogDescription>
         </DialogHeader>
 
@@ -289,15 +288,16 @@ const SellWinesDialog = ({
           <div className="border-border-muted rounded-xl border px-4 py-3">
             <p className="text-text-primary text-xs font-semibold">Before you offer</p>
             <p className="text-text-muted mt-1 text-xs leading-relaxed">
-              You can withdraw an offer at any time while the wine is in our
-              warehouse. To sell it, we may place it with a licensed
+              You receive your asking price in full; our commission is added
+              to it, never deducted. You can withdraw an offer at any time
+              while the wine is in our warehouse. To sell it, we may place it with a licensed
               distributor; once it has left our warehouse, the offer can no
               longer be withdrawn.{' '}
               <a
                 href="/legal/private-cellar-terms"
                 target="_blank"
                 rel="noreferrer"
-                className="text-text-primary font-medium underline underline-offset-2"
+                className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400"
               >
                 Private Cellar terms
               </a>

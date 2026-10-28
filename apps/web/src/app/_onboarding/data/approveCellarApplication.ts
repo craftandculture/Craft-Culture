@@ -68,7 +68,7 @@ const approveCellarApplication = async (applicationId: string, adminId: string) 
     userId: user.id,
     type: 'status_update',
     title: 'Your cellar is ready',
-    message: 'Have a look around — nothing is charged until you first act on your cellar.',
+    message: 'Have a look around. Nothing is charged until you first act on your cellar.',
     actionUrl: '/platform/cellar',
   }).catch(() => undefined);
 

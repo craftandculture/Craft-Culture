@@ -11,7 +11,7 @@ const memberLinks: Record<ProductUpdateAudience, { path: string; label: string; 
   collector: [
     { path: '/platform/cellar', label: 'View your cellar', about: 'the collection: wines held, valuations, drinking windows' },
     { path: '/platform/cellar/deliveries', label: 'View your deliveries', about: 'requesting a delivery and following it' },
-    { path: '/platform/cellar/selling', label: 'View your sales', about: 'offering wine for sale and sale proceeds' },
+    { path: '/platform/cellar/selling', label: 'View Selling', about: 'offering wine for sale and sale proceeds' },
     { path: '/platform/cellar/available', label: 'View the C&C Cellar List', about: 'wine available to add to the cellar' },
     { path: '/platform/cellar/statement', label: 'View your statements', about: 'monthly statements' },
     { path: '/platform/cellar/invoices', label: 'View your invoices', about: 'invoices' },

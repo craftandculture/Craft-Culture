@@ -45,14 +45,14 @@ const UpdateCard = ({ type, title, body, linkPath, isNew, highlight, preview }: 
 
   return (
     <article
-      className={`bg-surface-primary rounded-xl border px-4 py-4 dark:bg-white/[0.045] dark:shadow-none shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_14px_rgba(0,0,0,0.04)] sm:px-6 sm:py-5 ${
-        isNew ? 'border-emerald-400 ring-1 ring-emerald-400/30 dark:border-emerald-700' : 'border-black/[0.08] dark:border-white/10'
-      }`}
+      className="bg-surface-primary rounded-xl border border-black/[0.08] px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_14px_rgba(0,0,0,0.04)] sm:px-6 sm:py-5 dark:border-white/10 dark:bg-white/[0.045] dark:shadow-none"
     >
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <UpdateTypeTag type={type} />
+        {/* Unseen updates alone carry a mark: a green dot and the word, never a solid pill */}
         {isNew && (
-          <span className="rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-white uppercase">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+            <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
             New
           </span>
         )}

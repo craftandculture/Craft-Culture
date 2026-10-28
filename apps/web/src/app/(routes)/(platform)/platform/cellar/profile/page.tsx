@@ -22,6 +22,9 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import CellarInstallCard from '../CellarInstallCard';
+import CellarPasskeyCard from '../CellarPasskeyCard';
+
 const ID_DOCUMENTS = [
   {
     type: 'emirates_id_front',
@@ -207,7 +210,7 @@ const CellarProfilePage = () => {
       {/*
         Someone the cellar is shared with sees where wine goes and their own
         access, and nothing of the holder's identity or contact details to
-        edit — the server refuses those changes to anyone but the holder.
+        edit; the server refuses those changes to anyone but the holder.
       */}
       {!isLoading && !isError && isDelegate && (
         <div className="mt-6 flex flex-col gap-5">
@@ -223,6 +226,8 @@ const CellarProfilePage = () => {
             </Typography>
           </section>
           <CellarAccessPanel />
+          <CellarInstallCard placement="details" />
+          <CellarPasskeyCard placement="details" />
         </div>
       )}
 
@@ -480,6 +485,9 @@ const CellarProfilePage = () => {
           </div>
 
           <CellarAccessPanel />
+          {/* Signing in on a phone: home screen and Face ID live here for good */}
+          <CellarInstallCard placement="details" />
+          <CellarPasskeyCard placement="details" />
         </div>
       )}
     </div>

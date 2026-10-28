@@ -61,7 +61,7 @@ describe('parseLcbStockRow', () => {
   });
 });
 
-describe('parseLcbStockRow — Rotation Stock by Supplier', () => {
+describe('parseLcbStockRow: Rotation Stock by Supplier', () => {
   it('reads capitalised headings, PRODUCT as the code and a spreadsheet day number', () => {
     const holding = parseLcbStockRow({
       SUPPLIER: 'BGERKD',

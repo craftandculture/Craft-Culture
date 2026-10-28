@@ -263,14 +263,15 @@ const AvailablePage = () => {
   const selectClass =
     'border-border-muted text-text-primary bg-surface-primary h-10 w-full min-w-0 rounded-lg border px-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-text-primary/20 sm:h-9';
 
+  /* The cellar's own palette: C&C greens and near-black, never a rainbow */
   const categoryTone = (category: string | null | undefined) =>
     category === 'Spirits'
-      ? 'bg-violet-500'
+      ? 'bg-neutral-700 dark:bg-neutral-300'
       : category === 'RTD'
-        ? 'bg-sky-500'
+        ? 'bg-emerald-300'
         : category === 'Wine'
-          ? 'bg-emerald-500'
-          : 'bg-slate-400';
+          ? 'bg-emerald-600'
+          : 'bg-neutral-400';
 
   const origin = (wine: (typeof wines)[number]) =>
     [wine.producer, wine.region ?? wine.country].filter(Boolean).join(' · ');
@@ -402,9 +403,9 @@ const AvailablePage = () => {
           <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
             {[
               { id: undefined, label: 'Everything', tone: '' },
-              { id: 'Wine', label: 'Wine', tone: 'bg-emerald-500' },
-              { id: 'Spirits', label: 'Spirits', tone: 'bg-violet-500' },
-              { id: 'RTD', label: 'Ready to drink', tone: 'bg-sky-500' },
+              { id: 'Wine', label: 'Wine', tone: categoryTone('Wine') },
+              { id: 'Spirits', label: 'Spirits', tone: categoryTone('Spirits') },
+              { id: 'RTD', label: 'Ready to drink', tone: categoryTone('RTD') },
             ].map((chip) => (
               <button
                 key={chip.label}
@@ -566,7 +567,7 @@ const AvailablePage = () => {
                   setVintage('');
                   setLimit(PAGE);
                 }}
-                className="bg-text-primary text-surface-primary h-10 rounded-lg px-4 text-sm font-semibold"
+                className="h-10 px-2 text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
               >
                 Clear filters
               </button>
@@ -624,19 +625,19 @@ const AvailablePage = () => {
             <CellarStatTile
               label="Wines"
               icon={IconGlassFull}
-              tone="indigo"
+              tone="plain"
               value={filtered.length.toLocaleString('en-US')}
             />
             <CellarStatTile
               label="Bottles"
               icon={IconBottle}
-              tone="blue"
+              tone="plain"
               value={totalBottles.toLocaleString('en-US')}
             />
             <CellarStatTile
               label="Producers"
               icon={IconBuildingWarehouse}
-              tone="violet"
+              tone="plain"
               value={String(shownProducers.size)}
             />
           </div>
@@ -733,7 +734,7 @@ const AvailablePage = () => {
                             </span>
                             <span className="text-text-muted flex items-center gap-2 truncate text-xs">
                               {isRecentlyAdded(wine.addedAt) && <RecentlyAddedTag />}
-                              <span className="truncate">{origin(wine) || '—'}</span>
+                              <span className="truncate">{origin(wine)}</span>
                             </span>
                           </div>
                         </div>
@@ -788,16 +789,17 @@ const AvailablePage = () => {
             A bar rather than a separate basket page. Choosing wine and
             committing to it are one motion here, and sending someone to another
             screen to find the total is how a half-built order gets abandoned.
+            A white card, so its one near-black button is the emphasis.
           */}
           {basketLines.length > 0 && (
-            <div className="bg-text-primary text-surface-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 mt-4 md:bottom-3 flex flex-col gap-3 rounded-xl px-4 py-3 shadow-xl sm:flex-row sm:items-center sm:justify-between">
+            <div className="border-border-muted bg-surface-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 mt-4 md:bottom-3 flex flex-col gap-3 rounded-xl border px-4 py-3 shadow-xl sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="text-sm font-semibold">
+                <p className="text-text-primary text-sm font-semibold">
                   {basketLines.length} {basketLines.length === 1 ? 'wine' : 'wines'} &middot; {basketBottles}{' '}
                   {basketBottles === 1 ? 'bottle' : 'bottles'}
                   <span className="ml-2 tabular-nums">{money(basketTotal)}</span>
                 </p>
-                <p className="text-xs opacity-70">
+                <p className="text-text-muted text-xs">
                   Duty-free. Reserved for you for 48 hours while you pay by bank transfer, and added to your cellar
                   once your payment arrives.
                 </p>
@@ -806,7 +808,7 @@ const AvailablePage = () => {
                 <button
                   type="button"
                   onClick={() => setBasket(new Map())}
-                  className="h-9 px-2 text-xs font-semibold opacity-70 transition-opacity hover:opacity-100"
+                  className="h-9 px-2 text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
                 >
                   Clear
                 </button>
@@ -814,7 +816,7 @@ const AvailablePage = () => {
                   type="button"
                   disabled={isPlacing}
                   onClick={() => setIsReviewing(true)}
-                  className="bg-surface-primary text-text-primary h-10 flex-1 rounded-lg px-4 text-sm font-semibold disabled:opacity-50 sm:flex-none"
+                  className="bg-text-primary text-surface-primary h-10 flex-1 rounded-lg px-4 text-sm font-semibold disabled:opacity-50 sm:flex-none"
                 >
                   Review and reserve
                 </button>

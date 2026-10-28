@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import describePreferredDelivery from '@/app/_cellar/utils/describePreferredDelivery';
 import Button from '@/app/_ui/components/Button/Button';
@@ -243,22 +244,20 @@ const CellarReleasesPage = () => {
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Typography variant="headingLg">Cellar releases</Typography>
-          <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
-            Member requests to release wine held in bond
-          </Typography>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          isDisabled={isRefetching}
-        >
-          <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Cellar releases"
+        description="Member requests to release wine held in bond"
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            isDisabled={isRefetching}
+          >
+            <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
+          </Button>
+        }
+      />
 
       <div className="mb-5 flex flex-wrap gap-1.5">
         {filters.map((filter) => (

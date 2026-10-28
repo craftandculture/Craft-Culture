@@ -369,7 +369,7 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
         title: row.name,
         detail:
           row.status === 'past_due'
-            ? 'Paused by us — resume when it is settled'
+            ? 'Paused by us; resume when it is settled'
             : 'Started opening their cellar and has not finished',
         since: row.since,
       })),

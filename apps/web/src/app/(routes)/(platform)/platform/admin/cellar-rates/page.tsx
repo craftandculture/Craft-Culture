@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import UkRatesCard from '@/app/_cellar/components/admin/UkRatesCard';
 import PaymentDetailsCard from '@/app/_cellar/components/PaymentDetailsCard';
 import type { MembershipTermsCard } from '@/app/_cellar/utils/monthlyMembershipCharge';
@@ -382,22 +383,20 @@ const CellarRatesPage = () => {
     <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 sm:py-8">
       <UkRatesCard />
       <PaymentDetailsCard />
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Typography variant="headingLg">Release rates</Typography>
-          <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
-            Charges applied when a member releases wine from bond
-          </Typography>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          isDisabled={isRefetching}
-        >
-          <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Release rates"
+        description="Charges applied when a member releases wine from bond"
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            isDisabled={isRefetching}
+          >
+            <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
+          </Button>
+        }
+      />
 
       {isLoading && (
         <Typography variant="bodySm" colorRole="muted">

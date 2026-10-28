@@ -130,7 +130,7 @@ const CellarConditions = () => {
                   {tile.label}
                 </span>
                 <span className="text-text-primary mt-0.5 block text-xl font-semibold tabular-nums">
-                  {tile.value ?? '—'}
+                  {tile.value ?? ''}
                 </span>
                 <span className="text-text-muted text-[11px]">
                   Target {tile.target}

@@ -195,7 +195,7 @@ const QuoteForm = ({ move, onDone }: QuoteFormProps) => {
       </label>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-text-primary text-sm font-semibold tabular-nums">
-          Member sees {Number.isNaN(total) ? '—' : money(total)} all in
+          Member sees {Number.isNaN(total) ? '' : money(total)} all in
         </p>
         <div className="flex items-center gap-2">
           <ConfirmAction

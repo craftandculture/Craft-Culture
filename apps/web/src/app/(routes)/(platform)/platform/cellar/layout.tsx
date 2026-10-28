@@ -6,12 +6,10 @@ import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
 import tryCatch from '@/utils/tryCatch';
 
-import CellarInstallCard from './CellarInstallCard';
-import CellarPasskeyCard from './CellarPasskeyCard';
 import CellarTabs from './CellarTabs';
 
 export const metadata: Metadata = {
-  title: 'Your Cellar',
+  title: 'Your cellar',
   /* Behind a login, and about a named individual's holdings either way. */
   robots: { index: false, follow: false },
   /*
@@ -32,7 +30,7 @@ export const viewport: Viewport = {
 /**
  * The cellar is for accounts that hold wine with us
  *
- * Anyone else is sent to their own home rather than shown an empty page —
+ * Anyone else is sent to their own home rather than shown an empty page:
  * a screen that renders nothing reads as a fault, not as a boundary.
  */
 const CellarLayout = async ({ children }: React.PropsWithChildren) => {
@@ -58,13 +56,13 @@ const CellarLayout = async ({ children }: React.PropsWithChildren) => {
 
   /*
     The tabs live here rather than on each page, so a member never lands
-    somewhere that has lost its own navigation.
+    somewhere that has lost its own navigation. The home-screen and Face ID
+    suggestions are not here: they sit beneath the wine on Your cellar, and
+    on Your details.
   */
   return (
     <div className="mx-auto w-full max-w-[1400px] px-3 pt-6 pb-28 sm:px-6 sm:pt-8 md:pb-0">
       <CellarTabs />
-      <CellarInstallCard />
-      <CellarPasskeyCard />
       {children}
     </div>
   );
