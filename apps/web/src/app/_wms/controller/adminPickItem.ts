@@ -296,6 +296,25 @@ const adminPickItem = wmsOperatorProcedure
         candidates = free;
       }
 
+      /*
+        A member's own delivery is their bottles and nobody else's. On
+        PL-2026-0147 the right bottle left the shelf but the line pointed at
+        another owner's magnum of the same wine, and the pick booked it to them.
+      */
+      if (ownDelivery) {
+        const theirs = candidates.filter((row) => row.ownerId === ownDelivery.ownerId);
+        if (theirs.length === 0) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message:
+              `This is a member's own delivery, and the ${pickListItem.productName} at ` +
+              `${location.locationCode} belongs to ${candidates[0]?.ownerName ?? 'someone else'}. ` +
+              'Pick the member’s own bottles, or ask the office.',
+          });
+        }
+        candidates = theirs;
+      }
+
       const packOf = (row: (typeof candidates)[number]) => row.caseConfig ?? 12;
 
       // The pack the line was released against — a WHOLE-CASE pick must come from

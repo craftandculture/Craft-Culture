@@ -12,6 +12,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import db from '@/database/client';
 import {
   wmsPickListItems,
@@ -183,6 +184,10 @@ const adminResyncPickList = wmsOperatorProcedure
 
       let added = 0;
       const orderLwins = new Set<string>();
+      // A member's own delivery comes only from their own bottles
+      const ownDelivery = (await getOwnerDeliveryOwners([pickList.orderId])).get(
+        pickList.orderId ?? '',
+      );
 
       for (const item of orderItems) {
         const resolvedLwin18 = item.lwin18
@@ -207,6 +212,7 @@ const adminResyncPickList = wmsOperatorProcedure
         // Pack-agnostic, in-stock-only match by LWIN7+vintage (safe name
         // fallback) — never pins an empty pack or a lookalike cuvée.
         const suggestedStock = await resolvePickStock({
+          ownerId: ownDelivery?.ownerId,
           lwin18: resolvedLwin18,
           productName: item.name,
           neededCases: remaining,

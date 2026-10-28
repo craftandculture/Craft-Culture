@@ -9,6 +9,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import resolvePickStock from '@/app/_wms/utils/resolvePickStock';
@@ -147,6 +148,8 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
 
     // Create pick list items with suggested locations
     const pickListItems = [];
+    // A member's own delivery comes only from their own bottles
+    const ownDelivery = (await getOwnerDeliveryOwners([salesOrderId])).get(salesOrderId);
 
     for (const item of orderItems) {
       // Resolve LWIN18: use explicit lwin18 field, or convert SKU to LWIN18 format
@@ -160,6 +163,7 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
       // fallback — never pins an empty pack or a lookalike cuvée (this is the
       // path that mis-matched Talenti Brunello to the empty Talenti Piero pack).
       const suggestedStock = await resolvePickStock({
+        ownerId: ownDelivery?.ownerId,
         lwin18: resolvedLwin18,
         productName: item.name,
         neededCases: item.quantity,

@@ -2,6 +2,8 @@ import { and, eq, gt, ilike, isNull, like, or, sql } from 'drizzle-orm';
 
 import { wmsStock } from '@/database/schema';
 
+import getCollectorStockHolds from '../data/getCollectorStockHolds';
+
 import normalizeLwin18 from './normalizeLwin18';
 
 interface ResolvePickStockParams {
@@ -16,6 +18,14 @@ interface ResolvePickStockParams {
     "preference" that can be silently improved upon is not a constraint.
   */
   sourceStockId?: string | null;
+  /*
+    The member whose own delivery this is. Only their rows qualify: on
+    PL-2026-0147 a re-sync matched Ihab Toma's Bonnes Mares to Alain
+    Brahamcha's magnum, and the pick booked his bottle against Alain's
+    account. Without it, rows held for their owner are left out instead, as
+    release-to-pick and the pick itself already do.
+  */
+  ownerId?: string | null;
   /** The ordered line's LWIN18 (dashed or raw); may be empty. */
   lwin18: string | null | undefined;
   /** The ordered line's product name, for the name fallback. */
@@ -36,12 +46,14 @@ interface StockRow {
   lwin18: string;
   /** The bay's storage method — shelf, pallet or mixed */
   storageMethod?: string | null;
+  ownerId: string | null;
+  notForSale: boolean | null;
 }
 
 /**
  * Resolve the best in-stock location for a pick-list line.
  *
- * Matches pack-agnostically by LWIN7 + vintage — the reliable wine identifier
+ * Matches pack-agnostically by LWIN7 + vintage + bottle size — the reliable wine identifier
  * that distinguishes lookalike names (e.g. "Talenti, Brunello di Montalcino"
  * from "Talenti, Piero, Brunello di Montalcino") — and requires physical stock
  * (quantity_cases > 0) so an empty pack is never suggested. Prefers the exact
@@ -58,6 +70,7 @@ interface StockRow {
  */
 const resolvePickStock = async ({
   sourceStockId,
+  ownerId,
   lwin18,
   productName,
   neededCases,
@@ -103,6 +116,8 @@ const resolvePickStock = async ({
   const wineCode = parts.length === 4 ? (parts[0] ?? '') : '';
   const vintageStr = parts.length === 4 ? (parts[1] ?? '') : '';
   const orderedPack = parts.length === 4 ? Number(parts[2]) || 0 : 0;
+  // A magnum is a different bottle from a 75cl, so the size is kept in every match
+  const sizeStr = parts.length === 4 ? (parts[3] ?? '') : '';
 
   const select = {
     stockId: wmsStock.id,
@@ -112,6 +127,8 @@ const resolvePickStock = async ({
     openBottles: wmsStock.openBottles,
     caseConfig: wmsStock.caseConfig,
     lwin18: wmsStock.lwin18,
+    ownerId: wmsStock.ownerId,
+    notForSale: wmsStock.notForSale,
     storageMethod: sql<string | null>`(
       SELECT storage_method::text FROM wms_locations
        WHERE wms_locations.id = ${wmsStock.locationId}
@@ -120,11 +137,18 @@ const resolvePickStock = async ({
 
   // Rank in-stock rows: exact ordered pack first, then enough available, then
   // the most available. Never returns a zero-quantity row.
-  const pick = (rows: StockRow[]) => {
+  const pick = async (rows: StockRow[]) => {
     // Loose bottles from a cracked case are stock too — a single-bottle line
     // is filled from them without touching a sealed case.
-    const inStock = rows.filter(
+    const present = rows.filter(
       (s) => (s.quantityCases ?? 0) > 0 || (s.openBottles ?? 0) > 0,
+    );
+    // Whose bottles may go: the member's own on their delivery, otherwise none held for an owner
+    const holds = ownerId
+      ? null
+      : await getCollectorStockHolds(present.map((s) => ({ ...s, id: s.stockId })));
+    const inStock = present.filter((s) =>
+      ownerId ? s.ownerId === ownerId : !holds?.isHeld({ ...s, id: s.stockId }),
     );
     if (inStock.length === 0) return null;
     const exact =
@@ -172,7 +196,7 @@ const resolvePickStock = async ({
           or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
         ),
       );
-    const best = pick(rows);
+    const best = await pick(rows);
     if (best) {
       return {
         stockId: best.stockId,
@@ -184,18 +208,21 @@ const resolvePickStock = async ({
     }
   }
 
-  // Primary — wine code + vintage, pack-agnostic, in stock.
+  // Primary — wine code + vintage + bottle size, pack-agnostic, in stock.
   if (wineCode && vintageStr) {
     const rows: StockRow[] = await db
       .select(select)
       .from(wmsStock)
       .where(
         and(
-          like(wmsStock.lwin18, `${wineCode}-${vintageStr}-%`),
+          like(
+            wmsStock.lwin18,
+            sizeStr ? `${wineCode}-${vintageStr}-%-${sizeStr}` : `${wineCode}-${vintageStr}-%`,
+          ),
           or(gt(wmsStock.quantityCases, 0), gt(wmsStock.openBottles, 0)),
         ),
       );
-    const best = pick(rows);
+    const best = await pick(rows);
     if (best) {
       return {
         stockId: best.stockId,
@@ -268,7 +295,7 @@ const resolvePickStock = async ({
       rows.map((r) => r.lwin18.split('-')[0]).filter(Boolean),
     );
     if (distinctWines.size === 1) {
-      const best = pick(rows);
+      const best = await pick(rows);
       if (best) {
         return {
           stockId: best.stockId,
