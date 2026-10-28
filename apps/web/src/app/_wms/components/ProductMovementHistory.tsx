@@ -26,10 +26,21 @@ export interface ProductMovementHistoryProps {
 const ProductMovementHistory = ({ lwin18, limit = 50 }: ProductMovementHistoryProps) => {
   const api = useTRPC();
   const { data, isLoading } = useQuery({
-    ...api.wms.admin.stock.getMovements.queryOptions({ lwin18, limit }),
+    // The case these bottles came from, and the pick that opened it, belong in their story
+    ...api.wms.admin.stock.getMovements.queryOptions({ lwin18, allPacks: true, limit }),
   });
 
   const movements = data?.movements ?? [];
+  const packOf = (code: string) => Number(code.split('-')[2]) || 1;
+  /** Bottles where the movement recorded them, else cases of this row's pack */
+  const quantityLabel = (m: (typeof movements)[number]) => {
+    const pack = packOf(m.lwin18);
+    if (m.quantityBottles != null && (pack === 1 || m.movementType === 'pick')) {
+      const n = Math.abs(m.quantityBottles);
+      return `${m.quantityBottles < 0 ? '−' : ''}${n} btl`;
+    }
+    return `${m.quantityCases < 0 ? '−' : ''}${Math.abs(m.quantityCases)} cs`;
+  };
 
   const formatDate = (date: Date | string) =>
     new Date(date).toLocaleString('en-GB', {
@@ -86,13 +97,23 @@ const ProductMovementHistory = ({ lwin18, limit = 50 }: ProductMovementHistoryPr
                   {formatDate(m.performedAt)}
                 </td>
                 <td className="px-3 py-2">
-                  <MovementTypeBadge
-                    movementType={m.movementType as MovementTypeBadgeProps['movementType']}
-                    size="sm"
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <MovementTypeBadge
+                      movementType={m.movementType as MovementTypeBadgeProps['movementType']}
+                      size="sm"
+                    />
+                    {m.lwin18 !== lwin18 && (
+                      <span
+                        className="rounded-full bg-fill-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted"
+                        title={m.lwin18}
+                      >
+                        {packOf(m.lwin18) === 1 ? 'single' : `${packOf(m.lwin18)}-pack`}
+                      </span>
+                    )}
+                  </div>
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums font-medium text-text-primary">
-                  {m.quantityCases}
+                <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums font-medium text-text-primary">
+                  {quantityLabel(m)}
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-1.5 font-mono text-xs text-text-secondary">
