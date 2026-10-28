@@ -60,6 +60,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import PackBadge from '@/app/_wms/components/PackBadge';
 import ProductMovementHistory from '@/app/_wms/components/ProductMovementHistory';
 import StockForSaleToggle from '@/app/_wms/components/StockForSaleToggle';
+import AddToStockPanel from '@/app/_wms/components/AddToStockPanel';
 import TakeOutOfStockPanel from '@/app/_wms/components/TakeOutOfStockPanel';
 import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
@@ -771,6 +772,7 @@ const ProductRow = ({
   const [adjustReason, setAdjustReason] = useState('');
   const [packStockId, setPackStockId] = useState<string | null>(null);
   const [takingOut, setTakingOut] = useState(false);
+  const [addingMore, setAddingMore] = useState(false);
   const [packConfig, setPackConfig] = useState(0);
   const [packReason, setPackReason] = useState('');
   const [transferringStockId, setTransferringStockId] = useState<string | null>(
@@ -1159,8 +1161,34 @@ const ProductRow = ({
                     <IconPackage className="mr-1 h-3 w-3" />
                     {packStockId ? 'Cancel' : 'Fix pack'}
                   </Button>
+                  <Button
+                    variant={addingMore ? 'default' : 'outline'}
+                    size="xs"
+                    title="Wine that missed receiving: add it to an owner's stock, dated the day it arrived"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAddingMore((v) => !v);
+                    }}
+                  >
+                    <IconPlus className="mr-1 h-3 w-3" />
+                    {addingMore ? 'Cancel' : 'Add more'}
+                  </Button>
                 </div>
               </div>
+              {addingMore && (
+                <div className="mb-2">
+                  <AddToStockPanel
+                    template={{
+                      lwin18: product.lwin18,
+                      productName: product.productName,
+                      caseConfig: product.caseConfig,
+                      ownerId: product.locations[0]?.ownerId,
+                      locationCode: product.locations[0]?.locationCode,
+                    }}
+                    onClose={() => setAddingMore(false)}
+                  />
+                </div>
+              )}
               {takingOut && (
                 <div className="mb-2">
                   <TakeOutOfStockPanel
@@ -2248,6 +2276,7 @@ const StockExplorerPage = () => {
     localStorage.setItem('se-full-names', fullNames ? '1' : '0');
   }, [fullNames]);
   const [showZeroQty, setShowZeroQty] = useState(false);
+  const [addingStock, setAddingStock] = useState(false);
   const [category, setCategory] = useState<CategoryFilter | undefined>('Wine');
   const [sortBy, setSortBy] = useState<SortField>('totalCases');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -2774,6 +2803,16 @@ const StockExplorerPage = () => {
             </Typography>
           </div>
           <div className="flex items-center gap-2">
+            {/* Wine that missed receiving, booked in on the day it arrived */}
+            <Button
+              variant={addingStock ? 'outline' : 'default'}
+              size="sm"
+              onClick={() => setAddingStock((v) => !v)}
+            >
+              <IconPlus className="h-4 w-4" />
+              {addingStock ? 'Cancel' : 'Add to stock'}
+            </Button>
+
             {/* Density toggle */}
             <div className="border-border-muted flex items-center rounded-lg border">
               {(['compact', 'normal', 'relaxed'] as RowDensity[]).map((d) => (
@@ -2829,6 +2868,8 @@ const StockExplorerPage = () => {
             </Button>
           </div>
         </div>
+
+        {addingStock && <AddToStockPanel onClose={() => setAddingStock(false)} />}
 
         {/*
           Details a repacked row never inherited.
