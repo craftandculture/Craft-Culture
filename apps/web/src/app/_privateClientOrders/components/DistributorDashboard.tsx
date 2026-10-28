@@ -47,7 +47,7 @@ const DistributorDashboard = () => {
   const trpcClient = useTRPCClient();
   const [currency, setCurrency] = useState<Currency>('AED');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['privateClientOrders.distributorDashboard'],
     queryFn: () => trpcClient.privateClientOrders.distributorDashboard.query(),
     refetchInterval: 30000,
@@ -76,12 +76,18 @@ const DistributorDashboard = () => {
   }
 
   if (!data) {
+    // A failed load used to read "No data available", as if there were no orders
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
         <Icon icon={IconPackage} size="xl" className="text-text-muted" />
         <Typography variant="bodySm" colorRole="muted">
-          No data available
+          {isError ? 'The dashboard could not be loaded.' : 'No data available'}
         </Typography>
+        {isError && (
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Try again
+          </Button>
+        )}
       </div>
     );
   }

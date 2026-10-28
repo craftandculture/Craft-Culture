@@ -75,6 +75,11 @@ const PlatformMobileNav = ({ user, isStaff = false }: PlatformMobileNavProps) =>
       title: 'CRM',
       links: [{ href: '/platform/clients', label: 'Clients' }],
     });
+    // On the desktop bar beside CRM; the phone had lost it
+    sections.push({
+      title: 'Source',
+      links: [{ href: '/platform/partner/source', label: 'Source' }],
+    });
   }
 
   // Distributor section - for B2B users and distributor partners (not admins)
@@ -106,6 +111,8 @@ const PlatformMobileNav = ({ user, isStaff = false }: PlatformMobileNavProps) =>
 
   // Support routes to the desk that knows this kind of account.
   const getSupportHref = () => {
+    // A collector's help is on the general route, as the footer already sends them
+    if (access.kind === 'collector') return '/platform/support';
     if (access.can.ownsStock) return '/platform/partner/support';
     if (access.can.distributorTools) return '/platform/distributor/support';
     return '/platform/support';

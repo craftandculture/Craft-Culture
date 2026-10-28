@@ -72,7 +72,7 @@ const PrivateOrdersList = () => {
     return 'all';
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['privateClientOrders.getMany', { limit: 20, cursor, search: search || undefined }],
     queryFn: () =>
       trpcClient.privateClientOrders.getMany.query({
@@ -305,6 +305,15 @@ const PrivateOrdersList = () => {
           <Typography variant="bodySm" colorRole="muted">
             Loading orders...
           </Typography>
+        </div>
+      ) : isError && !data ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border-muted bg-surface-secondary/30 py-12">
+          <Typography variant="bodySm" className="font-medium">
+            Your orders could not be loaded
+          </Typography>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Try again
+          </Button>
         </div>
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-border-muted bg-surface-secondary/30 py-12">
