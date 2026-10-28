@@ -44,6 +44,9 @@ import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import PricingBandsEditor from '@/app/_wms/components/PricingBandsEditor';
+import pricePricingManagerRow, {
+  type PricingManagerRowInput,
+} from '@/app/_wms/utils/pricePricingManagerRow';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1784,47 +1787,26 @@ const PricingManagerPage = () => {
       const aoa: (string | number)[][] = [[
         'Product', 'Producer', 'Vintage', 'Status', 'Pack', 'Cases', 'Bottles', 'Import $/btl', 'Logistics $/btl',
         'Transfer $/btl', 'Override $/btl', 'Landed $/btl', 'Import $/case', 'In Bond $/btl', 'In Bond $/case',
-        'PC Price $/btl', 'PC Price $/case', 'Margin %',
+        'PC Price $/btl', 'PC Price $/case', 'Margin % (PC vs In Bond)', 'Margin % (In Bond vs Landed)',
       ]];
       for (const p of all) {
         const caseConfig = p.caseConfig ?? 12;
         const override = p.costOverridePerBottle ?? null;
-        // Logistics = live system freight/btl; C&C wine with no profile → $22.50.
-        // Transfer = FZ→mainland ($2.50 default).
-        const systemLog = (p as { systemLogistics?: number | null }).systemLogistics ?? 0;
-        const isCcWine =
-          (p as { isCraftCulture?: number }).isCraftCulture === 1 &&
-          (p.category === 'Wine' || p.category == null);
-        const lineLog = (p as { lineLogistics?: number | null }).lineLogistics ?? null;
-        const rowLog =
-          lineLog != null ? lineLog : systemLog > 0 ? systemLog : isCcWine ? 22.5 : 0;
-        const transferDefault =
-          (p as { isZeroTransferOwner?: number }).isZeroTransferOwner === 1 ? 0 : 2.5;
-        const rowTransfer =
-          (p as { transferPricePerBottle?: number | null }).transferPricePerBottle ??
-          transferDefault;
-        const rowInbondDiv = (() => {
-          const pct = ownerId ? effInbondPct : (p.ownerInbondPct ?? inBondMarkupPct);
-          return pct < 100 ? 1 - pct / 100 : null;
-        })();
-        const rowPcDiv = (() => {
-          const pct = ownerId ? effPcPct : (p.ownerPcPct ?? (pcMarginPct > 0 ? pcMarginPct : null));
-          return pct != null && pct < 100 ? 1 - pct / 100 : null;
-        })();
-        const hasCost = (p.importPricePerBottle != null && p.importPricePerBottle > 0) || override != null;
-        const landed = hasCost
-          ? (p.importPricePerBottle ?? 0) + rowLog + rowTransfer + (override ?? 0)
-          : null;
-        const inBond = landed && rowInbondDiv ? landed / rowInbondDiv : null;
-        const ownerP = ownerId ? ownerPrices[p.lwin18] : undefined;
-        const computed =
-          rowPcDiv != null && inBond != null && inBond > 0
-            ? Math.round(inBond * 100) / 100 / rowPcDiv
-            : null;
-        const sell =
-          ownerP != null && ownerP > 0 ? ownerP : computed != null ? computed : p.sellingPricePerBottle;
-        // Margin measured against the in-bond (B2B) price
-        const margin = calcMargin(inBond, sell);
+        // The same function the table uses, so a margin typed on the row is in the sheet too
+        const priced = pricePricingManagerRow(p as PricingManagerRowInput, {
+          ownerSelected: !!ownerId,
+          effInbondPct,
+          effPcPct,
+          inBondMarkupPct,
+          pcMarginPct,
+          ownerPcPrice: ownerId ? ownerPrices[p.lwin18] : null,
+        });
+        const rowLog = priced.logistics;
+        const rowTransfer = priced.transfer;
+        const landed = priced.landed;
+        const inBond = priced.inBond;
+        const sell = priced.sellPrice;
+        const margin = priced.pcMargin;
         const num = (v: number | null | undefined, dp = 2) =>
           v != null ? Number(v.toFixed(dp)) : '';
         aoa.push([
@@ -1846,14 +1828,15 @@ const PricingManagerPage = () => {
           num(sell),
           num(sell != null ? sell * caseConfig : null),
           num(margin, 1),
+          num(priced.inbondMargin, 1),
         ]);
       }
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       ws['!cols'] = [
         { wch: 40 }, { wch: 22 }, { wch: 8 }, { wch: 24 }, { wch: 10 }, { wch: 7 }, { wch: 8 }, { wch: 12 }, { wch: 13 },
-        { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 9 },
+        { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 13 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
       ];
-      ws['!autofilter'] = { ref: `A1:R${all.length + 1}` };
+      ws['!autofilter'] = { ref: `A1:S${all.length + 1}` };
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Pricing');
       XLSX.writeFile(wb, `pricing-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -2873,99 +2856,36 @@ const PricingManagerPage = () => {
                     const costOverride =
                       (product as { costOverridePerBottle?: number | null }).costOverridePerBottle ??
                       null;
-                    // Rates: a selected owner's rates apply to all rows; in "All Owners" each row
-                    // uses ITS owner's own rates (falling back to the global toolbar values).
-                    const orow = product as {
-                      ownerLogistics?: number | null;
-                      ownerInbondPct?: number | null;
-                      ownerPcPct?: number | null;
-                    };
-                    // Logistics = live group/shipment freight per bottle (from the
-                    // system; read-only). C&C-owned wine with no freight profile
-                    // (old imports) falls back to $22.50. Transfers = FZ→mainland
-                    // fee ($2.50 default, editable per SKU).
-                    const systemLog =
-                      (product as { systemLogistics?: number | null }).systemLogistics ?? 0;
-                    const isCcWine =
-                      (product as { isCraftCulture?: number }).isCraftCulture === 1 &&
-                      (product.category === 'Wine' || product.category == null);
-                    // Per-line override beats live system freight / the C&C fallback
+                    // Kept for the cells that edit them
                     const lineLogistics =
                       (product as { lineLogistics?: number | null }).lineLogistics ?? null;
-                    const rowLogistics =
-                      lineLogistics != null
-                        ? lineLogistics
-                        : systemLog > 0
-                          ? systemLog
-                          : isCcWine
-                            ? 22.5
-                            : 0;
                     const transferStored =
                       (product as { transferPricePerBottle?: number | null })
                         .transferPricePerBottle ?? null;
-                    // Cru Wine / Crurated default to $0 transfer; everyone else $2.50
-                    const transferDefault =
-                      (product as { isZeroTransferOwner?: number }).isZeroTransferOwner === 1
-                        ? 0
-                        : 2.5;
-                    const rowTransfer = transferStored ?? transferDefault;
-                    // A margin typed on THIS row wins over the owner's rate and
-                    // the toolbar default — otherwise saving one changed the
-                    // stored value and nothing on screen, which reads as the
-                    // save having failed.
                     /*
-                      Spirits and RTD are priced like wine: In Bond % over
-                      landed, then PC % over In Bond, which is what the price
-                      list has always published. A margin set on a spirit
-                      before that (its old single "bespoke" margin) is kept as
-                      its In Bond margin until one is typed.
+                      One definition of every price on the row, shared with the
+                      Excel export so the sheet always says what the screen says.
+                      A selected owner's rates apply to all rows; in "All Owners"
+                      each row uses its owner's rates, then the toolbar. A margin
+                      typed on this row beats both.
                     */
-                    const isSpiritOrRtd =
-                      product.category === 'Spirits' || product.category === 'RTD';
-                    const bespokeMargin =
-                      (product as { sellMarginPct?: number | null }).sellMarginPct ?? null;
-                    const lineB2bPct =
-                      (product as { b2bMarginPct?: number | null }).b2bMarginPct ??
-                      (isSpiritOrRtd ? bespokeMargin : null);
-                    const linePcPct =
-                      (product as { pcMarginPct?: number | null }).pcMarginPct ?? null;
-                    const rowInbondPct =
-                      lineB2bPct ??
-                      (ownerId ? effInbondPct : (orow.ownerInbondPct ?? inBondMarkupPct));
-                    const rowInbondDivisor = rowInbondPct < 100 ? 1 - rowInbondPct / 100 : null;
-                    const rowPcPct =
-                      linePcPct ??
-                      (ownerId
-                        ? effPcPct
-                        : (orow.ownerPcPct ?? (pcMarginPct > 0 ? pcMarginPct : null)));
-                    const rowPcDivisor =
-                      rowPcPct != null && rowPcPct < 100 ? 1 - rowPcPct / 100 : null;
-                    // Landed = import (paid) + logistics + transfer + manual override
-                    const hasCost = (importPrice != null && importPrice > 0) || costOverride != null;
-                    const landed = hasCost
-                      ? (importPrice ?? 0) + rowLogistics + rowTransfer + (costOverride ?? 0)
-                      : null;
-                    const ownerPcPrice = ownerId ? ownerPriceMap[product.lwin18] : undefined;
-                    const storedOwnerPrice =
-                      ownerId != null && ownerPcPrice != null && ownerPcPrice > 0 ? ownerPcPrice : null;
-
-                    const inBondPrice =
-                      landed != null && rowInbondDivisor ? landed / rowInbondDivisor : null;
-                    // PC precedence: an ACTIVE PC% drives the price and beats stored prices;
-                    // else stored owner price, then default. PC is a margin on the IN-BOND
-                    // price (which already reflects the override via landed).
-                    const computedPc =
-                      rowPcDivisor != null && inBondPrice != null && inBondPrice > 0
-                        ? Math.round(inBondPrice * 100) / 100 / rowPcDivisor
-                        : null;
-                    const sellPrice =
-                      computedPc != null
-                        ? computedPc
-                        : (storedOwnerPrice ?? product.sellingPricePerBottle);
-                    const isSuggestedPc = computedPc != null;
-                    const hasOwnerPrice = computedPc == null && storedOwnerPrice != null;
+                    const priced = pricePricingManagerRow(product as PricingManagerRowInput, {
+                      ownerSelected: !!ownerId,
+                      effInbondPct,
+                      effPcPct,
+                      inBondMarkupPct,
+                      pcMarginPct,
+                      ownerPcPrice: ownerId ? ownerPriceMap[product.lwin18] : null,
+                    });
+                    const rowLogistics = priced.logistics;
+                    const rowTransfer = priced.transfer;
+                    const landed = priced.landed;
+                    const inBondPrice = priced.inBond;
+                    const sellPrice = priced.sellPrice;
+                    const isSuggestedPc = priced.computedPc != null;
+                    const hasOwnerPrice = priced.computedPc == null && priced.storedOwnerPrice != null;
                     // Margin measured against the in-bond (B2B) price
-                    const margin = calcMargin(inBondPrice, sellPrice);
+                    const margin = priced.pcMargin;
                     const marginPerBottle =
                       inBondPrice &&
                       sellPrice &&
