@@ -1,3 +1,9 @@
+## [2.1.9](https://github.com/craftandculture/Craft-Culture/compare/v2.1.8...v2.1.9) (2026-10-28)
+
+### Features
+
+* wine that missed receiving can be added to stock from Stock Explorer, dated the day it arrived ([9c9bd48](https://github.com/craftandculture/Craft-Culture/commit/9c9bd48110ba944577422801bb5753bb3ac97e14))
+
 ## [2.1.8](https://github.com/craftandculture/Craft-Culture/compare/v2.1.7...v2.1.8) (2026-10-28)
 
 ### Features
