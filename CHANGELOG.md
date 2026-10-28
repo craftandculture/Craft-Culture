@@ -1,3 +1,9 @@
+## [2.1.2](https://github.com/craftandculture/Craft-Culture/compare/v2.1.1...v2.1.2) (2026-10-28)
+
+### Bug Fixes
+
+* a member's own delivery is now picked only from their own bottles, and a pick booked to the wrong owner can be moved to the right one ([dd45aaa](https://github.com/craftandculture/Craft-Culture/commit/dd45aaa24a5cd0bd571458d4e119f798ddf30c94))
+
 ## [2.1.1](https://github.com/craftandculture/Craft-Culture/compare/v2.1.0...v2.1.1) (2026-10-28)
 
 ### Features
