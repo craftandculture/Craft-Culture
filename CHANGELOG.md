@@ -1,3 +1,9 @@
+## [2.1.24](https://github.com/craftandculture/Craft-Culture/compare/v2.1.23...v2.1.24) (2026-10-28)
+
+### Bug Fixes
+
+* **logistics:** "Arriving soonest" lists shipments still on their way first ([bade56a](https://github.com/craftandculture/Craft-Culture/commit/bade56abb4b4223f6819159a8e86c1c593ebe29a))
+
 ## [2.1.23](https://github.com/craftandculture/Craft-Culture/compare/v2.1.22...v2.1.23) (2026-10-28)
 
 ### Features
