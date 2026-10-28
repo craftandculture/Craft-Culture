@@ -295,6 +295,7 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
             originCity: logisticsShipments.originCity,
             totalCases: logisticsShipments.totalCases,
             totalBottles: logisticsShipments.totalBottles,
+            etaConfirmed: logisticsShipments.etaConfirmed,
           })
           .from(logisticsShipments)
           .where(eq(logisticsShipments.hillebrandShipmentId, hShipment.id))
@@ -397,10 +398,29 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
             ...tracking
           } = shipmentData;
 
+          /*
+            Only what Hillebrand actually sent is written.
+
+            A field missing from their response parsed to null and was written
+            over whatever was there, so an arrival date, a container number or
+            an ETA someone had entered vanished on the next sync — and a
+            delivered shipment lost its ata. A value they do send still
+            refreshes ours; an absent one leaves ours alone.
+
+            An ETA staff have marked confirmed is theirs to change, so it is
+            not replaced by Hillebrand's estimate. And a missing modality
+            would read as sea freight by default, so it is not written either.
+          */
+          const reported = Object.fromEntries(
+            Object.entries(tracking).filter(([, value]) => value != null),
+          ) as Partial<typeof tracking>;
+          if (existing.etaConfirmed) delete reported.eta;
+          if (!detailedShipment.mainModality) delete reported.transportMode;
+
           await db
             .update(logisticsShipments)
             .set({
-              ...tracking,
+              ...reported,
               status,
               ...(!existing.destinationCity && { destinationCity }),
               ...(!existing.destinationWarehouse && { destinationWarehouse }),

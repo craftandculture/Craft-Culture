@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, ne, or } from 'drizzle-orm';
+import { and, eq, inArray, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -15,6 +15,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import generateShipmentNumber from '../utils/generateShipmentNumber';
+import { QUOTED_FREIGHT_SOURCE } from '../utils/quotedFreightLine';
 import quoteTotalUsd from '../utils/quoteTotalUsd';
 import resolveFxToUsd from '../utils/resolveFxToUsd';
 import syncShipmentCostsFromLedger from '../utils/syncShipmentCostsFromLedger';
@@ -52,7 +53,8 @@ const acceptQuoteSchema = z.object({
  *   shipment; a draft job takes the winning quote's mode and forwarder
  * - Records the quoted price as the shipment's freight cost, as a line in the
  *   shipment's cost ledger where the shipment keeps one
- * - Rejects the other pending quotes for the same request and shipment
+ * - Refuses if another quote for the same request or shipment is already
+ *   accepted, and rejects the others still open (pending, expired or draft)
  * - Marks the request the quote answers as completed
  *
  * @example
@@ -246,6 +248,50 @@ const adminAcceptQuote = adminProcedure
         ].filter((c) => c !== undefined);
 
         if (competitors.length > 0) {
+          /*
+            A quote that already won stays the winner.
+
+            Losers used to be rejected only while pending, so an expired one
+            was left as it was; editing its validity made it pending again and
+            it could then be accepted beside the first, booking a second
+            freight line on the same shipment. The request and the shipment
+            are locked first so two accepts at the same moment are checked one
+            after the other rather than both seeing no winner.
+          */
+          if (quote.requestId) {
+            await tx
+              .select({ id: logisticsQuoteRequests.id })
+              .from(logisticsQuoteRequests)
+              .where(eq(logisticsQuoteRequests.id, quote.requestId))
+              .for('update');
+          }
+          if (targetShipmentId) {
+            await tx
+              .select({ id: logisticsShipments.id })
+              .from(logisticsShipments)
+              .where(eq(logisticsShipments.id, targetShipmentId))
+              .for('update');
+          }
+
+          const [alreadyWon] = await tx
+            .select({ quoteNumber: logisticsQuotes.quoteNumber })
+            .from(logisticsQuotes)
+            .where(
+              and(
+                or(...competitors),
+                eq(logisticsQuotes.status, 'accepted'),
+                ne(logisticsQuotes.id, quoteId),
+              ),
+            )
+            .limit(1);
+
+          if (alreadyWon) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: `Quote ${alreadyWon.quoteNumber} is already accepted for this request or shipment. Nothing was changed.`,
+            });
+          }
+
           await tx
             .update(logisticsQuotes)
             .set({
@@ -258,7 +304,8 @@ const adminAcceptQuote = adminProcedure
             .where(
               and(
                 or(...competitors),
-                eq(logisticsQuotes.status, 'pending'),
+                // Expired and draft quotes too, so none can be revived later
+                inArray(logisticsQuotes.status, ['pending', 'expired', 'draft']),
                 ne(logisticsQuotes.id, quoteId),
               ),
             );
@@ -269,10 +316,13 @@ const adminAcceptQuote = adminProcedure
         if (targetShipmentId && updateShipmentCosts) {
           if (fx && fx.source !== 'unresolved') {
             const ledgerLines = await tx
-              .select({ id: logisticsShipmentCostLines.id })
+              .select({
+                id: logisticsShipmentCostLines.id,
+                category: logisticsShipmentCostLines.category,
+                sourceDocument: logisticsShipmentCostLines.sourceDocument,
+              })
               .from(logisticsShipmentCostLines)
-              .where(eq(logisticsShipmentCostLines.shipmentId, targetShipmentId))
-              .limit(1);
+              .where(eq(logisticsShipmentCostLines.shipmentId, targetShipmentId));
             const amountUsd = Math.round(quote.totalPrice * fx.rate * 100) / 100;
 
             // A shipment that keeps a ledger gets a ledger line; one whose costs were
@@ -283,7 +333,22 @@ const adminAcceptQuote = adminProcedure
               request.sourceType !== 'shipment' &&
               request.shipmentId === targetShipmentId;
 
-            if (
+            /*
+              Freight already billed is the real figure, so the quote is not
+              added on top of it: the ledger sums every line, and an invoice
+              read before the quote was accepted would otherwise be counted
+              twice in the landed cost.
+            */
+            const billedFreight = ledgerLines.some(
+              (line) =>
+                line.category === 'freight' &&
+                line.sourceDocument !== QUOTED_FREIGHT_SOURCE,
+            );
+
+            if (billedFreight) {
+              // The invoice's freight stands; the response still reports freight
+              // as recorded, since the shipment has it
+            } else if (
               ledgerLines.length > 0 ||
               createdShipmentNumber ||
               openedByRequest
@@ -298,7 +363,7 @@ const adminAcceptQuote = adminProcedure
                 amountUsd,
                 vendor: quote.forwarderName,
                 invoiceRef: quote.quoteNumber,
-                sourceDocument: 'Accepted freight quote',
+                sourceDocument: QUOTED_FREIGHT_SOURCE,
                 createdBy: ctx.user.id,
               });
               await syncShipmentCostsFromLedger(targetShipmentId, tx);

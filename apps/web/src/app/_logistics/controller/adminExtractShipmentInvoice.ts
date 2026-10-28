@@ -18,6 +18,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import isFetchableLogisticsFileUrl from '../utils/isFetchableLogisticsFileUrl';
+import supersedeQuotedFreight from '../utils/quotedFreightLine';
 import resolveFxToUsd from '../utils/resolveFxToUsd';
 import syncShipmentCostsFromLedger from '../utils/syncShipmentCostsFromLedger';
 
@@ -251,6 +252,11 @@ const adminExtractShipmentInvoice = adminProcedure
 
         if (rows.length > 0) await tx.insert(logisticsShipmentCostLines).values(rows);
 
+        // The billed freight replaces the accepted quote's estimate of it
+        const quotedFreightRemoved = rows.some((r) => r.category === 'freight')
+          ? await supersedeQuotedFreight(input.shipmentId, tx)
+          : 0;
+
         await tx.insert(logisticsShipmentActivityLogs).values({
           shipmentId: input.shipmentId,
           userId: ctx.user.id,
@@ -264,6 +270,7 @@ const adminExtractShipmentInvoice = adminProcedure
             fxSource: fx.source,
             linesReplaced: removed.length,
             linesWritten: rows.length,
+            quotedFreightRemoved,
             totalUsd: documentUsd,
             lines: rows.map((r) => ({ category: r.category, description: r.description, amount: r.amount })),
           },

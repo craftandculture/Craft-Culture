@@ -1,7 +1,10 @@
+import USD_TO_AED from '@/lib/currency/usdToAed';
+
 /** USD-pegged currencies convert at a fixed rate rather than a lookup. */
 export const PEGGED: Record<string, number> = {
   USD: 1,
-  AED: 0.2723,
+  // From the house peg (3.6725 AED per USD), not a rounded 0.2723
+  AED: 1 / USD_TO_AED,
   SAR: 0.2667,
   QAR: 0.2747,
   BHD: 2.6539,
