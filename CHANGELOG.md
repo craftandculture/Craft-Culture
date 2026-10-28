@@ -1,3 +1,9 @@
+## [2.1.20](https://github.com/craftandculture/Craft-Culture/compare/v2.1.19...v2.1.20) (2026-10-28)
+
+### Features
+
+* **logistics:** next actions, owners and a no-news clock on every shipment ([27904c5](https://github.com/craftandculture/Craft-Culture/commit/27904c50e3316a5dc1ea964036903057f0e5d339))
+
 ## [2.1.19](https://github.com/craftandculture/Craft-Culture/compare/v2.1.18...v2.1.19) (2026-10-28)
 
 ### Features
