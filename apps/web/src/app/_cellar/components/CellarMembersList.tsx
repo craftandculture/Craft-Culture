@@ -206,9 +206,15 @@ const CellarMembersList = () => {
                   className="border-border-muted hover:bg-fill-muted/40 border-b transition-colors last:border-b-0"
                 >
                   <td className="px-4 py-2.5">
-                    <Typography variant="bodySm" className="font-semibold">
-                      {member.name}
-                    </Typography>
+                    <Link
+                      href={`/platform/admin/cellar-statements?member=${member.id}`}
+                      className="hover:underline"
+                      title="Open this member's statement"
+                    >
+                      <Typography variant="bodySm" className="font-semibold">
+                        {member.name}
+                      </Typography>
+                    </Link>
                     {member.code && (
                       <span className="text-text-muted mr-1.5 font-mono text-[11px]">
                         {member.code}
