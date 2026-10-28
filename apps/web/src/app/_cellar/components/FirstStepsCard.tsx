@@ -43,7 +43,7 @@ const FirstStepsCard = ({ eyebrow, title, message, steps, action }: FirstStepsCa
         {steps.map((step, index) => (
           <li
             key={step.title}
-            className="bg-background-primary relative flex flex-col items-center rounded-xl border border-black/[0.06] px-4 pt-5 pb-5 text-center shadow-sm dark:border-white/10 dark:bg-white/[0.04]"
+            className="bg-surface-primary relative flex flex-col items-center rounded-xl border border-black/[0.06] px-4 pt-5 pb-5 text-center shadow-sm dark:border-white/10 dark:bg-white/[0.04]"
           >
             <span className="relative grid size-11 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
               <step.icon size={20} />

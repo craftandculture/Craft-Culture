@@ -266,7 +266,7 @@ const MemberUpdatesAdmin = () => {
             : 'Nothing here.'}
         </p>
       ) : (
-        <div className="border-border-muted bg-background-primary divide-border-muted divide-y rounded-xl border">
+        <div className="border-border-muted bg-surface-primary divide-border-muted divide-y rounded-xl border">
           {shown.map((row) => (
             <div
               key={row.id}

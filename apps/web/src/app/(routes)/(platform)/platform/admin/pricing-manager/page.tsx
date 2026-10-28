@@ -2053,7 +2053,7 @@ const PricingManagerPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search products"
-            className="w-full rounded-xl border-2 border-border-primary bg-background-primary py-3 pl-12 pr-11 text-base font-medium text-text-primary shadow-sm transition-all placeholder:font-normal placeholder:text-text-muted/70 focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-border-brand/25"
+            className="w-full rounded-xl border-2 border-border-primary bg-surface-primary py-3 pl-12 pr-11 text-base font-medium text-text-primary shadow-sm transition-all placeholder:font-normal placeholder:text-text-muted/70 focus:border-border-brand focus:outline-none focus:ring-2 focus:ring-border-brand/25"
           />
           {search && (
             <button

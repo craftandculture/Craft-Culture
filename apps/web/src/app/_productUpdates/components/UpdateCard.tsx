@@ -45,7 +45,7 @@ const UpdateCard = ({ type, title, body, linkPath, isNew, highlight, preview }: 
 
   return (
     <article
-      className={`bg-background-primary rounded-xl border px-4 py-4 dark:bg-white/[0.045] dark:shadow-none shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_14px_rgba(0,0,0,0.04)] sm:px-6 sm:py-5 ${
+      className={`bg-surface-primary rounded-xl border px-4 py-4 dark:bg-white/[0.045] dark:shadow-none shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_14px_rgba(0,0,0,0.04)] sm:px-6 sm:py-5 ${
         isNew ? 'border-emerald-400 ring-1 ring-emerald-400/30 dark:border-emerald-700' : 'border-black/[0.08] dark:border-white/10'
       }`}
     >

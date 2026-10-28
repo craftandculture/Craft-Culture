@@ -50,7 +50,7 @@ const SkeletonRow = () => (
 
 /** Mobile skeleton card */
 const SkeletonCard = () => (
-  <div className="rounded-xl border border-border-muted bg-background-primary p-4">
+  <div className="rounded-xl border border-border-muted bg-surface-primary p-4">
     <div className="mb-3 h-5 w-3/4 animate-pulse rounded bg-surface-muted" />
     <div className="mb-2 h-4 w-1/2 animate-pulse rounded bg-surface-muted" />
     <div className="flex gap-4">
@@ -382,7 +382,7 @@ const PartnerStockPage = () => {
               return (
                 <div
                   key={key}
-                  className="overflow-hidden rounded-xl border border-border-muted bg-background-primary shadow-sm"
+                  className="overflow-hidden rounded-xl border border-border-muted bg-surface-primary shadow-sm"
                 >
                   {/* Card header — tappable */}
                   <button
@@ -492,7 +492,7 @@ const PartnerStockPage = () => {
 
         {/* ─── Desktop Table Layout ───────────────────────────────── */}
         <div className="hidden md:block">
-          <div className="overflow-hidden rounded-xl border border-border-muted bg-background-primary shadow-sm">
+          <div className="overflow-hidden rounded-xl border border-border-muted bg-surface-primary shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>

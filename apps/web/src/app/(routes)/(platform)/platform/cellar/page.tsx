@@ -2159,7 +2159,7 @@ const CellarPage = () => {
                   {isOpen && (
                     <tr className="bg-fill-muted/50 shadow-[inset_3px_0_0_0] shadow-emerald-400">
                       <td colSpan={11} className="px-3 py-3 sm:px-6 sm:py-4">
-                        <div className="border-border-muted bg-background-primary rounded-xl border px-3.5 py-3.5 shadow-sm">
+                        <div className="border-border-muted bg-surface-primary rounded-xl border px-3.5 py-3.5 shadow-sm">
                         {wine.locations.length > 0 && location !== 'uk' && (
                         <>
                         {/*
@@ -2591,7 +2591,7 @@ const CellarPage = () => {
 
       {/* Several wines ticked to sell: one dialog for all of them */}
       {sellPicked.size > 0 && (
-        <div className="border-border-muted bg-background-primary sticky bottom-3 z-20 mt-6 hidden items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-xl md:flex">
+        <div className="border-border-muted bg-surface-primary sticky bottom-3 z-20 mt-6 hidden items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-xl md:flex">
           <p className="text-text-primary text-sm">
             <span className="font-semibold tabular-nums">{sellPicked.size}</span>{' '}
             {sellPicked.size === 1 ? 'wine' : 'wines'} chosen to sell
@@ -2613,7 +2613,7 @@ const CellarPage = () => {
       )}
 
       {basket.size > 0 && (
-        <div className="border-border-muted bg-background-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 md:bottom-3 mt-6 overflow-hidden rounded-xl border shadow-xl">
+        <div className="border-border-muted bg-surface-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 md:bottom-3 mt-6 overflow-hidden rounded-xl border shadow-xl">
           <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-200" />
           <div className="p-3 sm:p-4">
           <div className="flex flex-col gap-3">
@@ -2783,7 +2783,7 @@ const CellarPage = () => {
         }
 
         return (
-          <div className="border-border-muted bg-background-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 md:bottom-3 mt-3 overflow-hidden rounded-xl border shadow-xl">
+          <div className="border-border-muted bg-surface-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 md:bottom-3 mt-3 overflow-hidden rounded-xl border shadow-xl">
             <div className="h-1 bg-gradient-to-r from-slate-500 via-slate-400 to-slate-200" />
             <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
               <div className="min-w-0">

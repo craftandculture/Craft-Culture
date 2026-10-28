@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  IconCoin,
-  IconDownload,
-  IconPackageImport,
-  IconPrinter,
-  IconTag,
-  IconTruckDelivery,
-} from '@tabler/icons-react';
+import { IconDownload, IconPrinter } from '@tabler/icons-react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { format, startOfMonth, subMonths } from 'date-fns';
 import { useMemo, useState } from 'react';
@@ -15,7 +8,6 @@ import { flushSync } from 'react-dom';
 
 import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
 import CellarState from '@/app/_cellar/components/CellarState';
-import CellarStatTile from '@/app/_cellar/components/CellarStatTile';
 import StatementGroups from '@/app/_cellar/components/StatementGroups';
 import type { StatementGroup } from '@/app/_cellar/components/StatementGroups';
 import StatementSection from '@/app/_cellar/components/StatementSection';
@@ -279,8 +271,8 @@ const StatementPage = () => {
       </div>
 
       <CellarPageHeader
-        className="statement-header mb-4"
-                title={data?.memberName ?? 'Your statements'}
+        className="statement-header mb-5"
+        title={data?.memberName ?? 'Your statements'}
         description={`${monthLabel}${
           data ? ` · issued ${format(new Date(data.generatedAt), 'd MMMM yyyy')}` : ''
         }`}
@@ -336,52 +328,66 @@ const StatementPage = () => {
 
       {data && totals && (
         <>
-          {/* The cellar home's tiles: the same look wherever a member reads numbers */}
-          <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
+          {/*
+            One strip, read left to right like a statement: what came in, what
+            went out, what sold and what is owed. Only the balance owed carries
+            colour; a month with nothing in a column says so quietly.
+          */}
+          <dl className="border-border-muted bg-surface-primary divide-border-muted mb-7 grid grid-cols-2 divide-x overflow-hidden rounded-xl border sm:grid-cols-4 [&>div:nth-child(n+3)]:border-t sm:[&>div:nth-child(n+3)]:border-t-0">
             {[
               {
                 label: 'Added',
-                value: totals.added.toLocaleString(),
-                detail: totals.added === 1 ? 'bottle' : 'bottles',
-                icon: IconPackageImport,
-                tone: 'blue' as const,
+                value: bottles(totals.added),
+                detail: 'to your cellar',
+                quiet: totals.added === 0,
               },
               {
-                label: 'Delivered to you',
-                value: totals.delivered.toLocaleString(),
-                detail: totals.onItsWay ? `${totals.onItsWay} on the way` : totals.delivered === 1 ? 'bottle' : 'bottles',
-                icon: IconTruckDelivery,
-                tone: 'violet' as const,
+                label: 'Deliveries',
+                value: bottles(totals.delivered + totals.onItsWay),
+                detail: totals.onItsWay
+                  ? totals.delivered
+                    ? `${totals.delivered} delivered · ${totals.onItsWay} on the way`
+                    : 'on the way to you'
+                  : 'delivered to you',
+                quiet: totals.delivered + totals.onItsWay === 0,
               },
               {
                 label: 'Sold',
                 value: money(data.soldUsd + data.soldLeftUsd),
                 detail: `${bottles(totals.sold)}${data.unpricedBottles ? ` · ${data.unpricedBottles} awaiting a price` : ''}`,
-                icon: IconTag,
-                tone: 'amber' as const,
+                quiet: totals.sold === 0,
               },
               {
                 label: 'Owed to you',
                 value: money(Math.max(0, data.owedUsd)),
-                detail: data.paidUsd > 0 ? `${money(data.paidUsd)} paid this month` : 'paid monthly',
-                icon: IconCoin,
-                tone: 'emerald' as const,
+                detail: data.paidUsd > 0 ? `${money(data.paidUsd)} paid this month` : 'Paid monthly',
+                accent: data.owedUsd > 0,
               },
-            ].map((tile) => (
-              <CellarStatTile
-                key={tile.label}
-                label={tile.label}
-                value={tile.value}
-                detail={tile.detail}
-                icon={tile.icon}
-                tone={tile.tone}
-              />
+            ].map((item) => (
+              <div key={item.label} className="min-w-0 px-4 py-3">
+                <dt className="text-text-muted text-[11px] font-medium uppercase tracking-wider">
+                  {item.label}
+                </dt>
+                <dd
+                  className={`mt-1 text-xl font-semibold leading-tight tabular-nums ${
+                    item.accent
+                      ? 'text-emerald-700 dark:text-emerald-400'
+                      : item.quiet
+                        ? 'text-text-muted'
+                        : 'text-text-primary'
+                  }`}
+                >
+                  {item.value}
+                </dd>
+                <dd className="text-text-muted mt-0.5 truncate text-xs">{item.detail}</dd>
+              </div>
             ))}
-          </div>
+          </dl>
 
           <StatementGroups
             title="Deliveries"
             empty="No deliveries this month."
+            total={totals.delivered + totals.onItsWay ? bottles(totals.delivered + totals.onItsWay) : undefined}
             groups={[
               ...groupsOf(data.left.filter((row) => row.outcome === 'delivery')),
               ...data.deliveries.map((delivery) => ({
@@ -402,6 +408,7 @@ const StatementPage = () => {
           <StatementGroups
             title="Sold"
             empty="Nothing sold this month."
+            total={totals.sold ? money(data.soldUsd + data.soldLeftUsd) : undefined}
             groups={[
               ...groupsOf(data.left.filter((row) => row.outcome === 'sale')),
               ...(data.sold.length
@@ -456,19 +463,19 @@ const StatementPage = () => {
             }))}
           />
 
-          <section className="mb-6">
-            <h2 className="text-text-muted mb-2 text-[11px] font-semibold uppercase tracking-wider">
+          <section className="mb-7">
+            <h2 className="text-text-muted mb-1 px-1 text-[11px] font-semibold uppercase tracking-wider">
               Your cellar today · {bottles(totals.uae + totals.uk)}
               {totals.value > 0 ? ` · ${money(totals.value)}` : ''}
             </h2>
-            <p className="text-text-muted mb-2 text-xs">
+            <p className="text-text-muted mb-2 px-1 text-xs">
               As held on {format(new Date(data.generatedAt), 'd MMMM yyyy')}
               {totals.uk > 0 && data.ukReportedAt
                 ? `; wine in the UK as last reported by London City Bond on ${format(new Date(data.ukReportedAt), 'd MMMM yyyy')}`
                 : ''}
               .
             </p>
-            <div className="border-border-muted bg-surface-primary overflow-hidden rounded-xl border shadow-sm">
+            <div className="border-border-muted bg-surface-primary overflow-hidden rounded-xl border">
               <table className="w-full text-sm">
                 <thead className="bg-fill-muted/60 border-border-muted border-b">
                   <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">
@@ -540,7 +547,7 @@ const StatementPage = () => {
               )}
           </section>
 
-          <p className="text-text-muted text-xs leading-5">
+          <p className="text-text-muted border-border-muted max-w-3xl border-t px-1 pt-4 text-xs leading-5">
             Wine in the UAE is held in bond, duty suspended, under Craft &amp;
             Culture&rsquo;s licence on your behalf. Sales are valued at your price
             for each wine. Bottles taken as samples, or damaged in our care, are
