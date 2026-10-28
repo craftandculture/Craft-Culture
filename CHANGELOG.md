@@ -1,3 +1,10 @@
+## [2.1.18](https://github.com/craftandculture/Craft-Culture/compare/v2.1.17...v2.1.18) (2026-10-28)
+
+### Features
+
+* **pricing:** London price reads at a glance, green below London and red when ours is more than 30% above ([43efd68](https://github.com/craftandculture/Craft-Culture/commit/43efd68eb1014a9b6f717938afbc887f500f9a74))
+* **pricing:** vintage stays beside the wine name when the Pricing Manager is scrolled across ([e86955d](https://github.com/craftandculture/Craft-Culture/commit/e86955de767a6b38e6645d8bcd24e2bdcef6bad5))
+
 ## [2.1.17](https://github.com/craftandculture/Craft-Culture/compare/v2.1.16...v2.1.17) (2026-10-28)
 
 ### Features
