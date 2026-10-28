@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import priceWineInBond from '@/app/_winelabs/data/priceWineInBond';
@@ -13,7 +13,7 @@ import { teamProcedure } from '@/lib/trpc/procedures';
 const RECENT_MINUTES = 10;
 
 /**
- * Ask Wine Labs for one wine's London in-bond market now
+ * Ask Wine Labs for one wine's London in-bond market now, in the row's bottle size
  *
  * For a price someone is about to quote on: the order book and the trades,
  * 15 to 30 credits. A price fetched in the last 10 minutes is returned without
@@ -27,7 +27,10 @@ const refreshLondonInBond = teamProcedure
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'This wine has no LWIN the London exchanges know.' });
     }
 
-    const [previous] = await db.select().from(winelabsMarket).where(eq(winelabsMarket.lwin11, code.lwin11));
+    const [previous] = await db
+      .select()
+      .from(winelabsMarket)
+      .where(and(eq(winelabsMarket.lwin11, code.lwin11), eq(winelabsMarket.format, code.format)));
     const recent =
       previous &&
       previous.status !== 'checking' &&

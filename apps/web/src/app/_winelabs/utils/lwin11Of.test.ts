@@ -8,6 +8,7 @@ describe('lwin11Of', () => {
       lwin7: '1012781',
       vintage: '2015',
       lwin11: '10127812015',
+      format: '750',
     });
   });
 
@@ -19,8 +20,18 @@ describe('lwin11Of', () => {
     expect(lwin11Of('1012781-2015-12-00750')?.lwin11).toBe(lwin11Of('1012781-2015-06-01500')?.lwin11);
   });
 
+  it('reads the bottle size in ml', () => {
+    expect(lwin11Of('1012781-2015-06-01500')?.format).toBe('1500');
+    expect(lwin11Of('1012781-2015-01-03000')?.format).toBe('3000');
+  });
+
   it('reads a 0000 vintage as non-vintage', () => {
-    expect(lwin11Of('2360072-0000-06-00750')).toEqual({ lwin7: '2360072', vintage: '1000', lwin11: '23600721000' });
+    expect(lwin11Of('2360072-0000-06-00750')).toEqual({
+      lwin7: '2360072',
+      vintage: '1000',
+      lwin11: '23600721000',
+      format: '750',
+    });
   });
 
   it('refuses codes that are not LWIN18s', () => {

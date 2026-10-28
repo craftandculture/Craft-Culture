@@ -6,19 +6,19 @@ import getInBondMarket from '@/lib/winelabs/getInBondMarket';
 const TRADES_REFRESH_DAYS = 90;
 
 /**
- * Ask Wine Labs for one wine's London in-bond market and save it
+ * Ask Wine Labs for one wine's London in-bond market, in one bottle size, and save it
  *
  * The order book is always asked for (15 credits). The trades (another 15)
  * only when the wine is listed and its trades are over 90 days old, or when
  * `fresh` is set; otherwise the last trade already held is kept.
  *
- * @param wine - The wine and vintage
+ * @param wine - The wine, vintage and bottle size in ml
  * @param previous - The row already held for it, if any
  * @param fresh - Ask for the trades whatever their age (a price someone is about to quote on)
  * @returns The saved row
  */
 const priceWineInBond = async (
-  wine: { lwin11: string; lwin7: string; vintage: string },
+  wine: { lwin11: string; lwin7: string; vintage: string; format: string },
   previous: WinelabsMarket | undefined,
   fresh = false,
 ) => {
@@ -28,7 +28,7 @@ const priceWineInBond = async (
     !previous.tradesCheckedAt ||
     previous.tradesCheckedAt.getTime() < Date.now() - TRADES_REFRESH_DAYS * 24 * 60 * 60 * 1000;
 
-  const market = await getInBondMarket(wine.lwin7, wine.vintage, tradesDue);
+  const market = await getInBondMarket(wine.lwin7, wine.vintage, tradesDue, wine.format);
   const onBook = market.bidUsd !== null || market.askUsd !== null;
   const now = new Date();
 
@@ -62,8 +62,8 @@ const priceWineInBond = async (
 
   const [row] = await db
     .insert(winelabsMarket)
-    .values({ lwin11: wine.lwin11, lwin7: wine.lwin7, vintage: wine.vintage, ...values })
-    .onConflictDoUpdate({ target: winelabsMarket.lwin11, set: values })
+    .values({ lwin11: wine.lwin11, lwin7: wine.lwin7, vintage: wine.vintage, format: wine.format, ...values })
+    .onConflictDoUpdate({ target: [winelabsMarket.lwin11, winelabsMarket.format], set: values })
     .returning();
 
   return row!;

@@ -13,9 +13,9 @@ const priceOf = (row: Record<string, unknown>) => {
 
 /**
  * Read an /exchange/orderbook and an /exchange/trades response into one
- * London in-bond price for a 75cl bottle of one wine and vintage
+ * London in-bond price for one bottle size of one wine and vintage
  *
- * Only rows for the vintage asked about, in 75cl and in bond, count: the
+ * Only rows for the vintage and size asked about, in bond, count: the
  * exchanges list magnums and other vintages under the same wine. Prices are
  * Wine Labs' adjusted_price, per bottle in USD (trades are struck in GBP and
  * converted by Wine Labs).
@@ -31,12 +31,13 @@ const priceOf = (row: Record<string, unknown>) => {
  * @param orderbook - The orderbook response body
  * @param trades - The trades response body, or null when it was not asked for
  * @param vintage - The vintage asked about; LWIN's 1000 for non-vintage
+ * @param format - The bottle size in ml, as the exchanges write it ('750', '1500')
  * @returns Best bid, best ask, last trade and the venues seen
  */
-const parseInBondMarket = (orderbook: unknown, trades: unknown, vintage: string) => {
+const parseInBondMarket = (orderbook: unknown, trades: unknown, vintage: string, format = '750') => {
   const ours = (row: Record<string, unknown>) =>
     String(row.vintage ?? '') === vintage &&
-    String(row.format ?? '750') === '750' &&
+    Number(row.format ?? 750) === Number(format) &&
     String(row.duty_code ?? 'IB') === 'IB' &&
     priceOf(row) !== null;
 

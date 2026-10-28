@@ -118,10 +118,13 @@ const InBondRows = ({ rows }: { rows: InBondSummary['rows'] }) => (
       </thead>
       <tbody className="divide-y divide-border-muted">
         {rows.map((row) => (
-          <tr key={row.lwin11}>
+          <tr key={`${row.lwin11}:${row.format}`}>
             <td className="px-3 py-2">
               <span className="font-medium">{row.name}</span>
               <span className="text-text-muted"> {row.vintage === '1000' ? 'NV' : row.vintage}</span>
+              {row.format !== '750' && (
+                <span className="text-text-muted"> · {Number(row.format) / 10}cl</span>
+              )}
             </td>
             <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{row.bottles}</td>
             <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{usd(row.bidUsd)}</td>
@@ -229,7 +232,7 @@ const WineLabsPage = async () => {
             </span>
           </h2>
           <p className="mt-1 max-w-3xl text-xs text-text-muted">
-            What a 75cl bottle bids, asks and last traded for in bond on the London exchanges Wine Labs reads
+            What each bottle size we hold (75cl, magnum and larger) bids, asks and last traded for in bond on the London exchanges Wine Labs reads
             (Bordeaux Index, BBX and others; not Liv-ex), in USD. Our UAE in-bond price carries freight to Dubai,
             so expect it above London. These prices also show beside In Bond in the Pricing Manager.
           </p>

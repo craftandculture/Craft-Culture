@@ -3613,6 +3613,20 @@ const runMigrations = async () => {
       UPDATE "winelabs_market" SET "trades_checked_at" = "checked_at"
       WHERE "status" = 'priced' AND "trades_checked_at" IS NULL
     `);
+    // One row per bottle size: magnums and larger trade at their own price, not twice a bottle's
+    await client.unsafe(`ALTER TABLE "winelabs_market" ADD COLUMN IF NOT EXISTS "format" text DEFAULT '750' NOT NULL`);
+    await client.unsafe(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint c
+          JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+          WHERE c.conrelid = 'winelabs_market'::regclass AND c.contype = 'p' AND a.attname = 'format'
+        ) THEN
+          ALTER TABLE "winelabs_market" DROP CONSTRAINT IF EXISTS "winelabs_market_pkey";
+          ALTER TABLE "winelabs_market" ADD CONSTRAINT "winelabs_market_pkey" PRIMARY KEY ("lwin11", "format");
+        END IF;
+      END $$
+    `);
     console.log('✅ winelabs market ready');
 
     /*

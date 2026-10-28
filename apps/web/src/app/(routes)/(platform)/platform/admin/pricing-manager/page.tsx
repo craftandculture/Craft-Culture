@@ -1013,7 +1013,7 @@ const VENUE_NAMES: Record<string, string> = {
 };
 
 /**
- * London in-bond market for a 75cl bottle, beside our In Bond price
+ * London in-bond market for the row's bottle size, beside our In Bond price
  *
  * The lowest ask is what a trade buyer could buy it for in London today, so it
  * leads; the last trade stands in when nothing is offered. The percentage is
@@ -2748,7 +2748,7 @@ const PricingManagerPage = () => {
                   <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
                     <span className="flex items-center justify-end gap-1">
                       London
-                      <HeaderInfo text="London in-bond market for a 75cl bottle, from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not Liv-ex): the lowest ask, or the last trade when nothing is offered, and how far our In Bond price sits from it. Our price carries freight to Dubai, so expect it above London: green is below London, grey up to 30% above, red more than 30% above. LAST means no one is offering it and the last trade is shown. Refreshed from the Wine Labs page." />
+                      <HeaderInfo text="London in-bond market for the bottle size of the row (a magnum priced as a magnum), from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not Liv-ex): the lowest ask, or the last trade when nothing is offered, and how far our In Bond price sits from it. Our price carries freight to Dubai, so expect it above London: green is below London, grey up to 30% above, red more than 30% above. LAST means no one is offering it and the last trade is shown. Refreshed from the Wine Labs page." />
                     </span>
                   </th>
                   <th
@@ -3365,7 +3365,7 @@ const PricingManagerPage = () => {
                         <LondonCell
                           market={londonPrices[product.lwin18]}
                           ours={inBondPrice}
-                          canAsk={/^[1-8]\d{6}-?\d{4}-?\d{2}-?00750$/.test(product.lwin18 ?? '')}
+                          canAsk={/^[1-8]\d{6}-?\d{4}-?\d{2}-?\d{5}$/.test(product.lwin18 ?? '')}
                           asking={askingLondon === product.lwin18}
                           onAsk={() => refreshLondonMut.mutate({ lwin18: product.lwin18 })}
                         />

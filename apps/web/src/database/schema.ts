@@ -8,6 +8,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -8371,10 +8372,14 @@ export const winelabsCalls = pgTable(
  * spending credits. A London price is a check on ours, never a price we set:
  * our UAE in-bond price carries freight to Dubai that London's does not.
  */
-export const winelabsMarket = pgTable('winelabs_market', {
-  lwin11: text('lwin11').primaryKey(),
+export const winelabsMarket = pgTable(
+  'winelabs_market',
+  {
+  lwin11: text('lwin11').notNull(),
   lwin7: text('lwin7').notNull(),
   vintage: text('vintage').notNull(),
+  /** Bottle size in ml, as the exchanges write it: '750', '1500', '3000' */
+  format: text('format').notNull().default('750'),
   /** priced | unlisted | checking */
   status: text('status').notNull(),
   bidUsd: doublePrecision('bid_usd'),
@@ -8388,7 +8393,9 @@ export const winelabsMarket = pgTable('winelabs_market', {
   checkedAt: timestamp('checked_at', { mode: 'date' }).notNull().defaultNow(),
   /** When the trades were last asked for; they move slower than the order book */
   tradesCheckedAt: timestamp('trades_checked_at', { mode: 'date' }),
-});
+  },
+  (table) => [primaryKey({ columns: [table.lwin11, table.format] })],
+);
 
 export type WinelabsMarket = typeof winelabsMarket.$inferSelect;
 

@@ -28,7 +28,8 @@ export interface InBondBatchResult {
 /**
  * Fetch the London in-bond market for the next batch of wines we hold
  *
- * Largest holdings first, one wine at a time, stopping at the first error so a
+ * Largest holdings first, one wine and bottle size at a time (a magnum has
+ * its own price, not twice a bottle's), stopping at the first error so a
  * reached cap costs nothing more. A listed wine is asked again after 30 days,
  * an unlisted one after 90; our internal codes are never asked. The order book
  * costs 15 credits; the trades another 15, only when they are 90 days old.
@@ -60,8 +61,16 @@ const runInBondBatch = async (
     getStockWines(),
     db.select({ row: winelabsMarket, due: sql<boolean>`(${due})` }).from(winelabsMarket),
   ]);
-  const before = new Map(held.map(({ row, due: isDue }) => [row.lwin11, { ...row, due: isDue }]));
-  const todo = wines.filter((wine) => !isInternalLwin(wine.lwin7) && before.get(wine.lwin11)?.due !== false);
+  const keyOf = (row: { lwin11: string; format: string }) => `${row.lwin11}:${row.format}`;
+  const before = new Map(held.map(({ row, due: isDue }) => [keyOf(row), { ...row, due: isDue }]));
+  // Each size held is asked for apart, largest holdings first
+  const todo = wines
+    .filter((wine) => !isInternalLwin(wine.lwin7))
+    .flatMap(({ formats, ...wine }) =>
+      Object.entries(formats).map(([format, bottles]) => ({ ...wine, format, bottles })),
+    )
+    .sort((a, b) => b.bottles - a.bottles)
+    .filter((wine) => before.get(keyOf(wine))?.due !== false);
 
   let priced = 0;
   let unlisted = 0;
@@ -72,33 +81,35 @@ const runInBondBatch = async (
     // Claim the wine first, so a second run started alongside this one skips it rather than paying twice
     const [claimed] = await db
       .insert(winelabsMarket)
-      .values({ lwin11: wine.lwin11, lwin7: wine.lwin7, vintage: wine.vintage, status: 'checking' })
+      .values({ lwin11: wine.lwin11, lwin7: wine.lwin7, vintage: wine.vintage, format: wine.format, status: 'checking' })
       .onConflictDoUpdate({
-        target: winelabsMarket.lwin11,
+        target: [winelabsMarket.lwin11, winelabsMarket.format],
         set: { status: 'checking', checkedAt: new Date() },
         setWhere: due,
       })
       .returning({ lwin11: winelabsMarket.lwin11 });
     if (!claimed) continue;
 
+    const thisRow = and(eq(winelabsMarket.lwin11, wine.lwin11), eq(winelabsMarket.format, wine.format));
     try {
-      const earlier = before.get(wine.lwin11);
+      const earlier = before.get(keyOf(wine));
       const saved = await priceWineInBond(wine, earlier?.status === 'checking' ? undefined : earlier);
       if (saved.status === 'priced') priced += 1;
       else unlisted += 1;
     } catch (caught) {
       // Due again next run: a wine never priced is forgotten, an earlier price is kept
-      const earlier = before.get(wine.lwin11)?.status;
+      const earlier = before.get(keyOf(wine))?.status;
       if (earlier && earlier !== 'checking') {
         await db
           .update(winelabsMarket)
           .set({ status: earlier, checkedAt: new Date(0) })
-          .where(eq(winelabsMarket.lwin11, wine.lwin11));
+          .where(thisRow);
       } else {
-        await db.delete(winelabsMarket).where(eq(winelabsMarket.lwin11, wine.lwin11));
+        await db.delete(winelabsMarket).where(thisRow);
       }
-      error = `${wine.name} ${wine.vintage}: ${caught instanceof Error ? caught.message : String(caught)}`;
-      console.error('Wine Labs in-bond check failed', { lwin11: wine.lwin11, caught });
+      const size = wine.format === '750' ? '' : ` (${Number(wine.format) / 10}cl)`;
+      error = `${wine.name} ${wine.vintage}${size}: ${caught instanceof Error ? caught.message : String(caught)}`;
+      console.error('Wine Labs in-bond check failed', { lwin11: wine.lwin11, format: wine.format, caught });
       break;
     }
   }
