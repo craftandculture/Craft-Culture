@@ -8386,6 +8386,8 @@ export const winelabsMarket = pgTable('winelabs_market', {
   trades: integer('trades').notNull().default(0),
   venues: text('venues').array().notNull().default(sql`'{}'::text[]`),
   checkedAt: timestamp('checked_at', { mode: 'date' }).notNull().defaultNow(),
+  /** When the trades were last asked for; they move slower than the order book */
+  tradesCheckedAt: timestamp('trades_checked_at', { mode: 'date' }),
 });
 
 export type WinelabsMarket = typeof winelabsMarket.$inferSelect;

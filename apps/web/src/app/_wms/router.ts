@@ -1,4 +1,5 @@
 import getLondonInBond from '@/app/_winelabs/controller/getLondonInBond';
+import refreshLondonInBond from '@/app/_winelabs/controller/refreshLondonInBond';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddBay from './controller/adminAddBay';
@@ -197,6 +198,8 @@ const stockPricingRouter = createTRPCRouter({
   getOwnerPricing: adminGetOwnerPricing,
   // London in-bond market beside In Bond, from the Wine Labs snapshot
   getLondonInBond,
+  // One wine asked again now, for a price about to be quoted (spends credits)
+  refreshLondonInBond,
   autoPopulate: adminAutoPopulateImportPrice,
   getProducts: adminGetPricingProducts,
   getBands: adminGetPricingBands,

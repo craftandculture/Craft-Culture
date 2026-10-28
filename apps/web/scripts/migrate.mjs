@@ -3607,6 +3607,12 @@ const runMigrations = async () => {
         "checked_at" timestamp DEFAULT now() NOT NULL
       )
     `);
+    // When the trades were last asked for: they are refreshed quarterly, the order book monthly
+    await client.unsafe(`ALTER TABLE "winelabs_market" ADD COLUMN IF NOT EXISTS "trades_checked_at" timestamp`);
+    await client.unsafe(`
+      UPDATE "winelabs_market" SET "trades_checked_at" = "checked_at"
+      WHERE "status" = 'priced' AND "trades_checked_at" IS NULL
+    `);
     console.log('✅ winelabs market ready');
 
     /*

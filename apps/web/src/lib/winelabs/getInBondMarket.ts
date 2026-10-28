@@ -11,14 +11,15 @@ import winelabsFetch from './winelabsFetch';
  *
  * @param lwin7 - The wine
  * @param vintage - The vintage; LWIN's 1000 for non-vintage
+ * @param withTrades - Ask for the trades too when the wine is listed (another 15 credits)
  * @returns Best bid, best ask, last trade and venues, all null when unlisted
  */
-const getInBondMarket = async (lwin7: string, vintage: string) => {
+const getInBondMarket = async (lwin7: string, vintage: string, withTrades = true) => {
   const query = { lwin: lwin7, vintage, duty_code: 'IB', currency: 'USD', format: '750' };
 
   const orderbook = await winelabsFetch('exchange/orderbook', { ...query, limit: 100 });
   const listed = parseInBondMarket(orderbook, null, vintage);
-  if (!listed.bids && !listed.asks) return listed;
+  if (!withTrades || (!listed.bids && !listed.asks)) return listed;
 
   const trades = await winelabsFetch('exchange/trades', {
     ...query,

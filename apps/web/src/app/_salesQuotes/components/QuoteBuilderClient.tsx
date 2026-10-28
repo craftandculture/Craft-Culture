@@ -102,6 +102,29 @@ const QuoteBuilderClient = () => {
 
   const quotesQuery = useQuery(api.salesQuotes.admin.getMany.queryOptions({}));
 
+  // London in-bond market beside each line, from the Wine Labs snapshot (no credits)
+  const lineLwins = [...new Set(lines.map((line) => line.lwin18))].slice(0, 1000);
+  const londonQuery = useQuery({
+    ...api.wms.admin.stock.pricing.getLondonInBond.queryOptions({ lwin18s: lineLwins }),
+    enabled: lineLwins.length > 0,
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+
+  // One wine asked for now, before it goes out on a quote (15 to 30 credits)
+  const askLondon = useMutation({
+    ...api.wms.admin.stock.pricing.refreshLondonInBond.mutationOptions(),
+    onSuccess: ({ status }) => {
+      void queryClient.invalidateQueries({
+        queryKey: api.wms.admin.stock.pricing.getLondonInBond.queryKey(),
+      });
+      toast.success(
+        status === 'priced' ? 'London price updated' : 'Not listed on the London exchanges',
+      );
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const invalidate = () =>
     queryClient.invalidateQueries({
       queryKey: api.salesQuotes.admin.getMany.queryKey({}),
@@ -369,6 +392,9 @@ const QuoteBuilderClient = () => {
           </Typography>
           <QuoteLinesTable
             lines={lines}
+            london={londonQuery.data?.prices ?? {}}
+            askingLondon={askLondon.isPending ? askLondon.variables?.lwin18 : undefined}
+            onAskLondon={(lwin18) => askLondon.mutate({ lwin18 })}
             onChange={(index, patch) =>
               setLines((current) =>
                 current.map((line, i) =>

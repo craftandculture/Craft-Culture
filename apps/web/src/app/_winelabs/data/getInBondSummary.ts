@@ -1,4 +1,5 @@
 import getStockWines from '@/app/_winelabs/data/getStockWines';
+import isInternalLwin from '@/app/_winelabs/utils/isInternalLwin';
 import db from '@/database/client';
 import { winelabsMarket } from '@/database/schema';
 
@@ -8,7 +9,9 @@ import { winelabsMarket } from '@/database/schema';
  * @returns Counts, and the priced wines largest holding first
  */
 const getInBondSummary = async () => {
-  const [wines, rows] = await Promise.all([getStockWines(), db.select().from(winelabsMarket)]);
+  const [stock, rows] = await Promise.all([getStockWines(), db.select().from(winelabsMarket)]);
+  // Our internal codes are never asked, so they are not counted as still to ask
+  const wines = stock.filter((wine) => !isInternalLwin(wine.lwin7));
 
   const byLwin11 = new Map(rows.map((row) => [row.lwin11, row]));
   const checked = wines.flatMap((wine) => {

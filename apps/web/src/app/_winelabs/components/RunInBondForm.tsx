@@ -36,8 +36,8 @@ const RunInBondForm = ({ defaultSize, disabled }: RunInBondFormProps) => {
         {pending ? 'Pricing…' : 'Price next wines'}
       </button>
       <span className="text-xs text-text-muted">
-        Largest holdings first; each price is kept 30 days. 15 credits a wine the exchanges do not list, 30 a
-        wine they do.
+        Largest holdings first. Listed wines are asked again after 30 days, unlisted after 90. 15 credits a
+        wine, 30 when its trades are also due (quarterly).
       </span>
       {result && (
         <p className={`w-full text-sm ${result.error ? 'text-red-700 dark:text-red-300' : 'text-text-muted'}`}>

@@ -14,6 +14,7 @@ import {
   IconLoader2,
   IconPencil,
   IconPercentage,
+  IconRefresh,
   IconReportMoney,
   IconSearch,
   IconSortAscending,
@@ -1021,6 +1022,9 @@ const VENUE_NAMES: Record<string, string> = {
 const LondonCell = ({
   market,
   ours,
+  canAsk,
+  asking,
+  onAsk,
 }: {
   market?: {
     bidUsd: number | null;
@@ -1031,13 +1035,31 @@ const LondonCell = ({
     checkedAt: Date | string;
   };
   ours: number | null;
+  /** A 75cl wine with a real LWIN, which the exchanges could list */
+  canAsk: boolean;
+  asking: boolean;
+  onAsk: () => void;
 }) => {
   const ccy = useContext(CurrencyContext);
   const lead = market?.askUsd ?? market?.lastUsd ?? null;
+
+  const askButton = canAsk && (
+    <button
+      type="button"
+      onClick={onAsk}
+      disabled={asking}
+      title="Ask Wine Labs for today's London price (15 to 30 credits)"
+      className="ml-1 inline-flex align-middle text-text-muted/50 hover:text-text-primary disabled:opacity-50"
+    >
+      {asking ? <IconLoader2 size={12} className="animate-spin" /> : <IconRefresh size={12} />}
+    </button>
+  );
+
   if (!market || lead == null) {
     return (
       <td className="px-3 py-2.5 text-right">
         <span className="text-text-muted/40">—</span>
+        {askButton}
       </td>
     );
   }
@@ -1060,6 +1082,7 @@ const LondonCell = ({
         {market.askUsd == null ? 'last ' : ''}
         {money(lead, ccy, 0)}
       </span>
+      {askButton}
       {gap != null && (
         <span className="pm-gap mt-0.5 block text-xs text-text-muted">
           {gap > 0 ? `ours +${gap}%` : gap < 0 ? `ours ${gap}%` : 'level'}
@@ -1560,6 +1583,19 @@ const PricingManagerPage = () => {
     staleTime: 5 * 60_000,
   });
   const londonPrices = londonData?.prices ?? {};
+
+  // One wine's London price asked for now, before quoting on it; spends credits
+  const [askingLondon, setAskingLondon] = useState<string | null>(null);
+  const refreshLondonMut = useMutation({
+    ...api.wms.admin.stock.pricing.refreshLondonInBond.mutationOptions(),
+    onMutate: ({ lwin18 }) => setAskingLondon(lwin18),
+    onSettled: () => setAskingLondon(null),
+    onSuccess: ({ status }) => {
+      void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getLondonInBond.queryKey() });
+      toast.success(status === 'priced' ? 'London price updated' : 'Not listed on the London exchanges');
+    },
+    onError: (error) => toast.error(error.message),
+  });
 
   // Active filters for chips
   const activeFilters: Array<{ key: string; label: string; onRemove: () => void }> = [];
@@ -3301,7 +3337,13 @@ const PricingManagerPage = () => {
                           hintFor={inBondHint}
                           onSave={saveInBond}
                         />
-                        <LondonCell market={londonPrices[product.lwin18]} ours={inBondPrice} />
+                        <LondonCell
+                          market={londonPrices[product.lwin18]}
+                          ours={inBondPrice}
+                          canAsk={/^[1-8]\d{6}-?\d{4}-?\d{2}-?00750$/.test(product.lwin18 ?? '')}
+                          asking={askingLondon === product.lwin18}
+                          onAsk={() => refreshLondonMut.mutate({ lwin18: product.lwin18 })}
+                        />
 
                         {/* PC Price (editable) — Private Client group */}
                         <PriceCell
