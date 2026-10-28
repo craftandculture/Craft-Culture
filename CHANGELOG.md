@@ -1,3 +1,9 @@
+## [2.1.16](https://github.com/craftandculture/Craft-Culture/compare/v2.1.15...v2.1.16) (2026-10-28)
+
+### Features
+
+* repacks for a member's own deliveries are billed on their monthly invoice, not on delivery quotes ([2356e97](https://github.com/craftandculture/Craft-Culture/commit/2356e977517a88bc45328fd39f8cfa1c0d8a40fe))
+
 ## [2.1.15](https://github.com/craftandculture/Craft-Culture/compare/v2.1.14...v2.1.15) (2026-10-28)
 
 ### Bug Fixes
