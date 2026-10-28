@@ -1,3 +1,9 @@
+## [2.1.19](https://github.com/craftandculture/Craft-Culture/compare/v2.1.18...v2.1.19) (2026-10-28)
+
+### Features
+
+* **winelabs:** magnums and larger bottles get their own London price ([b6f6378](https://github.com/craftandculture/Craft-Culture/commit/b6f63785d59576d8bb67415afa22fce4f3c4c7a8))
+
 ## [2.1.18](https://github.com/craftandculture/Craft-Culture/compare/v2.1.17...v2.1.18) (2026-10-28)
 
 ### Features
