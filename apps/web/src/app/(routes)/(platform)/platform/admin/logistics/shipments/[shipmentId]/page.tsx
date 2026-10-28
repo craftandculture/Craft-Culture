@@ -5,6 +5,7 @@ import {
   IconArrowRight,
   IconCalculator,
   IconCheck,
+  IconChevronRight,
   IconCloud,
   IconDownload,
   IconFileText,
@@ -933,12 +934,29 @@ const ShipmentDetailPage = () => {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/platform/admin/logistics/shipments" aria-label="Back to shipments">
-              <Button variant="ghost" size="sm">
-                <Icon icon={IconArrowLeft} size="sm" />
-              </Button>
-            </Link>
             <div>
+              {/* The house breadcrumb; the title below stays click-to-rename */}
+              <nav
+                aria-label="Breadcrumb"
+                className="mb-1 flex flex-wrap items-center gap-1.5 text-sm text-text-muted"
+              >
+                <Link href="/platform/admin/home" className="transition-colors hover:text-text-primary">
+                  Admin
+                </Link>
+                <IconChevronRight className="size-4" />
+                <Link href="/platform/admin/logistics" className="transition-colors hover:text-text-primary">
+                  Logistics
+                </Link>
+                <IconChevronRight className="size-4" />
+                <Link
+                  href="/platform/admin/logistics/shipments"
+                  className="transition-colors hover:text-text-primary"
+                >
+                  Shipments
+                </Link>
+                <IconChevronRight className="size-4" />
+                <span className="text-text-primary">{shipment.shipmentNumber}</span>
+              </nav>
               <div className="flex items-center gap-3">
                 {isEditingName ? (
                   <form
@@ -991,9 +1009,9 @@ const ShipmentDetailPage = () => {
                       setIsEditingName(true);
                     }}
                   >
-                    <Typography variant="headingLg">
+                    <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
                       {shipment.name || shipment.shipmentNumber}
-                    </Typography>
+                    </h1>
                     <Icon
                       icon={IconPencil}
                       size="sm"

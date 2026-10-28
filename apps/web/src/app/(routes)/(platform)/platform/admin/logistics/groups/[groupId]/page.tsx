@@ -2,8 +2,8 @@
 
 import {
   IconAlertTriangle,
-  IconArrowLeft,
   IconCalculator,
+  IconChevronRight,
   IconLoader2,
   IconPencil,
   IconPlus,
@@ -649,12 +649,27 @@ const ShipmentGroupDetailPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/platform/admin/logistics/groups">
-              <Button variant="ghost" size="sm">
-                <ButtonContent iconLeft={IconArrowLeft}>Groups</ButtonContent>
-              </Button>
-            </Link>
             <div>
+              {/* The house breadcrumb; the title below stays click-to-rename */}
+              <nav
+                aria-label="Breadcrumb"
+                className="mb-1 flex flex-wrap items-center gap-1.5 text-sm text-text-muted"
+              >
+                <Link href="/platform/admin/home" className="transition-colors hover:text-text-primary">
+                  Admin
+                </Link>
+                <IconChevronRight className="size-4" />
+                <Link href="/platform/admin/logistics" className="transition-colors hover:text-text-primary">
+                  Logistics
+                </Link>
+                <IconChevronRight className="size-4" />
+                <Link
+                  href="/platform/admin/logistics/groups"
+                  className="transition-colors hover:text-text-primary"
+                >
+                  Groups
+                </Link>
+              </nav>
               {editingName ? (
                 <input
                   autoFocus
@@ -678,7 +693,9 @@ const ShipmentGroupDetailPage = () => {
                   }}
                   className="hover:bg-surface-muted focus-visible:ring-text-primary -mx-1 rounded px-1 text-left focus:outline-none focus-visible:ring-2"
                 >
-                  <Typography variant="headingSm">{group.name}</Typography>
+                  <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
+                    {group.name}
+                  </h1>
                 </button>
               )}
               <div className="flex flex-wrap items-center gap-1">
