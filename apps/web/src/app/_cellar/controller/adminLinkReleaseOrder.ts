@@ -2,8 +2,15 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
+import wineKey from '@/app/_distribution/utils/wineKey';
+import resolveOrderPartnerId from '@/app/_partners/data/resolveOrderPartnerId';
 import db from '@/database/client';
-import { cellarReleaseRequests, privateClientOrders } from '@/database/schema';
+import {
+  cellarReleaseRequestItems,
+  cellarReleaseRequests,
+  privateClientOrderItems,
+  privateClientOrders,
+} from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 /**
@@ -33,6 +40,7 @@ const adminLinkReleaseOrder = staffAdminProcedure
       const [request] = await tx
         .select({
           id: cellarReleaseRequests.id,
+          partnerId: cellarReleaseRequests.partnerId,
           status: cellarReleaseRequests.status,
           privateClientOrderId: cellarReleaseRequests.privateClientOrderId,
         })
@@ -60,7 +68,12 @@ const adminLinkReleaseOrder = staffAdminProcedure
       }
 
       const [order] = await tx
-        .select({ id: privateClientOrders.id, status: privateClientOrders.status })
+        .select({
+          id: privateClientOrders.id,
+          status: privateClientOrders.status,
+          partnerId: privateClientOrders.partnerId,
+          clientName: privateClientOrders.clientName,
+        })
         .from(privateClientOrders)
         .where(eq(privateClientOrders.orderNumber, orderNumber))
         .limit(1);
@@ -69,6 +82,63 @@ const adminLinkReleaseOrder = staffAdminProcedure
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: `${orderNumber} is not an open order in the Index.`,
+        });
+      }
+
+      if (order.status === 'delivered') {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `${orderNumber} has already been delivered, so it cannot carry this release.`,
+        });
+      }
+
+      /*
+        The PCO number is typed by hand, and linking marks the order as the
+        member's own delivery, which lets their bottles go out on it. So the
+        order must be raised for this member (under their own record, or under
+        C&C as member orders are), and carry only this release's wines.
+      */
+      const allowedPartnerIds = new Set([
+        request.partnerId,
+        await resolveOrderPartnerId(request.partnerId),
+      ]);
+
+      if (!order.partnerId || !allowedPartnerIds.has(order.partnerId)) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: `${orderNumber} (for ${order.clientName}) belongs to another partner, not this member. Check the PCO number.`,
+        });
+      }
+
+      const releaseItems = await tx
+        .select({ lwin18: cellarReleaseRequestItems.lwin18 })
+        .from(cellarReleaseRequestItems)
+        .where(eq(cellarReleaseRequestItems.requestId, request.id));
+
+      const orderItems = await tx
+        .select({
+          lwin: privateClientOrderItems.lwin,
+          productName: privateClientOrderItems.productName,
+        })
+        .from(privateClientOrderItems)
+        .where(eq(privateClientOrderItems.orderId, order.id));
+
+      const releaseWines = new Set(
+        releaseItems.map((item) => wineKey(item.lwin18)),
+      );
+      const strangers = orderItems.filter(
+        (item) => !item.lwin || !releaseWines.has(wineKey(item.lwin)),
+      );
+
+      if (orderItems.length === 0 || strangers.length > 0) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            orderItems.length === 0
+              ? `${orderNumber} (for ${order.clientName}) has no lines, so it cannot be checked against this release.`
+              : `${orderNumber} (for ${order.clientName}) carries wine that is not on this release: ${strangers
+                  .map((item) => item.productName)
+                  .join(', ')}. Check the PCO number.`,
         });
       }
 

@@ -80,12 +80,24 @@ const getMonthlyRepacks = async (month: string) => {
   const pcoNumbers = [...new Set([...deliveries.values()].map((row) => row.pcoNumber))];
   const releases = pcoNumbers.length
     ? await db
-        .select({ pcoNumber: privateClientOrders.orderNumber, requestNumber: cellarReleaseRequests.requestNumber })
+        .select({
+          pcoNumber: privateClientOrders.orderNumber,
+          requestNumber: cellarReleaseRequests.requestNumber,
+          repackCostUsd: cellarReleaseRequests.repackCostUsd,
+        })
         .from(cellarReleaseRequests)
         .innerJoin(privateClientOrders, eq(privateClientOrders.id, cellarReleaseRequests.privateClientOrderId))
         .where(inArray(privateClientOrders.orderNumber, pcoNumbers))
     : [];
   const releaseOf = new Map(releases.map((row) => [row.pcoNumber, row.requestNumber]));
+  /*
+    Deliveries quoted before repacks moved to the monthly bill carry the repack
+    on the release quote, and the member has paid it there. Billing them again
+    here would charge twice.
+  */
+  const repackOnQuote = new Set(
+    releases.filter((row) => (row.repackCostUsd ?? 0) > 0).map((row) => row.pcoNumber),
+  );
 
   const groups = new Map<
     string,
@@ -102,6 +114,7 @@ const getMonthlyRepacks = async (month: string) => {
       const delivery = row.orderId ? deliveries.get(row.orderId) : undefined;
       // Only the member's own delivery is theirs to pay for
       if (!delivery || delivery.ownerId !== row.fromOwnerId) continue;
+      if (repackOnQuote.has(delivery.pcoNumber)) continue;
       key = `${row.fromOwnerId}|${delivery.pcoNumber}`;
       kind = 'delivery';
       const release = releaseOf.get(delivery.pcoNumber);

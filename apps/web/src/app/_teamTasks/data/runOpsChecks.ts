@@ -203,20 +203,28 @@ const duplicateCheck = async (): Promise<OpsCheckResult> => {
   };
 };
 
-/** A delivery booked for today whose order has no pick list yet */
+/**
+ * A delivery booked for today, or missed in the last week, whose order has no pick list yet
+ *
+ * Keyed by order alone and kept while the delivery is overdue. Keyed by order
+ * and date, and found only on the day itself, an unresolved item vanished at
+ * midnight and was ticked off as put right.
+ */
 const deliveryTodayCheck = async (): Promise<OpsCheckResult> => {
   const today = dubaiToday();
+  const deliveryDay = sql<string>`to_char((${privateClientOrders.scheduledDeliveryDate} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Dubai')::date, 'YYYY-MM-DD')`;
   const rows = await db
     .select({
       id: privateClientOrders.id,
       orderNumber: privateClientOrders.orderNumber,
       clientName: privateClientOrders.clientName,
+      deliveryDay,
     })
     .from(privateClientOrders)
     .where(
       and(
         inArray(privateClientOrders.status, LIVE_STATUSES),
-        sql`(${privateClientOrders.scheduledDeliveryDate} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Dubai')::date = ${today}::date`,
+        sql`(${privateClientOrders.scheduledDeliveryDate} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Dubai')::date BETWEEN ${today}::date - 7 AND ${today}::date`,
         sql`NOT EXISTS (
           SELECT 1 FROM ${wmsPickLists}
           WHERE ${wmsPickLists.orderId} = ${privateClientOrders.id}
@@ -230,15 +238,18 @@ const deliveryTodayCheck = async (): Promise<OpsCheckResult> => {
 
   return {
     key: 'delivery_today_no_pick',
-    title: 'Deliveries today with no pick list',
+    title: 'Deliveries due with no pick list',
     area: 'Warehouse',
     owners: [LARAINE],
     urgent: true,
     linkUrl: PCO_LIST,
     complete: true,
     findings: rows.map((r) => ({
-      recordKey: `${r.id}:${today}`,
-      what: `${pcoLabel(r)}: delivery booked today, raise the pick list`,
+      recordKey: r.id,
+      what:
+        r.deliveryDay === today
+          ? `${pcoLabel(r)}: delivery booked today, raise the pick list`
+          : `${pcoLabel(r)}: delivery was booked for ${r.deliveryDay} and has no pick list`,
     })),
   };
 };

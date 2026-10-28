@@ -564,11 +564,15 @@ const runMigrations = async () => {
     );
     // Backfill the split-case picks already recorded — their bottle count only
     // ever survived in the note text ("... — 3 bottle(s) (split-case)").
-    await client.unsafe(
-      `UPDATE "wms_stock_movements"
-         SET "quantity_bottles" = NULLIF(substring("notes" from '([0-9]+) bottle'), '')::int
-       WHERE "quantity_bottles" IS NULL
-         AND "notes" ~ '[0-9]+ bottle'`,
+    // Once only: later movements leave it NULL on purpose (full-case moves),
+    // and re-reading their notes on every deploy rewrote them.
+    await dataFix('movement bottle counts read from split-case notes', () =>
+      client.unsafe(
+        `UPDATE "wms_stock_movements"
+           SET "quantity_bottles" = NULLIF(substring("notes" from '([0-9]+) bottle'), '')::int
+         WHERE "quantity_bottles" IS NULL
+           AND "notes" ~ '[0-9]+ bottle'`,
+      ),
     );
     console.log('✅ wms_stock_movements.quantity_bottles ready');
 
@@ -781,29 +785,35 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "tri_programmes" ADD COLUMN IF NOT EXISTS "takes_unattributed" boolean NOT NULL DEFAULT false`,
     );
-    await client.unsafe(`
-      UPDATE "tri_programmes"
-      SET "consignment_tag" = 'CRURATED', "takes_unattributed" = true
-      WHERE "id" = '${CRURATED_PROGRAMME_ID}' AND "consignment_tag" IS NULL
-    `);
     /*
-      Everyone else is matched on the letters of their name, which is reliable
-      for the four tags that are a word from it. Anything it does not match is
-      left null and simply claims nothing until someone sets it — an unclaimed
-      client is visible, whereas a wrongly claimed one is not.
+      Once only: a tag staff later clear must stay cleared, and a programme
+      added later must not be claimed by its name on the next deploy.
     */
-    for (const [tag, pattern] of [
-      ['CULT', '%cult%'],
-      ['CRU', '%cru wine%'],
-      ['RARE', '%rare%'],
-    ]) {
+    await dataFix('tri_programmes consignment tags seeded by name', async () => {
       await client.unsafe(`
         UPDATE "tri_programmes"
-        SET "consignment_tag" = '${tag}'
-        WHERE "consignment_tag" IS NULL
-          AND LOWER("name") LIKE '${pattern}'
+        SET "consignment_tag" = 'CRURATED', "takes_unattributed" = true
+        WHERE "id" = '${CRURATED_PROGRAMME_ID}' AND "consignment_tag" IS NULL
       `);
-    }
+      /*
+        Everyone else is matched on the letters of their name, which is reliable
+        for the four tags that are a word from it. Anything it does not match is
+        left null and simply claims nothing until someone sets it — an unclaimed
+        client is visible, whereas a wrongly claimed one is not.
+      */
+      for (const [tag, pattern] of [
+        ['CULT', '%cult%'],
+        ['CRU', '%cru wine%'],
+        ['RARE', '%rare%'],
+      ]) {
+        await client.unsafe(`
+          UPDATE "tri_programmes"
+          SET "consignment_tag" = '${tag}'
+          WHERE "consignment_tag" IS NULL
+            AND LOWER("name") LIKE '${pattern}'
+        `);
+      }
+    });
     console.log('✅ tri_programmes consignment tags ready');
 
     /*
@@ -2135,12 +2145,15 @@ const runMigrations = async () => {
       happened to be Crurated, so the answer was right by accident and would
       have become wrong the moment the catch-all changed hands.
     */
-    await client.unsafe(`
+    // Once only, so an alias staff remove stays removed
+    await dataFix('OpenCellar alias added to Crurated', () =>
+      client.unsafe(`
       UPDATE "cons_owners"
       SET "owner_aliases" = array_append(COALESCE("owner_aliases", '{}'), 'OPENCELLAR')
       WHERE UPPER("consignment_tag") = 'CRURATED'
         AND NOT ('OPENCELLAR' = ANY(COALESCE("owner_aliases", '{}')))
-    `);
+    `),
+    );
     console.log('✅ OpenCellar reads as Crurated');
 
     /*

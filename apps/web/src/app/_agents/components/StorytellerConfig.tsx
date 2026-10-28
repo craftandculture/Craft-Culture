@@ -42,7 +42,7 @@ const StorytellerConfig = () => {
     }
   }, [configs]);
 
-  const { mutate: upsertConfig } = useMutation({
+  const { mutate: upsertConfig, isPending: isSaving } = useMutation({
     ...api.agents.upsertAgentConfig.mutationOptions(),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
@@ -106,7 +106,7 @@ const StorytellerConfig = () => {
             variant="outline"
             size="sm"
             onClick={() => handleSave(CONFIG_KEYS.brandVoice, brandVoice)}
-            disabled={upsertMutation.isPending}
+            disabled={isSaving}
           >
             {savedKey === CONFIG_KEYS.brandVoice ? (
               <>
@@ -146,7 +146,7 @@ const StorytellerConfig = () => {
             variant="outline"
             size="sm"
             onClick={() => handleSave(CONFIG_KEYS.contentIdeas, contentIdeas)}
-            disabled={upsertMutation.isPending}
+            disabled={isSaving}
           >
             {savedKey === CONFIG_KEYS.contentIdeas ? (
               <>
@@ -186,7 +186,7 @@ const StorytellerConfig = () => {
             variant="outline"
             size="sm"
             onClick={() => handleSave(CONFIG_KEYS.calendarContext, calendarContext)}
-            disabled={upsertMutation.isPending}
+            disabled={isSaving}
           >
             {savedKey === CONFIG_KEYS.calendarContext ? (
               <>

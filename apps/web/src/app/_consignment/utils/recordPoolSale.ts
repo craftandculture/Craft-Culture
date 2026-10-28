@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import withNumberRetry from '@/app/_cellar/utils/withNumberRetry';
 import type db from '@/database/client';
@@ -6,6 +6,7 @@ import { poolSales, saleMandateLots, saleMandates } from '@/database/schema';
 
 
 import generateSaleNumber from './generateSaleNumber';
+import { SELLABLE_STATUSES } from './mandateStatuses';
 import writeConsignmentSettlement from './writeConsignmentSettlement';
 import type { CommissionAudience } from '../constants/commissionRates';
 import { commissionPctFor } from '../constants/commissionRates';
@@ -76,6 +77,21 @@ const recordPoolSale = async ({
   if (!mandate) throw new Error('That mandate does not exist');
 
   if (bottles <= 0) throw new Error('A sale needs at least one bottle');
+
+  /*
+    Only a live offer can sell. A withdrawn, expired or suspended mandate is
+    the member saying no, and the CASE below would otherwise flip it back to
+    partially_sold and put the rest of their wine on sale again.
+  */
+  if (
+    !SELLABLE_STATUSES.includes(
+      mandate.status as (typeof SELLABLE_STATUSES)[number],
+    )
+  ) {
+    throw new Error(
+      `${mandate.mandateNumber} is ${mandate.status} and no longer for sale, so no sale can be recorded against it`,
+    );
+  }
 
   if (bottles > mandate.bottlesRemaining) {
     throw new Error(
@@ -171,6 +187,7 @@ const recordPoolSale = async ({
     .where(
       and(
         eq(saleMandates.id, mandateId),
+        inArray(saleMandates.status, [...SELLABLE_STATUSES]),
         sql`${saleMandates.bottlesRemaining} >= ${bottles}`,
       ),
     )

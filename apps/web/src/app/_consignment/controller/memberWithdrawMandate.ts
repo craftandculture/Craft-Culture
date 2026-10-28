@@ -3,7 +3,13 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
+import {
+  cellarPurchaseItems,
+  cellarPurchases,
+  saleMandateLots,
+  saleMandates,
+  wmsStock,
+} from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
 import getCommittedBottles from '../data/getCommittedBottles';
@@ -72,6 +78,35 @@ const memberWithdrawMandate = stockOwnerProcedure
     );
 
     await db.transaction(async (tx) => {
+      /*
+        Not while a buyer holds bottles from this offer. Their purchase is
+        reserved against it and may already be paid; withdrawing under it
+        would let staff confirm the payment and sell wine the member had taken
+        off the market. They wait for it to complete, lapse or be cancelled.
+      */
+      const [openPurchase] = await tx
+        .select({ purchaseNumber: cellarPurchases.purchaseNumber })
+        .from(cellarPurchaseItems)
+        .innerJoin(
+          cellarPurchases,
+          eq(cellarPurchases.id, cellarPurchaseItems.purchaseId),
+        )
+        .where(
+          and(
+            eq(cellarPurchaseItems.mandateId, mandate.id),
+            inArray(cellarPurchases.status, ['reserved', 'payment_claimed']),
+          ),
+        )
+        .limit(1);
+
+      if (openPurchase) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'A buyer is holding bottles from this offer while their payment is completed, so it cannot be withdrawn just now. Please try again once the purchase has settled or lapsed, or contact us.',
+        });
+      }
+
       /*
         The status first, and only from the status read above. A sale or a
         staff decision landing in the same moment would otherwise be
