@@ -1,3 +1,9 @@
+## [2.1.12](https://github.com/craftandculture/Craft-Culture/compare/v2.1.11...v2.1.12) (2026-10-28)
+
+### Features
+
+* **ui:** take the white out of the whole app ([829edc7](https://github.com/craftandculture/Craft-Culture/commit/829edc73014d84ae89b4b1e19ab5a45609cfc8bb))
+
 ## [2.1.11](https://github.com/craftandculture/Craft-Culture/compare/v2.1.10...v2.1.11) (2026-10-28)
 
 ### Features
