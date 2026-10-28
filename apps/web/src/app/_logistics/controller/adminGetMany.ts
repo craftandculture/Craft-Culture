@@ -13,10 +13,14 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getShipmentsSchema, { SHIPMENT_STAGE_GROUPS, type ShipmentStageGroup } from '../schemas/getShipmentsSchema';
 import { lastNewsSql, noNewsWhere } from '../utils/noNews';
+import NOT_ARRIVED_STATUSES from '../utils/notArrivedStatuses';
 import { partyLogoSql, partyNameSql } from '../utils/shipmentPartySql';
 
 /** The person who owns the next action, apart from the shipment's creator */
 const actionOwner = alias(users, 'action_owner');
+
+/** Still on its way, so its ETA is a date to wait for rather than history */
+const notArrived = inArray(logisticsShipments.status, [...NOT_ARRIVED_STATUSES]);
 
 /**
  * Get list of shipments with pagination and filters
@@ -165,8 +169,17 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     .orderBy(
       // An owner's own list leads with what has gone quietest
       ...(owner ? [asc(lastNewsSql)] : []),
+      /*
+        Arriving soonest: shipments still on their way first, soonest ETA at the
+        top and undated last; then the ones already in, latest first. Sorting
+        everything by ETA put last winter's deliveries above this week's.
+      */
       ...(sort === 'eta'
-        ? [sql`${logisticsShipments.eta} IS NULL`, asc(logisticsShipments.eta)]
+        ? [
+            sql`CASE WHEN ${notArrived} THEN 0 ELSE 1 END`,
+            sql`CASE WHEN ${notArrived} THEN ${logisticsShipments.eta} END ASC NULLS LAST`,
+            sql`COALESCE(${logisticsShipments.ata}, ${logisticsShipments.eta}, ${logisticsShipments.createdAt}) DESC`,
+          ]
         : [desc(logisticsShipments.createdAt)]),
     )
     .limit(limit)

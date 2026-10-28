@@ -317,7 +317,8 @@ const ShipmentsList = () => {
                 const news = AWAITING.has(shipment.status)
                   ? freshness(shipment.lastUpdateAt ?? shipment.createdAt)
                   : null;
-                const eta = formatDate(shipment.eta);
+                // An ETA matters only while it is still awaited; once in, it is history
+                const eta = AWAITING.has(shipment.status) ? formatDate(shipment.eta) : null;
                 return (
                   <li key={shipment.id} className="flex items-center">
                     <Link href={href} className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 transition-colors hover:bg-surface-secondary">
