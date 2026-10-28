@@ -1,3 +1,9 @@
+## [2.1.1](https://github.com/craftandculture/Craft-Culture/compare/v2.1.0...v2.1.1) (2026-10-28)
+
+### Features
+
+* **ui:** give pages definition and tidy the member statement ([eb46df8](https://github.com/craftandculture/Craft-Culture/commit/eb46df8f96721bb77239b4cd3ce46abc41f67ae4))
+
 ## [2.1.0](https://github.com/craftandculture/Craft-Culture/compare/v2.0.612...v2.1.0) (2026-10-27)
 
 ### Features
