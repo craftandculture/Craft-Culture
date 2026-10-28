@@ -208,6 +208,30 @@ const getStockActivity = async ({
     }
   }
 
+  /*
+    A count corrected and then put back the same day is not news to an owner.
+    On 28 October Ihab Toma's feed showed "+1 case" and "-1 case" of Bonnes
+    Mares minutes apart: a mistaken correction and its undo. Corrections on
+    the same wine and bay on the same day that add up to nothing are folded
+    away; the warehouse ledger keeps both.
+  */
+  const isCorrection = (row: (typeof rows)[number]) =>
+    row.movementType === 'count' ||
+    (row.movementType === 'adjust' && !row.reasonCode?.startsWith('stock_out:'));
+  const dubaiDay = (at: Date) => new Date(at.getTime() + 4 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const corrections = new Map<string, { ids: string[]; net: number }>();
+  for (const row of rows) {
+    if (!isCorrection(row)) continue;
+    const key = [row.lwin18, row.fromLocation ?? row.toLocation ?? '', dubaiDay(row.performedAt)].join('|');
+    const group = corrections.get(key) ?? { ids: [], net: 0 };
+    group.ids.push(row.id);
+    group.net += row.quantityCases;
+    corrections.set(key, group);
+  }
+  for (const group of corrections.values()) {
+    if (group.ids.length > 1 && group.net === 0) group.ids.forEach((id) => folded.add(id));
+  }
+
   const bottleWord = (n: number) => `${n} ${n === 1 ? 'bottle' : 'bottles'}`;
 
   return rows.filter((row) => !folded.has(row.id)).map((row) => {
