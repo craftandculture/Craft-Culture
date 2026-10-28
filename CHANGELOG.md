@@ -1,3 +1,9 @@
+## [2.1.23](https://github.com/craftandculture/Craft-Culture/compare/v2.1.22...v2.1.23) (2026-10-28)
+
+### Features
+
+* **logistics:** the board at a glance on the Logistics dashboard ([2cad6b9](https://github.com/craftandculture/Craft-Culture/commit/2cad6b9164a19f603ad186ae40246b50b7a4acf7))
+
 ## [2.1.22](https://github.com/craftandculture/Craft-Culture/compare/v2.1.21...v2.1.22) (2026-10-28)
 
 ### Bug Fixes
