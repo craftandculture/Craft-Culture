@@ -1,3 +1,25 @@
+## [2.1.27](https://github.com/craftandculture/Craft-Culture/compare/v2.1.26...v2.1.27) (2026-10-28)
+
+### Features
+
+* admin home leads with what needs doing; slim staff footer; retired pages removed ([c371db3](https://github.com/craftandculture/Craft-Culture/commit/c371db34c0fd5b007b8bdf35c8e85afd6b328eb1))
+* Private Cellar is quieter and reads as one place ([86fd1a9](https://github.com/craftandculture/Craft-Culture/commit/86fd1a9c3a8a3bc2cd620763a34fb8a79059b6cf))
+
+### Improvements
+
+* Logistics, Stock, Partners and Settings pages share the house page header ([627cb29](https://github.com/craftandculture/Craft-Culture/commit/627cb2967d66b89b985427d0b37dc50bf3c76a16))
+* Orders, Source and Finance pages share the house page header ([5c52ffc](https://github.com/craftandculture/Craft-Culture/commit/5c52ffc9488ac0100c45cb71c085d91b6afb49f1))
+* shipment and group pages open with the house breadcrumb and title ([59a710b](https://github.com/craftandculture/Craft-Culture/commit/59a710bf8f751084a0db6c68eba6c9e10170d7df))
+
+### Bug Fixes
+
+* **cellar:** guard offers, release links and repack billing ([34f0060](https://github.com/craftandculture/Craft-Culture/commit/34f0060f6dd7130c554de90d241f550436189c50))
+* **logistics:** stop freight and currency errors in shipment costs ([44d1b7f](https://github.com/craftandculture/Craft-Culture/commit/44d1b7f8adc450e22db9a062fee6558d33943c62))
+* **orders:** keep box totals, payment status and landed costs right ([a447918](https://github.com/craftandculture/Craft-Culture/commit/a4479180c69e28bb6118b3bbb8634f5ab2f9d93d))
+* partner phone menu matches the desktop one; order screens say when they fail to load ([fd146a0](https://github.com/craftandculture/Craft-Culture/commit/fd146a0360a1ed06c50d92b981df339a6d791f5d))
+* **security:** close access gaps found in the 28 Oct security audit ([8292de5](https://github.com/craftandculture/Craft-Culture/commit/8292de58932b7f22184a06ffe123559afd4012fe))
+* **wms:** correct cycle counts, picks and stock merges ([41259eb](https://github.com/craftandculture/Craft-Culture/commit/41259eb721ab611b9216337c92d0b77531554150))
+
 ## [2.1.26](https://github.com/craftandculture/Craft-Culture/compare/v2.1.25...v2.1.26) (2026-10-28)
 
 ### Improvements
