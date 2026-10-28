@@ -1,3 +1,9 @@
+## [2.1.26](https://github.com/craftandculture/Craft-Culture/compare/v2.1.25...v2.1.26) (2026-10-28)
+
+### Improvements
+
+* no more teal in admin, partner and distributor screens; order status colours mean something ([d0442fa](https://github.com/craftandculture/Craft-Culture/commit/d0442fa4e9896ad3eec5463df47abd12569bda26))
+
 ## [2.1.25](https://github.com/craftandculture/Craft-Culture/compare/v2.1.24...v2.1.25) (2026-10-28)
 
 ### Features
