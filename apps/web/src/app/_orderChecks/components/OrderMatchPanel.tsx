@@ -14,6 +14,7 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import { useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
@@ -238,7 +239,12 @@ const OrderMatchPanel = () => {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => void exportReport(r)}
+                onClick={() =>
+                  void exportReport(r).catch((error: unknown) => {
+                    console.error('Error exporting order check report', { error });
+                    toast.error('The report could not be exported. Please try again.');
+                  })
+                }
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border-muted px-3 py-1.5 text-sm text-text-primary hover:bg-surface-secondary/60"
               >
                 <IconDownload size={15} /> Export to Excel
