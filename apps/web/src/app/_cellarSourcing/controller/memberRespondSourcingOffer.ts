@@ -5,7 +5,7 @@ import { z } from 'zod';
 import assertActivated from '@/app/_onboarding/data/assertActivated';
 import db from '@/database/client';
 import { cellarSourcingRequests } from '@/database/schema';
-import { stockOwnerProcedure } from '@/lib/trpc/procedures';
+import { collectorProcedure } from '@/lib/trpc/procedures';
 
 import fulfilAgreedWine from '../data/fulfilAgreedWine';
 import notifySourcingUpdate from '../data/notifySourcingUpdate';
@@ -21,16 +21,31 @@ import notifySourcingUpdate from '../data/notifySourcingUpdate';
  * @example
  *   await trpcClient.cellarSourcing.member.respondOffer.mutate({ requestId, response: 'accept' });
  */
-const memberRespondSourcingOffer = stockOwnerProcedure
+const memberRespondSourcingOffer = collectorProcedure
   .input(
     z.object({
       requestId: z.string().uuid(),
       response: z.enum(['accept', 'decline']),
+      /*
+        The figures the member saw. Accepting holds them to exactly that
+        offer: if the team has re-sent it at a different price or quantity
+        since the page loaded, the accept is refused rather than taken at
+        terms the member never saw.
+      */
+      pricePerBottleUsd: z.number().nonnegative().optional(),
+      cases: z.number().int().nonnegative().optional(),
     }),
   )
   .mutation(async ({ ctx, input }) => {
     if (input.response === 'accept') {
       await assertActivated(ctx.partner.id);
+
+      if (input.pricePerBottleUsd === undefined || input.cases === undefined) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Please refresh the page and accept the offer again.',
+        });
+      }
     }
 
     const now = new Date();
@@ -51,6 +66,15 @@ const memberRespondSourcingOffer = stockOwnerProcedure
             isNull(cellarSourcingRequests.offerValidUntil),
             gt(cellarSourcingRequests.offerValidUntil, now),
           ),
+          ...(input.response === 'accept'
+            ? [
+                eq(
+                  cellarSourcingRequests.offerPricePerBottleUsd,
+                  input.pricePerBottleUsd!,
+                ),
+                eq(cellarSourcingRequests.offerCases, input.cases!),
+              ]
+            : []),
         ),
       )
       .returning();
@@ -59,7 +83,7 @@ const memberRespondSourcingOffer = stockOwnerProcedure
       throw new TRPCError({
         code: 'CONFLICT',
         message:
-          'This offer is no longer open. Please contact us and we will see what we can do.',
+          'This offer is no longer open, or it has changed since you opened the page. Please refresh to see the latest, or contact us.',
       });
     }
 
@@ -67,6 +91,11 @@ const memberRespondSourcingOffer = stockOwnerProcedure
     let purchaseNumber: string | null = null;
 
     if (input.response === 'accept') {
+      /*
+        If the wine cannot be reserved or handed to the team, the accept is
+        undone so the member can try again — never left accepted with nothing
+        behind it.
+      */
       const result = await fulfilAgreedWine({
         partnerId: ctx.partner.id,
         partnerName: ctx.partner.businessName,
@@ -80,6 +109,18 @@ const memberRespondSourcingOffer = stockOwnerProcedure
         holdAt: row.offerHoldAt ?? row.holdAt,
         fromStock: row.offerFromStock,
         linkUrl: '/platform/admin/cellar-members?tab=requests',
+      }).catch(async (error: unknown) => {
+        await db
+          .update(cellarSourcingRequests)
+          .set({ status: 'offer_sent', respondedAt: null, updatedAt: new Date() })
+          .where(
+            and(
+              eq(cellarSourcingRequests.id, row.id),
+              eq(cellarSourcingRequests.status, 'accepted'),
+              isNull(cellarSourcingRequests.purchaseId),
+            ),
+          );
+        throw error;
       });
 
       purchaseNumber = result.purchase?.purchaseNumber ?? null;

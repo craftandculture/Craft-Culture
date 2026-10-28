@@ -39,7 +39,7 @@ const HomeTasksCard = () => {
       <CardContent className="p-0">
         <div className="flex items-center justify-between px-6 py-4">
           <p className="text-[15px] font-bold">Your tasks</p>
-          <Link href="/platform/admin/tasks" className="text-[12px] font-medium text-text-brand transition-opacity hover:opacity-80">
+          <Link href="/platform/admin/tasks" className="text-[12px] font-medium text-text-primary transition-opacity hover:opacity-80">
             All tasks &rarr;
           </Link>
         </div>

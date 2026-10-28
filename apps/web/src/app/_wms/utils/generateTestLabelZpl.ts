@@ -1,4 +1,6 @@
+import escapeZpl from './escapeZpl';
 import type { LabelSize } from '../providers/PrinterProvider';
+
 
 /**
  * Generate a minimal ZPL test label to verify printer connectivity.
@@ -7,6 +9,9 @@ import type { LabelSize } from '../providers/PrinterProvider';
  * @param ip - IP address of the printer
  * @param labelSize - Label size variant ('4x2' or '4x6')
  * @returns ZPL string for a test label
+ *
+ * Saves the media setting (^JUS) to the printer: this is the one label printed
+ * deliberately to set a printer up, so it is the place to persist it.
  */
 const generateTestLabelZpl = (printerName: string, ip: string, labelSize: LabelSize) => {
   const timestamp = new Date().toLocaleString('en-GB', {
@@ -22,8 +27,8 @@ const generateTestLabelZpl = (printerName: string, ip: string, labelSize: LabelS
 ^MTD^JUS
 ^PR3
 ^FO50,40^ADN,46,24^FDTEST PRINT^FS
-^FO50,100^A0N,32,32^FD${printerName}^FS
-^FO50,150^A0N,28,28^FD${ip}^FS
+^FO50,100^A0N,32,32^FD${escapeZpl(printerName)}^FS
+^FO50,150^A0N,28,28^FD${escapeZpl(ip)}^FS
 ^FO50,200^A0N,24,24^FD${timestamp}^FS
 ^FO50,260^GB710,0,3^FS
 ^FO50,290^A0N,24,24^FDPrinter is working!^FS
@@ -34,8 +39,8 @@ const generateTestLabelZpl = (printerName: string, ip: string, labelSize: LabelS
 ^MTD^JUS
 ^PR3
 ^FO30,20^ADN,36,20^FDTEST PRINT^FS
-^FO30,65^A0N,24,24^FD${printerName}^FS
-^FO30,95^A0N,20,20^FD${ip}^FS
+^FO30,65^A0N,24,24^FD${escapeZpl(printerName)}^FS
+^FO30,95^A0N,20,20^FD${escapeZpl(ip)}^FS
 ^FO30,125^A0N,18,18^FD${timestamp}^FS
 ^FO30,155^GB750,0,2^FS
 ^FO30,170^A0N,20,20^FDPrinter is working!^FS

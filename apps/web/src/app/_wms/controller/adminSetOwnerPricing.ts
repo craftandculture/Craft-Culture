@@ -1,5 +1,5 @@
 import { client } from '@/database/client';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { setOwnerPricingSchema } from '../schemas/pricingManagerSchema';
 
@@ -13,7 +13,7 @@ import { setOwnerPricingSchema } from '../schemas/pricingManagerSchema';
  * @param ownerId - The partner/owner UUID
  * @param pcSellingPricePerBottle - PC selling price per bottle in USD
  */
-const adminSetOwnerPricing = wmsOperatorProcedure
+const adminSetOwnerPricing = adminProcedure
   .input(setOwnerPricingSchema)
   .mutation(async ({ input, ctx }) => {
     const { lwin18, ownerId, pcSellingPricePerBottle } = input;

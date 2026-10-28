@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import writeProductPricing from '../utils/writeProductPricing';
 
@@ -20,7 +20,7 @@ import writeProductPricing from '../utils/writeProductPricing';
  *     lwin18s: ['1014525-2019-06-00750'], b2bMarginPct: 20, pcMarginPct: 30,
  *   });
  */
-const adminSetLineMargins = wmsOperatorProcedure
+const adminSetLineMargins = adminProcedure
   .input(
     z.object({
       lwin18s: z.array(z.string()).min(1).max(500),

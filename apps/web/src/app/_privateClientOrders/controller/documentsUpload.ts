@@ -1,16 +1,18 @@
 import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
-import { eq } from 'drizzle-orm';
 import { fileTypeFromBuffer } from 'file-type';
 
+
 import db from '@/database/client';
-import { partnerMembers, privateClientOrderDocuments } from '@/database/schema';
+import { privateClientOrderDocuments } from '@/database/schema';
+import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { approvedProcedure } from '@/lib/trpc/procedures';
 import { extractDocumentJob } from '@/trigger/jobs/extract-document/extractDocumentJob';
 import logger from '@/utils/logger';
 
 import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
+import { UPLOADABLE_DOCUMENT_TYPES } from '../utils/documentAccess';
+import resolveOrderParty from '../utils/resolveOrderParty';
 
 const ALLOWED_DOCUMENT_TYPES = [
   'application/pdf',
@@ -31,8 +33,8 @@ const documentsUpload = approvedProcedure.input(uploadDocumentSchema).mutation(a
   const { user } = ctx;
 
   // Check if Blob token is configured
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    logger.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
+  if (!process.env.BLOB_PRIVATE_READ_WRITE_TOKEN) {
+    logger.error('BLOB_PRIVATE_READ_WRITE_TOKEN environment variable is not set');
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
       message: 'File storage is not configured. Please contact support.',
@@ -51,23 +53,28 @@ const documentsUpload = approvedProcedure.input(uploadDocumentSchema).mutation(a
     });
   }
 
-  // Check access - must be admin, the partner who created it, or assigned distributor
-  const isAdmin = user.role === 'admin';
+  // C&C staff, the partner who placed it, or its distributor (not view-only)
+  const { party, canWrite } = await resolveOrderParty(user, order);
 
-  // Check if user is a member of any partner
-  const [userPartnerMembership] = await db
-    .select({ partnerId: partnerMembers.partnerId })
-    .from(partnerMembers)
-    .where(eq(partnerMembers.userId, user.id))
-    .limit(1);
-
-  const isPartner = userPartnerMembership && order.partnerId === userPartnerMembership.partnerId;
-  const isDistributor = userPartnerMembership && order.distributorId === userPartnerMembership.partnerId;
-
-  if (!isAdmin && !isPartner && !isDistributor) {
+  if (!party) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'You do not have access to this order',
+    });
+  }
+
+  if (!canWrite) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'You have view-only access to this account. Ask its owner to change your access.',
+    });
+  }
+
+  // Each party adds only its own kinds of document
+  if (!UPLOADABLE_DOCUMENT_TYPES[party].includes(documentType)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'This kind of document is added by another party to the order',
     });
   }
 
@@ -108,11 +115,8 @@ const documentsUpload = approvedProcedure.input(uploadDocumentSchema).mutation(a
     const blobFilename = `private-orders/${orderId}/${documentType}/${timestamp}-${sanitizedFilename}`;
 
     // Upload to Vercel Blob using detected content type
-    const blob = await put(blobFilename, buffer, {
-      access: 'public',
-      contentType: detectedType.mime,
-      addRandomSuffix: true,
-    });
+    // Private store: opened only through /api/files after a login check
+      const blob = await putPrivateFile(blobFilename, buffer, detectedType.mime);
 
     // Create database record
     const documents = await db

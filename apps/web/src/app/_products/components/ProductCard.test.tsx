@@ -140,7 +140,7 @@ describe('ProductCard', () => {
 
       render(<ProductCard product={product} onAdd={handleAdd} />);
 
-      // Price: 100 USD * 3.67 = 367 AED (with AED prefix)
+      // Price: 100 USD * 3.6725 = 367.25, shown rounded as AED 367
       expect(screen.getByText('AED 367')).toBeInTheDocument();
     });
 
@@ -194,7 +194,7 @@ describe('ProductCard', () => {
 
       render(<ProductCard product={product} onAdd={handleAdd} />);
 
-      // Price: 0 * 3.67 = 0 (with AED prefix)
+      // Price: 0 * 3.6725 = 0 (with AED prefix)
       expect(screen.getByText('AED 0')).toBeInTheDocument();
     });
   });

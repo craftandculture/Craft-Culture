@@ -94,8 +94,8 @@ const ShipmentStatusStepper = ({
                     isCompleted
                       ? 'border-text-primary bg-text-primary text-surface-primary'
                       : isCurrent
-                        ? 'border-text-primary bg-white dark:bg-surface-primary'
-                        : 'border-border-muted bg-white dark:bg-surface-primary'
+                        ? 'border-text-primary bg-surface-primary dark:bg-surface-primary'
+                        : 'border-border-muted bg-surface-primary dark:bg-surface-primary'
                   }`}
                 >
                   {isCompleted ? (

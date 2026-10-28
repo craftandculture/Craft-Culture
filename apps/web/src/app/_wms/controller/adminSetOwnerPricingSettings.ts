@@ -1,6 +1,6 @@
 import db from '@/database/client';
 import { wmsOwnerPricingSettings } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { setOwnerPricingSettingsSchema } from '../schemas/pricingManagerSchema';
 
@@ -14,7 +14,7 @@ import { setOwnerPricingSettingsSchema } from '../schemas/pricingManagerSchema';
  * @param inbondMarginPct - In-bond (B2B) margin percentage on landed cost
  * @param pcMarginPct - Private-client margin percentage on landed cost (optional)
  */
-const adminSetOwnerPricingSettings = wmsOperatorProcedure
+const adminSetOwnerPricingSettings = adminProcedure
   .input(setOwnerPricingSettingsSchema)
   .mutation(async ({ input, ctx }) => {
     const { ownerId, logisticsPerBottle, inbondMarginPct, pcMarginPct } = input;

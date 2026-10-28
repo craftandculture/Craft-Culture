@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import OrphanOrderBackfill from '@/app/_privateClientContacts/components/OrphanOrderBackfill';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
@@ -73,15 +74,10 @@ const AdminClientsPage = () => {
 
   return (
     <div className="space-y-5 p-6">
-      <div>
-        <Typography variant="headingLg">Clients</Typography>
-        <Typography variant="bodySm" colorRole="muted" asChild>
-          <p className="mt-1">
-            Every private client across all partners. Partners see only their
-            own; this is the whole book.
-          </p>
-        </Typography>
-      </div>
+      <AdminPageHeader
+        title="Clients"
+        description="Every private client across all partners. Partners see only their own; this is the whole book."
+      />
 
       <OrphanOrderBackfill />
 

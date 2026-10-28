@@ -1,5 +1,6 @@
-import { desc, like } from 'drizzle-orm';
-
+import nextYearNumber, {
+  type NumberExecutor,
+} from '@/app/_cellar/utils/nextYearNumber';
 import db from '@/database/client';
 import { consignmentPayoutRuns } from '@/database/schema';
 
@@ -9,23 +10,11 @@ import { consignmentPayoutRuns } from '@/database/schema';
  * @example
  *   await generateRunNumber(); // 'PAY-2026-0007'
  *
+ * @param executor - The database, or the transaction the insert runs in
+ * @param offset - Steps past the next free number, after a clash (see withNumberRetry)
  * @returns A sequential, year-scoped run reference
  */
-const generateRunNumber = async () => {
-  const prefix = `PAY-${new Date().getFullYear()}-`;
-
-  const [latest] = await db
-    .select({ runNumber: consignmentPayoutRuns.runNumber })
-    .from(consignmentPayoutRuns)
-    .where(like(consignmentPayoutRuns.runNumber, `${prefix}%`))
-    .orderBy(desc(consignmentPayoutRuns.runNumber))
-    .limit(1);
-
-  const next = latest
-    ? parseInt(latest.runNumber.replace(prefix, ''), 10) + 1
-    : 1;
-
-  return `${prefix}${String(next).padStart(4, '0')}`;
-};
+const generateRunNumber = (executor: NumberExecutor = db, offset = 0) =>
+  nextYearNumber(executor, consignmentPayoutRuns, consignmentPayoutRuns.runNumber, 'PAY', offset);
 
 export default generateRunNumber;

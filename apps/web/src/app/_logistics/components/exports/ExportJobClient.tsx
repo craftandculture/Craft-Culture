@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
+import fileHref from '@/utils/fileHref';
 
 import ShipmentTypeBadge from '../ShipmentTypeBadge';
 import BondPanel from './BondPanel';
@@ -379,7 +380,7 @@ const JobView = ({ job }: { job: Job }) => {
                         </Link>
                         {linked?.pdfUrl ? (
                           <a
-                            href={linked.pdfUrl}
+                            href={fileHref(linked.pdfUrl)}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
@@ -546,7 +547,7 @@ const JobView = ({ job }: { job: Job }) => {
               <ul className="divide-y divide-border-muted">
                 {job.documents.map((d) => (
                   <li key={d.id} className="flex items-center justify-between gap-3 py-2">
-                    <a href={d.fileUrl} target="_blank" rel="noreferrer" className="flex min-w-0 items-center gap-2 text-sm text-text-primary hover:underline">
+                    <a href={fileHref(d.fileUrl)} target="_blank" rel="noreferrer" className="flex min-w-0 items-center gap-2 text-sm text-text-primary hover:underline">
                       <IconFileText size={16} className="shrink-0 text-text-muted" />
                       <span className="truncate">{d.fileName}</span>
                     </a>

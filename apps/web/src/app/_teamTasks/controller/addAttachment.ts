@@ -5,9 +5,9 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { teamTaskAttachments, teamTasks } from '@/database/schema';
 import { teamProcedure } from '@/lib/trpc/procedures';
-import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 
 import logTaskEvent from '../data/logTaskEvent';
+import isTaskFileUrl from '../utils/isTaskFileUrl';
 
 /**
  * Attach a file to a job, once the browser has uploaded it to Blob
@@ -29,7 +29,7 @@ const addAttachment = teamProcedure
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    if (!isVercelBlobUrl(input.fileUrl)) {
+    if (!isTaskFileUrl(input.fileUrl, input.taskId)) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unrecognised file location' });
     }
 

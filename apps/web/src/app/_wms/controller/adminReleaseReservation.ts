@@ -51,8 +51,16 @@ const adminReleaseReservation = wmsOperatorProcedure
         availableCases: sql`${wmsStock.availableCases} + ${quantityCases}`,
         updatedAt: now,
       })
-      .where(eq(wmsStock.id, stockId))
+      // Only if still reserved when written: a double tap released twice
+      .where(and(eq(wmsStock.id, stockId), sql`${wmsStock.reservedCases} >= ${quantityCases}`))
       .returning();
+
+    if (!updated) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This reservation changed a moment ago. Refresh and try again.',
+      });
+    }
 
     /*
      * Close the reservation rows too, oldest first, up to the quantity handed

@@ -19,6 +19,7 @@ const parseQuoteExcelSchema = z.object({
   /** Base64-encoded Excel file data OR plain CSV string */
   content: z
     .string()
+    .max(14_000_000, 'File is too large (10 MB limit)')
     .transform((val) => val.replace(/\x00/g, ''))
     .pipe(z.string().min(1, 'Content is required')),
   /** Whether the content is base64-encoded Excel (true) or plain CSV (false) */

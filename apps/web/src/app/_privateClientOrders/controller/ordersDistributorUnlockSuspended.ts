@@ -7,6 +7,8 @@ import db from '@/database/client';
 import { partnerMembers, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import distributorOrderView from '../utils/distributorOrderView';
+
 const unlockSuspendedSchema = z.object({
   orderId: z.string().uuid(),
   notes: z.string().optional(),
@@ -104,7 +106,8 @@ const ordersDistributorUnlockSuspended = distributorProcedure
       }
     }
 
-    return updatedOrder;
+    // Without C&C's own notes and its payment to the partner
+    return updatedOrder ? distributorOrderView(updatedOrder) : updatedOrder;
   });
 
 export default ordersDistributorUnlockSuspended;

@@ -4,7 +4,7 @@ import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import ApplicationStatus from '@/app/_onboarding/components/ApplicationStatus';
 
 export const metadata = {
-  title: 'Your application — Private Cellar',
+  title: 'Your application · Private Cellar',
 };
 
 /** Where a submitted Private Cellar application stands */

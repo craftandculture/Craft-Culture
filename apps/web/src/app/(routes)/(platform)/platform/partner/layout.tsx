@@ -20,15 +20,23 @@ const PartnerLayout = async ({ children }: React.PropsWithChildren) => {
     redirect('/sign-in?next=/platform/partner/support');
   }
 
-  // Only allow wine partners to access partner routes
-  const isWinePartner =
-    resolveAccessProfile({
-      role: user.role,
-      customerType: user.customerType,
-      partnerType: user.partner?.type,
-    }).can.ownsStock;
+  const access = resolveAccessProfile({
+    role: user.role,
+    customerType: user.customerType,
+    partnerType: user.partner?.type,
+  });
 
-  if (!isWinePartner) {
+  /*
+    Only a wine partner, the same rule as winePartnerProcedure. Owning stock
+    is not enough: a private collector owns stock too, passed this gate, and
+    then met FORBIDDEN on every query. A collector following an old link lands
+    in their cellar instead.
+  */
+  if (access.kind === 'collector') {
+    redirect(access.home);
+  }
+
+  if (access.kind !== 'wine_partner') {
     redirect('/platform');
   }
 

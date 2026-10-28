@@ -7,6 +7,7 @@ import logger from '@/utils/logger';
 import logUserActivity from '@/utils/logUserActivity';
 
 import saveQuoteSchema from '../schemas/saveQuoteSchema';
+import buildStoredQuotePricing from '../utils/buildStoredQuotePricing';
 
 /**
  * Save a new quote to the database
@@ -22,6 +23,15 @@ import saveQuoteSchema from '../schemas/saveQuoteSchema';
 const quotesSave = approvedProcedure
   .input(saveQuoteSchema)
   .mutation(async ({ input, ctx: { user } }) => {
+    // Price the quote here from the live offers; never trust totals or
+    // commission sent by the browser
+    const pricing = await buildStoredQuotePricing({
+      lineItems: input.lineItems,
+      extras: input.quoteData,
+      currency: input.currency,
+      customerType: user.customerType,
+    });
+
     try {
       const [quote] = await db
         .insert(quotes)
@@ -30,14 +40,14 @@ const quotesSave = approvedProcedure
           name: input.name,
           status: 'draft',
           lineItems: input.lineItems,
-          quoteData: input.quoteData,
+          quoteData: pricing.quoteData,
           clientName: input.clientName,
           clientEmail: input.clientEmail,
           clientCompany: input.clientCompany,
           notes: input.notes,
           currency: input.currency,
-          totalUsd: input.totalUsd,
-          totalAed: input.totalAed,
+          totalUsd: pricing.totalUsd,
+          totalAed: pricing.totalAed,
           expiresAt: input.expiresAt,
         })
         .returning();

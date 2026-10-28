@@ -264,8 +264,8 @@ describe('B2BCalculator', () => {
       // Toggle to AED
       await user.click(currencyToggle);
 
-      // Should now show AED (5000 * 3.67 = 18350) - multiple instances
-      expect(screen.getAllByText('AED 18,350')[0]).toBeInTheDocument();
+      // Should now show AED (5000 * 3.6725 = 18,362.5, rounded) - multiple instances
+      expect(screen.getAllByText('AED 18,363')[0]).toBeInTheDocument();
     });
 
     it('should convert all prices when currency is toggled', async () => {
@@ -282,10 +282,10 @@ describe('B2BCalculator', () => {
 
       // All breakdown values should be in AED
       // With new formula: customerQuotePrice = 7658.82 USD
-      // In bond: 5000 * 3.67 = 18,350
-      // Total in AED: 7658.82 * 3.67 = 28,108
-      expect(screen.getAllByText('AED 18,350')[0]).toBeInTheDocument(); // In bond (multiple instances)
-      expect(screen.getAllByText('AED 28,108')[0]).toBeInTheDocument(); // Total (multiple instances)
+      // In bond: 5000 * 3.6725 = 18,363
+      // Total in AED: 7658.82 * 3.6725 = 28,127
+      expect(screen.getAllByText('AED 18,363')[0]).toBeInTheDocument(); // In bond (multiple instances)
+      expect(screen.getAllByText('AED 28,127')[0]).toBeInTheDocument(); // Total (multiple instances)
     });
   });
 

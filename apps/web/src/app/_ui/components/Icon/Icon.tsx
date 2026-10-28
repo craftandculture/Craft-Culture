@@ -17,7 +17,7 @@ export const iconStyles = tv({
     colorRole: {
       primary: 'stroke-text-primary',
       muted: 'stroke-text-muted',
-      brand: 'stroke-text-brand',
+      brand: 'stroke-text-primary',
       success: 'stroke-text-success',
       warning: 'stroke-text-warning',
       danger: 'stroke-text-danger',

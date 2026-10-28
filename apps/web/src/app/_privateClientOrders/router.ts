@@ -12,6 +12,7 @@ import adminDashboard from './controller/adminDashboard';
 import adminDelete from './controller/adminDelete';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
+import adminGetOrderEmails from './controller/adminGetOrderEmails';
 import adminGetOrderInvoicing from './controller/adminGetOrderInvoicing';
 import adminGetSubscriptionBoxes from './controller/adminGetSubscriptionBoxes';
 import adminGetWmsStockForOrder from './controller/adminGetWmsStockForOrder';
@@ -24,9 +25,12 @@ import adminRecordManualInvoice from './controller/adminRecordManualInvoice';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminResetItemInvoicing from './controller/adminResetItemInvoicing';
 import adminSetDistributorSku from './controller/adminSetDistributorSku';
+import adminSetOrderEmailMode from './controller/adminSetOrderEmailMode';
+import adminSetPricing from './controller/adminSetPricing';
 import adminSetSubscriptionBox from './controller/adminSetSubscriptionBox';
 import adminUnlinkZohoSalesOrder from './controller/adminUnlinkZohoSalesOrder';
 import adminUpdateItem from './controller/adminUpdateItem';
+import adminUpdateNotes from './controller/adminUpdateNotes';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import checkLocalStock from './controller/checkLocalStock';
 import distributorAddNote from './controller/distributorAddNote';
@@ -136,7 +140,9 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminBulkAssignDistributor,
   adminBulkUpdateStockStatus,
   adminMatchStockLwins,
+  adminSetPricing,
   adminUpdateItem,
+  adminUpdateNotes,
   adminRemoveItem,
   adminGetMany,
   adminGetOne,
@@ -147,6 +153,9 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminAssignDistributor: ordersAssignDistributor,
   adminResetVerification: ordersAdminResetVerification,
   adminMarkPartnerPaid,
+  // Order emails to partners and distributors: the switch and the outbox
+  adminGetOrderEmails,
+  adminSetOrderEmailMode,
   // Manual invoicing of delivered lines
   adminGetOrderInvoicing,
   adminMarkDeliveredInvoicePending,

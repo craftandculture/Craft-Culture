@@ -126,11 +126,11 @@ const AlternativesSection = ({
   };
 
   return (
-    <div className="rounded-lg border border-border-muted bg-white p-3">
+    <div className="rounded-lg border border-border-muted bg-surface-primary p-3">
       <Typography variant="bodyXs" className="font-semibold mb-2 flex items-center gap-1">
         <span>💡</span> Suggest Alternatives
         {alternatives.length > 0 && (
-          <span className="text-text-brand">({alternatives.length})</span>
+          <span className="text-text-primary">({alternatives.length})</span>
         )}
       </Typography>
 
@@ -257,8 +257,8 @@ const ReviewLineItemRow = ({
   return (
     <div className={`rounded-lg border-2 transition-all duration-200 ${
       isExpanded
-        ? 'border-border-brand bg-white shadow-md'
-        : 'border-border-muted bg-white hover:border-border-brand/50 hover:shadow-sm'
+        ? 'border-text-primary bg-surface-primary shadow-md'
+        : 'border-border-muted bg-surface-primary hover:border-text-primary/50 hover:shadow-sm'
     }`}>
       {/* Mobile Card Layout */}
       <div className="md:hidden px-3 py-3 space-y-3" onClick={onToggle}>
@@ -496,7 +496,7 @@ const ReviewLineItemRow = ({
         <div className="border-t border-border-muted px-4 py-4 bg-fill-muted/20 space-y-4">
           {/* Alternative Vintages (if customer requested) */}
           {lineItem.alternativeVintages && lineItem.alternativeVintages.length > 0 && (
-            <div className="rounded-lg bg-fill-brand/5 border border-border-brand/30 p-3">
+            <div className="rounded-lg bg-text-primary/5 border border-text-primary/30 p-3">
               <Typography variant="bodyXs" className="font-semibold mb-2 flex items-center gap-1">
                 <span>📅</span> Customer requested alternatives:
               </Typography>
@@ -504,7 +504,7 @@ const ReviewLineItemRow = ({
                 {lineItem.alternativeVintages.map((vintage, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex px-2 py-0.5 rounded bg-fill-brand/10 text-text-brand text-xs font-medium"
+                    className="inline-flex px-2 py-0.5 rounded bg-text-primary/10 text-text-primary text-xs font-medium"
                   >
                     {vintage}
                   </span>

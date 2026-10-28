@@ -32,16 +32,14 @@ const StatementSection = ({
   rows,
   footer,
 }: StatementSectionProps) => (
-  <section className="mb-6">
-    <h2 className="text-text-muted mb-2 text-[11px] font-semibold uppercase tracking-wider">
+  <section className="mb-7">
+    <h2 className="text-text-muted mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider">
       {title}
     </h2>
     {rows.length === 0 ? (
-      <p className="text-text-muted border-border-muted rounded-xl border px-4 py-3 text-sm">
-        {empty}
-      </p>
+      <p className="text-text-muted border-border-muted border-t px-1 pt-2 text-sm">{empty}</p>
     ) : (
-      <div className="border-border-muted overflow-x-auto rounded-xl border">
+      <div className="border-border-muted bg-surface-primary overflow-x-auto rounded-xl border">
         <table className="w-full text-sm">
           <thead className="bg-fill-muted/60 border-border-muted border-b">
             <tr className="text-text-muted text-[10px] uppercase tracking-[0.08em]">

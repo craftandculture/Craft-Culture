@@ -376,7 +376,7 @@ const ScanInput = forwardRef<ScanInputHandle, ScanInputProps>(({
             ? 'border-red-500 bg-red-50 dark:border-red-600 dark:bg-red-900/20'
             : success
               ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-900/20'
-              : 'border-border-primary bg-fill-primary focus-within:border-border-brand'
+              : 'border-border-primary bg-fill-primary focus-within:border-text-primary'
         }`}
       >
         <div className="flex items-center px-4">

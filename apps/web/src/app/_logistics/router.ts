@@ -26,7 +26,6 @@ import adminDeleteGroupDocument from './controller/adminDeleteGroupDocument';
 import adminDeleteShipment from './controller/adminDeleteShipment';
 import adminDeleteShipmentCostLine from './controller/adminDeleteShipmentCostLine';
 import adminDeleteShipmentGroup from './controller/adminDeleteShipmentGroup';
-import adminExportCompliancePdf from './controller/adminExportCompliancePdf';
 import adminExportLandedCostExcel from './controller/adminExportLandedCostExcel';
 import adminExtractDocument from './controller/adminExtractDocument';
 import adminExtractQuote from './controller/adminExtractQuote';
@@ -55,8 +54,12 @@ import adminGetReportMetrics from './controller/adminGetReportMetrics';
 import adminGetRouteOptions from './controller/adminGetRouteOptions';
 import adminGetShipmentGroup from './controller/adminGetShipmentGroup';
 import adminGetShipmentGroups from './controller/adminGetShipmentGroups';
+import adminGetTeam from './controller/adminGetTeam';
+import adminGetTeamBoard from './controller/adminGetTeamBoard';
+import adminGetUaeArrivalRateCard from './controller/adminGetUaeArrivalRateCard';
 import adminImportExtractedItems from './controller/adminImportExtractedItems';
 import adminImportForwarders from './controller/adminImportForwarders';
+import adminLogUpdate from './controller/adminLogUpdate';
 import adminMarkRequestRecipients from './controller/adminMarkRequestRecipients';
 import adminOpenRequestJob from './controller/adminOpenRequestJob';
 import adminParseGroupInvoice from './controller/adminParseGroupInvoice';
@@ -71,6 +74,7 @@ import adminSetClientPrice from './controller/adminSetClientPrice';
 import adminSetGroupInvoiceVendor from './controller/adminSetGroupInvoiceVendor';
 import adminSetRequestRecipients from './controller/adminSetRequestRecipients';
 import adminSetShipmentFx from './controller/adminSetShipmentFx';
+import adminSetUaeArrivalRateCard from './controller/adminSetUaeArrivalRateCard';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
 import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocuments';
 import adminSyncHillebrandInvoices from './controller/adminSyncHillebrandInvoices';
@@ -104,6 +108,12 @@ const adminRouter = createTRPCRouter({
   getOne: adminGetOne,
   update: adminUpdate,
   updateStatus: adminUpdateStatus,
+  // Status, ETA, next action and owner in one save, from the quick update
+  logUpdate: adminLogUpdate,
+  // Who can own a next action
+  getTeam: adminGetTeam,
+  // Board health, no news, arriving and next actions per owner, at a glance
+  getTeamBoard: adminGetTeamBoard,
   delete: adminDeleteShipment,
 
   // Items
@@ -175,7 +185,6 @@ const adminRouter = createTRPCRouter({
 
   // Exports
   exportLandedCostExcel: adminExportLandedCostExcel,
-  exportCompliancePdf: adminExportCompliancePdf,
 
   // Tools
   extractDocument: adminExtractDocument,
@@ -195,6 +204,9 @@ const adminRouter = createTRPCRouter({
     compare: adminCompareQuotes,
     extract: adminExtractQuote,
     uploadAttachment: adminUploadQuoteAttachment,
+    // The UAE customs and handling charges added to every quote into the UAE
+    arrivalRateCard: adminGetUaeArrivalRateCard,
+    setArrivalRateCard: adminSetUaeArrivalRateCard,
   }),
 
   // Forwarders on file, built from the quotes they send

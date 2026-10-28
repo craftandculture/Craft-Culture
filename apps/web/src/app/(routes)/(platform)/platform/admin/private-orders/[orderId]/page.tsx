@@ -2,7 +2,6 @@
 
 import {
   IconAlertCircle,
-  IconArrowLeft,
   IconBuilding,
   IconBuildingWarehouse,
   IconCheck,
@@ -28,6 +27,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Fragment, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import LwinLookup from '@/app/_lwin/components/LwinLookup';
 import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
 import OrderClientCard from '@/app/_privateClientContacts/components/OrderClientCard';
@@ -42,9 +42,9 @@ import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/Priva
 import StockIdentificationSection from '@/app/_privateClientOrders/components/StockIdentificationSection';
 import StockManagementSection from '@/app/_privateClientOrders/components/StockManagementSection';
 import SubscriptionBoxPicker from '@/app/_privateClientOrders/components/SubscriptionBoxPicker';
-import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import ZohoSalesOrderButton from '@/app/_privateClientOrders/components/ZohoSalesOrderButton';
 import { pcoListNeighbours } from '@/app/_privateClientOrders/utils/pcoListOrder';
+import isRoutinePcoTransition from '@/app/_privateClientOrders/utils/pcoStatusTransitions';
 import MakeJobButton from '@/app/_teamTasks/components/MakeJobButton';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -62,13 +62,15 @@ import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import usePrintPcoLabels from '@/app/_wms/hooks/usePrintPcoLabels';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
+import OrderChain from '@/app/_zohoSalesOrders/components/OrderChain';
 import type { PrivateClientOrder } from '@/database/schema';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 /**
  * Format a price value with currency
@@ -245,6 +247,40 @@ const AdminPrivateOrderDetailPage = () => {
     }),
   );
 
+  /* This order's own rates while they are being overridden, as typed */
+  const [rateDraft, setRateDraft] = useState<Record<
+    'ccMarginPercent' | 'importDutyPercent' | 'transferCostPercent' | 'distributorMarginPercent' | 'vatPercent',
+    string
+  > | null>(null);
+
+  const { mutate: setRates, isPending: isSavingRates } = useMutation(
+    api.privateClientOrders.adminSetPricing.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.mode === 'standard' ? 'Back on standard rates' : 'Rates saved and totals recalculated');
+        setRateDraft(null);
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message || 'Failed to save rates'),
+    }),
+  );
+
+  /* The note being edited, and its draft text */
+  const [editingNote, setEditingNote] = useState<{
+    key: 'partnerNotes' | 'deliveryNotes';
+    text: string;
+  } | null>(null);
+
+  const { mutate: saveNotes, isPending: isSavingNotes } = useMutation(
+    api.privateClientOrders.adminUpdateNotes.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.changed ? 'Notes saved' : 'Nothing changed');
+        setEditingNote(null);
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message || 'Failed to save notes'),
+    }),
+  );
+
   // Update item mutation
   const { mutate: updateItem, isPending: isUpdatingItem } = useMutation(
     api.privateClientOrders.adminUpdateItem.mutationOptions({
@@ -398,9 +434,18 @@ const AdminPrivateOrderDetailPage = () => {
     },
   });
 
+  // A status change is never one click: routine steps are confirmed, and a
+  // jump outside the normal steps is confirmed as a correction
   const handleStatusChange = (newStatus: OrderStatus) => {
+    if (!order || newStatus === order.status) return;
+    const label = statusOptions.find((opt) => opt.value === newStatus)?.label ?? newStatus;
+    const routine = isRoutinePcoTransition(order.status, newStatus);
+    const question = routine
+      ? `Change this order to "${label}"?`
+      : `Moving this order to "${label}" skips or reverses the normal steps. Make this correction?`;
+    if (!window.confirm(question)) return;
     setIsUpdating(true);
-    updateStatus({ orderId, status: newStatus });
+    updateStatus({ orderId, status: newStatus, override: routine ? undefined : true });
   };
 
   const handleDistributorAssign = (distributorId: string) => {
@@ -428,6 +473,15 @@ const AdminPrivateOrderDetailPage = () => {
 
   const handleSaveItem = () => {
     if (!editingItem) return;
+    // A cleared price field reads as 0; never save a line at no price by accident
+    if (!Number.isFinite(editingItem.pricePerCaseUsd) || editingItem.pricePerCaseUsd <= 0) {
+      toast.error('Price must be greater than 0');
+      return;
+    }
+    if (!Number.isFinite(editingItem.quantity) || editingItem.quantity < 1) {
+      toast.error('Quantity must be at least 1');
+      return;
+    }
     updateItem({
       itemId: editingItem.id,
       productName: editingItem.productName,
@@ -485,6 +539,8 @@ const AdminPrivateOrderDetailPage = () => {
   const canAssignDistributor = order && DISTRIBUTOR_ASSIGNABLE_STATUSES.includes(order.status);
   const canEditItems = order && !NON_EDITABLE_STATUSES.includes(order.status);
   const canDelete = order && ['draft', 'cancelled'].includes(order.status);
+  // A member's own wine going to them (a cellar release), not a sale to a client
+  const isMemberDelivery = !!order?.cellarRelease || order?.orderKind === 'owner_delivery';
 
   const handleDeleteOrder = () => {
     if (confirm(`Are you sure you want to permanently delete order ${order?.orderNumber}? This action cannot be undone.`)) {
@@ -550,9 +606,8 @@ const AdminPrivateOrderDetailPage = () => {
   }
 
   // Calculate exchange rate for AED conversion (use actual rate if available, otherwise default)
-  const totalAed = Number(order.totalAed) || 0;
-  const totalUsd = Number(order.totalUsd) || 1;
-  const usdToAedRate = totalAed > 0 ? totalAed / totalUsd : DEFAULT_EXCHANGE_RATE;
+  // At the fixed peg; the stored ratio carried 3.67 on orders totalled before 28 Oct 2026
+  const usdToAedRate = USD_TO_AED;
 
   /**
    * Convert amount to selected currency
@@ -566,15 +621,25 @@ const AdminPrivateOrderDetailPage = () => {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-4">
-        {/* Header - compact */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/platform/admin/private-orders">
-                <Icon icon={IconArrowLeft} size="sm" />
+        <AdminPageHeader
+          title={order.orderNumber}
+          crumbs={[{ label: 'Private Client Orders', href: '/platform/admin/private-orders' }]}
+          description={
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <PrivateOrderStatusBadge status={order.status} />
+            {order.cellarRelease && (
+              <Link
+                href={`/platform/admin/cellar-releases?open=${order.cellarRelease.id}`}
+                className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900"
+                title={`Member's own wine — bill only the delivery quote of $${order.cellarRelease.totalCostUsd?.toLocaleString() ?? 0}`}
+              >
+                From cellar release {order.cellarRelease.requestNumber}
               </Link>
-            </Button>
-            <Typography variant="headingLg">{order.orderNumber}</Typography>
+            )}
+            </span>
+          }
+          actions={
+            <>
             {neighbours && neighbours.total > 1 && (
               <div className="flex items-center gap-0.5">
                 <Button
@@ -602,11 +667,6 @@ const AdminPrivateOrderDetailPage = () => {
                 </Button>
               </div>
             )}
-            <PrivateOrderStatusBadge status={order.status} />
-          </div>
-
-          {/* Quick actions bar */}
-          <div className="flex flex-wrap items-center gap-2">
             {/* Currency Toggle */}
             <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
               <button
@@ -650,6 +710,8 @@ const AdminPrivateOrderDetailPage = () => {
               </SelectContent>
             </Select>
 
+            {/* A member's own delivery is not something to copy to other clients */}
+            {!isMemberDelivery && (
             <CloneOrderDialog
               audience="admin"
               orderId={order.id}
@@ -660,6 +722,7 @@ const AdminPrivateOrderDetailPage = () => {
               subscriptionCaseSize={order.subscriptionCaseSize}
               subscriptionVariant={order.subscriptionVariant}
             />
+            )}
 
             <ZohoSalesOrderButton
               orderId={order.id}
@@ -686,31 +749,51 @@ const AdminPrivateOrderDetailPage = () => {
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </Button>
             )}
-          </div>
-        </div>
+            </>
+          }
+        />
 
-        {/* Workflow Stepper */}
-        <WorkflowStepper order={order} />
-
-        {/* The distributor's bundle SKU (City Drinks), with its source. Shown
-            on unassigned orders too, so the SKU can be recorded whenever it
-            is known; hidden only for a distributor that doesn't use SKUs. */}
-        {(!order.distributor || order.distributor.requiresOrderSku) && (
-          <DistributorSkuCard
-            key={order.distributorSku ?? 'none'}
-            audience="admin"
-            orderId={order.id}
-            orderNumber={order.orderNumber}
-            status={order.status}
-            distributorName={order.distributor?.businessName ?? 'Distributor'}
-            sku={order.distributorSku}
-            source={order.distributorSkuSource}
-            distributorRef={order.distributorRef}
-            feedSku={order.feedBundle?.sku ?? null}
-          />
-        )}
+        {/*
+          One tracker: the paperwork chain, with the two milestones only the
+          order knows (client verified, client paid) slotted in. The status
+          stepper above it described the same journey a second time. The
+          distributor SKU is a line under it rather than a card of its own.
+        */}
+        <Card>
+          <CardContent className="p-4">
+            <OrderChain
+              pcoId={order.id}
+              extraSteps={[
+                ...(order.distributor?.requiresClientVerification
+                  ? [{ after: 'invoice' as const, key: 'verified', label: 'Client verified', at: order.clientVerifiedAt ?? null, done: !!order.clientVerifiedAt }]
+                  : []),
+                { after: 'invoice' as const, key: 'paid', label: isMemberDelivery ? 'Delivery paid' : 'Client paid', at: order.clientPaidAt ?? null, done: !!order.clientPaidAt },
+              ]}
+              footer={
+                /* Shown on unassigned orders too, so the SKU can be recorded whenever it
+                   is known; hidden only for a distributor that doesn't use SKUs. */
+                (!order.distributor || order.distributor.requiresOrderSku) ? (
+                  <DistributorSkuCard
+                    compact
+                    key={order.distributorSku ?? 'none'}
+                    audience="admin"
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    status={order.status}
+                    distributorName={order.distributor?.businessName ?? 'Distributor'}
+                    sku={order.distributorSku}
+                    source={order.distributorSkuSource}
+                    distributorRef={order.distributorRef}
+                    feedSku={order.feedBundle?.sku ?? null}
+                  />
+                ) : null
+              }
+            />
+          </CardContent>
+        </Card>
 
         {/* Which subscription box this order is — what the clone tool keys on */}
+        {!isMemberDelivery && (
         <SubscriptionBoxPicker
           audience="admin"
           key={`${order.subscriptionTier}-${order.subscriptionCaseSize}-${order.subscriptionVariant}`}
@@ -718,8 +801,9 @@ const AdminPrivateOrderDetailPage = () => {
           tier={order.subscriptionTier}
           caseSize={order.subscriptionCaseSize}
           variant={order.subscriptionVariant}
-          clientTotalAed={order.totalAed}
+          clientTotalAed={order.totalUsd != null ? Number(order.totalUsd) * USD_TO_AED : null}
         />
+        )}
 
         {/* Order Completion - Shown prominently for delivered/distributor_paid orders */}
         {['delivered', 'distributor_paid'].includes(order.status) && (
@@ -869,7 +953,7 @@ const AdminPrivateOrderDetailPage = () => {
                       className="group relative overflow-hidden rounded-lg border border-border-muted"
                     >
                       <Image
-                        src={order.deliveryPhoto}
+                        src={fileHref(order.deliveryPhoto)}
                         alt="Proof of delivery"
                         width={120}
                         height={80}
@@ -1433,9 +1517,113 @@ const AdminPrivateOrderDetailPage = () => {
           {/* Order Summary - Full Breakdown for Admin */}
           <Card>
             <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-2">
-                Pricing Breakdown ({currency})
-              </Typography>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <Typography variant="labelSm" colorRole="muted">
+                  Pricing Breakdown ({currency})
+                </Typography>
+                {!rateDraft && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const v = order.pricingVariables;
+                      setRateDraft({
+                        ccMarginPercent: String(v?.ccMarginPercent ?? ''),
+                        importDutyPercent: String(v?.importDutyPercent ?? ''),
+                        transferCostPercent: String(v?.transferCostPercent ?? ''),
+                        distributorMarginPercent: String(v?.distributorMarginPercent ?? ''),
+                        vatPercent: String(v?.vatPercent ?? ''),
+                      });
+                    }}
+                    className="text-text-muted hover:text-text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
+                  >
+                    <Icon icon={IconEdit} size="xs" />
+                    Override rates
+                  </button>
+                )}
+              </div>
+              {order.hasPricingOverride && !rateDraft && (
+                <p className="mb-2 w-fit rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                  Custom rates for this order
+                </p>
+              )}
+              {/*
+                Rates for this order alone. The pricing variables in admin stay
+                the default; this is for the order that needs different figures.
+              */}
+              {rateDraft && (
+                <div className="mb-3 flex flex-col gap-1.5 rounded-lg border border-border-muted p-2">
+                  {(
+                    [
+                      ['ccMarginPercent', 'C&C margin'],
+                      ['importDutyPercent', 'Import duty'],
+                      ['transferCostPercent', 'Transfer'],
+                      ['distributorMarginPercent', 'Distributor'],
+                      ['vatPercent', 'VAT'],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label key={key} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-text-muted">{label}</span>
+                      <span className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          step="any"
+                          min={0}
+                          max={100}
+                          value={rateDraft[key]}
+                          onChange={(event) => setRateDraft({ ...rateDraft, [key]: event.target.value })}
+                          className="h-7 w-24 text-right text-xs"
+                        />
+                        %
+                      </span>
+                    </label>
+                  ))}
+                  {order.zohoSalesOrderId && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                      {order.zohoSalesOrderNumber ?? 'The Zoho order'} is already raised — update its prices in Zoho too.
+                    </p>
+                  )}
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      isDisabled={
+                        isSavingRates ||
+                        Object.values(rateDraft).some((value) => value.trim() === '' || Number.isNaN(Number(value)))
+                      }
+                      onClick={() =>
+                        setRates({
+                          mode: 'override',
+                          orderId,
+                          ccMarginPercent: Number(rateDraft.ccMarginPercent),
+                          importDutyPercent: Number(rateDraft.importDutyPercent),
+                          transferCostPercent: Number(rateDraft.transferCostPercent),
+                          distributorMarginPercent: Number(rateDraft.distributorMarginPercent),
+                          vatPercent: Number(rateDraft.vatPercent),
+                        })
+                      }
+                    >
+                      <Icon icon={IconCheck} size="sm" />
+                      Save and recalculate
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setRateDraft(null)}>
+                      Cancel
+                    </Button>
+                    {order.hasPricingOverride && (
+                      <button
+                        type="button"
+                        disabled={isSavingRates}
+                        onClick={() => {
+                          if (window.confirm(`Put ${order.orderNumber} back on the standard pricing variables?`)) {
+                            setRates({ mode: 'standard', orderId });
+                          }
+                        }}
+                        className="text-text-muted ml-auto text-xs font-medium hover:text-text-primary disabled:opacity-40"
+                      >
+                        Use standard rates
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
               {(() => {
                 // Calculate derived values for full breakdown
                 const lineItemsTotal = order.items?.reduce(
@@ -1458,7 +1646,24 @@ const AdminPrivateOrderDetailPage = () => {
                 const transferPct = landedDutyFree > 0 ? ((transferUsd / landedDutyFree) * 100) : 0.75;
                 const distPct = afterDistributor > 0 ? ((1 - dutyPaidLanded / afterDistributor) * 100) : 7.5;
                 const vatPct = afterDistributor > 0 ? ((vatUsd / afterDistributor) * 100) : 5;
-                const fmtPct = (v: number) => Number.isInteger(v) ? v.toString() : v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+                /*
+                  Each rate as the order is priced at it. Worked back out of the
+                  rounded totals they read 4.8978, 7.5006, 4.9994; the rate is
+                  only shown that way when the order was priced at a different
+                  one, and then to two places.
+                */
+                const rates = order.pricingVariables;
+                const shown = (configured: number | null | undefined, derived: number) =>
+                  configured != null && Math.abs(configured - derived) < 0.01
+                    ? configured
+                    : Math.round(derived * 100) / 100;
+                const shownMarginPct = shown(rates?.ccMarginPercent, ccMarginPct);
+                const shownDutyPct = shown(rates?.importDutyPercent, dutyPct);
+                const shownTransferPct = shown(rates?.transferCostPercent, transferPct);
+                const shownDistPct = shown(rates?.distributorMarginPercent, distPct);
+                const shownVatPct = shown(rates?.vatPercent, vatPct);
+                // Up to four places: a margin keyed as 4.8976 must not read as 4.9
+                const fmtPct = (v: number) => Number.isInteger(v) ? v.toString() : v.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
 
                 return (
                   <div className="space-y-1 text-xs">
@@ -1468,7 +1673,7 @@ const AdminPrivateOrderDetailPage = () => {
                       <span>{formatCurrencyValue(getAmount(lineItemsTotal), currency)}</span>
                     </div>
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ C&C Margin ({fmtPct(ccMarginPct)}%)</span>
+                      <span className="pl-2">+ C&C Margin ({fmtPct(shownMarginPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(ccMargin), currency)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
@@ -1480,11 +1685,11 @@ const AdminPrivateOrderDetailPage = () => {
 
                     {/* Duties & Transfer */}
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ Import Duty ({fmtPct(dutyPct)}%)</span>
+                      <span className="pl-2">+ Import Duty ({fmtPct(shownDutyPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(dutyUsd), currency)}</span>
                     </div>
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ Transfer ({fmtPct(transferPct)}%)</span>
+                      <span className="pl-2">+ Transfer ({fmtPct(shownTransferPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(transferUsd), currency)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
@@ -1496,7 +1701,7 @@ const AdminPrivateOrderDetailPage = () => {
 
                     {/* Distributor Margin */}
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ Distributor ({fmtPct(distPct)}%)</span>
+                      <span className="pl-2">+ Distributor ({fmtPct(shownDistPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(distributorMargin), currency)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
@@ -1508,7 +1713,7 @@ const AdminPrivateOrderDetailPage = () => {
 
                     {/* VAT & Total */}
                     <div className="flex justify-between text-text-muted">
-                      <span className="pl-2">+ VAT ({fmtPct(vatPct)}%)</span>
+                      <span className="pl-2">+ VAT ({fmtPct(shownVatPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(vatUsd), currency)}</span>
                     </div>
                     <div className="flex justify-between font-semibold text-sm pt-1">
@@ -1679,7 +1884,7 @@ const AdminPrivateOrderDetailPage = () => {
               <IconX size={24} />
             </button>
             <Image
-              src={order.deliveryPhoto}
+              src={fileHref(order.deliveryPhoto)}
               alt="Proof of delivery"
               width={1200}
               height={800}
@@ -1869,7 +2074,7 @@ const AdminPrivateOrderDetailPage = () => {
                         className="group relative overflow-hidden rounded-lg border border-border-muted"
                       >
                         <Image
-                          src={order.deliveryPhoto}
+                          src={fileHref(order.deliveryPhoto)}
                           alt="Proof of delivery"
                           width={120}
                           height={80}
@@ -1889,31 +2094,90 @@ const AdminPrivateOrderDetailPage = () => {
         </Card>
         )}
 
-        {/* Notes - if present */}
-        {(order.partnerNotes || order.deliveryNotes) && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {order.partnerNotes && (
-                  <div>
-                    <Typography variant="labelSm" colorRole="muted" className="mb-1">
-                      Partner Notes
+        {/*
+          Notes, editable. They were fixed once the order was raised, so a
+          note that had gone out of date stayed on the order for good. The old
+          text is kept in the activity log.
+        */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(
+                [
+                  { key: 'partnerNotes', label: 'Partner Notes', value: order.partnerNotes },
+                  { key: 'deliveryNotes', label: 'Delivery Notes', value: order.deliveryNotes },
+                ] as const
+              ).map(({ key, label, value }) => (
+                <div key={key}>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <Typography variant="labelSm" colorRole="muted">
+                      {label}
                     </Typography>
-                    <Typography variant="bodySm">{order.partnerNotes}</Typography>
+                    {editingNote?.key !== key && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingNote({ key, text: value ?? '' })}
+                          className="text-text-muted hover:text-text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
+                        >
+                          <Icon icon={value ? IconEdit : IconPlus} size="xs" />
+                          {value ? 'Edit' : 'Add'}
+                        </button>
+                        {value && (
+                          <button
+                            type="button"
+                            disabled={isSavingNotes}
+                            onClick={() => {
+                              if (window.confirm(`Delete the ${label.toLowerCase()} on ${order.orderNumber}?`)) {
+                                saveNotes({ orderId: order.id, [key]: '' });
+                              }
+                            }}
+                            className="text-text-muted inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium hover:text-red-700 disabled:opacity-40"
+                          >
+                            <Icon icon={IconTrash} size="xs" />
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                )}
-                {order.deliveryNotes && (
-                  <div>
-                    <Typography variant="labelSm" colorRole="muted" className="mb-1">
-                      Delivery Notes
+                  {editingNote?.key === key ? (
+                    <div className="flex flex-col gap-2">
+                      <textarea
+                        value={editingNote.text}
+                        onChange={(event) => setEditingNote({ key, text: event.target.value })}
+                        rows={5}
+                        autoFocus
+                        className="border-border-muted bg-surface-primary text-text-primary focus:border-text-primary w-full rounded-lg border px-3 py-2 text-sm outline-none"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          isDisabled={isSavingNotes}
+                          onClick={() => saveNotes({ orderId: order.id, [key]: editingNote.text })}
+                        >
+                          <Icon icon={IconCheck} size="sm" />
+                          Save
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingNote(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : value ? (
+                    <Typography variant="bodySm" className="whitespace-pre-line">
+                      {value}
                     </Typography>
-                    <Typography variant="bodySm">{order.deliveryNotes}</Typography>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  ) : (
+                    <Typography variant="bodySm" colorRole="muted">
+                      None
+                    </Typography>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Activity Log - Full timeline with filters */}
         <Card>
@@ -1934,7 +2198,7 @@ const AdminPrivateOrderDetailPage = () => {
                     onClick={() => setActivityFilter(filter)}
                     className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                       activityFilter === filter
-                        ? 'bg-fill-brand text-white'
+                        ? 'bg-text-primary text-white'
                         : 'bg-surface-secondary text-text-muted hover:bg-surface-muted'
                     }`}
                   >

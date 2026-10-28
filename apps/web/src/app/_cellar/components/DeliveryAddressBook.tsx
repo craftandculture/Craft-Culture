@@ -217,7 +217,7 @@ const DeliveryAddressBook = ({ onMainChanged }: DeliveryAddressBookProps) => {
                   instructions: draft.instructions.trim() || null,
                 })
               }
-              className="bg-text-primary text-surface-primary h-9 rounded-lg px-4 text-xs font-semibold disabled:opacity-50"
+              className="h-9 text-xs font-semibold disabled:opacity-50 text-emerald-700 hover:underline dark:text-emerald-400"
             >
               {isSaving ? 'Saving…' : 'Save address'}
             </button>

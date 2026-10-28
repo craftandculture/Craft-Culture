@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -77,9 +77,21 @@ const adminGenerateFinalQuote = adminProcedure
       // costPricePerCaseUsd is guaranteed non-null by the filter above
       const costPerCase = quote.costPricePerCaseUsd ?? 0;
       const finalPerCase = item.finalPriceUsd || costPerCase;
-      const lineTotal = finalPerCase * quantity;
 
-      totalCostUsd += costPerCase * quantity;
+      // Prices are per case; a line requested by the bottle is charged per
+      // bottle (same rule as the RFQ Excel export)
+      const caseSize =
+        (quote.caseConfig ? parseInt(quote.caseConfig, 10) : null) ||
+        item.caseConfig ||
+        null;
+      const isBottles = item.quantityUnit === 'bottles' && !!caseSize;
+      const lineTotal = isBottles
+        ? (finalPerCase / caseSize) * quantity
+        : finalPerCase * quantity;
+
+      totalCostUsd += isBottles
+        ? (costPerCase / caseSize) * quantity
+        : costPerCase * quantity;
       totalFinalUsd += lineTotal;
 
       return {
@@ -108,6 +120,7 @@ const adminGenerateFinalQuote = adminProcedure
         // Include LWIN for PDF/Excel export
         lwin: item.lwin,
         quantity,
+        quantityUnit: isBottles ? ('bottles' as const) : ('cases' as const),
         pricePerCase: finalPerCase,
         lineTotal,
         isAlternative: quote.quoteType === 'alternative',
@@ -118,11 +131,13 @@ const adminGenerateFinalQuote = adminProcedure
       };
     });
 
-    // Update RFQ status to quote_generated
+    // Move to quote_generated only from 'selecting'. Downloading the PDF
+    // again later (client review, confirmations, finalised) must not pull
+    // the RFQ back a stage.
     await db
       .update(sourceRfqs)
       .set({ status: 'quote_generated' })
-      .where(eq(sourceRfqs.id, rfqId));
+      .where(and(eq(sourceRfqs.id, rfqId), eq(sourceRfqs.status, 'selecting')));
 
     return {
       rfq: {
@@ -149,6 +164,7 @@ const adminGenerateFinalQuote = adminProcedure
         producer: row.item.producer,
         vintage: row.item.vintage,
         quantity: row.item.quantity,
+        quantityUnit: row.item.quantityUnit,
       })),
     };
   });

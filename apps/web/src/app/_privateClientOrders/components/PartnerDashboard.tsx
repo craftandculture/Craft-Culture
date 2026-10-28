@@ -3,18 +3,10 @@
 import {
   IconArrowRight,
   IconBook,
-  IconBox,
-  IconCalendar,
-  IconCash,
-  IconCheck,
   IconChevronRight,
-  IconClock,
-  IconFileCheck,
   IconPackage,
   IconPlus,
   IconShieldCheck,
-  IconTruck,
-  IconUser,
   IconUsers,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -22,12 +14,12 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
@@ -35,7 +27,6 @@ import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 /**
  * PartnerDashboard displays an overview of orders for wine partners
@@ -57,12 +48,12 @@ const PartnerDashboard = () => {
   /**
    * Format currency value, calculating AED from USD if AED is not available
    */
-  const formatCurrency = (amountUsd: number, amountAed: number) => {
+  const formatCurrency = (amountUsd: number, _amountAed?: number) => {
     let amount: number;
     if (currency === 'USD') {
       amount = amountUsd;
     } else {
-      amount = amountAed > 0 ? amountAed : amountUsd * DEFAULT_EXCHANGE_RATE;
+      amount = amountUsd * USD_TO_AED;
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -80,12 +71,11 @@ const PartnerDashboard = () => {
     totalAed?: number | null;
   }) => {
     const usdAmount = order.totalUsd ?? 0;
-    const aedAmount = order.totalAed ?? 0;
     let amount: number;
     if (currency === 'USD') {
       amount = usdAmount;
     } else {
-      amount = aedAmount > 0 ? aedAmount : usdAmount * DEFAULT_EXCHANGE_RATE;
+      amount = usdAmount * USD_TO_AED;
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -116,7 +106,7 @@ const PartnerDashboard = () => {
           onClick={() => refetch()}
           isDisabled={isRefetching}
         >
-          {isRefetching ? 'Loading...' : 'Try Again'}
+          {isRefetching ? 'Loading...' : 'Try again'}
         </Button>
       </div>
     );
@@ -124,322 +114,177 @@ const PartnerDashboard = () => {
 
   const { kpis, statusBreakdown, recentOrders, topClients } = data;
 
-  // Status pipeline steps for partners
-  const pipelineSteps = [
-    {
-      label: 'Drafts',
-      count: statusBreakdown.drafts,
-      icon: IconFileCheck,
-      color: 'bg-slate-400',
-      bgColor: 'bg-slate-50 dark:bg-slate-900/20',
-      textColor: 'text-slate-700 dark:text-slate-300',
-      href: '/platform/private-orders/orders?status=draft',
-    },
-    {
-      label: 'Pending',
-      count: statusBreakdown.pendingApproval,
-      icon: IconClock,
-      color: 'bg-amber-500',
-      bgColor: 'bg-amber-50 dark:bg-amber-900/20',
-      textColor: 'text-amber-700 dark:text-amber-300',
-      href: '/platform/private-orders/orders?status=pending',
-    },
-    {
-      label: 'Verification',
-      count: statusBreakdown.awaitingVerification,
-      icon: IconShieldCheck,
-      color: 'bg-orange-500',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-      textColor: 'text-orange-700 dark:text-orange-300',
-      href: '/platform/private-orders/orders?status=verification',
-    },
-    {
-      label: 'Payment',
-      count: statusBreakdown.awaitingPayment,
-      icon: IconCash,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      textColor: 'text-blue-700 dark:text-blue-300',
-      href: '/platform/private-orders/orders?status=payment',
-    },
-    {
-      label: 'Fulfillment',
-      count: statusBreakdown.inFulfillment,
-      icon: IconTruck,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-      textColor: 'text-purple-700 dark:text-purple-300',
-      href: '/platform/private-orders/orders?status=fulfillment',
-    },
-    {
-      label: 'Delivered',
-      count: statusBreakdown.completed,
-      icon: IconCheck,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      textColor: 'text-green-700 dark:text-green-300',
-      href: '/platform/private-orders/orders?status=delivered',
-    },
+  const ORDERS = '/platform/private-orders/orders';
+
+  /*
+    The live pipeline, laid out as the distributor and admin dashboards are.
+    `yours` marks the stages waiting on the partner, which turn amber when
+    something is in them. Delivered is shown apart: it is the finish line.
+  */
+  const stages = [
+    { key: 'drafts', label: 'Drafts', owner: 'You', count: statusBreakdown.drafts, dot: 'bg-slate-400', href: `${ORDERS}?status=draft`, yours: true },
+    { key: 'pending', label: 'C&C review', owner: 'C&C', count: statusBreakdown.pendingApproval, dot: 'bg-amber-400', href: `${ORDERS}?status=pending`, yours: false },
+    { key: 'verification', label: 'Verification', owner: 'You · distributor', count: statusBreakdown.awaitingVerification, dot: 'bg-orange-400', href: `${ORDERS}?status=verification`, yours: true },
+    { key: 'payment', label: 'Payment', owner: 'Client', count: statusBreakdown.awaitingPayment, dot: 'bg-blue-500', href: `${ORDERS}?status=payment`, yours: false },
+    { key: 'fulfilment', label: 'Fulfilment', owner: 'C&C · distributor', count: statusBreakdown.inFulfillment, dot: 'bg-violet-500', href: `${ORDERS}?status=fulfillment`, yours: false },
   ];
+  const inFlight = stages.reduce((sum, stage) => sum + stage.count, 0);
+  const totalClientValue = topClients.reduce((sum, client) => sum + client.totalValueUsd, 0);
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header with New Order Button and Currency Toggle */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 sm:gap-5">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Typography variant="headingLg" className="font-bold">
-            Dashboard
+            Private Client Orders
           </Typography>
           <Typography variant="bodySm" colorRole="muted">
-            Overview of your private client orders
+            Orders you raise for your clients
           </Typography>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href="/platform/private-orders/new">
-            <Button className="gap-2">
+            <Button size="sm" className="gap-1.5">
               <Icon icon={IconPlus} size="sm" />
-              New Order
+              New order
+            </Button>
+          </Link>
+          <Link href={ORDERS}>
+            <Button size="sm" variant="outline" className="gap-1.5">
+              Active orders ({kpis.totalOrders})
+            </Button>
+          </Link>
+          <Link href="/docs/pco-flows">
+            <Button size="sm" variant="ghost" className="gap-1.5">
+              <Icon icon={IconBook} size="sm" />
+              Process guide
             </Button>
           </Link>
           <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
-            <button
-              type="button"
-              onClick={() => setCurrency('USD')}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
-                currency === 'USD'
-                  ? 'bg-background-primary text-text-primary shadow-sm'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              USD
-            </button>
-            <button
-              type="button"
-              onClick={() => setCurrency('AED')}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
-                currency === 'AED'
-                  ? 'bg-background-primary text-text-primary shadow-sm'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              AED
-            </button>
+            {(['USD', 'AED'] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCurrency(c)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                  currency === c
+                    ? 'bg-background-primary text-text-primary shadow-sm'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-        {/* Active Orders */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Active Orders
-                </Typography>
-                <Typography variant="headingLg" className="mt-1">
-                  {kpis.totalOrders}
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-fill-brand/10 p-2">
-                <Icon icon={IconPackage} size="sm" className="text-text-brand" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* This Month */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  This Month
-                </Typography>
-                <Typography variant="headingLg" className="mt-1">
-                  {kpis.monthlyOrders}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  {kpis.monthlyCases} cases
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-emerald-100 p-2 dark:bg-emerald-900/30">
-                <Icon
-                  icon={IconCalendar}
-                  size="sm"
-                  className="text-emerald-600 dark:text-emerald-400"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Cases */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Total Cases
-                </Typography>
-                <Typography variant="headingLg" className="mt-1">
-                  {kpis.totalCases}
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-violet-100 p-2 dark:bg-violet-900/30">
-                <Icon icon={IconBox} size="sm" className="text-violet-600 dark:text-violet-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Clients */}
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Clients
-                </Typography>
-                <Typography variant="headingLg" className="mt-1">
-                  {kpis.totalClients}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  {kpis.verifiedClients} verified
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
-                <Icon icon={IconUsers} size="sm" className="text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Value */}
-        <Card className="relative overflow-hidden col-span-2 lg:col-span-1">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Typography
-                  variant="bodyXs"
-                  colorRole="muted"
-                  className="uppercase tracking-wider"
-                >
-                  Total Value
-                </Typography>
-                <Typography variant="headingMd" className="mt-1">
-                  {formatCurrency(kpis.totalValueUsd, kpis.totalValueAed)}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  Monthly: {formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed)}
-                </Typography>
-              </div>
-              <div className="rounded-lg bg-amber-100 p-2 dark:bg-amber-900/30">
-                <Icon icon={IconCash} size="sm" className="text-amber-600 dark:text-amber-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* The book at a glance */}
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border border-border-muted bg-fill-primary px-5 py-3">
+        {[
+          { label: 'Active orders', value: String(kpis.totalOrders) },
+          { label: 'Last 30 days', value: `${kpis.monthlyOrders} orders · ${kpis.monthlyCases} cases` },
+          { label: 'Value, last 30 days', value: formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed) },
+          { label: 'Value in progress', value: formatCurrency(kpis.totalValueUsd, kpis.totalValueAed) },
+          { label: 'Clients', value: `${kpis.totalClients} · ${kpis.verifiedClients} verified` },
+        ].map((stat) => (
+          <div key={stat.label} className="flex items-baseline gap-2">
+            <Typography variant="bodyXs" colorRole="muted">
+              {stat.label}
+            </Typography>
+            <Typography variant="bodySm" className="font-semibold">
+              {stat.value}
+            </Typography>
+          </div>
+        ))}
       </div>
 
-      {/* Status Pipeline */}
+      {/* Pipeline: where live orders are, and which are waiting on you */}
       <Card>
-        <CardContent className="p-4 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <Typography variant="headingSm" className="font-semibold">
-              Order Pipeline
-            </Typography>
-            <Link href="/platform/private-orders/orders">
-              <Button variant="ghost" size="sm" className="gap-1">
-                View All <Icon icon={IconArrowRight} size="sm" />
-              </Button>
+        <CardContent className="flex flex-col gap-3 p-4 sm:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="flex items-baseline gap-2">
+              <Typography variant="headingSm" className="font-semibold">
+                Pipeline
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                {inFlight} in flight
+              </Typography>
+            </div>
+            <Link
+              href={`${ORDERS}?status=delivered`}
+              className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary"
+            >
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              {statusBreakdown.completed} delivered
+              <Icon icon={IconChevronRight} size="xs" />
             </Link>
           </div>
 
-          {/* Mobile: Stacked cards */}
-          <div className="flex flex-col gap-2 sm:hidden">
-            {pipelineSteps.map((step) => (
-              <Link key={step.label} href={step.href}>
-                <div
-                  className={`flex items-center justify-between rounded-lg p-3 ${step.bgColor} transition-opacity hover:opacity-80`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`rounded-lg p-1.5 ${step.color}`}>
-                      <Icon icon={step.icon} size="sm" className="text-white" />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {stages.map((stage, index) => {
+              const share = inFlight > 0 ? (stage.count / inFlight) * 100 : 0;
+              const needsYou = stage.yours && stage.count > 0;
+              return (
+                <div key={stage.key} className="relative">
+                  <Link
+                    href={stage.href}
+                    className={`flex h-full flex-col gap-2 rounded-lg border p-3 transition-colors ${
+                      needsYou
+                        ? 'border-fill-warning/50 bg-fill-warning/5 hover:bg-fill-warning/10'
+                        : 'border-border-muted hover:border-border-primary hover:bg-fill-muted/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${stage.dot}`} />
+                        <Typography variant="bodySm" className="font-medium">
+                          {stage.label}
+                        </Typography>
+                      </span>
+                      <Typography variant="bodyXs" colorRole="muted" className="hidden truncate sm:block">
+                        {stage.owner}
+                      </Typography>
                     </div>
-                    <Typography variant="bodySm" className={step.textColor}>
-                      {step.label}
-                    </Typography>
-                  </div>
-                  <Badge colorRole="muted" size="sm" className="font-semibold">
-                    {step.count}
-                  </Badge>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* Desktop: Horizontal pipeline */}
-          <div className="hidden sm:block">
-            <div className="flex items-center justify-between">
-              {pipelineSteps.map((step, index) => (
-                <div key={step.label} className="flex flex-1 items-center">
-                  <Link href={step.href} className="group flex flex-1 flex-col items-center">
-                    <div
-                      className={`mb-2 flex h-10 w-10 items-center justify-center rounded-full ${step.color} transition-transform group-hover:scale-110`}
+                    <Typography
+                      variant="headingMd"
+                      className={`font-semibold ${stage.count === 0 ? 'text-text-muted' : ''}`}
                     >
-                      <Icon icon={step.icon} size="sm" className="text-white" />
-                    </div>
-                    <Typography variant="headingMd" className="mb-0.5 font-bold">
-                      {step.count}
+                      {stage.count}
                     </Typography>
-                    <Typography variant="bodyXs" colorRole="muted" className="text-center">
-                      {step.label}
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-fill-muted">
+                      <div className={`h-full ${stage.dot}`} style={{ width: `${share}%` }} />
+                    </div>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      {stage.count === 0 ? 'Empty' : needsYou ? 'Waiting on you' : `With ${stage.owner}`}
                     </Typography>
                   </Link>
-                  {index < pipelineSteps.length - 1 && (
+                  {index < stages.length - 1 && (
                     <Icon
                       icon={IconChevronRight}
-                      size="md"
-                      className="mx-1 flex-shrink-0 text-text-muted"
+                      size="xs"
+                      className="absolute -right-2 top-1/2 z-10 hidden -translate-y-1/2 rounded-full bg-fill-primary text-text-muted lg:block"
                     />
                   )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
 
-      {/* Two Column Layout for Recent Orders and Top Clients */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Orders */}
+      {/* Recent orders and clients */}
+      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
         <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <CardContent className="p-4 sm:p-5">
+            <div className="mb-2 flex items-center justify-between">
               <Typography variant="headingSm" className="font-semibold">
-                Recent Orders
+                Recent orders
               </Typography>
-              <Link href="/platform/private-orders/orders">
+              <Link href={ORDERS}>
                 <Button variant="ghost" size="sm" className="gap-1">
-                  View All <Icon icon={IconArrowRight} size="sm" />
+                  View all <Icon icon={IconArrowRight} size="sm" />
                 </Button>
               </Link>
             </div>
@@ -453,7 +298,7 @@ const PartnerDashboard = () => {
                 <Link href="/platform/private-orders/new">
                   <Button variant="outline" size="sm" className="gap-2">
                     <Icon icon={IconPlus} size="sm" />
-                    Create First Order
+                    Create your first order
                   </Button>
                 </Link>
               </div>
@@ -463,7 +308,7 @@ const PartnerDashboard = () => {
                   <Link
                     key={order.id}
                     href={`/platform/private-orders/${order.id}`}
-                    className="group flex items-center gap-3 py-3 transition-colors hover:bg-surface-secondary/50"
+                    className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-secondary/50"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -472,19 +317,16 @@ const PartnerDashboard = () => {
                         </Typography>
                         <PrivateOrderStatusBadge status={order.status} size="sm" />
                       </div>
-                      <div className="mt-1 flex items-center gap-2 text-text-muted">
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-text-muted">
                         <Typography variant="bodyXs">{order.clientName}</Typography>
                         {order.client?.cityDrinksVerifiedAt && (
-                          <span
-                            className="inline-flex items-center gap-0.5 text-green-600 dark:text-green-400"
-                            title="City Drinks Verified"
-                          >
+                          <span title="Verified with the distributor" className="inline-flex text-emerald-600 dark:text-emerald-400">
                             <Icon icon={IconShieldCheck} size="xs" />
                           </span>
                         )}
                         <span className="hidden sm:inline">·</span>
                         <Typography variant="bodyXs" className="hidden sm:inline">
-                          {order.caseCount} cases
+                          {order.caseCount} {order.caseCount === 1 ? 'case' : 'cases'}
                         </Typography>
                       </div>
                     </div>
@@ -493,7 +335,7 @@ const PartnerDashboard = () => {
                         {formatOrderCurrency(order)}
                       </Typography>
                       <Typography variant="bodyXs" colorRole="muted">
-                        {format(new Date(order.createdAt), 'MMM d')}
+                        {format(new Date(order.createdAt), 'd MMM')}
                       </Typography>
                     </div>
                     <Icon
@@ -508,16 +350,22 @@ const PartnerDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Top Clients */}
         <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="mb-4">
-              <Typography variant="headingSm" className="font-semibold">
-                Top Clients
-              </Typography>
-              <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                Your most active customers
-              </Typography>
+          <CardContent className="p-4 sm:p-5">
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div>
+                <Typography variant="headingSm" className="font-semibold">
+                  Top clients
+                </Typography>
+                <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                  Share of value, all time
+                </Typography>
+              </div>
+              <Link href="/platform/clients">
+                <Button variant="ghost" size="sm" className="gap-1">
+                  Clients <Icon icon={IconArrowRight} size="sm" />
+                </Button>
+              </Link>
             </div>
 
             {topClients.length === 0 ? (
@@ -530,40 +378,28 @@ const PartnerDashboard = () => {
             ) : (
               <div className="flex flex-col divide-y divide-border-muted">
                 {topClients.map((client) => {
+                  // Share of the book by value, so the bar and the figure agree
                   const percentage =
-                    kpis.totalOrders > 0
-                      ? Math.round((client.orderCount / kpis.totalOrders) * 100)
+                    totalClientValue > 0
+                      ? Math.round((client.totalValueUsd / totalClientValue) * 100)
                       : 0;
-
                   return (
-                    <div key={client.clientId ?? client.clientName} className="py-3">
-                      <div className="mb-2 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-secondary">
-                            <Icon icon={IconUser} size="sm" className="text-text-muted" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <Typography
-                                variant="bodySm"
-                                className="truncate font-medium"
-                              >
-                                {client.clientName}
-                              </Typography>
-                              {client.isVerified && (
-                                <span
-                                  className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                  title="City Drinks Verified"
-                                >
-                                  <Icon icon={IconShieldCheck} size="xs" />
-                                  <span className="text-xs font-medium">Verified</span>
-                                </span>
-                              )}
-                            </div>
-                            <Typography variant="bodyXs" colorRole="muted">
-                              {client.orderCount} orders · {client.totalCases} cases
+                    <div key={client.clientId ?? client.clientName} className="py-2.5">
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <Typography variant="bodySm" className="truncate font-medium">
+                              {client.clientName}
                             </Typography>
+                            {client.isVerified && (
+                              <span title="Verified with the distributor" className="inline-flex text-emerald-600 dark:text-emerald-400">
+                                <Icon icon={IconShieldCheck} size="xs" />
+                              </span>
+                            )}
                           </div>
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {client.orderCount} orders · {client.totalCases} cases
+                          </Typography>
                         </div>
                         <Typography variant="bodySm" className="whitespace-nowrap font-medium">
                           {formatCurrency(client.totalValueUsd, client.totalValueAed)}
@@ -571,7 +407,7 @@ const PartnerDashboard = () => {
                       </div>
                       <div className="relative h-1.5 overflow-hidden rounded-full bg-surface-secondary">
                         <div
-                          className="absolute left-0 top-0 h-full rounded-full bg-fill-brand transition-all"
+                          className="absolute left-0 top-0 h-full rounded-full bg-text-primary/70 transition-all"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
@@ -582,38 +418,6 @@ const PartnerDashboard = () => {
             )}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Quick Links - Compact inline actions */}
-      <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
-        <Link
-          href="/platform/private-orders/orders?status=draft"
-          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-4 py-2 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
-        >
-          <Icon icon={IconFileCheck} size="xs" />
-          <span>{statusBreakdown.drafts} Drafts</span>
-        </Link>
-        <Link
-          href="/platform/private-orders/orders"
-          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-4 py-2 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
-        >
-          <Icon icon={IconPackage} size="xs" />
-          <span>All Orders</span>
-        </Link>
-        <Link
-          href="/platform/clients"
-          className="flex items-center gap-1.5 rounded-full border border-border-muted bg-surface-secondary/50 px-4 py-2 text-text-muted transition-colors hover:bg-surface-secondary hover:text-text-primary"
-        >
-          <Icon icon={IconUsers} size="xs" />
-          <span>Manage Clients</span>
-        </Link>
-        <Link
-          href="/docs/pco-flows"
-          className="flex items-center gap-1.5 rounded-full border border-border-brand bg-fill-brand/5 px-4 py-2 text-text-brand transition-colors hover:bg-fill-brand/10"
-        >
-          <Icon icon={IconBook} size="xs" />
-          <span>Process Guide</span>
-        </Link>
       </div>
     </div>
   );

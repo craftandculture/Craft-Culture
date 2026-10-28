@@ -2,8 +2,8 @@
 
 import {
   IconAlertTriangle,
-  IconArrowLeft,
   IconCalculator,
+  IconChevronRight,
   IconLoader2,
   IconPencil,
   IconPlus,
@@ -34,6 +34,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 const CATEGORIES = [
   'freight',
@@ -93,7 +94,7 @@ interface PendingConfirm {
 }
 
 const selectCls =
-  'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-border-brand focus:outline-none';
+  'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-text-primary focus:outline-none';
 
 // USD-pegged currencies convert at a fixed rate; floating ones default to 1
 // and must be set manually.
@@ -194,7 +195,7 @@ const InvoiceVendorField = ({
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Supplier name"
           autoFocus
-          className="border-border-primary bg-background-primary focus:border-border-brand w-52 rounded border px-1.5 py-0.5 text-sm focus:outline-none"
+          className="border-border-primary bg-background-primary focus:border-text-primary w-52 rounded border px-1.5 py-0.5 text-sm focus:outline-none"
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               setDraft(vendor ?? '');
@@ -204,7 +205,7 @@ const InvoiceVendorField = ({
         />
         <button
           type="submit"
-          className="bg-fill-brand hover:bg-fill-brand/90 rounded px-2 py-0.5 text-[11px] font-medium text-white"
+          className="bg-text-primary hover:bg-text-primary/90 rounded px-2 py-0.5 text-[11px] font-medium text-white"
         >
           Save
         </button>
@@ -452,7 +453,7 @@ const ShipmentGroupDetailPage = () => {
     // refused before our code runs
     setInvoiceUploading(true);
     void upload(`logistics/groups/${groupId}/${f.name}`, f, {
-      access: 'public',
+      access: 'private',
       handleUploadUrl: '/api/upload/blob',
     })
       .then((blob) =>
@@ -492,7 +493,7 @@ const ShipmentGroupDetailPage = () => {
     // Straight to Blob, so a scanned GAC invoice over ~3MB is not refused
     setDocUploading(true);
     void upload(`logistics/groups/${groupId}/${f.name}`, f, {
-      access: 'public',
+      access: 'private',
       handleUploadUrl: '/api/upload/blob',
     })
       .then((blob) =>
@@ -648,12 +649,27 @@ const ShipmentGroupDetailPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/platform/admin/logistics/groups">
-              <Button variant="ghost" size="sm">
-                <ButtonContent iconLeft={IconArrowLeft}>Groups</ButtonContent>
-              </Button>
-            </Link>
             <div>
+              {/* The house breadcrumb; the title below stays click-to-rename */}
+              <nav
+                aria-label="Breadcrumb"
+                className="mb-1 flex flex-wrap items-center gap-1.5 text-sm text-text-muted"
+              >
+                <Link href="/platform/admin/home" className="transition-colors hover:text-text-primary">
+                  Admin
+                </Link>
+                <IconChevronRight className="size-4" />
+                <Link href="/platform/admin/logistics" className="transition-colors hover:text-text-primary">
+                  Logistics
+                </Link>
+                <IconChevronRight className="size-4" />
+                <Link
+                  href="/platform/admin/logistics/groups"
+                  className="transition-colors hover:text-text-primary"
+                >
+                  Groups
+                </Link>
+              </nav>
               {editingName ? (
                 <input
                   autoFocus
@@ -664,7 +680,7 @@ const ShipmentGroupDetailPage = () => {
                     if (e.key === 'Enter') commitName();
                     if (e.key === 'Escape') setEditingName(false);
                   }}
-                  className="border-border-primary bg-background-primary focus:border-border-brand w-full min-w-[18rem] rounded border px-2 py-0.5 text-lg font-semibold focus:outline-none"
+                  className="border-border-primary bg-background-primary focus:border-text-primary w-full min-w-[18rem] rounded border px-2 py-0.5 text-lg font-semibold focus:outline-none"
                   aria-label="Group name"
                 />
               ) : (
@@ -675,9 +691,11 @@ const ShipmentGroupDetailPage = () => {
                     setNameDraft(group.name);
                     setEditingName(true);
                   }}
-                  className="hover:bg-surface-muted focus-visible:ring-border-brand -mx-1 rounded px-1 text-left focus:outline-none focus-visible:ring-2"
+                  className="hover:bg-surface-muted focus-visible:ring-text-primary -mx-1 rounded px-1 text-left focus:outline-none focus-visible:ring-2"
                 >
-                  <Typography variant="headingSm">{group.name}</Typography>
+                  <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
+                    {group.name}
+                  </h1>
                 </button>
               )}
               <div className="flex flex-wrap items-center gap-1">
@@ -692,7 +710,7 @@ const ShipmentGroupDetailPage = () => {
                       if (e.key === 'Escape') setEditingRef(false);
                     }}
                     placeholder="AWB / container reference"
-                    className="border-border-primary bg-background-primary focus:border-border-brand w-56 rounded border px-1.5 py-0.5 text-xs focus:outline-none"
+                    className="border-border-primary bg-background-primary focus:border-text-primary w-56 rounded border px-1.5 py-0.5 text-xs focus:outline-none"
                     aria-label="Group reference"
                   />
                 ) : (
@@ -933,10 +951,10 @@ const ShipmentGroupDetailPage = () => {
                     className="flex items-center justify-between gap-3 py-1.5"
                   >
                     <a
-                      href={d.fileUrl}
+                      href={fileHref(d.fileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-text-brand min-w-0 truncate text-sm hover:underline"
+                      className="text-text-primary min-w-0 truncate text-sm hover:underline"
                     >
                       &#x1F4C4; {d.fileName}
                     </a>

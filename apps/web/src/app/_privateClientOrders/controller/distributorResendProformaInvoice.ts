@@ -9,6 +9,8 @@ import { distributorProcedure } from '@/lib/trpc/procedures';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
+import maskEmail from '../utils/maskEmail';
+
 const FINANCE_PROFORMA_TEMPLATE_ID = 'cmklmzgr612b40ixqdeluo8qb'; // finance proforma template
 
 /**
@@ -80,7 +82,7 @@ const distributorResendProformaInvoice = distributorProcedure
     try {
       logger.info('PCO: Sending proforma invoice notification to finance', {
         templateId: FINANCE_PROFORMA_TEMPLATE_ID,
-        email: distributor.financeEmail,
+        email: maskEmail(distributor.financeEmail),
         orderId,
         orderNumber: order.orderNumber,
         pdfDownloadUrl,
@@ -102,7 +104,7 @@ const distributorResendProformaInvoice = distributorProcedure
       });
 
       logger.info('PCO: Proforma invoice resent successfully', {
-        email: distributor.financeEmail,
+        email: maskEmail(distributor.financeEmail),
         orderId,
         result: JSON.stringify(result),
         success: result?.success,
@@ -115,7 +117,7 @@ const distributorResendProformaInvoice = distributorProcedure
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('PCO: Failed to resend proforma invoice', {
-        email: distributor.financeEmail,
+        email: maskEmail(distributor.financeEmail),
         orderId,
         error: errorMessage,
         stack: error instanceof Error ? error.stack : undefined,

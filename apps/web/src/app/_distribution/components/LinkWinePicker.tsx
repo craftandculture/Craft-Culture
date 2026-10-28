@@ -43,7 +43,7 @@ const LinkWinePicker = ({ outletId, outletCode, productName, onLinked, onCancel 
   });
 
   return (
-    <div className="border-border-brand bg-fill-brand/5 space-y-2 rounded-lg border p-3">
+    <div className="border-text-primary bg-text-primary/5 space-y-2 rounded-lg border p-3">
       <div className="flex flex-wrap items-center gap-2">
         <input
           id={`link-${outletCode}`}

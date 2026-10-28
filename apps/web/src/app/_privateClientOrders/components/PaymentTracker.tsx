@@ -229,7 +229,7 @@ const PaymentTracker = ({
                       : payment.status === 'awaiting'
                         ? 'bg-fill-warning'
                         : payment.status === 'awaiting_verification'
-                          ? 'bg-fill-brand'
+                          ? 'bg-text-primary'
                           : 'bg-fill-muted'
                   }`}
                 >
@@ -280,7 +280,7 @@ const PaymentTracker = ({
 
                   {/* Message for awaiting verification status */}
                   {payment.status === 'awaiting_verification' && (
-                    <Typography variant="bodyXs" className="mt-2 text-text-brand">
+                    <Typography variant="bodyXs" className="mt-2 text-text-primary">
                       Partner confirmed payment received. Awaiting distributor verification.
                     </Typography>
                   )}
@@ -353,7 +353,7 @@ const PaymentTracker = ({
                             setExpandedStage(payment.stage);
                             setPaymentRef('');
                           }}
-                          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-muted hover:text-text-brand"
+                          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-muted hover:text-text-primary"
                         >
                           <IconCurrencyDollar size={14} />
                           Mark Paid

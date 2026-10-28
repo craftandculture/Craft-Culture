@@ -7,6 +7,8 @@ import db from '@/database/client';
 import { partners } from '@/database/schema';
 import serverConfig from '@/server.config';
 
+import { queueUkMoveQuoted, queueUkMoveSentBack, queueUkMoveShipped } from '../data/queueCellarEmails';
+
 export type UkMoveEvent =
   | 'submitted'
   | 'withdrawn'
@@ -121,6 +123,11 @@ const notifyUkMoveUpdate = async ({
         metadata: { moveNumber, totalUsd },
       });
     }
+
+    /* The member's email, queued for the member-emails cron and its switch */
+    if (event === 'quoted') await queueUkMoveQuoted({ partnerId, moveId, moveNumber });
+    if (event === 'shipping') await queueUkMoveShipped({ partnerId, moveId, moveNumber });
+    if (event === 'cancelled') await queueUkMoveSentBack({ partnerId, moveId, moveNumber, adminNotes });
   } catch (error) {
     console.error('Failed to notify on UK move update', {
       moveNumber,

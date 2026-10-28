@@ -29,6 +29,9 @@ const serverConfig = {
   wmsDeviceUserEmail: serverEnv.WMS_DEVICE_USER_EMAIL,
   zebraPrinterIp: serverEnv.ZEBRA_PRINTER_IP || '192.168.0.112',
   zebraPrinterPort: 9100,
+  winelabsUserId: serverEnv.WINELABS_USER_ID,
+  winelabsBaseUrl: serverEnv.WINELABS_BASE_URL || 'https://external-api.wine-labs.com',
+  winelabsMonthlyCreditCap: Number(serverEnv.WINELABS_MONTHLY_CREDIT_CAP) || 45000,
 } as const;
 
 export default serverConfig;

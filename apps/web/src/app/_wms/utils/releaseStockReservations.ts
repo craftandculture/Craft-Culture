@@ -53,19 +53,15 @@ const releaseStockReservations = async ({
   let totalCasesReleased = 0;
   const now = new Date();
 
-  for (const reservation of activeReservations) {
-    // Restore stock availability
-    await db
-      .update(wmsStock)
-      .set({
-        reservedCases: sql`${wmsStock.reservedCases} - ${reservation.quantityCases}`,
-        availableCases: sql`${wmsStock.availableCases} + ${reservation.quantityCases}`,
-        updatedAt: now,
-      })
-      .where(eq(wmsStock.id, reservation.stockId));
+  let releasedCount = 0;
 
-    // Mark reservation as released
-    await db
+  for (const reservation of activeReservations) {
+    /*
+      Claim the reservation before giving its cases back. Two releases of the
+      same order (a cancel racing a pick-list delete, a double tap) both read
+      it as active and both added its cases back to available.
+    */
+    const claimed = await db
       .update(wmsStockReservations)
       .set({
         status: 'released' as const,
@@ -73,13 +69,32 @@ const releaseStockReservations = async ({
         releaseReason: reason,
         updatedAt: now,
       })
-      .where(eq(wmsStockReservations.id, reservation.id));
+      .where(
+        and(
+          eq(wmsStockReservations.id, reservation.id),
+          eq(wmsStockReservations.status, 'active'),
+        ),
+      )
+      .returning({ id: wmsStockReservations.id });
 
+    if (claimed.length === 0) continue;
+
+    // Restore stock availability
+    await db
+      .update(wmsStock)
+      .set({
+        reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${reservation.quantityCases}, 0)`,
+        availableCases: sql`${wmsStock.availableCases} + ${reservation.quantityCases}`,
+        updatedAt: now,
+      })
+      .where(eq(wmsStock.id, reservation.stockId));
+
+    releasedCount++;
     totalCasesReleased += reservation.quantityCases;
   }
 
   return {
-    releasedCount: activeReservations.length,
+    releasedCount,
     totalCasesReleased,
   };
 };

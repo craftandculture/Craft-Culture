@@ -31,7 +31,7 @@ const SEARCH_FROM = 12;
 
 const linkClass = (isActive: boolean) =>
   `flex min-h-11 items-center rounded-lg px-3 text-sm font-medium transition-colors ${
-    isActive ? 'bg-fill-brand text-white' : 'text-text-primary hover:bg-fill-muted active:bg-fill-muted'
+    isActive ? 'bg-text-primary text-white' : 'text-text-primary hover:bg-fill-muted active:bg-fill-muted'
   }`;
 
 /**
@@ -111,7 +111,7 @@ const MobileNav = ({ sections, footer }: MobileNavProps) => {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Find a page"
                 aria-label="Find a page"
-                className="h-11 w-full rounded-lg border border-border-muted bg-fill-primary pl-9 pr-3 text-base text-text-primary placeholder:text-text-muted focus:border-border-brand focus:outline-none sm:text-sm"
+                className="h-11 w-full rounded-lg border border-border-muted bg-fill-primary pl-9 pr-3 text-base text-text-primary placeholder:text-text-muted focus:border-text-primary focus:outline-none sm:text-sm"
               />
             </div>
           </div>
@@ -158,10 +158,10 @@ const MobileNav = ({ sections, footer }: MobileNavProps) => {
                       onClick={() => toggle(section.title)}
                       aria-expanded={isOpen}
                       className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold transition-colors hover:bg-fill-muted active:bg-fill-muted ${
-                        holdsCurrent ? 'text-text-brand' : 'text-text-primary'
+                        holdsCurrent ? 'text-text-primary' : 'text-text-primary'
                       }`}
                     >
-                      {section.icon && <Icon icon={section.icon} size="sm" className={holdsCurrent ? 'text-text-brand' : 'text-text-muted'} />}
+                      {section.icon && <Icon icon={section.icon} size="sm" className={holdsCurrent ? 'text-text-primary' : 'text-text-muted'} />}
                       <span className="flex-1">{section.title}</span>
                       <IconChevronDown className={`h-4 w-4 text-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                     </button>

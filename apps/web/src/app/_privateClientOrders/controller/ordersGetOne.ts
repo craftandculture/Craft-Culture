@@ -1,7 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import counterpartySafeActivity from '@/app/_privateClientOrders/utils/counterpartySafeActivity';
+import { STAFF_ONLY_ACTIVITY_ACTIONS } from '@/app/_privateClientOrders/utils/staffOnlyActivity';
 import db from '@/database/client';
 import {
   partners,
@@ -30,8 +32,8 @@ const ordersGetOne = winePartnerProcedure
         order: privateClientOrders,
         distributor: {
           id: partners.id,
+          // Named only so the partner can tell their client where to register
           businessName: partners.businessName,
-          logoUrl: partners.logoUrl,
           requiresClientVerification: partners.requiresClientVerification,
         },
         client: {
@@ -86,7 +88,9 @@ const ordersGetOne = winePartnerProcedure
         and(
           eq(privateClientOrderActivityLogs.orderId, input.id),
           // C&C-only notes never reach the partner or distributor
-          ne(privateClientOrderActivityLogs.action, 'internal_note_added'),
+          notInArray(privateClientOrderActivityLogs.action, [
+              ...STAFF_ONLY_ACTIVITY_ACTIONS,
+            ]),
         ),
       )
       .orderBy(privateClientOrderActivityLogs.createdAt);
@@ -99,11 +103,10 @@ const ordersGetOne = winePartnerProcedure
       distributor: orderResult.distributor,
       client: orderResult.client,
       items,
-      activityLogs: activityLogs.map((row) => ({
-        ...row.log,
-        user: row.user,
-        partner: row.partner,
-      })),
+      // The distributor's staff are never named to the partner
+      activityLogs: activityLogs.map((row) =>
+        counterpartySafeActivity(row, orderResult.order.distributorId, 'Distributor'),
+      ),
     };
   });
 

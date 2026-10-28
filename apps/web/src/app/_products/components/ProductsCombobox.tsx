@@ -55,7 +55,7 @@ const highlightText = (text: string | number | null, search: string) => {
         return isMatch ? (
           <mark
             key={index}
-            className="bg-fill-brand/10 text-text-brand font-semibold"
+            className="bg-text-primary/10 text-text-primary font-semibold"
           >
             {part}
           </mark>

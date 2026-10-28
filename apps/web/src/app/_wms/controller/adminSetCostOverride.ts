@@ -1,4 +1,4 @@
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { setCostOverrideSchema } from '../schemas/pricingManagerSchema';
 import writeProductPricing from '../utils/writeProductPricing';
@@ -17,7 +17,7 @@ import writeProductPricing from '../utils/writeProductPricing';
  * @param lwin18 - The product LWIN18 identifier
  * @param costOverridePerBottle - Per-bottle override in USD, or null to clear
  */
-const adminSetCostOverride = wmsOperatorProcedure
+const adminSetCostOverride = adminProcedure
   .input(setCostOverrideSchema)
   .mutation(async ({ input, ctx }) => {
     const { lwin18, costOverridePerBottle } = input;

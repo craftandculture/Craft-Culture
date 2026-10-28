@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -79,28 +80,23 @@ const SourcePage = () => {
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <Typography variant="headingLg" className="mb-2">
-              SOURCE
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Create and manage sourcing requests for out-of-stock items
-            </Typography>
-          </div>
-          <Link href="/platform/admin/source/new">
-            <Button variant="default" colorRole="brand">
-              <ButtonContent iconLeft={IconPlus}>New RFQ</ButtonContent>
-            </Button>
-          </Link>
-        </div>
+        <AdminPageHeader
+          title="SOURCE"
+          description="Create and manage sourcing requests for out-of-stock items"
+          actions={
+            <Link href="/platform/admin/source/new">
+              <Button variant="default" colorRole="brand">
+                <ButtonContent iconLeft={IconPlus}>New RFQ</ButtonContent>
+              </Button>
+            </Link>
+          }
+        />
 
         {/* Sub-navigation */}
         <div className="flex gap-1 border-b border-border-muted">
           <Link
             href="/platform/admin/source"
-            className="flex items-center gap-2 border-b-2 border-border-brand px-4 py-2 text-sm font-medium text-text-brand"
+            className="flex items-center gap-2 border-b-2 border-text-primary px-4 py-2 text-sm font-medium text-text-primary"
           >
             <IconSearch className="h-4 w-4" />
             RFQs
@@ -174,7 +170,7 @@ const SourcePage = () => {
                 href={`/platform/admin/source/${rfq.id}`}
                 className="block"
               >
-                <Card className="hover:border-border-brand transition-colors cursor-pointer">
+                <Card className="hover:border-text-primary transition-colors cursor-pointer">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">

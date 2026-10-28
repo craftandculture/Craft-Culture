@@ -270,10 +270,10 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false, movesOnly = fals
               setIsChoosing((value) => !value);
               setSelected(new Set());
             }}
-            className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors ${
+            className={`inline-flex h-9 items-center gap-1.5 text-xs font-semibold transition-colors ${
               isChoosing
-                ? 'border-border-muted text-text-muted hover:text-text-primary border'
-                : 'bg-text-primary text-surface-primary'
+                ? 'text-text-muted hover:text-text-primary'
+                : 'text-emerald-700 hover:underline dark:text-emerald-400'
             }`}
           >
             {!isChoosing && <IconPlaneDeparture size={14} />}
@@ -434,12 +434,12 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false, movesOnly = fals
                   </td>
                   {formatValue && (
                     <td className="text-text-muted whitespace-nowrap px-3 py-2.5 text-right tabular-nums">
-                      {holding.indicativePerBottle ? formatValue(holding.indicativePerBottle) : '—'}
+                      {holding.indicativePerBottle ? formatValue(holding.indicativePerBottle) : 'Not valued'}
                     </td>
                   )}
-                  <td className="text-text-muted px-3 py-2.5 text-xs">{holding.supplierName ?? '—'}</td>
+                  <td className="text-text-muted px-3 py-2.5 text-xs">{holding.supplierName ?? ''}</td>
                   <td className="text-text-muted whitespace-nowrap px-4 py-2.5 text-xs">
-                    {holding.receivedAt ? format(new Date(holding.receivedAt), 'd MMM yyyy') : '—'}
+                    {holding.receivedAt ? format(new Date(holding.receivedAt), 'd MMM yyyy') : ''}
                   </td>
                 </tr>
               );

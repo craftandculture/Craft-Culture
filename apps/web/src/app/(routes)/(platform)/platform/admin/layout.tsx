@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import CommandPalette from '@/app/_wms/components/CommandPalette';
 import getQueryClient from '@/lib/react-query';
 import api from '@/lib/trpc/server';
@@ -16,7 +17,12 @@ const AdminLayout = async ({ children }: React.PropsWithChildren) => {
 
   const [user, userError] = await tryCatch(queryClient.fetchQuery(api.users.getMe.queryOptions()));
 
-  if (userError || !['admin', 'wms_operator'].includes(user.role)) {
+  /*
+    Staff only: an admin or warehouse role signed in with a C&C address. Some
+    partners hold admin logins, and pages that read the database directly
+    (rather than through a staff-gated procedure) relied on this check alone.
+  */
+  if (userError || !isTeamMember(user)) {
     redirect('/platform');
   }
 

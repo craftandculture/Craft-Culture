@@ -5,6 +5,8 @@ import { upload } from '@vercel/blob/client';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import fileHref from '@/utils/fileHref';
+
 import useTaskMutations from '../hooks/useTaskMutations';
 
 export interface TaskFile {
@@ -71,7 +73,7 @@ const TaskFiles = ({ taskId, files }: { taskId: string; files: TaskFile[] }) => 
     await Promise.all(
       ok.map(async (f) => {
         try {
-          const blob = await upload(`team-tasks/${taskId}/${f.name}`, f, { access: 'public', handleUploadUrl: '/api/upload/blob' });
+          const blob = await upload(`team-tasks/${taskId}/${f.name}`, f, { access: 'private', handleUploadUrl: '/api/upload/blob' });
           await m.addAttachment.mutateAsync({ taskId, fileUrl: blob.url, fileName: f.name, mimeType: f.type || null, fileSize: f.size });
         } catch (error) {
           toast.error(`${f.name}: ${error instanceof Error ? error.message : 'upload failed'}`);
@@ -94,7 +96,7 @@ const TaskFiles = ({ taskId, files }: { taskId: string; files: TaskFile[] }) => 
               <li key={f.id} className="flex items-center gap-2.5 px-2.5 py-2">
                 <Icon size={18} className="shrink-0 text-text-muted" />
                 <div className="min-w-0 flex-1">
-                  <a href={f.fileUrl} target="_blank" rel="noreferrer" className="block truncate text-sm text-text-primary hover:underline">
+                  <a href={fileHref(f.fileUrl)} target="_blank" rel="noreferrer" className="block truncate text-sm text-text-primary hover:underline">
                     {f.fileName}
                   </a>
                   <p className="text-[11px] text-text-muted">

@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
 
 import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import { users } from '@/database/schema';
 import type { Quote } from '@/database/schema';
-import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
@@ -16,13 +16,18 @@ import logger from '@/utils/logger';
 const notifyAdminsOfPOSubmission = async (quote: Quote) => {
   try {
     // Query all admin users
-    const adminUsers = await db
-      .select({
-        email: users.email,
-        name: users.name,
-      })
-      .from(users)
-      .where(eq(users.role, 'admin'));
+    // C&C staff only: a partner holding an admin login must not receive
+    // other customers' orders
+    const adminUsers = (
+      await db
+        .select({
+          email: users.email,
+          name: users.name,
+          role: users.role,
+        })
+        .from(users)
+        .where(eq(users.role, 'admin'))
+    ).filter(isTeamMember);
 
     if (adminUsers.length === 0) {
       logger.warn('No admin users found to notify of PO submission');
@@ -63,33 +68,16 @@ const notifyAdminsOfPOSubmission = async (quote: Quote) => {
       },
     });
 
-    // Send email to each admin
-    const emailPromises = adminUsers.map(async (admin) => {
-      try {
-        // TODO: Create template in Loops with ID 'quote-po-submitted'
-        await loops.sendTransactionalEmail({
-          transactionalId: 'quote-po-submitted',
-          email: admin.email,
-          dataVariables: {
-            adminName: admin.name,
-            quoteName: quote.name,
-            quoteId: quote.id,
-            customerName: quoteOwner.name,
-            customerEmail: quoteOwner.email,
-            poNumber: quote.poNumber || 'N/A',
-            totalUsd: quote.totalUsd.toFixed(2),
-            submittedDate: new Date().toLocaleDateString(),
-            reviewUrl,
-          },
-        });
-
-        logger.dev(`Sent PO submission notification to admin: ${admin.email}`);
-      } catch (error) {
-        logger.error(`Failed to send notification to admin ${admin.email}:`, error);
-      }
-    });
-
-    await Promise.allSettled(emailPromises);
+    /*
+      No Loops template exists for this email yet ('quote-po-submitted' was a
+      placeholder id, so every send failed quietly). Admins still get the
+      in-app notification above; the email is skipped, loudly, until a real
+      template id is set here.
+    */
+    logger.error(
+      'PO submission email skipped: no Loops template is set up for it (in-app notification sent)',
+      { quoteId: quote.id, recipients: adminUsers.length },
+    );
   } catch (error) {
     logger.error('Failed to notify admins of PO submission:', error);
   }

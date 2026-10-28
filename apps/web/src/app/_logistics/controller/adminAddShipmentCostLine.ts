@@ -4,6 +4,7 @@ import db from '@/database/client';
 import { logisticsShipmentCostLines } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import supersedeQuotedFreight from '../utils/quotedFreightLine';
 import syncShipmentCostsFromLedger from '../utils/syncShipmentCostsFromLedger';
 
 const addShipmentCostLineSchema = z.object({
@@ -36,18 +37,26 @@ const addShipmentCostLineSchema = z.object({
 const adminAddShipmentCostLine = adminProcedure
   .input(addShipmentCostLineSchema)
   .mutation(async ({ input, ctx }) => {
-    await db.insert(logisticsShipmentCostLines).values({
-      shipmentId: input.shipmentId,
-      category: input.category,
-      description: input.description ?? null,
-      amount: input.amount,
-      currency: input.currency.toUpperCase(),
-      fxToUsd: input.fxToUsd,
-      amountUsd: Math.round(input.amount * input.fxToUsd * 100) / 100,
-      invoiceRef: input.invoiceRef ?? null,
-      vendor: input.vendor ?? null,
-      sourceDocument: 'Manual entry',
-      createdBy: ctx.user.id,
+    await db.transaction(async (tx) => {
+      await tx.insert(logisticsShipmentCostLines).values({
+        shipmentId: input.shipmentId,
+        category: input.category,
+        description: input.description ?? null,
+        amount: input.amount,
+        currency: input.currency.toUpperCase(),
+        fxToUsd: input.fxToUsd,
+        amountUsd: Math.round(input.amount * input.fxToUsd * 100) / 100,
+        invoiceRef: input.invoiceRef ?? null,
+        vendor: input.vendor ?? null,
+        sourceDocument: 'Manual entry',
+        createdBy: ctx.user.id,
+      });
+
+      // Freight entered by hand is the real figure, so the accepted quote's
+      // estimate stops counting — otherwise both sum into the landed cost
+      if (input.category === 'freight') {
+        await supersedeQuotedFreight(input.shipmentId, tx);
+      }
     });
     await syncShipmentCostsFromLedger(input.shipmentId);
     return { ok: true };

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { PARTNER_FEED_PERMISSION } from '@/app/_partners/schemas/createApiKeySchema';
 import getCatalogueInboundRows from '@/app/_wms/data/getCatalogueInboundRows';
 import getCatalogueRows from '@/app/_wms/data/getCatalogueRows';
 import type { CatalogueRow } from '@/app/_wms/data/getCatalogueRows';
@@ -11,6 +10,7 @@ import type { CatalogueResponse, CatalogueResponseItem } from './schema';
 import { catalogueQuerySchema } from './schema';
 import checkRateLimit from '../_middleware/checkRateLimit';
 import validateApiKey from '../_middleware/validateApiKey';
+import isPartnerFeed from '../_utils/isPartnerFeed';
 import logApiRequest from '../_utils/logApiRequest';
 
 /**
@@ -111,7 +111,7 @@ export const GET = async (request: NextRequest) => {
       integration. Enforced here rather than in the query so there is one place
       to check what a key is allowed to see.
     */
-    const partnerFeed = permissions.includes(PARTNER_FEED_PERMISSION);
+    const partnerFeed = isPartnerFeed(permissions);
 
     // A partner cannot slice the book by owner either — that would disclose
     // through the filter what the payload withholds.

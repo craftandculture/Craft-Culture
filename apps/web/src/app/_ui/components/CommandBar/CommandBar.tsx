@@ -87,7 +87,7 @@ const CommandBar = () => {
                 onSelect={() => handleSelect('/platform/quotes')}
                 className="relative flex cursor-pointer select-none items-center gap-2 rounded-md px-3 py-2 text-sm outline-none transition-colors aria-selected:bg-fill-muted aria-selected:text-text-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
               >
-                <span className="flex h-4 w-4 items-center justify-center rounded bg-fill-brand/10 text-[10px] font-semibold text-text-brand">
+                <span className="flex h-4 w-4 items-center justify-center rounded bg-text-primary/10 text-[10px] font-semibold text-text-primary">
                   +
                 </span>
                 <span>Create New Quote</span>

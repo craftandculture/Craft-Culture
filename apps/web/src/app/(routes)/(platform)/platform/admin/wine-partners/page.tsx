@@ -3,8 +3,6 @@
 import {
   IconBottle,
   IconBuilding,
-  IconCheck,
-  IconEdit,
   IconMail,
   IconMapPin,
   IconPhone,
@@ -12,24 +10,14 @@ import {
   IconPlus,
   IconReceipt,
   IconSearch,
-  IconTrash,
-  IconUser,
-  IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useState } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import HideNameOnLabelsToggle from '@/app/_partners/components/HideNameOnLabelsToggle';
-import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
-import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
-import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
-import AlertDialogContent from '@/app/_ui/components/AlertDialog/AlertDialogContent';
-import AlertDialogDescription from '@/app/_ui/components/AlertDialog/AlertDialogDescription';
-import AlertDialogFooter from '@/app/_ui/components/AlertDialog/AlertDialogFooter';
-import AlertDialogHeader from '@/app/_ui/components/AlertDialog/AlertDialogHeader';
-import AlertDialogTitle from '@/app/_ui/components/AlertDialog/AlertDialogTitle';
-import AlertDialogTrigger from '@/app/_ui/components/AlertDialog/AlertDialogTrigger';
+import PartnerRowActions from '@/app/_partners/components/PartnerRowActions';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -134,7 +122,7 @@ const WinePartnersPage = () => {
     switch (status) {
       case 'active':
         return (
-          <span className="bg-fill-brand/10 text-text-brand border border-border-brand inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+          <span className="bg-text-primary/10 text-text-primary border border-text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
             Active
           </span>
         );
@@ -169,14 +157,15 @@ const WinePartnersPage = () => {
   const handleSavePartner = () => {
     if (!editingPartner) return;
 
+    // Sent as typed: a field emptied in the form is cleared, not ignored
     updatePartner({
       partnerId: editingPartner.id,
       businessName: editingPartner.businessName,
-      businessAddress: editingPartner.businessAddress || undefined,
-      businessPhone: editingPartner.businessPhone || undefined,
-      businessEmail: editingPartner.businessEmail || undefined,
-      taxId: editingPartner.taxId || undefined,
-      logoUrl: editingPartner.logoUrl || undefined,
+      businessAddress: editingPartner.businessAddress,
+      businessPhone: editingPartner.businessPhone,
+      businessEmail: editingPartner.businessEmail,
+      taxId: editingPartner.taxId,
+      logoUrl: editingPartner.logoUrl,
     });
   };
 
@@ -196,177 +185,173 @@ const WinePartnersPage = () => {
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div>
-            <Typography variant="headingLg" className="mb-2">
-              Partners (Wine Companies)
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Manage wine companies that source stock and bring clients
-            </Typography>
-          </div>
-          <div className="flex items-center gap-3">
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="default" colorRole="brand">
-                  <ButtonContent iconLeft={IconPlus}>Add Partner</ButtonContent>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Add Wine Partner</DialogTitle>
-                  <DialogDescription>
-                    Add a wine company that will source stock and bring clients
-                  </DialogDescription>
-                </DialogHeader>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleCreatePartner();
-                  }}
-                  className="space-y-6 mt-4"
-                >
-                  {/* Business Details Section */}
-                  <div className="space-y-4">
-                    <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
-                      <IconBuilding className="h-4 w-4" />
-                      Company Details
-                    </Typography>
+        <AdminPageHeader
+          title="Partners (Wine Companies)"
+          description="Manage wine companies that source stock and bring clients"
+          actions={
+            <>
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" colorRole="brand">
+                    <ButtonContent iconLeft={IconPlus}>Add Partner</ButtonContent>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add Wine Partner</DialogTitle>
+                    <DialogDescription>
+                      Add a wine company that will source stock and bring clients
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleCreatePartner();
+                    }}
+                    className="space-y-6 mt-4"
+                  >
+                    {/* Business Details Section */}
+                    <div className="space-y-4">
+                      <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                        <IconBuilding className="h-4 w-4" />
+                        Company Details
+                      </Typography>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Company Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={newPartner.businessName}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessName: e.target.value })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          TRN / Tax ID
-                        </label>
-                        <input
-                          type="text"
-                          value={newPartner.taxId}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, taxId: e.target.value })
-                          }
-                          placeholder="e.g., 100123456789003"
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Business Address
-                        </label>
-                        <textarea
-                          value={newPartner.businessAddress}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessAddress: e.target.value })
-                          }
-                          rows={2}
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={newPartner.businessEmail}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessEmail: e.target.value })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-text-primary mb-1">
-                          Phone
-                        </label>
-                        <input
-                          type="tel"
-                          value={newPartner.businessPhone}
-                          onChange={(e) =>
-                            setNewPartner({ ...newPartner, businessPhone: e.target.value })
-                          }
-                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Branding Section */}
-                  <div className="space-y-4 border-t border-border-muted pt-4">
-                    <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
-                      <IconPhoto className="h-4 w-4" />
-                      Branding
-                    </Typography>
-
-                    <div>
-                      <label className="block text-sm font-medium text-text-primary mb-1">
-                        Logo URL
-                      </label>
-                      <input
-                        type="url"
-                        value={newPartner.logoUrl}
-                        onChange={(e) =>
-                          setNewPartner({ ...newPartner, logoUrl: e.target.value })
-                        }
-                        placeholder="https://example.com/logo.png"
-                        className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
-                      />
-                      {newPartner.logoUrl && (
-                        <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
-                          <Image
-                            src={newPartner.logoUrl}
-                            alt="Logo preview"
-                            width={48}
-                            height={48}
-                            className="max-h-12 w-auto object-contain"
-                            unoptimized
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Company Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={newPartner.businessName}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessName: e.target.value })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                            required
                           />
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsCreateDialogOpen(false)}
-                    >
-                      <ButtonContent>Cancel</ButtonContent>
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="default"
-                      colorRole="brand"
-                      isDisabled={isCreating}
-                    >
-                      <ButtonContent>
-                        {isCreating ? 'Creating...' : 'Add Partner'}
-                      </ButtonContent>
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            TRN / Tax ID
+                          </label>
+                          <input
+                            type="text"
+                            value={newPartner.taxId}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, taxId: e.target.value })
+                            }
+                            placeholder="e.g., 100123456789003"
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Business Address
+                          </label>
+                          <textarea
+                            value={newPartner.businessAddress}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessAddress: e.target.value })
+                            }
+                            rows={2}
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            value={newPartner.businessEmail}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessEmail: e.target.value })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-1">
+                            Phone
+                          </label>
+                          <input
+                            type="tel"
+                            value={newPartner.businessPhone}
+                            onChange={(e) =>
+                              setNewPartner({ ...newPartner, businessPhone: e.target.value })
+                            }
+                            className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Branding Section */}
+                    <div className="space-y-4 border-t border-border-muted pt-4">
+                      <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
+                        <IconPhoto className="h-4 w-4" />
+                        Branding
+                      </Typography>
+
+                      <div>
+                        <label className="block text-sm font-medium text-text-primary mb-1">
+                          Logo URL
+                        </label>
+                        <input
+                          type="url"
+                          value={newPartner.logoUrl}
+                          onChange={(e) =>
+                            setNewPartner({ ...newPartner, logoUrl: e.target.value })
+                          }
+                          placeholder="https://example.com/logo.png"
+                          className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2 text-sm"
+                        />
+                        {newPartner.logoUrl && (
+                          <div className="mt-2 p-2 bg-fill-muted rounded-lg inline-block">
+                            <Image
+                              src={newPartner.logoUrl}
+                              alt="Logo preview"
+                              width={48}
+                              height={48}
+                              className="max-h-12 w-auto object-contain"
+                              unoptimized
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4 border-t border-border-muted">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsCreateDialogOpen(false)}
+                      >
+                        <ButtonContent>Cancel</ButtonContent>
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="default"
+                        colorRole="brand"
+                        isDisabled={isCreating}
+                      >
+                        <ButtonContent>
+                          {isCreating ? 'Creating...' : 'Add Partner'}
+                        </ButtonContent>
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
+          }
+        />
 
         {/* Filters */}
         <Card>
@@ -482,109 +467,25 @@ const WinePartnersPage = () => {
                     </div>
 
                     {/* Actions Section */}
-                    <div className="flex-shrink-0 flex gap-2">
-                      {partner.status === 'active' ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorRole="danger"
-                          onClick={() => updatePartner({ partnerId: partner.id, status: 'inactive' })}
-                          isDisabled={isUpdating}
-                          title="Deactivate partner"
-                        >
-                          <ButtonContent iconLeft={IconX}>Deactivate</ButtonContent>
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorRole="brand"
-                          onClick={() => updatePartner({ partnerId: partner.id, status: 'active' })}
-                          isDisabled={isUpdating}
-                          title="Activate partner"
-                        >
-                          <ButtonContent iconLeft={IconCheck}>Activate</ButtonContent>
-                        </Button>
-                      )}
-                      {/*
+                    <PartnerRowActions
+                      name={partner.businessName}
+                      status={partner.status}
+                      noun="partner"
+                      isBusy={isUpdating || isDeletingPartner}
+                      onEdit={() => handleEditPartner(partner)}
+                      onSetStatus={(status) => updatePartner({ partnerId: partner.id, status })}
+                      onDelete={() => deletePartner({ partnerId: partner.id })}
+                      /*
                         Reclassify rather than recreate. Individual collectors
                         were filed here for want of a type that fitted, and
                         deleting and re-adding them would orphan the stock that
                         already points at this partner id.
-                      */}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="sm" variant="outline" isDisabled={isUpdating}>
-                            <ButtonContent iconLeft={IconUser}>Make Collector</ButtonContent>
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Reclassify {partner.businessName} as a private collector?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              They move to the Collectors tab and see only their own
-                              cellar &mdash; sourcing, RFQs and private-client orders are
-                              withdrawn. All stock stays with them: it is held against
-                              this partner record, not against the type.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() =>
-                                updatePartner({
-                                  partnerId: partner.id,
-                                  type: 'private_collector',
-                                })
-                              }
-                            >
-                              Make Collector
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditPartner(partner)}
-                      >
-                        <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            colorRole="danger"
-                            isDisabled={isDeletingPartner}
-                            title="Delete Partner"
-                          >
-                            <ButtonContent iconLeft={IconTrash} />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Partner</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to permanently delete{' '}
-                              <strong>{partner.businessName}</strong>? This will remove all
-                              associated user memberships.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deletePartner({ partnerId: partner.id })}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Delete Partner
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                      */
+                      makeCollector={{
+                        onConfirm: () =>
+                          updatePartner({ partnerId: partner.id, type: 'private_collector' }),
+                      }}
+                    />
                   </div>
                 </CardContent>
               </Card>

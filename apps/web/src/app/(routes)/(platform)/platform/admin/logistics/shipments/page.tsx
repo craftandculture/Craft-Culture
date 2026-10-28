@@ -20,6 +20,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { Suspense, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import LogUpdateSheet, { type LogUpdateSheetShipment } from '@/app/_logistics/components/LogUpdateSheet';
 import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
 import ShipmentPartyMark from '@/app/_logistics/components/ShipmentPartyMark';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
@@ -56,6 +57,19 @@ const TYPES: ShipmentType[] = ['inbound', 'outbound', 'mainland_transfer'];
 const formatDate = (date: Date | null | undefined) =>
   date ? new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
 
+const HOUR = 60 * 60 * 1000;
+
+/** How long since news was logged, and how worried to be about it */
+const freshness = (at: Date | string) => {
+  const hours = (Date.now() - new Date(at).getTime()) / HOUR;
+  const label = hours < 1 ? 'just now' : hours < 24 ? `${Math.floor(hours)}h ago` : `${Math.floor(hours / 24)}d ago`;
+  const tone = hours < 24 ? 'bg-emerald-500' : hours < 48 ? 'bg-amber-500' : 'bg-red-600';
+  return { label, tone, stale: hours >= 48 };
+};
+
+/** Statuses where news is still expected; once at the warehouse, receiving takes over */
+const AWAITING = new Set(['draft', 'booked', 'picked_up', 'in_transit', 'arrived_port', 'customs_clearance', 'cleared']);
+
 /**
  * Shipments list
  *
@@ -75,8 +89,12 @@ const ShipmentsList = () => {
   const sort = params.get('sort') === 'eta' ? 'eta' : 'newest';
   const page = Math.max(0, Number(params.get('page') ?? 0) || 0);
   const search = params.get('q') ?? '';
+  const owner = params.get('owner') ?? undefined;
+  const mine = owner === 'me';
+  const noNews = params.get('news') === 'none';
 
   const [typed, setTyped] = useState(search);
+  const [updating, setUpdating] = useState<LogUpdateSheetShipment | null>(null);
 
   const setParam = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params.toString());
@@ -110,6 +128,8 @@ const ShipmentsList = () => {
       stage,
       type,
       sort,
+      owner,
+      noNews: noNews || undefined,
     }),
     placeholderData: (prev) => prev,
   });
@@ -186,6 +206,26 @@ const ShipmentsList = () => {
         </div>
 
         <div className="-mt-2 flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
+          {/* An owner's own list, and what has gone quiet: the board the team keeps each day */}
+          <button
+            type="button"
+            onClick={() => setParam({ owner: owner ? null : 'me' })}
+            className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
+              owner ? 'bg-text-primary text-surface-primary' : 'bg-surface-secondary hover:text-text-primary'
+            }`}
+          >
+            {owner && !mine ? 'One person’s actions ×' : 'My actions'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setParam({ news: noNews ? null : 'none' })}
+            className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
+              noNews ? 'bg-text-primary text-surface-primary' : 'bg-surface-secondary hover:text-text-primary'
+            }`}
+          >
+            No news 48h
+          </button>
+          <span className="mx-1 h-3 w-px bg-border-muted" aria-hidden />
           <span>Also:</span>
           {(
             [
@@ -260,7 +300,9 @@ const ShipmentsList = () => {
             </div>
           ) : shipments.length === 0 ? (
             <p className="px-4 py-12 text-center text-sm text-text-muted">
-              {search || stage || type ? 'No shipments match. Clear a filter or change the search.' : 'No shipments yet.'}
+              {owner
+                ? `Nothing is waiting on ${mine ? 'you' : 'them'}.`
+                : search || stage || type || noNews ? 'No shipments match. Clear a filter or change the search.' : 'No shipments yet.'}
             </p>
           ) : (
             <ul className={`divide-y divide-border-muted transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
@@ -268,12 +310,18 @@ const ShipmentsList = () => {
                 const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
                 const origin = shipment.originCity ?? shipment.originCountry ?? 'Origin';
                 const destination = shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination';
-                const href = shipment.jobNumber
+                // Only export jobs have the exports screen; an import job opens as a shipment
+                const href = shipment.jobKind === 'export'
                   ? `/platform/admin/logistics/exports/${shipment.id}`
                   : `/platform/admin/logistics/shipments/${shipment.id}`;
+                const news = AWAITING.has(shipment.status)
+                  ? freshness(shipment.lastUpdateAt ?? shipment.createdAt)
+                  : null;
+                // An ETA matters only while it is still awaited; once in, it is history
+                const eta = AWAITING.has(shipment.status) ? formatDate(shipment.eta) : null;
                 return (
-                  <li key={shipment.id}>
-                    <Link href={href} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-secondary">
+                  <li key={shipment.id} className="flex items-center">
+                    <Link href={href} className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 transition-colors hover:bg-surface-secondary">
                       <ShipmentPartyMark type={shipment.type} logoUrl={shipment.partyLogoUrl} name={shipment.partyName} icon={ModeIcon} />
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-1.5">
@@ -305,14 +353,40 @@ const ShipmentsList = () => {
                             </>
                           ) : null}
                         </span>
+                        {(shipment.nextAction || news) && (
+                          <span className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs">
+                            {news && (
+                              <span className={`inline-flex items-center gap-1 ${news.stale ? 'font-semibold text-red-700 dark:text-red-400' : 'text-text-muted'}`}>
+                                <span className={`size-1.5 rounded-full ${news.tone}`} aria-hidden />
+                                {news.stale ? `No news ${news.label.replace(' ago', '')}` : news.label}
+                              </span>
+                            )}
+                            {shipment.nextAction && (
+                              <>
+                                {news && <span className="text-text-muted">·</span>}
+                                <span className="min-w-0 truncate text-text-primary">Next: {shipment.nextAction}</span>
+                                {shipment.actionOwnerName && (
+                                  <span className="text-text-muted">({shipment.actionOwnerName.split(' ')[0]})</span>
+                                )}
+                              </>
+                            )}
+                          </span>
+                        )}
                       </span>
                       <ShipmentMetrics
                         cases={shipment.totalCases}
                         bottles={shipment.totalBottles}
-                        etaLabel={formatDate(shipment.eta)}
+                        etaLabel={eta ? `${eta}${shipment.etaConfirmed ? '' : ' est.'}` : null}
                       />
                       <IconChevronRight className="size-4 shrink-0 text-text-muted" />
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => setUpdating(shipment)}
+                      className="mr-3 h-9 shrink-0 rounded-lg border border-border-muted px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-secondary"
+                    >
+                      Update
+                    </button>
                   </li>
                 );
               })}
@@ -334,6 +408,8 @@ const ShipmentsList = () => {
           </div>
         ) : null}
       </div>
+
+      <LogUpdateSheet shipment={updating} onClose={() => setUpdating(null)} />
     </div>
   );
 };

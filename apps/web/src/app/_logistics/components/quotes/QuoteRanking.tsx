@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
+import fileHref from '@/utils/fileHref';
 
 import { card, money, pillClass, secondaryButton, sectionHeading } from '../exports/exportUi';
 
@@ -95,8 +96,15 @@ const QuoteRanking = ({ request, selectedQuoteId, onSelect, onEdit, onAddBottles
                 <th className="px-4 py-2 font-medium">Forwarder</th>
                 <th className="px-2 py-2 text-right font-medium">Quoted</th>
                 <th className="px-2 py-2 text-right font-medium">USD</th>
-                <th className="px-2 py-2 text-right font-medium">Per bottle</th>
-                <th className="px-2 py-2 text-right font-medium">Per 75cl</th>
+                <th className="px-2 py-2 text-right font-medium" title="UAE customs and handling from the rate card">
+                  + UAE arrival
+                </th>
+                <th className="px-2 py-2 text-right font-medium" title="Freight plus UAE arrival">
+                  All-in / bottle
+                </th>
+                <th className="px-2 py-2 text-right font-medium" title="Freight plus UAE arrival">
+                  All-in / 75cl
+                </th>
                 <th className="px-2 py-2 text-right font-medium">Transit</th>
                 <th className="px-2 py-2 font-medium">Valid to</th>
                 <th className="px-2 py-2 text-right font-medium">Price on</th>
@@ -125,7 +133,7 @@ const QuoteRanking = ({ request, selectedQuoteId, onSelect, onEdit, onAddBottles
                         {q.attachments.map((a) => (
                           <a
                             key={a.id}
-                            href={a.fileUrl}
+                            href={fileHref(a.fileUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             title={a.fileName}
@@ -138,6 +146,17 @@ const QuoteRanking = ({ request, selectedQuoteId, onSelect, onEdit, onAddBottles
                     </td>
                     <td className="px-2 py-2.5 text-right tabular-nums">{money(q.totalPrice, q.currency.toUpperCase())}</td>
                     <td className="px-2 py-2.5 text-right tabular-nums">{usd2(q.totalUsd)}</td>
+                    <td
+                      className="px-2 py-2.5 text-right tabular-nums"
+                      title={
+                        q.arrivalCoveredByQuote.length
+                          ? `The quote already includes ${q.arrivalCoveredByQuote.join(' and ')}, so that part is not added`
+                          : undefined
+                      }
+                    >
+                      {q.arrivalUsd == null ? '—' : usd2(q.arrivalUsd)}
+                      {q.arrivalCoveredByQuote.length > 0 && <span className="text-text-muted">*</span>}
+                    </td>
                     <td className="px-2 py-2.5 text-right tabular-nums">{usd2(q.perBottleUsd)}</td>
                     <td className="px-2 py-2.5 text-right font-semibold tabular-nums text-text-primary">{usd2(q.per75clUsd)}</td>
                     <td className="px-2 py-2.5 text-right tabular-nums">{q.transitDays ? `${q.transitDays} days` : '—'}</td>

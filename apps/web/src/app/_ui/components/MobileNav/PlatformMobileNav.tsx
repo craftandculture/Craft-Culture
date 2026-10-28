@@ -51,6 +51,7 @@ const PlatformMobileNav = ({ user, isStaff = false }: PlatformMobileNavProps) =>
           ? [
               { href: '/platform/partner/movements', label: 'Movements' },
               { href: '/platform/partner/activity', label: 'Activity' },
+              { href: '/platform/partner/logistics', label: 'Shipments' },
             ]
           : []),
       ],
@@ -73,6 +74,11 @@ const PlatformMobileNav = ({ user, isStaff = false }: PlatformMobileNavProps) =>
     sections.push({
       title: 'CRM',
       links: [{ href: '/platform/clients', label: 'Clients' }],
+    });
+    // On the desktop bar beside CRM; the phone had lost it
+    sections.push({
+      title: 'Source',
+      links: [{ href: '/platform/partner/source', label: 'Source' }],
     });
   }
 
@@ -105,6 +111,8 @@ const PlatformMobileNav = ({ user, isStaff = false }: PlatformMobileNavProps) =>
 
   // Support routes to the desk that knows this kind of account.
   const getSupportHref = () => {
+    // A collector's help is on the general route, as the footer already sends them
+    if (access.kind === 'collector') return '/platform/support';
     if (access.can.ownsStock) return '/platform/partner/support';
     if (access.can.distributorTools) return '/platform/distributor/support';
     return '/platform/support';

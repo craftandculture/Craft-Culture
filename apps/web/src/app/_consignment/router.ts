@@ -8,11 +8,13 @@ import adminDecideMandate from './controller/adminDecideMandate';
 import adminGetMandates from './controller/adminGetMandates';
 import adminGetPayoutRuns from './controller/adminGetPayoutRuns';
 import adminGetPurchases from './controller/adminGetPurchases';
+import adminRecordAgreedPrices from './controller/adminRecordAgreedPrices';
 import adminRecostPartnerSettlements from './controller/adminRecostPartnerSettlements';
 import adminReversePurchase from './controller/adminReversePurchase';
 import memberBrowseCatalogue from './controller/memberBrowseCatalogue';
 import memberCancelPurchase from './controller/memberCancelPurchase';
 import memberCreatePurchase from './controller/memberCreatePurchase';
+import memberGetFxRates from './controller/memberGetFxRates';
 import memberGetMandates from './controller/memberGetMandates';
 import memberGetProceeds from './controller/memberGetProceeds';
 import memberGetPurchases from './controller/memberGetPurchases';
@@ -24,6 +26,7 @@ const memberRouter = createTRPCRouter({
   offerForSale: memberOfferForSale,
   withdrawMandate: memberWithdrawMandate,
   getMandates: memberGetMandates,
+  getFxRates: memberGetFxRates,
   browseCatalogue: memberBrowseCatalogue,
   createPurchase: memberCreatePurchase,
   markPurchasePaid: memberMarkPurchasePaid,
@@ -43,6 +46,8 @@ const adminRouter = createTRPCRouter({
   getPayoutRuns: adminGetPayoutRuns,
   createPayoutRun: adminCreatePayoutRun,
   approvePayoutRun: adminApprovePayoutRun,
+  // Prices agreed with an owner away from the portal, as their offers
+  recordAgreedPrices: adminRecordAgreedPrices,
 });
 
 const consignmentRouter = createTRPCRouter({

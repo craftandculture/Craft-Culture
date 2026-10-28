@@ -1,7 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, ne } from 'drizzle-orm';
+import { and, eq, inArray, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import counterpartySafeActivity from '@/app/_privateClientOrders/utils/counterpartySafeActivity';
+import { STAFF_ONLY_ACTIVITY_ACTIONS } from '@/app/_privateClientOrders/utils/staffOnlyActivity';
 import db from '@/database/client';
 import {
   partners,
@@ -13,7 +15,11 @@ import {
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import { DISTRIBUTOR_VISIBLE_STATUSES } from '../constants';
+import distributorItemView from '../utils/distributorItemView';
 import distributorOrderView from '../utils/distributorOrderView';
+import distributorPartnerView from '../utils/distributorPartnerView';
+import getCraftCulturePartnerId from '../utils/getCraftCulturePartnerId';
 
 /**
  * Get a single private client order by ID for distributor
@@ -29,11 +35,6 @@ const distributorGetOne = distributorProcedure
     const [orderResult] = await db
       .select({
         order: privateClientOrders,
-        partner: {
-          id: partners.id,
-          businessName: partners.businessName,
-          logoUrl: partners.logoUrl,
-        },
         client: {
           id: privateClientContacts.id,
           name: privateClientContacts.name,
@@ -43,31 +44,13 @@ const distributorGetOne = distributorProcedure
         },
       })
       .from(privateClientOrders)
-      .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
       .leftJoin(privateClientContacts, eq(privateClientOrders.clientId, privateClientContacts.id))
       .where(
         and(
           eq(privateClientOrders.id, input.id),
           eq(privateClientOrders.distributorId, partnerId),
           // Only show orders that are past CC approval
-          inArray(privateClientOrders.status, [
-            'cc_approved',
-            'awaiting_partner_verification',
-            'awaiting_distributor_verification',
-            'verification_suspended',
-            'awaiting_client_payment',
-            'client_paid',
-            'scheduling_delivery',
-            'delivery_scheduled',
-            'awaiting_distributor_payment',
-            'distributor_paid',
-            'awaiting_partner_payment',
-            'partner_paid',
-            'stock_in_transit',
-            'with_distributor',
-            'out_for_delivery',
-            'delivered',
-          ]),
+          inArray(privateClientOrders.status, [...DISTRIBUTOR_VISIBLE_STATUSES]),
         ),
       );
 
@@ -106,10 +89,17 @@ const distributorGetOne = distributorProcedure
         and(
           eq(privateClientOrderActivityLogs.orderId, input.id),
           // C&C-only notes never reach the partner or distributor
-          ne(privateClientOrderActivityLogs.action, 'internal_note_added'),
+          notInArray(privateClientOrderActivityLogs.action, [
+              ...STAFF_ONLY_ACTIVITY_ACTIONS,
+            ]),
         ),
       )
       .orderBy(privateClientOrderActivityLogs.createdAt);
+
+    // C&C's own orders (Private Cellar deliveries) may say so; nobody else is named
+    const craftCulturePartnerId = await getCraftCulturePartnerId();
+    const placedByCraftCulture =
+      !!orderResult.order.partnerId && orderResult.order.partnerId === craftCulturePartnerId;
 
     // Get distributor details (the current user's partner) for finance email
     const [distributor] = await db
@@ -125,15 +115,33 @@ const distributorGetOne = distributorProcedure
 
     return {
       ...distributorOrderView(orderResult.order),
-      partner: orderResult.partner,
-      client: orderResult.client,
+      // The wine partner behind the order is never named to the distributor
+      partner: distributorPartnerView(orderResult.order.partnerId, craftCulturePartnerId),
+      /*
+        The City Drinks account details on a client are City Drinks' own
+        record, so only a distributor that verifies clients is sent them.
+      */
+      client: orderResult.client
+        ? distributor?.requiresClientVerification
+          ? orderResult.client
+          : {
+              id: orderResult.client.id,
+              name: orderResult.client.name,
+              cityDrinksVerifiedAt: null,
+              cityDrinksAccountName: null,
+              cityDrinksPhone: null,
+            }
+        : null,
       distributor,
-      items,
-      activityLogs: activityLogs.map((row) => ({
-        ...row.log,
-        user: row.user,
-        partner: row.partner,
-      })),
+      // Without the partner's own prices, which would show C&C's margin
+      items: distributorItemView(items, orderResult.order),
+      activityLogs: activityLogs.map((row) =>
+        counterpartySafeActivity(
+          row,
+          placedByCraftCulture ? null : orderResult.order.partnerId,
+          'Trade partner',
+        ),
+      ),
     };
   });
 

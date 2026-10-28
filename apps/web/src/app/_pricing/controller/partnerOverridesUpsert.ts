@@ -7,10 +7,10 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 const inputSchema = z.object({
   partnerId: z.string().uuid(),
-  ccMarginPercent: z.number().min(0).max(100).optional().nullable(),
+  ccMarginPercent: z.number().min(0).lt(100).optional().nullable(),
   importDutyPercent: z.number().min(0).max(100).optional().nullable(),
   transferCostPercent: z.number().min(0).max(100).optional().nullable(),
-  distributorMarginPercent: z.number().min(0).max(100).optional().nullable(),
+  distributorMarginPercent: z.number().min(0).lt(100).optional().nullable(),
   vatPercent: z.number().min(0).max(100).optional().nullable(),
   effectiveFrom: z.date().optional().nullable(),
   effectiveUntil: z.date().optional().nullable(),

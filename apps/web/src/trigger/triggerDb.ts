@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
 import relations from '@/database/relations';
+import cleanDbUrl from '@/utils/cleanDbUrl';
 
 /**
  * Lightweight database client for Trigger.dev jobs
@@ -14,7 +15,7 @@ const getDbUrl = () => {
   if (!url) {
     throw new Error('DB_URL environment variable is required');
   }
-  return url;
+  return cleanDbUrl(url);
 };
 
 export const triggerClient = postgres(getDbUrl(), {

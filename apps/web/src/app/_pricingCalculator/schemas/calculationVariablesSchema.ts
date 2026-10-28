@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import USD_TO_AED from '@/lib/currency/usdToAed';
+
 /**
  * Schema for pricing calculation variables
  *
@@ -39,7 +41,7 @@ export const defaultCalculationVariables: CalculationVariables = {
   inputCurrency: 'USD',
   gbpToUsdRate: 1.27,
   eurToUsdRate: 1.08,
-  usdToAedRate: 3.67,
+  usdToAedRate: USD_TO_AED,
   defaultCaseConfig: 6,
   marginType: 'percentage',
   marginPercent: 5,

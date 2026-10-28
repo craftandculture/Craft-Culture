@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  IconBuilding,
   IconCheck,
   IconDots,
   IconDownload,
@@ -14,7 +13,6 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -30,6 +28,7 @@ import DropdownMenuTrigger from '@/app/_ui/components/DropdownMenu/DropdownMenuT
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import type { DistributorQueue, DistributorStage } from '../constants';
@@ -44,7 +43,6 @@ import type { DistributorOrder } from '../utils/distributorOrderView';
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 type OrderWithPartner = DistributorOrder & {
   bottleCount: number;
@@ -236,13 +234,12 @@ const DistributorOrdersList = () => {
 
   const formatCurrencyValue = (order: OrderWithPartner) => {
     const usdAmount = order.totalUsd ?? 0;
-    const aedAmount = order.totalAed ?? 0;
     let amount: number;
     if (currency === 'USD') {
       amount = usdAmount;
     } else {
-      // Use AED if available, otherwise calculate from USD
-      amount = aedAmount > 0 ? aedAmount : usdAmount * DEFAULT_EXCHANGE_RATE;
+      // At the fixed peg; stored AED totals before 28 Oct 2026 used 3.67
+      amount = usdAmount * USD_TO_AED;
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -315,7 +312,7 @@ const DistributorOrdersList = () => {
           type="checkbox"
           checked={orders.length > 0 && selectedOrderIds.size === orders.length}
           onChange={toggleSelectAll}
-          className="h-5 w-5 rounded border-border-muted accent-fill-brand"
+          className="h-5 w-5 rounded border-border-muted accent-text-primary"
         />
       ),
       cell: ({ row }) => (
@@ -324,7 +321,7 @@ const DistributorOrdersList = () => {
           checked={selectedOrderIds.has(row.original.id)}
           onChange={() => toggleOrderSelection(row.original.id)}
           onClick={(e) => e.stopPropagation()}
-          className="h-5 w-5 rounded border-border-muted accent-fill-brand"
+          className="h-5 w-5 rounded border-border-muted accent-text-primary"
         />
       ),
     },
@@ -341,30 +338,6 @@ const DistributorOrdersList = () => {
               SKU needed
             </span>
           )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'partner.businessName',
-      header: 'Partner',
-      cell: ({ row }) => (
-        <div className="flex flex-col items-center gap-1.5">
-          {row.original.partner?.logoUrl ? (
-            <Image
-              src={row.original.partner.logoUrl}
-              alt={row.original.partner?.businessName ?? 'Partner'}
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded-lg object-contain"
-            />
-          ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-secondary">
-              <Icon icon={IconBuilding} size="md" colorRole="muted" />
-            </div>
-          )}
-          <Typography variant="bodyXs" className="text-center">
-            {row.original.partner?.businessName ?? '-'}
-          </Typography>
         </div>
       ),
     },
@@ -503,7 +476,7 @@ const DistributorOrdersList = () => {
               }}
               className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-fill-brand text-white'
+                  ? 'bg-text-primary text-white'
                   : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
               }`}
             >
@@ -659,7 +632,7 @@ const DistributorOrdersList = () => {
                   type="checkbox"
                   checked={selectedOrderIds.has(order.id)}
                   onChange={() => toggleOrderSelection(order.id)}
-                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-border-muted accent-fill-brand"
+                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-border-muted accent-text-primary"
                 />
                 <Link
                   href={`/platform/distributor/orders/${order.id}`}
@@ -667,25 +640,9 @@ const DistributorOrdersList = () => {
                 >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    {order.partner?.logoUrl ? (
-                      <Image
-                        src={order.partner.logoUrl}
-                        alt={order.partner?.businessName ?? 'Partner'}
-                        width={32}
-                        height={32}
-                        className="h-8 w-8 rounded-lg object-contain"
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
-                        <Icon icon={IconBuilding} size="sm" colorRole="muted" />
-                      </div>
-                    )}
                     <div>
                       <Typography variant="bodySm" className="font-mono font-medium">
                         {order.orderNumber}
-                      </Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {order.partner?.businessName ?? '-'}
                       </Typography>
                       {needsSku(order) && (
                         <span className="mt-0.5 inline-block rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">

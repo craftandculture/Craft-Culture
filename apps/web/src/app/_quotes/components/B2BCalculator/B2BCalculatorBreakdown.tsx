@@ -135,14 +135,14 @@ const B2BCalculatorBreakdown = ({
       <Divider className="my-2" />
 
       {/* Customer quote price (total) - Prominent display */}
-      <div className="flex flex-col gap-3 rounded-lg bg-fill-brand/10 p-4">
+      <div className="flex flex-col gap-3 rounded-lg bg-text-primary/10 p-4">
         <div className="flex items-baseline justify-between gap-2">
           <Typography variant="bodyMd" className="font-semibold">
             Customer Price
           </Typography>
           <Typography
             variant="bodyLg"
-            className="tabular-nums font-bold text-text-brand"
+            className="tabular-nums font-bold text-text-primary"
           >
             {formatPrice(convertValue(calculatedQuote.customerQuotePrice), currency)}
           </Typography>

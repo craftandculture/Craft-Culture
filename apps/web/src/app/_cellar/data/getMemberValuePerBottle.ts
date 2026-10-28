@@ -23,8 +23,9 @@ import getCostPerBottle from './getCostPerBottle';
  * Wine the member imported is valued from their own shipment lines first. The
  * shared lookup takes the highest cost for a wine across every owner's
  * shipments and the pricing record, so a member holding a wine C&C or a
- * partner also holds could be shown that owner's cost. The shared figure stays
- * only as the fallback for wine with no shipment of the member's own.
+ * partner also holds could be shown that owner's cost. The shared figure is
+ * used only when a caller asks for it (`sharedFallback`), for the release
+ * quote's duty base, and never for a value shown per bottle.
  *
  * Several purchases of one wine average by bottles. Keyed by `lwinPakKeyOf`,
  * like `getCostPerBottle`.
@@ -37,8 +38,30 @@ import getCostPerBottle from './getCostPerBottle';
  * @param lwins - The LWIN18s being valued
  * @returns Value per bottle, keyed pack-agnostically
  */
-const getMemberValuePerBottle = async (partnerId: string, lwins: string[]) => {
-  const values = await getCostPerBottle(lwins);
+const getMemberValuePerBottle = async (
+  partnerId: string,
+  lwins: string[],
+  options: {
+    /** Kept for older callers; own-only is now the default for everyone */
+    ownOnly?: boolean;
+    /**
+     * Fall back to the shared cost (the highest across every owner and C&C's
+     * pricing row) for wine with no shipment or purchase of the holder's own.
+     * Only for figures the member never sees per bottle — the release quote's
+     * duty base — never for a value shown on their screen.
+     */
+    sharedFallback?: boolean;
+  } = {},
+) => {
+  /*
+    Own figures only unless asked. The shared cost is another owner's figure,
+    or ours, when the holder shipped none of that wine — and sending it to a
+    member's or a partner's browser showed someone else's cost.
+  */
+  const values =
+    options.sharedFallback && !options.ownOnly
+      ? await getCostPerBottle(lwins)
+      : new Map<string, number>();
 
   if (lwins.length === 0) return values;
 

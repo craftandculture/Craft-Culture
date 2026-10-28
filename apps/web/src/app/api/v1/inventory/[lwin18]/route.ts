@@ -1,17 +1,28 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { PARTNER_FEED_PERMISSION } from '@/app/_partners/schemas/createApiKeySchema';
+import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 import db from '@/database/client';
 import { productOffers, products } from '@/database/schema';
 import logger from '@/utils/logger';
 
 import checkRateLimit from '../../_middleware/checkRateLimit';
 import validateApiKey from '../../_middleware/validateApiKey';
+import isPartnerFeed from '../../_utils/isPartnerFeed';
 import logApiRequest from '../../_utils/logApiRequest';
 import toInventoryOffer from '../../_utils/toInventoryOffer';
 import type { InventoryItem } from '../schema';
+
+/**
+ * The same LWIN18 dashed and compact, since callers send either form and
+ * catalogue rows have been stored in both
+ */
+const lwin18Variants = (lwin18: string) => {
+  const dashed = normalizeLwin18(lwin18) ?? lwin18;
+  const compact = /^\d{7}-\d{4}-\d{2}-\d{5}$/.test(dashed) ? dashed.replace(/-/g, '') : dashed;
+  return [...new Set([lwin18, dashed, compact])];
+};
 
 interface RouteParams {
   params: Promise<{ lwin18: string }>;
@@ -83,8 +94,8 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
   }
 
   try {
-    // Validate LWIN18 format (alphanumeric only)
-    if (!/^[a-zA-Z0-9]+$/.test(lwin18)) {
+    // Validate LWIN18 format: alphanumeric, compact or dashed
+    if (!/^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$/.test(lwin18) || lwin18.length > 40) {
       const responseTimeMs = Date.now() - startTime;
       await logApiRequest({
         request,
@@ -105,7 +116,7 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
     const [product] = await db
       .select()
       .from(products)
-      .where(eq(products.lwin18, lwin18))
+      .where(inArray(products.lwin18, lwin18Variants(lwin18)))
       .limit(1);
 
     if (!product) {
@@ -129,7 +140,7 @@ export const GET = async (request: NextRequest, { params }: RouteParams) => {
       .where(eq(productOffers.productId, product.id));
 
     // Partner-feed keys see one supplier: no offer source or base price
-    const partnerFeed = permissions.includes(PARTNER_FEED_PERMISSION);
+    const partnerFeed = isPartnerFeed(permissions);
 
     // Transform to response format
     const inventoryItem: InventoryItem = {

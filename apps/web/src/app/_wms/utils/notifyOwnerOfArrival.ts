@@ -1,9 +1,11 @@
 import { eq } from 'drizzle-orm';
 
+import { queueWineArrived } from '@/app/_cellar/data/queueCellarEmails';
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
 import { partnerMembers, partners } from '@/database/schema';
 import serverConfig from '@/server.config';
+
 
 export interface NotifyOwnerOfArrivalParams {
   /** The partner whose wine this is */
@@ -13,6 +15,9 @@ export interface NotifyOwnerOfArrivalParams {
   bottles: number;
   /** Where it came from, when we know */
   shipmentNumber?: string | null;
+  /** The stock row booked in, so a member's arrival email is sent once */
+  stockId?: string | null;
+  lwin18?: string | null;
 }
 
 /**
@@ -38,6 +43,8 @@ const notifyOwnerOfArrival = async ({
   cases,
   bottles,
   shipmentNumber,
+  stockId,
+  lwin18,
 }: NotifyOwnerOfArrivalParams) => {
   try {
     const [owner] = await db
@@ -86,6 +93,18 @@ const notifyOwnerOfArrival = async ({
         entityId: ownerId,
         actionUrl: home,
         metadata: { productName, cases, bottles, shipmentNumber },
+      });
+    }
+
+    /* A Private Cellar member also gets an email, queued for the switch */
+    if (owner.type === 'private_collector' && stockId) {
+      await queueWineArrived({
+        partnerId: ownerId,
+        entityId: stockId,
+        productName,
+        lwin18,
+        bottles,
+        shipmentNumber,
       });
     }
   } catch (error) {

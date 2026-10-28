@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  IconArrowLeft,
   IconCheck,
   IconClipboard,
   IconDownload,
@@ -13,11 +12,11 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import ExcelJS from 'exceljs';
-import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -149,7 +148,8 @@ const PdfExtractPage = () => {
     isLoading: isLoadingShipments,
     error: shipmentsError,
   } = useQuery({
-    ...api.logistics.admin.getMany.queryOptions({ limit: 50 }),
+    // The most the shipment list returns in one go; newest first
+    ...api.logistics.admin.getMany.queryOptions({ limit: 100 }),
     enabled: showImportModal,
   });
 
@@ -196,7 +196,13 @@ const PdfExtractPage = () => {
       'image/jpeg': ['.jpg', '.jpeg'],
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024, // 10MB
+    // The file travels inside the request as base64 (a third larger), and Vercel
+    // refuses request bodies over 4.5MB before our code runs, so 3MB is the most
+    // that gets through
+    maxSize: 3 * 1024 * 1024,
+    onDropRejected: () => {
+      toast.error('That file is over 3MB. Save a smaller PDF (fewer pages or lower image quality) and try again.');
+    },
   });
 
   const handleExtract = async () => {
@@ -372,21 +378,11 @@ const PdfExtractPage = () => {
     <div className="container mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/platform/admin/logistics">
-              <Icon icon={IconArrowLeft} size="sm" />
-            </Link>
-          </Button>
-          <div>
-            <Typography variant="headingLg" className="mb-2">
-              Document Extractor
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Upload logistics documents and extract structured data using AI
-            </Typography>
-          </div>
-        </div>
+        <AdminPageHeader
+          title="Document Extractor"
+          description="Upload logistics documents and extract structured data using AI"
+          crumbs={[{ label: 'Logistics', href: '/platform/admin/logistics' }]}
+        />
 
         {/* Upload Section */}
         <Card>
@@ -416,8 +412,8 @@ const PdfExtractPage = () => {
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                   isDragActive
-                    ? 'border-brand-primary bg-brand-primary/5'
-                    : 'border-border-muted hover:border-brand-primary'
+                    ? 'border-text-primary bg-text-primary/10'
+                    : 'border-border-muted hover:border-text-primary'
                 }`}
               >
                 <input {...getInputProps()} />
@@ -442,7 +438,7 @@ const PdfExtractPage = () => {
                       {isDragActive ? 'Drop the file here' : 'Drag & drop a document here'}
                     </Typography>
                     <Typography variant="bodyXs" colorRole="muted">
-                      or click to select • PDF, PNG, JPG up to 10MB
+                      or click to select • PDF, PNG, JPG up to 3MB
                     </Typography>
                   </div>
                 )}

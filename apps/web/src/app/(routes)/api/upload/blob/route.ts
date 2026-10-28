@@ -2,6 +2,24 @@ import { type HandleUploadBody, handleUpload } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
+
+/**
+ * Where staff uploads may land. Every caller today is a staff screen: Team
+ * Tasks files, logistics group invoices and documents, export documents. A
+ * bare file name (no folder) is still accepted for the shipment document
+ * upload, which does not prefix its path yet.
+ */
+const TEAM_TASK_PATH = /^team-tasks\/[0-9a-f-]{36}\/[^/]+$/i;
+const LOGISTICS_PATH = /^logistics\/[\w-]+\/[\w-]+\/[^/]+$/;
+const BARE_FILE_NAME = /^[^/]+$/;
+
+const isAllowedPathname = (pathname: string) =>
+  !pathname.split('/').some((segment) => segment === '.' || segment === '..') &&
+  !pathname.includes('\\') &&
+  (TEAM_TASK_PATH.test(pathname) ||
+    LOGISTICS_PATH.test(pathname) ||
+    BARE_FILE_NAME.test(pathname));
 
 /**
  * Vercel Blob client upload handler
@@ -17,16 +35,23 @@ export const POST = async (request: Request) => {
     const jsonResponse = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async () => {
+      // Every staff upload goes to the private store; links open via /api/files
+      token: process.env.BLOB_PRIVATE_READ_WRITE_TOKEN,
+      onBeforeGenerateToken: async (pathname) => {
         const user = await getCurrentUser();
         if (!user) {
           throw new Error('Unauthorized');
         }
 
-        // A signup awaiting approval has nothing it may upload yet; without
-        // this, any self-registered account could write to Blob storage.
-        if (user.approvalStatus !== 'approved') {
+        // Only C&C staff screens upload through here. Partners, members and
+        // signups awaiting approval have no feature that uses it, so they
+        // must not be able to write to Blob storage.
+        if (user.approvalStatus !== 'approved' || !isTeamMember(user)) {
           throw new Error('Forbidden');
+        }
+
+        if (!isAllowedPathname(pathname)) {
+          throw new Error('Upload location not allowed');
         }
 
         return {

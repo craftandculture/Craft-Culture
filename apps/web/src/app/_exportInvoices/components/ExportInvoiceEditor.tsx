@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import useTRPC from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 import ExportChangeRequest from './ExportChangeRequest';
 import ExportChecksPanel from './ExportChecksPanel';
@@ -107,7 +109,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   const revising = editable && Boolean(data.number);
   const errors = data.checks.filter((c) => c.level === 'error');
   const warnings = data.checks.filter((c) => c.level === 'warning');
-  const pdfHref = data.pdfUrl ?? `/api/admin/export-invoices/${id}/pdf`;
+  const pdfHref = fileHref(data.pdfUrl) ?? `/api/admin/export-invoices/${id}/pdf`;
   const blockedBy = errors.length
     ? `${errors.length} error${errors.length > 1 ? 's' : ''} to fix in Checks: ${errors[0]?.message ?? ''}`
     : warnings.length && !acknowledged
@@ -180,7 +182,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
               {v.pdfUrl && (
                 <>
                   {' · '}
-                  <a className="underline" href={v.pdfUrl} target="_blank" rel="noreferrer">PDF</a>
+                  <a className="underline" href={fileHref(v.pdfUrl)} target="_blank" rel="noreferrer">PDF</a>
                 </>
               )}
             </p>
@@ -188,7 +190,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
         ))}
       </ol>
       {data.versions.length > 3 && (
-        <button type="button" onClick={() => setShowAllHistory((v) => !v)} className="mt-3 text-xs font-medium text-text-brand hover:underline">
+        <button type="button" onClick={() => setShowAllHistory((v) => !v)} className="mt-3 text-xs font-medium text-text-primary hover:underline">
           {showAllHistory ? 'Show fewer' : `Show all ${data.versions.length} versions`}
         </button>
       )}
@@ -207,7 +209,7 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
           <span className="font-semibold">{data.number}</span>
           <span className="block text-xs text-text-muted">Latest PDF</span>
         </span>
-        <span className="text-xs font-medium text-text-brand">Open ↗</span>
+        <span className="text-xs font-medium text-text-primary">Open ↗</span>
       </a>
       {pdfVersions.length > 1 && (
         <p className="mt-2 text-xs text-text-muted">{pdfVersions.length} PDF versions — earlier ones are in History.</p>
@@ -226,18 +228,19 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
   return (
     <div className="space-y-4">
       {/* Title, status and actions */}
-      <div className="rounded-xl border border-border-muted bg-fill-primary px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <Link href="/platform/admin/logistics/export-invoices" className="text-xs text-text-muted hover:underline">
-              ← Export invoices
-            </Link>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-semibold sm:text-xl">{data.number ?? 'Draft export invoice'}</h1>
+      <AdminPageHeader
+        title={data.number ?? 'Draft export invoice'}
+        crumbs={[
+          { label: 'Logistics', href: '/platform/admin/logistics' },
+          { label: 'Export invoices', href: '/platform/admin/logistics/export-invoices' },
+        ]}
+        description={
+          <>
+            <span className="flex flex-wrap items-center gap-2">
               <Badge colorRole={editable ? 'warning' : data.status === 'cancelled' ? 'danger' : 'success'} size="sm">
                 {revising ? 'Revising' : editable ? 'Draft' : data.status === 'cancelled' ? 'Cancelled' : 'Issued'}
               </Badge>
-              <span className="truncate text-sm text-text-muted">{data.document.header.consignee.name}</span>
+              <span className="truncate">{data.document.header.consignee.name}</span>
               {data.linkedJob && (
                 <Link
                   href={`/platform/admin/logistics/exports/${data.linkedJob.shipmentId}`}
@@ -246,12 +249,14 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
                   Export job {data.linkedJob.jobNumber} →
                 </Link>
               )}
-            </div>
+            </span>
             {data.status === 'issued' && (
-              <p className="mt-0.5 text-xs text-text-muted">Frozen. Edit reopens it under the same number; earlier PDFs stay in History.</p>
+              <span className="mt-0.5 block text-xs">Frozen. Edit reopens it under the same number; earlier PDFs stay in History.</span>
             )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+          </>
+        }
+        actions={
+          <>
             {editable && !revising &&
               (confirmDiscard ? (
                 <span className="flex items-center gap-1.5 text-xs">
@@ -312,9 +317,9 @@ const ExportInvoiceEditor = ({ id }: ExportInvoiceEditorProps) => {
                 onIssue={issue}
               />
             )}
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
 
       {revising && (

@@ -1,9 +1,9 @@
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
 import { fileTypeFromBuffer } from 'file-type';
 
 import db from '@/database/client';
 import { logisticsGroupDocuments } from '@/database/schema';
+import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { uploadGroupDocumentSchema } from '../schemas/shipmentGroupSchemas';
@@ -21,7 +21,7 @@ const adminUploadGroupDocument = adminProcedure
   .mutation(async ({ input, ctx: { user } }) => {
     const { groupId, filename, documentType, documentNumber } = input;
 
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    if (!process.env.BLOB_PRIVATE_READ_WRITE_TOKEN) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'File storage is not configured.',
@@ -45,11 +45,7 @@ const adminUploadGroupDocument = adminProcedure
     const fileUrl =
       input.blobUrl ??
       (
-        await put(
-          `logistics/groups/${groupId}/${buffer.length}-${filename.length}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`,
-          buffer,
-          { access: 'public', contentType: detectedType.mime, addRandomSuffix: true },
-        )
+        await putPrivateFile(`logistics/groups/${groupId}/${buffer.length}-${filename.length}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`, buffer, detectedType.mime)
       ).url;
 
     const [doc] = await db

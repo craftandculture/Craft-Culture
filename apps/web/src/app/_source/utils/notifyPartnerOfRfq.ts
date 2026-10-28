@@ -150,9 +150,9 @@ const notifyPartnerOfRfq = async ({
           },
         });
 
-        logger.dev(`Sent RFQ notification to: ${recipient.email}`);
+        logger.dev(`Sent RFQ notification`);
       } catch (error) {
-        logger.error(`Failed to send RFQ email notification to ${recipient.email}:`, error);
+        logger.error(`Failed to send RFQ email notification:`, error);
       }
     }
   } catch (error) {

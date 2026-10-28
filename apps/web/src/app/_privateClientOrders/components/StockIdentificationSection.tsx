@@ -160,12 +160,12 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
   }
 
   return (
-    <Card className="border-2 border-fill-brand/30 bg-fill-brand/5">
+    <Card className="border-2 border-text-primary/30 bg-text-primary/5">
       <CardContent className="p-4">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-brand/20">
-              <Icon icon={IconBox} size="sm" className="text-fill-brand" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-text-primary/20">
+              <Icon icon={IconBox} size="sm" className="text-text-primary" />
             </div>
             <div>
               <Typography variant="headingSm">Stock Identification</Typography>
@@ -362,10 +362,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               <label className="text-[10px] text-text-muted">C&C</label>
               <Input
                 type="number"
-                step="0.1"
+                step="any"
                 value={bespokePricing.ccMarginPercent}
                 onChange={(e) => updateBespokePricing('ccMarginPercent', parseFloat(e.target.value))}
-                className="h-6 w-14 text-center text-xs"
+                className="h-6 w-20 text-center text-xs"
               />
               <span className="text-[10px] text-text-muted">%</span>
             </div>
@@ -373,10 +373,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               <label className="text-[10px] text-text-muted">Duty</label>
               <Input
                 type="number"
-                step="0.1"
+                step="any"
                 value={bespokePricing.importDutyPercent}
                 onChange={(e) => updateBespokePricing('importDutyPercent', parseFloat(e.target.value))}
-                className="h-6 w-14 text-center text-xs"
+                className="h-6 w-20 text-center text-xs"
               />
               <span className="text-[10px] text-text-muted">%</span>
             </div>
@@ -384,10 +384,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               <label className="text-[10px] text-text-muted">Transfer</label>
               <Input
                 type="number"
-                step="0.01"
+                step="any"
                 value={bespokePricing.transferCostPercent}
                 onChange={(e) => updateBespokePricing('transferCostPercent', parseFloat(e.target.value))}
-                className="h-6 w-14 text-center text-xs"
+                className="h-6 w-20 text-center text-xs"
               />
               <span className="text-[10px] text-text-muted">%</span>
             </div>
@@ -395,10 +395,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               <label className="text-[10px] text-text-muted">Dist.</label>
               <Input
                 type="number"
-                step="0.1"
+                step="any"
                 value={bespokePricing.distributorMarginPercent}
                 onChange={(e) => updateBespokePricing('distributorMarginPercent', parseFloat(e.target.value))}
-                className="h-6 w-14 text-center text-xs"
+                className="h-6 w-20 text-center text-xs"
               />
               <span className="text-[10px] text-text-muted">%</span>
             </div>
@@ -406,10 +406,10 @@ const StockIdentificationSection = ({ order, onApproved }: StockIdentificationSe
               <label className="text-[10px] text-text-muted">VAT</label>
               <Input
                 type="number"
-                step="0.1"
+                step="any"
                 value={bespokePricing.vatPercent}
                 onChange={(e) => updateBespokePricing('vatPercent', parseFloat(e.target.value))}
-                className="h-6 w-14 text-center text-xs"
+                className="h-6 w-20 text-center text-xs"
               />
               <span className="text-[10px] text-text-muted">%</span>
             </div>

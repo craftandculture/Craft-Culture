@@ -1,12 +1,13 @@
 'use client';
 
-import { IconArrowLeft, IconPlus, IconSend, IconTrash } from '@tabler/icons-react';
+import { IconPlus, IconSend, IconTrash } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -249,15 +250,10 @@ const AdminPrivateOrderForm = () => {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/platform/admin/private-orders">
-            <Icon icon={IconArrowLeft} size="sm" />
-          </Link>
-        </Button>
-        <Typography variant="headingLg">New Private Order (Admin)</Typography>
-      </div>
+      <AdminPageHeader
+        title="New Private Order (Admin)"
+        crumbs={[{ label: 'Private Client Orders', href: '/platform/admin/private-orders' }]}
+      />
 
       {/* Partner Selection */}
       <Card>

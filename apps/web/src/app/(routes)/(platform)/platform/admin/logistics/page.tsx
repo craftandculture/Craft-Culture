@@ -13,7 +13,6 @@ import {
   IconFileText,
   IconPlane,
   IconPlus,
-  IconReceipt,
   IconRefresh,
   IconShip,
   IconTruck,
@@ -30,6 +29,7 @@ import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
 import ShipmentPartyMark from '@/app/_logistics/components/ShipmentPartyMark';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentTypeBadge, { type ShipmentType, shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
+import TeamBoardStrip from '@/app/_logistics/components/TeamBoardStrip';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -60,6 +60,7 @@ const formatCurrency = (amount: number) => {
  */
 const LogisticsDashboardPage = () => {
   const [typeFilter, setTypeFilter] = useState<ShipmentType | 'all'>('all');
+  const [stageTab, setStageTab] = useState<'shipments' | 'quotes'>('shipments');
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -108,19 +109,22 @@ const LogisticsDashboardPage = () => {
 
   const metrics = data;
   const shipments = metrics?.shipments;
-  const recent = metrics?.recentShipments ?? [];
+  const allRecent = metrics?.recentShipments ?? [];
+  const quoteJobs = allRecent.filter((s) => s.isQuote);
+  const shipmentJobs = allRecent.filter((s) => !s.isQuote);
+  const recent = stageTab === 'quotes' ? quoteJobs : shipmentJobs;
   const visible = recent.filter((s) => typeFilter === 'all' || s.type === typeFilter);
 
   // Where shipments are on the way in, read left to right
   const tiles = [
     { label: 'Active', value: shipments?.active ?? 0, tone: 'bg-surface-secondary text-text-primary' },
-    { label: 'In transit', value: shipments?.inTransit ?? 0, tone: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' },
+    { label: 'On the way', value: shipments?.onTheWay ?? 0, tone: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' },
     {
       label: 'At port or customs',
-      value: (shipments?.arrivedPort ?? 0) + (shipments?.customsClearance ?? 0),
+      value: shipments?.portCustoms ?? 0,
       tone: 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300',
     },
-    { label: 'At warehouse', value: shipments?.atWarehouse ?? 0, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
+    { label: 'At warehouse', value: shipments?.warehouse ?? 0, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
     { label: 'Opened, last 30 days', value: shipments?.recentActivityCount ?? 0, tone: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300' },
   ];
 
@@ -156,7 +160,6 @@ const LogisticsDashboardPage = () => {
     { label: 'All shipments', href: '/platform/admin/logistics/shipments', icon: IconShip },
     { label: 'Export jobs', href: '/platform/admin/logistics/exports', icon: IconTruckDelivery },
     { label: 'Freight Quotes', href: '/platform/admin/logistics/quotes', icon: IconFileInvoice },
-    { label: 'Freight Bills', href: '/platform/admin/logistics/invoices', icon: IconReceipt },
     { label: 'Export Invoices', href: '/platform/admin/logistics/export-invoices', icon: IconClipboardList },
     { label: 'Reports', href: '/platform/admin/logistics/reports', icon: IconChartBar },
     { label: 'PDF tool', href: '/platform/admin/logistics/tools/pdf-extract', icon: IconFileText },
@@ -205,6 +208,9 @@ const LogisticsDashboardPage = () => {
           </p>
         ) : null}
 
+        {/* The team's board at a glance: kept current, gone quiet, landing soon, who holds what */}
+        <TeamBoardStrip />
+
         {/* Status strip */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {tiles.map((t) => (
@@ -225,18 +231,51 @@ const LogisticsDashboardPage = () => {
             <NeedsAttentionCard />
 
             <section className="overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
-              <div className="flex flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-text-primary">Recent shipments</p>
-                  <p className="mt-0.5 text-xs text-text-muted">Live, and finished in the last 7 days</p>
+              <div className="flex items-center justify-between gap-3 border-b border-border-muted px-4">
+                <div className="flex gap-4">
+                  {(
+                    [
+                      { key: 'shipments', label: 'Shipments', count: shipmentJobs.length },
+                      { key: 'quotes', label: 'Quotes', count: quoteJobs.length },
+                    ] as const
+                  ).map((tab) => {
+                    const active = stageTab === tab.key;
+                    return (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => {
+                          setStageTab(tab.key);
+                          setTypeFilter('all');
+                        }}
+                        className={`-mb-px inline-flex items-center gap-1.5 border-b-2 py-3 text-sm font-semibold transition-colors ${
+                          active
+                            ? 'border-text-primary text-text-primary'
+                            : 'border-transparent text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        {tab.label}
+                        <span className="tabular-nums text-xs font-medium opacity-70">{tab.count}</span>
+                      </button>
+                    );
+                  })}
                 </div>
                 <Link
-                  href="/platform/admin/logistics/shipments"
+                  href={
+                    stageTab === 'quotes'
+                      ? '/platform/admin/logistics/quotes'
+                      : '/platform/admin/logistics/shipments'
+                  }
                   className="inline-flex items-center gap-1 text-sm text-text-muted transition-colors hover:text-text-primary"
                 >
                   View all <IconArrowRight size={14} />
                 </Link>
               </div>
+              <p className="px-4 pt-3 text-xs text-text-muted">
+                {stageTab === 'quotes'
+                  ? 'Jobs still waiting on a freight quote to be accepted'
+                  : 'Live, and finished in the last 7 days'}
+              </p>
               <div className="-mx-px flex gap-1.5 overflow-x-auto px-4 py-3">
                 {(['all', 'inbound', 'outbound', 'mainland_transfer', 're_export'] as const).map((t) => {
                   const count = recent.filter((s) => t === 'all' || s.type === t).length;
@@ -262,9 +301,11 @@ const LogisticsDashboardPage = () => {
 
               {visible.length === 0 ? (
                 <p className="border-t border-border-muted px-4 py-10 text-center text-sm text-text-muted">
-                  {typeFilter === 'inbound'
-                    ? 'No imports in the last 7 days. Older ones are under View all.'
-                    : 'No live shipments. Finished ones are under View all.'}
+                  {stageTab === 'quotes'
+                    ? 'No jobs waiting on a quote.'
+                    : typeFilter === 'inbound'
+                      ? 'No imports in the last 7 days. Older ones are under View all.'
+                      : 'No live shipments. Finished ones are under View all.'}
                 </p>
               ) : (
                 <ul className="divide-y divide-border-muted border-t border-border-muted">

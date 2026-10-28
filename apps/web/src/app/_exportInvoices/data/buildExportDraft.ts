@@ -19,6 +19,7 @@ import type { ExportDocument } from '../schemas/exportDocumentSchema';
 import { exportOpSchema } from '../schemas/exportOpSchema';
 import applyExportOps from '../utils/applyExportOps';
 import buildExportLines from '../utils/buildExportLines';
+import declareOrigins from '../utils/declareOrigins';
 import estimateGrossWeight from '../utils/estimateGrossWeight';
 
 /**
@@ -69,7 +70,9 @@ const buildExportDraft = async (input: { zohoCustomerId: string; zohoInvoiceIds:
     }
   };
 
-  const invoices = await step('Reading invoices from Zoho', () => fetchInvoicesForExport(input.zohoInvoiceIds));
+  const invoices = await step('Reading invoices from Zoho', () =>
+    fetchInvoicesForExport(input.zohoInvoiceIds, { zohoCustomerId: input.zohoCustomerId }),
+  );
   const lwins = invoices.flatMap((i) => i.lines.map((l) => l.lwin18).filter((l): l is string => Boolean(l)));
   const originByLwin = await step('Looking up origins', () => lookupOrigins(lwins));
   const boeByKey = await step('Finding BOEs in stock', () => resolveExportBoes(invoices));
@@ -85,7 +88,6 @@ const buildExportDraft = async (input: { zohoCustomerId: string; zohoInvoiceIds:
       );
 
   const today = new Date().toISOString().slice(0, 10);
-  const origins = [...new Set(lines.flatMap((l) => l.origin.split(' / ')).filter(Boolean))];
 
   let document: ExportDocument = {
     header: {
@@ -114,9 +116,7 @@ const buildExportDraft = async (input: { zohoCustomerId: string; zohoInvoiceIds:
     lines,
     extraColumns: [],
     notes: [],
-    declaration: origins.length
-      ? `${DEFAULT_DECLARATION} The goods are of ${origins.join(', ')} origin.`
-      : DEFAULT_DECLARATION,
+    declaration: declareOrigins(DEFAULT_DECLARATION, lines),
   };
 
   const ruleResults: { text: string; applied: boolean; error?: string }[] = [];

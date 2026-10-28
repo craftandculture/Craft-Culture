@@ -4,7 +4,6 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import {
-  sourceCustomerPos,
   sourceSupplierOrderItems,
   sourceSupplierOrders,
 } from '@/database/schema';
@@ -28,13 +27,11 @@ const partnerGetOneSupplierOrder = winePartnerProcedure
       .select({
         id: sourceSupplierOrders.id,
         orderNumber: sourceSupplierOrders.orderNumber,
-        customerPoId: sourceSupplierOrders.customerPoId,
         partnerId: sourceSupplierOrders.partnerId,
         status: sourceSupplierOrders.status,
         itemCount: sourceSupplierOrders.itemCount,
         totalAmountUsd: sourceSupplierOrders.totalAmountUsd,
         confirmedAmountUsd: sourceSupplierOrders.confirmedAmountUsd,
-        excelFileUrl: sourceSupplierOrders.excelFileUrl,
         sentAt: sourceSupplierOrders.sentAt,
         confirmedAt: sourceSupplierOrders.confirmedAt,
         partnerNotes: sourceSupplierOrders.partnerNotes,
@@ -56,28 +53,41 @@ const partnerGetOneSupplierOrder = winePartnerProcedure
       });
     }
 
-    // Get customer PO details
-    const [customerPo] = await db
-      .select({
-        id: sourceCustomerPos.id,
-        ccPoNumber: sourceCustomerPos.ccPoNumber,
-        customerName: sourceCustomerPos.customerName,
-        customerCompany: sourceCustomerPos.customerCompany,
-      })
-      .from(sourceCustomerPos)
-      .where(eq(sourceCustomerPos.id, supplierOrder.customerPoId))
-      .limit(1);
-
-    // Get order items
+    // The C&C end customer (name, company, PO) is never returned to the
+    // supplier. Items are an explicit allowlist (no internal links).
     const items = await db
-      .select()
+      .select({
+        id: sourceSupplierOrderItems.id,
+        supplierOrderId: sourceSupplierOrderItems.supplierOrderId,
+        quoteId: sourceSupplierOrderItems.quoteId,
+        productName: sourceSupplierOrderItems.productName,
+        producer: sourceSupplierOrderItems.producer,
+        vintage: sourceSupplierOrderItems.vintage,
+        region: sourceSupplierOrderItems.region,
+        lwin7: sourceSupplierOrderItems.lwin7,
+        lwin18: sourceSupplierOrderItems.lwin18,
+        bottleSize: sourceSupplierOrderItems.bottleSize,
+        caseConfig: sourceSupplierOrderItems.caseConfig,
+        quantityCases: sourceSupplierOrderItems.quantityCases,
+        quantityBottles: sourceSupplierOrderItems.quantityBottles,
+        costPerBottleUsd: sourceSupplierOrderItems.costPerBottleUsd,
+        costPerCaseUsd: sourceSupplierOrderItems.costPerCaseUsd,
+        lineTotalUsd: sourceSupplierOrderItems.lineTotalUsd,
+        confirmationStatus: sourceSupplierOrderItems.confirmationStatus,
+        confirmedAt: sourceSupplierOrderItems.confirmedAt,
+        updatedPriceUsd: sourceSupplierOrderItems.updatedPriceUsd,
+        updatedQuantity: sourceSupplierOrderItems.updatedQuantity,
+        updateReason: sourceSupplierOrderItems.updateReason,
+        rejectionReason: sourceSupplierOrderItems.rejectionReason,
+        partnerNotes: sourceSupplierOrderItems.partnerNotes,
+        sortOrder: sourceSupplierOrderItems.sortOrder,
+      })
       .from(sourceSupplierOrderItems)
       .where(eq(sourceSupplierOrderItems.supplierOrderId, id))
       .orderBy(sourceSupplierOrderItems.sortOrder);
 
     return {
       ...supplierOrder,
-      customerPo,
       items,
     };
   });

@@ -60,7 +60,7 @@ const EditableText = ({ value, onSave, disabled, align = 'left', placeholder = '
           setEditing(false);
         }
       }}
-      className={`w-full rounded border border-border-brand bg-fill-primary px-1 ${alignClass} ${className}`}
+      className={`w-full rounded border border-text-primary bg-fill-primary px-1 ${alignClass} ${className}`}
     />
   );
 };

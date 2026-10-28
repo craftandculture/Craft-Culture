@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  IconArrowLeft,
   IconBell,
   IconBuilding,
   IconBuildingBank,
@@ -25,6 +24,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
 import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
 import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
@@ -313,80 +313,74 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/platform/admin/users">
-              <Icon icon={IconArrowLeft} size="sm" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <Typography variant="headingLg">{user.name || 'Unnamed User'}</Typography>
-              {getStatusBadge(user.approvalStatus)}
-              {getRoleBadge(user.role)}
-            </div>
-            <Typography variant="bodySm" colorRole="muted">
-              {user.email}
-            </Typography>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {user.approvalStatus === 'pending' && (
-            <>
-              <Button
-                size="sm"
-                colorRole="brand"
-                onClick={() => approveUser({ userId: user.id })}
-                isDisabled={isApproving}
-              >
-                <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => rejectUser({ userId: user.id })}
-                isDisabled={isRejecting}
-              >
-                <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
-              </Button>
-            </>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleImpersonate(user.id, user.name, user.email)}
-            isDisabled={isImpersonating}
-          >
-            <ButtonContent iconLeft={IconLogin}>Login as User</ButtonContent>
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" variant="outline" colorRole="danger">
-                <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete User</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete {user.name}? This action cannot be undone. Records they created are kept and reassigned to you.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => deleteUser({ userId: user.id })}
-                  className="bg-red-600 hover:bg-red-700"
-                  disabled={isDeleting}
+      <AdminPageHeader
+        title={user.name || 'Unnamed User'}
+        crumbs={[{ label: 'Users', href: '/platform/admin/users' }]}
+        description={
+          <span className="flex flex-wrap items-center gap-2">
+            {getStatusBadge(user.approvalStatus)}
+            {getRoleBadge(user.role)}
+            <span>{user.email}</span>
+          </span>
+        }
+        actions={
+          <>
+            {user.approvalStatus === 'pending' && (
+              <>
+                <Button
+                  size="sm"
+                  colorRole="brand"
+                  onClick={() => approveUser({ userId: user.id })}
+                  isDisabled={isApproving}
                 >
-                  Delete User
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
+                  <ButtonContent iconLeft={IconCheck}>Approve</ButtonContent>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => rejectUser({ userId: user.id })}
+                  isDisabled={isRejecting}
+                >
+                  <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
+                </Button>
+              </>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleImpersonate(user.id, user.name, user.email)}
+              isDisabled={isImpersonating}
+            >
+              <ButtonContent iconLeft={IconLogin}>Login as User</ButtonContent>
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="outline" colorRole="danger">
+                  <ButtonContent iconLeft={IconTrash}>Delete</ButtonContent>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete {user.name}? This action cannot be undone. Records they created are kept and reassigned to you.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteUser({ userId: user.id })}
+                    className="bg-red-600 hover:bg-red-700"
+                    disabled={isDeleting}
+                  >
+                    Delete User
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
+        }
+      />
 
       {/* Tabs */}
       <Tabs defaultValue="profile">
@@ -852,7 +846,9 @@ const UserDetailView = ({ userId }: UserDetailViewProps) => {
                           Account Holder
                         </Typography>
                         <Typography variant="bodySm">
-                          {(user.bankDetails as Record<string, string>).accountHolder || '-'}
+                          {(user.bankDetails as Record<string, string>).accountName ||
+                            (user.bankDetails as Record<string, string>).accountHolder ||
+                            '-'}
                         </Typography>
                       </div>
                     </div>

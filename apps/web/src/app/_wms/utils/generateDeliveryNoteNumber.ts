@@ -1,34 +1,21 @@
-import { desc, sql } from 'drizzle-orm';
-
-import db from '@/database/client';
-import { wmsDeliveryNotes } from '@/database/schema';
+import nextDocumentNumber, { type DbExecutor } from './nextDocumentNumber';
 
 /**
- * Generate a unique delivery note number in format: DN-YYYY-NNNN
- * Example: DN-2026-0001
+ * Generate the next delivery note number (DN-YYYY-NNNN)
  *
- * @returns The generated delivery note number
+ * Pass the transaction the row is inserted in, so numbers taken earlier in the
+ * same transaction are seen. Collision-free via the wms_delivery_note_number_seq sequence.
+ *
+ * @example
+ *   const number = await generateDeliveryNoteNumber(tx); // "DN-2026-0042"
  */
-const generateDeliveryNoteNumber = async () => {
-  const year = new Date().getFullYear();
-  const prefix = `DN-${year}-`;
-
-  // Get the last delivery note number for this year
-  const [lastNote] = await db
-    .select({ deliveryNoteNumber: wmsDeliveryNotes.deliveryNoteNumber })
-    .from(wmsDeliveryNotes)
-    .where(sql`${wmsDeliveryNotes.deliveryNoteNumber} LIKE ${prefix + '%'}`)
-    .orderBy(desc(wmsDeliveryNotes.deliveryNoteNumber))
-    .limit(1);
-
-  let sequence = 1;
-
-  if (lastNote?.deliveryNoteNumber) {
-    const lastSequence = parseInt(lastNote.deliveryNoteNumber.split('-')[2] ?? '0', 10);
-    sequence = lastSequence + 1;
-  }
-
-  return `${prefix}${sequence.toString().padStart(4, '0')}`;
-};
+const generateDeliveryNoteNumber = async (executor?: DbExecutor) =>
+  nextDocumentNumber({
+    executor,
+    code: 'DN',
+    table: 'wms_delivery_notes',
+    column: 'delivery_note_number',
+    sequence: 'wms_delivery_note_number_seq',
+  });
 
 export default generateDeliveryNoteNumber;

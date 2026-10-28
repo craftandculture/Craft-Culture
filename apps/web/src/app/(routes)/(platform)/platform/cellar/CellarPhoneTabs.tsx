@@ -5,8 +5,10 @@ import {
   IconDots,
   IconFileInvoice,
   IconFileText,
+  IconHistory,
   IconShoppingBag,
   IconSparkles,
+  IconStars,
   IconTag,
   IconTruckDelivery,
   IconUserCircle,
@@ -17,6 +19,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
+import useWhatsNewDot from '@/app/_productUpdates/hooks/useWhatsNewDot';
 
 const isOn = (pathname: string, href: string) =>
   href === '/platform/cellar' ? pathname === href : pathname.startsWith(href);
@@ -24,32 +27,40 @@ const isOn = (pathname: string, href: string) =>
 /**
  * The member's navigation on a phone: four places within thumb reach
  *
- * Your cellar, The Cellar List, Deliveries and Invoices are what a member comes
- * back for; everything else sits under More, in a sheet from the bottom. A
- * guest the cellar is shared with sees no Invoices, as on the desktop.
+ * Your cellar, the C&C Cellar List, Deliveries and Selling are the places a
+ * member works in; their account (statements, invoices, purchases, activity
+ * and details) sits under More, in a sheet from the bottom. A guest the cellar
+ * is shared with sees no Invoices, as on the desktop.
  *
  * Hidden from tablet width up, where the tabs across the top return.
  */
 const CellarPhoneTabs = () => {
   const pathname = usePathname();
   const isViewer = useIsCellarViewer();
+  const whatsNew = useWhatsNewDot();
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => setMoreOpen(false), [pathname]);
 
+  // The same split as the desktop: the four places, then the account under More
   const main = [
-    { href: '/platform/cellar', label: 'My Cellar', icon: IconBottle },
-    { href: '/platform/cellar/available', label: 'C&C Cellar', icon: IconSparkles },
+    { href: '/platform/cellar', label: 'Your cellar', icon: IconBottle },
+    { href: '/platform/cellar/available', label: 'C&C List', icon: IconSparkles },
     { href: '/platform/cellar/deliveries', label: 'Deliveries', icon: IconTruckDelivery },
-    ...(isViewer ? [] : [{ href: '/platform/cellar/invoices', label: 'Invoices', icon: IconFileInvoice }]),
+    { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
   ];
 
   const more = [
-    { href: '/platform/cellar/selling', label: 'Selling', icon: IconTag },
+    { href: '/platform/cellar/statement', label: 'Statements', icon: IconFileText },
+    ...(isViewer ? [] : [{ href: '/platform/cellar/invoices', label: 'Invoices', icon: IconFileInvoice }]),
     { href: '/platform/cellar/purchases', label: 'Purchases', icon: IconShoppingBag },
-    { href: '/platform/cellar/statement', label: 'Statement', icon: IconFileText },
+    { href: '/platform/cellar/activity', label: 'Activity', icon: IconHistory },
     { href: '/platform/cellar/profile', label: 'Your details', icon: IconUserCircle },
+    ...(whatsNew.enabled ? [{ href: '/platform/cellar/whats-new', label: 'What’s New', icon: IconStars }] : []),
   ];
+
+  // The bottom bar stays at four places; a dot on More says something is new
+  const moreDot = whatsNew.hasNew && !isOn(pathname, '/platform/cellar/whats-new');
 
   const moreActive = more.some((item) => isOn(pathname, item.href));
 
@@ -65,7 +76,7 @@ const CellarPhoneTabs = () => {
           />
           <div className="bg-background-primary absolute inset-x-0 bottom-0 rounded-t-3xl px-4 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] shadow-2xl">
             <div className="mb-3 flex items-center justify-between px-1">
-              <span className="text-text-primary text-base font-semibold">More</span>
+              <span className="text-text-primary text-base font-semibold">Your account</span>
               <button
                 type="button"
                 onClick={() => setMoreOpen(false)}
@@ -84,6 +95,9 @@ const CellarPhoneTabs = () => {
                   >
                     <item.icon size={20} className="text-text-muted" />
                     {item.label}
+                    {moreDot && item.href === '/platform/cellar/whats-new' && (
+                      <span className="ml-auto size-2 rounded-full bg-emerald-500" aria-label="New updates" />
+                    )}
                   </Link>
                 </li>
               ))}
@@ -108,7 +122,9 @@ const CellarPhoneTabs = () => {
                   active ? 'text-text-primary font-semibold' : 'text-text-muted'
                 }`}
               >
-                <item.icon size={20} stroke={active ? 2.1 : 1.6} />
+                <span className="relative">
+                  <item.icon size={20} stroke={active ? 2.1 : 1.6} />
+                </span>
                 {item.label}
               </Link>
             );
@@ -120,7 +136,15 @@ const CellarPhoneTabs = () => {
               moreActive ? 'text-text-primary font-semibold' : 'text-text-muted'
             }`}
           >
-            <IconDots size={20} stroke={moreActive ? 2.1 : 1.6} />
+            <span className="relative">
+              <IconDots size={20} stroke={moreActive ? 2.1 : 1.6} />
+              {moreDot && (
+                <span
+                  className="border-background-primary absolute -top-0.5 -right-1 size-2 rounded-full border bg-emerald-500"
+                  aria-label="New updates"
+                />
+              )}
+            </span>
             More
           </button>
         </div>

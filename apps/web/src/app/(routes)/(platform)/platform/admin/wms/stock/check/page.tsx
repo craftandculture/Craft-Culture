@@ -282,7 +282,7 @@ const StockItemCard = ({
               placeholder="Reason (optional)"
               value={adjustmentReason}
               onChange={(e) => onSetReason(e.target.value)}
-              className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-border-brand focus:outline-none"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none"
             />
 
             <div className="flex gap-2">
@@ -385,8 +385,8 @@ const StockCheckPage = () => {
       setEditingItem(null);
       setAdjustmentReason('');
       // Refetch stock data
-      void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'operations', 'getStockAtLocation'] });
-      void queryClient.invalidateQueries({ queryKey: ['wms', 'admin', 'stock', 'getByProduct'] });
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'operations', 'getStockAtLocation']] });
+      void queryClient.invalidateQueries({ queryKey: [['wms', 'admin', 'stock', 'getByProduct']] });
     },
     onError: (error) => {
       toast.error(`Failed to update: ${error.message}`);
@@ -699,7 +699,7 @@ const StockCheckPage = () => {
                       placeholder="Search locations..."
                       value={locationSearch}
                       onChange={(e) => setLocationSearch(e.target.value)}
-                      className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-border-brand focus:outline-none"
+                      className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-text-primary focus:outline-none"
                     />
                   </div>
 
@@ -717,7 +717,7 @@ const StockCheckPage = () => {
                         <button
                           key={loc.id}
                           onClick={() => handleSelectLocation(loc.id)}
-                          className="flex w-full items-center justify-between rounded-lg border border-border-primary p-3 text-left transition-colors hover:border-border-brand hover:bg-fill-secondary"
+                          className="flex w-full items-center justify-between rounded-lg border border-border-primary p-3 text-left transition-colors hover:border-text-primary hover:bg-fill-secondary"
                         >
                           <LocationBadge
                             locationCode={loc.locationCode}
@@ -803,7 +803,7 @@ const StockCheckPage = () => {
                   value={bayStockSearch}
                   onChange={(e) => setBayStockSearch(e.target.value)}
                   placeholder="Search products..."
-                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
                 />
               </div>
             )}

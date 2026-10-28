@@ -228,7 +228,7 @@ const ProductPicker = ({
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {index !== undefined && (
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-fill-brand/10 text-xs font-semibold text-text-brand">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-text-primary/10 text-xs font-semibold text-text-primary">
               {index + 1}
             </span>
           )}
@@ -335,7 +335,7 @@ const ProductPicker = ({
       ) : mode === 'search' ? (
         <div className="mb-3">
           {hasPrePopulatedProduct && !selectedProduct ? (
-            <div className="flex items-center justify-between rounded-lg border border-border-brand bg-fill-brand-muted/50 px-3 py-2">
+            <div className="flex items-center justify-between rounded-lg border border-text-primary bg-text-primary-muted/50 px-3 py-2">
               <div className="flex flex-col gap-0.5 min-w-0">
                 <Typography variant="bodySm" className="font-medium truncate">
                   {value.productName}
@@ -485,7 +485,7 @@ const ProductPicker = ({
         {/* Cost subtotal (quantity × cost) — not the client's final price */}
         <div className="col-span-2 flex items-center justify-end gap-1.5 border-t border-border-muted pt-2 sm:ml-auto sm:border-t-0 sm:pt-0">
           <Typography variant="bodyXs" colorRole="muted">Cost subtotal:</Typography>
-          <Typography variant="bodySm" className="font-semibold text-text-brand">
+          <Typography variant="bodySm" className="font-semibold text-text-primary">
             {formattedTotal}
           </Typography>
         </div>

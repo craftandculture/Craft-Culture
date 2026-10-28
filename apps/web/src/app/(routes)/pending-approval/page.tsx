@@ -19,7 +19,8 @@ import useTRPC from '@/lib/trpc/browser';
  * Pending approval page shown to users waiting for admin approval
  *
  * This page is shown to both pending and rejected users (same message for softer UX)
- * Features auto-polling every 10 seconds and manual status check
+ * It checks quietly every 10 seconds, and on request, and says so in plain
+ * words rather than as a status readout.
  */
 const PendingApprovalPage = () => {
   const api = useTRPC();
@@ -81,10 +82,10 @@ const PendingApprovalPage = () => {
             {/* Heading */}
             <div className="space-y-2 text-center">
               <Typography variant="headingLg" className="font-semibold">
-                Account Pending Approval
+                Thank you{user?.name ? `, ${user.name}` : ''}
               </Typography>
               <Typography variant="bodyMd" className="text-text-secondary">
-                Thank you for signing up, {user?.name || 'there'}!
+                We are reviewing your account.
               </Typography>
             </div>
 
@@ -92,25 +93,21 @@ const PendingApprovalPage = () => {
             <div className="bg-surface-muted space-y-3 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <IconMail className="text-text-muted mt-0.5 h-5 w-5 shrink-0" />
-                <div className="space-y-1">
-                  <Typography variant="bodySm" className="text-text-primary font-medium">
-                    Your account is being reviewed
-                  </Typography>
-                  <Typography variant="bodySm" className="text-text-secondary">
-                    Our team will review your account and send you an email once you&apos;ve
-                    been approved. This usually takes 1-2 hours.
-                  </Typography>
-                </div>
+                <Typography variant="bodySm" className="text-text-secondary">
+                  A member of our team will be in touch by email as soon as your
+                  account is ready, usually within a couple of hours. This page
+                  will open your account by itself once it is approved.
+                </Typography>
               </div>
             </div>
 
             {/* Additional Info */}
             <div className="space-y-2 text-center">
               <Typography variant="bodyXs" className="text-text-muted">
-                Your email: <span className="font-medium">{user?.email}</span>
+                We will write to <span className="font-medium">{user?.email}</span>
               </Typography>
               <Typography variant="bodyXs" className="text-text-muted">
-                Questions? Contact us at{' '}
+                If you have any questions, please write to{' '}
                 <a
                   href="mailto:support@craftculture.xyz"
                   className="text-text-primary underline hover:no-underline"
@@ -120,31 +117,20 @@ const PendingApprovalPage = () => {
               </Typography>
             </div>
 
-            {/* Status Check Info */}
-            <div className="bg-surface-primary space-y-3 rounded-lg border border-border-primary p-4">
-              <div className="flex items-center justify-between">
-                <Typography variant="bodyXs" className="text-text-muted">
-                  Status: <span className="text-text-primary font-medium">Pending</span>
-                </Typography>
-                <Typography variant="bodyXs" className="text-text-muted">
-                  Auto-checking every 10s
-                </Typography>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleCheckStatus}
-                isDisabled={isChecking}
-              >
-                <ButtonContent iconLeft={IconRefresh}>
-                  {isChecking ? 'Checking...' : 'Check Status Now'}
-                </ButtonContent>
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleCheckStatus}
+              isDisabled={isChecking}
+            >
+              <ButtonContent iconLeft={IconRefresh}>
+                {isChecking ? 'Checking' : 'Check again'}
+              </ButtonContent>
+            </Button>
 
             {/* Sign Out Button */}
             <Button variant="outline" className="w-full" onClick={handleSignOut}>
-              <ButtonContent>Sign Out</ButtonContent>
+              <ButtonContent>Sign out</ButtonContent>
             </Button>
           </CardContent>
         </Card>
@@ -155,7 +141,7 @@ const PendingApprovalPage = () => {
             href="/"
             className="text-text-secondary hover:text-text-primary text-sm underline hover:no-underline"
           >
-            Back to Home
+            Back to the home page
           </Link>
         </div>
       </div>

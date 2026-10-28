@@ -38,6 +38,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import type { Quote } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import convertUsdToAed from '@/utils/convertUsdToAed';
+import fileHref from '@/utils/fileHref';
 import formatPrice from '@/utils/formatPrice';
 import safeHref from '@/utils/safeHref';
 
@@ -255,23 +256,13 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
     // Calculate total from line items, excluding unavailable ones without accepted alternatives
     let adjustedTotalUsd = 0;
 
+    // Use the server's line totals: they already reflect an accepted
+    // alternative, and an unavailable line with no accepted alternative is 0.
+    // Pricing an offered-but-not-accepted alternative here made the shown
+    // total differ from the amount the customer is asked to pay.
     quotePricingData.lineItems.forEach((item) => {
-      const hasAlternatives = item.adminAlternatives && item.adminAlternatives.length > 0;
-      const acceptedAlt = item.acceptedAlternative;
-      // If no accepted alt but alternatives exist, use the first one
-      const effectiveAlt = acceptedAlt || (hasAlternatives ? item.adminAlternatives?.[0] : null);
-
-      // Item is truly unavailable only if marked unavailable AND has no alternatives
-      const isTrulyUnavailable = item.available === false && !hasAlternatives;
-
-      // Include items that are available OR have an alternative (accepted or first offered)
-      if (!isTrulyUnavailable) {
-        // Use alternative pricing if available
-        const itemTotal = effectiveAlt
-          ? effectiveAlt.pricePerCase * (item.originalQuantity || 1)
-          : item.lineItemTotalUsd;
-        adjustedTotalUsd += itemTotal;
-      }
+      if (item.available === false && !item.acceptedAlternative) return;
+      adjustedTotalUsd += item.lineItemTotalUsd || 0;
     });
 
     // Add fulfilled OOC items
@@ -564,46 +555,36 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
     setIsExporting(true);
     try {
-      // Build line items for PDF, filtering out unavailable items without alternatives
+      const isAedPdf = quote.currency === 'AED' && !!quote.totalAed;
+      // USD value of every line on the PDF, for the total
+      const lineTotalsUsd: number[] = [];
+
+      // Build line items for PDF, leaving out unavailable lines with no accepted alternative
       const pdfLineItems = lineItems
         .map((item) => {
           const product = productMap[item.productId];
           const pricing = pricingMap[item.productId];
 
-          // Check if item has alternatives (use first one if not explicitly accepted)
-          const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
-          const acceptedAlt = pricing?.acceptedAlternative;
-          // If no accepted alt but alternatives exist, use the first one
-          const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing.adminAlternatives?.[0] : null);
+          // Only an alternative the customer accepted is priced; offered
+          // alternatives are not part of the amount due
+          const effectiveAlt = pricing?.acceptedAlternative ?? null;
 
-          // Item is truly unavailable only if marked unavailable AND has no alternatives
-          const isTrulyUnavailable = pricing?.available === false && !hasAlternatives;
-
-          // Skip items that are truly unavailable (no alternatives offered)
-          if (isTrulyUnavailable) {
+          // Unavailable with no accepted alternative: not on the invoice
+          if (pricing?.available === false && !effectiveAlt) {
             return null;
           }
 
-          // Use alternative pricing if available (accepted or first offered)
-          const displayQuantity = effectiveAlt
-            ? item.quantity // Use original quantity for alternatives
-            : (pricing?.confirmedQuantity ?? item.quantity);
+          const displayQuantity = pricing?.confirmedQuantity ?? item.quantity;
           const pricePerCase = effectiveAlt
             ? effectiveAlt.pricePerCase
             : (pricing?.basePriceUsd ?? (pricing?.lineItemTotalUsd ? pricing.lineItemTotalUsd / item.quantity : 0));
-          const lineTotal = effectiveAlt
-            ? effectiveAlt.pricePerCase * displayQuantity
-            : (pricing?.lineItemTotalUsd || 0);
+          const lineTotal = pricing?.lineItemTotalUsd ?? pricePerCase * displayQuantity;
+
+          lineTotalsUsd.push(lineTotal);
 
           // Convert to display currency if needed
-          const displayPricePerCase =
-            quote.currency === 'AED' && quote.totalAed
-              ? convertUsdToAed(pricePerCase)
-              : pricePerCase;
-          const displayLineTotal =
-            quote.currency === 'AED' && quote.totalAed
-              ? convertUsdToAed(lineTotal)
-              : lineTotal;
+          const displayPricePerCase = isAedPdf ? convertUsdToAed(pricePerCase) : pricePerCase;
+          const displayLineTotal = isAedPdf ? convertUsdToAed(lineTotal) : lineTotal;
 
           const bottlesPerCase = effectiveAlt
             ? effectiveAlt.bottlesPerCase
@@ -630,15 +611,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         const pricePerCase = item.pricePerCase;
         const lineTotal = item.lineItemTotalUsd;
 
+        lineTotalsUsd.push(lineTotal);
+
         // Convert to display currency if needed
-        const displayPricePerCase =
-          quote.currency === 'AED' && quote.totalAed
-            ? convertUsdToAed(pricePerCase)
-            : pricePerCase;
-        const displayLineTotal =
-          quote.currency === 'AED' && quote.totalAed
-            ? convertUsdToAed(lineTotal)
-            : lineTotal;
+        const displayPricePerCase = isAedPdf ? convertUsdToAed(pricePerCase) : pricePerCase;
+        const displayLineTotal = isAedPdf ? convertUsdToAed(lineTotal) : lineTotal;
 
         return {
           productName: item.productName,
@@ -649,10 +626,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
         };
       });
 
-      // Calculate total including OOC items
-      const lineItemsTotalUsd = pdfLineItems.reduce((sum, item) => sum + item.lineTotal, 0);
-      const oocItemsTotalUsd = pdfFulfilledOocItems.reduce((sum, item) => sum + item.lineTotal, 0);
-      const calculatedTotalUsd = lineItemsTotalUsd + oocItemsTotalUsd;
+      // Total from the USD line values (the displayed values may already be
+      // in AED — summing those and converting again overstated AED ~3.67x)
+      const calculatedTotalUsd = lineTotalsUsd.reduce((sum, value) => sum + value, 0);
       const calculatedTotalAed = convertUsdToAed(calculatedTotalUsd);
 
       await exportQuoteToPDF(
@@ -792,9 +768,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
 
             {/* Customer Quote Price (if margins applied) - Compact */}
             {quotePricingData?.customerQuotePrice && (
-              <div className="mt-1.5 flex items-center justify-between rounded bg-fill-brand/10 px-2 py-1.5">
+              <div className="mt-1.5 flex items-center justify-between rounded bg-text-primary/10 px-2 py-1.5">
                 <span className="text-xs text-text-muted">Customer Quote (Inc. VAT)</span>
-                <span className="text-sm font-bold text-text-brand">
+                <span className="text-sm font-bold text-text-primary">
                   {formatPrice(
                     quote.currency === 'AED'
                       ? convertUsdToAed(quotePricingData.customerQuotePrice)
@@ -822,20 +798,15 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                   const product = productMap[item.productId];
                   const pricing = pricingMap[item.productId];
 
-                  // Check if item has alternatives (use first one if not explicitly accepted)
-                  const hasAlternatives = pricing?.adminAlternatives && pricing.adminAlternatives.length > 0;
-                  const acceptedAlt = pricing?.acceptedAlternative;
-                  // If no accepted alt but alternatives exist, use the first one
-                  const effectiveAlt = acceptedAlt || (hasAlternatives ? pricing.adminAlternatives?.[0] : null);
+                  // Only an accepted alternative replaces the wine and its
+                  // price; offered alternatives are listed below the line
+                  const effectiveAlt = pricing?.acceptedAlternative ?? null;
 
-                  // Item is truly unavailable only if marked unavailable AND has no alternatives
-                  const isTrulyUnavailable = pricing?.available === false && !hasAlternatives;
+                  // Unavailable unless the customer accepted an alternative
+                  const isTrulyUnavailable = pricing?.available === false && !effectiveAlt;
 
-                  // Use alternative pricing if available
                   const displayQuantity = pricing?.confirmedQuantity ?? item.quantity;
-                  const lineItemTotal = effectiveAlt
-                    ? effectiveAlt.pricePerCase * item.quantity
-                    : (pricing?.lineItemTotalUsd || 0);
+                  const lineItemTotal = pricing?.lineItemTotalUsd || 0;
 
                   // Determine if item needs expanded view
                   const hasExpandedContent = effectiveAlt || pricing?.adminNotes;
@@ -889,7 +860,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                               <span className="shrink-0 rounded bg-fill-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">ALT</span>
                             )}
                             {/* Price */}
-                            <span className={`shrink-0 font-semibold tabular-nums ${isTrulyUnavailable ? 'text-text-muted' : 'text-text-brand'}`}>
+                            <span className={`shrink-0 font-semibold tabular-nums ${isTrulyUnavailable ? 'text-text-muted' : 'text-text-primary'}`}>
                               {formatPrice(displayCurrency === 'AED' ? convertUsdToAed(lineItemTotal) : lineItemTotal, displayCurrency)}
                             </span>
                           </div>
@@ -911,7 +882,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                              quote.status === 'paid' ||
                              quote.status === 'po_submitted' ||
                              quote.status === 'po_confirmed') && (
-                            <div className="ml-6 sm:ml-8 text-xs text-text-brand italic">{pricing.adminNotes}</div>
+                            <div className="ml-6 sm:ml-8 text-xs text-text-primary italic">{pricing.adminNotes}</div>
                           )}
 
                           {/* Admin Alternatives - compact inline */}
@@ -927,11 +898,11 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                 return (
                                   <div key={altIdx} className="flex items-center gap-2 text-xs">
                                     {isAccepted ? (
-                                      <IconCheck className="h-3 w-3 text-text-brand shrink-0" />
+                                      <IconCheck className="h-3 w-3 text-text-primary shrink-0" />
                                     ) : (
                                       <IconBulb className="h-3 w-3 text-text-muted shrink-0" />
                                     )}
-                                    <span className={`truncate ${isAccepted ? 'text-text-brand font-medium' : 'text-text-muted'}`}>
+                                    <span className={`truncate ${isAccepted ? 'text-text-primary font-medium' : 'text-text-muted'}`}>
                                       {alt.productName}
                                     </span>
                                     <span className="text-text-muted">
@@ -948,7 +919,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                                         className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${
                                           isAccepted
                                             ? 'bg-fill-danger/10 text-text-danger hover:bg-fill-danger/20'
-                                            : 'bg-fill-brand/10 text-text-brand hover:bg-fill-brand/20'
+                                            : 'bg-text-primary/10 text-text-primary hover:bg-text-primary/20'
                                         }`}
                                       >
                                         {isAccepted ? '✕' : 'Accept'}
@@ -1177,10 +1148,10 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                     Your quote has been confirmed. Please submit your Purchase Order to proceed.
                   </Typography>
                   {quote.deliveryLeadTime && (
-                    <div className="mb-4 rounded-lg border border-border-brand bg-white p-3">
+                    <div className="mb-4 rounded-lg border border-text-primary bg-surface-primary p-3">
                       <div className="flex items-center gap-2">
-                        <Icon icon={IconTruck} size="xs" className="text-text-brand" />
-                        <Typography variant="bodyXs" className="font-semibold text-text-brand">
+                        <Icon icon={IconTruck} size="xs" className="text-text-primary" />
+                        <Typography variant="bodyXs" className="font-semibold text-text-primary">
                           Delivery Lead Time:
                         </Typography>
                         <Typography variant="bodyXs" className="font-bold">
@@ -1303,7 +1274,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       href={safeHref(quote.paymentDetails.paymentUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 rounded bg-fill-brand px-4 py-2 text-sm text-white font-medium hover:bg-fill-brand/90"
+                      className="flex items-center justify-center gap-2 rounded bg-text-primary px-4 py-2 text-sm text-white font-medium hover:bg-text-primary/90"
                     >
                       <IconCreditCard className="h-4 w-4" />
                       Pay Now
@@ -1382,9 +1353,9 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       {/* Reference - highlighted */}
                       {quote.paymentDetails.reference && (
                         <div className="pt-2 border-t border-border-muted">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 bg-fill-brand/10 rounded px-3 py-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 bg-text-primary/10 rounded px-3 py-2">
                             <span className="text-sm text-text-muted">Payment Reference</span>
-                            <span className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</span>
+                            <span className="font-mono font-bold text-text-primary">{quote.paymentDetails.reference}</span>
                           </div>
                         </div>
                       )}
@@ -1404,7 +1375,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                       <div className="flex items-center gap-2 text-xs text-text-success">
                         <IconCheck className="h-3 w-3" />
                         <span className="font-medium">Proof submitted</span>
-                        <a href={safeHref(currentQuote.paymentProofUrl)} target="_blank" rel="noopener noreferrer" className="text-text-brand hover:underline ml-auto">View</a>
+                        <a href={safeHref(fileHref(currentQuote.paymentProofUrl))} target="_blank" rel="noopener noreferrer" className="text-text-primary hover:underline ml-auto">View</a>
                       </div>
                     ) : paymentProofUrl ? (
                       <div className="flex items-center gap-2 text-xs">
@@ -1415,7 +1386,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                           type="button"
                           onClick={() => submitPaymentProofMutation.mutate()}
                           disabled={submitPaymentProofMutation.isPending}
-                          className="ml-auto px-2 py-0.5 rounded bg-fill-brand text-white text-xs font-medium hover:bg-fill-brand/90 disabled:opacity-50"
+                          className="ml-auto px-2 py-0.5 rounded bg-text-primary text-white text-xs font-medium hover:bg-text-primary/90 disabled:opacity-50"
                         >
                           {submitPaymentProofMutation.isPending ? '...' : 'Submit'}
                         </button>
@@ -1441,7 +1412,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
               <>
                 <Divider />
                 <div className="flex items-center gap-2 text-sm">
-                  <IconCheck className="h-4 w-4 text-text-brand" />
+                  <IconCheck className="h-4 w-4 text-text-primary" />
                   <span className="font-medium">Paid</span>
                   {quote.paidAt && <span className="text-text-muted">· {format(new Date(quote.paidAt), 'MMM d, yyyy')}</span>}
                   {quote.deliveryLeadTime && <span className="text-text-muted">· Delivery: {quote.deliveryLeadTime}</span>}
@@ -1453,8 +1424,8 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
             {quote.status === 'po_submitted' && (
               <>
                 <Divider />
-                <div className="rounded-lg border border-border-brand bg-fill-brand/10 p-4">
-                  <Typography variant="bodySm" className="mb-2 font-semibold text-text-brand">
+                <div className="rounded-lg border border-text-primary bg-text-primary/10 p-4">
+                  <Typography variant="bodySm" className="mb-2 font-semibold text-text-primary">
                     Purchase Order Submitted
                   </Typography>
                   <div className="space-y-2">
@@ -1483,10 +1454,10 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         </Typography>
                         <div className="flex items-center gap-2">
                           <a
-                            href={safeHref(quote.poAttachmentUrl)}
+                            href={safeHref(fileHref(quote.poAttachmentUrl))}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-text-brand hover:underline text-sm"
+                            className="text-text-primary hover:underline text-sm"
                           >
                             View Document
                           </a>
@@ -1495,7 +1466,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              const href = safeHref(quote.poAttachmentUrl);
+                              const href = safeHref(fileHref(quote.poAttachmentUrl));
                               if (!href) return;
                               const link = document.createElement('a');
                               link.href = href;
@@ -1560,10 +1531,10 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                         </Typography>
                         <div className="flex items-center gap-2">
                           <a
-                            href={safeHref(quote.poAttachmentUrl)}
+                            href={safeHref(fileHref(quote.poAttachmentUrl))}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-text-brand hover:underline text-sm"
+                            className="text-text-primary hover:underline text-sm"
                           >
                             View Document
                           </a>
@@ -1572,7 +1543,7 @@ const QuoteDetailsDialog = ({ quote, open, onOpenChange }: QuoteDetailsDialogPro
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              const href = safeHref(quote.poAttachmentUrl);
+                              const href = safeHref(fileHref(quote.poAttachmentUrl));
                               if (!href) return;
                               const link = document.createElement('a');
                               link.href = href;

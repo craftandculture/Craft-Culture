@@ -139,7 +139,7 @@ const WMSReceivePage = () => {
 
               return (
                 <Link key={shipment.id} href={`/platform/admin/wms/receive/${shipment.id}`}>
-                  <Card className="cursor-pointer transition-colors hover:border-border-brand">
+                  <Card className="cursor-pointer transition-colors hover:border-text-primary">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
                         {/* Transport Icon */}

@@ -45,12 +45,12 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 /**
  * Format a price value with currency
@@ -62,22 +62,6 @@ const formatPrice = (amount: number, currency: Currency) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
-};
-
-/**
- * Calculate the client-facing price for a line item by prorating the order total
- *
- * Line items store supplier/partner prices, but the order total includes all markup
- * (C&C margin, duty, VAT, transfer costs). This function prorates the final total
- * back to each line item based on their proportion of the supplier cost.
- */
-const calculateClientPrice = (
-  itemSupplierTotal: number,
-  totalSupplierCost: number,
-  orderTotal: number,
-): number => {
-  if (totalSupplierCost === 0) return 0;
-  return (itemSupplierTotal / totalSupplierCost) * orderTotal;
 };
 
 /**
@@ -169,6 +153,20 @@ const DistributorOrderDetailPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to unlock order');
+    },
+  });
+
+  // The partner says the client has paid: the distributor confirms it
+  const { mutate: verifyClientPayment, isPending: isVerifyingPayment } = useMutation({
+    mutationFn: () =>
+      trpcClient.privateClientOrders.distributorPaymentVerification.mutate({ orderId }),
+    onSuccess: () => {
+      toast.success('Client payment verified');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to verify payment');
     },
   });
 
@@ -401,9 +399,8 @@ const DistributorOrderDetailPage = () => {
   const nextAction = getNextAction();
 
   // Calculate exchange rate for AED conversion (use actual rate if available, otherwise default)
-  const totalAed = Number(order.totalAed) || 0;
-  const totalUsd = Number(order.totalUsd) || 1;
-  const usdToAedRate = totalAed > 0 ? totalAed / totalUsd : DEFAULT_EXCHANGE_RATE;
+  // At the fixed peg; the stored ratio carried 3.67 on orders totalled before 28 Oct 2026
+  const usdToAedRate = USD_TO_AED;
 
   /**
    * Convert amount to selected currency
@@ -475,6 +472,18 @@ const DistributorOrderDetailPage = () => {
                 <span className="hidden sm:inline">Send to</span> Finance
               </ButtonContent>
             </Button>
+
+            {order.status === 'awaiting_payment_verification' && (
+              <Button
+                colorRole="brand"
+                onClick={() => verifyClientPayment()}
+                disabled={isVerifyingPayment}
+              >
+                <ButtonContent iconLeft={IconCheck} isLoading={isVerifyingPayment}>
+                  Verify Client Payment
+                </ButtonContent>
+              </Button>
+            )}
 
             {/* Next Action Button */}
             {nextAction && (
@@ -554,11 +563,11 @@ const DistributorOrderDetailPage = () => {
 
         {/* Unlock Suspended Order - shown when verification was previously suspended */}
         {order.status === 'verification_suspended' && (
-          <Card className="border-2 border-fill-brand/50 bg-fill-brand/5">
+          <Card className="border-2 border-text-primary/50 bg-text-primary/5">
             <CardContent className="p-6">
               <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/20">
-                  <Icon icon={IconShieldCheck} size="lg" className="text-fill-brand" />
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-text-primary/20">
+                  <Icon icon={IconShieldCheck} size="lg" className="text-text-primary" />
                 </div>
                 <div className="flex-1">
                   <Typography variant="headingSm" className="mb-1">
@@ -631,11 +640,11 @@ const DistributorOrderDetailPage = () => {
 
         {/* Payment Reference Display - shown when order has a payment reference */}
         {order.paymentReference && order.status === 'awaiting_client_payment' && (
-          <Card className="border-2 border-fill-brand/50 bg-fill-brand/5">
+          <Card className="border-2 border-text-primary/50 bg-text-primary/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/20">
-                  <Icon icon={IconCheck} size="md" className="text-fill-brand" />
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-text-primary/20">
+                  <Icon icon={IconCheck} size="md" className="text-text-primary" />
                 </div>
                 <div>
                   <Typography variant="labelSm" colorRole="muted">
@@ -664,12 +673,12 @@ const DistributorOrderDetailPage = () => {
           order.status === 'awaiting_partner_payment' ||
           order.status === 'partner_paid' ||
           order.status === 'scheduling_delivery') && (
-          <Card className="border-2 border-fill-brand/50 bg-fill-brand/5">
+          <Card className="border-2 border-text-primary/50 bg-text-primary/5">
             <CardContent className="p-6">
               <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-fill-brand/20">
-                    <Icon icon={IconPhone} size="lg" className="text-fill-brand" />
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-text-primary/20">
+                    <Icon icon={IconPhone} size="lg" className="text-text-primary" />
                   </div>
                   <div className="flex-1">
                     <Typography variant="headingSm" className="mb-1">
@@ -911,18 +920,19 @@ const DistributorOrderDetailPage = () => {
 
             {order.items && order.items.length > 0 ? (
               (() => {
-                // Calculate total supplier cost to prorate client prices
-                const totalSupplierCost = order.items.reduce((sum, item) => sum + item.totalUsd, 0);
+                // Each line's share of the client price, worked out on the server
                 const orderTotal = order.totalUsd ?? 0;
+                // A subscription box is priced as a whole, not wine by wine
+                const isBox = order.items.some((item) => item.inBox);
 
                 return (
                   <>
                     {/* Mobile: Card layout */}
                     <div className="flex flex-col divide-y divide-border-muted md:hidden">
                       {order.items.map((item) => {
-                        const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
-                        const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
-                        const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
+                        const clientTotal = item.clientTotalUsd;
+                        const clientPricePerCase = item.clientPricePerCaseUsd;
+                        const distributorCostPerCase = item.distributorCostPerCaseUsd;
                         const line = describePcoLine(item);
                         return (
                           <div key={item.id} className="py-3">
@@ -936,14 +946,18 @@ const DistributorOrderDetailPage = () => {
                                 </Typography>
                               </div>
                               <Typography variant="bodySm" className="flex-shrink-0 font-semibold">
-                                {formatPrice(getAmount(clientTotal), currency)}
+                                {item.inBox ? 'In box' : formatPrice(getAmount(clientTotal), currency)}
                               </Typography>
                             </div>
                             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
                               <span className="font-medium text-text-primary">{line.qty}</span>
                               <span>{line.pack}</span>
-                              <span>Client: {formatPrice(getAmount(clientPricePerCase), currency)}/{line.unit}</span>
-                              <span>Dist: {formatPrice(getAmount(distributorCostPerCase), currency)}/{line.unit}</span>
+                              {!item.inBox && (
+                                <>
+                                  <span>Client: {formatPrice(getAmount(clientPricePerCase), currency)}/{line.unit}</span>
+                                  <span>Dist: {formatPrice(getAmount(distributorCostPerCase), currency)}/{line.unit}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         );
@@ -964,9 +978,9 @@ const DistributorOrderDetailPage = () => {
                         </thead>
                         <tbody className="divide-y divide-border-muted/60">
                           {order.items.map((item) => {
-                            const clientTotal = calculateClientPrice(item.totalUsd, totalSupplierCost, orderTotal);
-                            const clientPricePerCase = item.quantity > 0 ? clientTotal / item.quantity : 0;
-                            const distributorCostPerCase = item.pricePerCaseUsd / 0.97;
+                            const clientTotal = item.clientTotalUsd;
+                            const clientPricePerCase = item.clientPricePerCaseUsd;
+                            const distributorCostPerCase = item.distributorCostPerCaseUsd;
                             const line = describePcoLine(item);
                             return (
                               <tr key={item.id} className="align-top hover:bg-surface-muted/20">
@@ -986,23 +1000,33 @@ const DistributorOrderDetailPage = () => {
                                     {line.isSingle ? line.pack : `${line.pack} · ${line.bottles} btl`}
                                   </Typography>
                                 </td>
-                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                                  <Typography variant="bodySm" colorRole="muted">
-                                    {formatPrice(getAmount(distributorCostPerCase), currency)}
-                                    <span className="text-xs"> /{line.unit}</span>
-                                  </Typography>
-                                </td>
-                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                                  <Typography variant="bodySm">
-                                    {formatPrice(getAmount(clientPricePerCase), currency)}
-                                    <span className="text-xs text-text-muted"> /{line.unit}</span>
-                                  </Typography>
-                                </td>
-                                <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                                  <Typography variant="bodySm" className="font-semibold">
-                                    {formatPrice(getAmount(clientTotal), currency)}
-                                  </Typography>
-                                </td>
+                                {item.inBox ? (
+                                  <td className="whitespace-nowrap px-4 py-3.5 text-right" colSpan={3}>
+                                    <Typography variant="bodySm" colorRole="muted">
+                                      In box
+                                    </Typography>
+                                  </td>
+                                ) : (
+                                  <>
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                      <Typography variant="bodySm" colorRole="muted">
+                                        {formatPrice(getAmount(distributorCostPerCase), currency)}
+                                        <span className="text-xs"> /{line.unit}</span>
+                                      </Typography>
+                                    </td>
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                      <Typography variant="bodySm">
+                                        {formatPrice(getAmount(clientPricePerCase), currency)}
+                                        <span className="text-xs text-text-muted"> /{line.unit}</span>
+                                      </Typography>
+                                    </td>
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                      <Typography variant="bodySm" className="font-semibold">
+                                        {formatPrice(getAmount(clientTotal), currency)}
+                                      </Typography>
+                                    </td>
+                                  </>
+                                )}
                               </tr>
                             );
                           })}
@@ -1011,7 +1035,7 @@ const DistributorOrderDetailPage = () => {
                           <tr>
                             <td className="px-4 py-3.5">
                               <Typography variant="bodySm" className="font-semibold">
-                                Total
+                                {isBox ? 'Box price' : 'Total'}
                               </Typography>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3.5" colSpan={3}>
@@ -1170,7 +1194,7 @@ const DistributorOrderDetailPage = () => {
                       {order.partner.businessName}
                     </Typography>
                     <Typography variant="bodyXs" colorRole="muted">
-                      Wine Partner
+                      Placed by
                     </Typography>
                   </div>
                 </div>
@@ -1301,7 +1325,7 @@ const DistributorOrderDetailPage = () => {
             <OrderNoteComposer
               audience="distributor"
               orderId={order.id}
-              partnerName={order.partner?.businessName}
+              partnerName={order.partner ? order.partner.businessName : null}
               distributorName={order.distributor?.businessName}
             />
             <ActivityTimeline activities={order.activityLogs ?? []} />

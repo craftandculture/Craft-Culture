@@ -6,6 +6,7 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -95,22 +96,20 @@ const ConsignmentPage = () => {
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Typography variant="headingLg">Consignment</Typography>
-          <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
-            Members offering wine for us to sell on their behalf
-          </Typography>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          isDisabled={isRefetching}
-        >
-          <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Consignment"
+        description="Members offering wine for us to sell on their behalf"
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            isDisabled={isRefetching}
+          >
+            <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
+          </Button>
+        }
+      />
 
       <div className="mb-5 flex flex-wrap gap-1.5">
         {filters.map((filter) => (
@@ -120,7 +119,7 @@ const ConsignmentPage = () => {
             onClick={() => setStatus(filter.id)}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               status === filter.id
-                ? 'bg-fill-brand text-text-on-brand'
+                ? 'bg-text-primary text-text-on-brand'
                 : 'border-border-muted text-text-muted hover:text-text-primary border'
             }`}
           >

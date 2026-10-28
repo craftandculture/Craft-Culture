@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  IconArrowLeft,
   IconDownload,
   IconLoader2,
   IconPlane,
@@ -12,6 +11,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -93,28 +93,18 @@ const LandedCostReportPage = () => {
     <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/platform/admin/logistics/reports">
-                <Icon icon={IconArrowLeft} size="sm" />
-              </Link>
+        <AdminPageHeader
+          title="Landed Cost Report"
+          description="Cost analysis for delivered shipments"
+          crumbs={[{ label: 'Logistics', href: '/platform/admin/logistics' }, { label: 'Reports', href: '/platform/admin/logistics/reports' }]}
+          actions={
+            <Button onClick={handleExport} disabled={isExporting}>
+              <ButtonContent iconLeft={isExporting ? IconLoader2 : IconDownload}>
+                {isExporting ? 'Exporting...' : 'Export Excel'}
+              </ButtonContent>
             </Button>
-            <div>
-              <Typography variant="headingLg" className="mb-2">
-                Landed Cost Report
-              </Typography>
-              <Typography variant="bodyMd" colorRole="muted">
-                Cost analysis for delivered shipments
-              </Typography>
-            </div>
-          </div>
-          <Button onClick={handleExport} disabled={isExporting}>
-            <ButtonContent iconLeft={isExporting ? IconLoader2 : IconDownload}>
-              {isExporting ? 'Exporting...' : 'Export Excel'}
-            </ButtonContent>
-          </Button>
-        </div>
+          }
+        />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -151,7 +141,7 @@ const LandedCostReportPage = () => {
               <Typography variant="bodyXs" colorRole="muted">
                 Avg Cost/Bottle
               </Typography>
-              <Typography variant="headingMd" className="text-brand-primary">
+              <Typography variant="headingMd" className="text-text-primary">
                 {formatPrice(report?.summary.averageCostPerBottle ?? 0, 'USD')}
               </Typography>
             </CardContent>
@@ -232,7 +222,7 @@ const LandedCostReportPage = () => {
                       <td className="py-3 pr-4">
                         <Link
                           href={`/platform/admin/logistics/shipments/${shipment.shipmentId}`}
-                          className="font-mono text-sm hover:text-brand-primary"
+                          className="font-mono text-sm hover:text-text-primary"
                         >
                           {shipment.shipmentNumber}
                         </Link>
@@ -252,7 +242,7 @@ const LandedCostReportPage = () => {
                       <td className="py-3 pr-4 text-right font-medium">
                         {formatPrice(shipment.costs.totalLanded, 'USD')}
                       </td>
-                      <td className="py-3 text-right font-medium text-brand-primary">
+                      <td className="py-3 text-right font-medium text-text-primary">
                         {formatPrice(shipment.costs.perBottle, 'USD')}
                       </td>
                     </tr>

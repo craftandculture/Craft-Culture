@@ -59,8 +59,8 @@ const OutOfCatalogueRequests = ({
     <div className="rounded-lg border border-border-muted bg-surface-muted/30 p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-fill-brand/10">
-            <IconBottle className="h-3.5 w-3.5 text-text-brand" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-text-primary/10">
+            <IconBottle className="h-3.5 w-3.5 text-text-primary" />
           </div>
           <div>
             <Typography variant="bodyXs" className="font-semibold">
@@ -84,7 +84,7 @@ const OutOfCatalogueRequests = ({
       {/* Collapsible content */}
       {isExpanded && items.length > 0 && (
         <div className="mt-3 space-y-2">
-          <div className="rounded-md border border-border-brand/20 bg-fill-brand/5 px-2.5 py-2">
+          <div className="rounded-md border border-text-primary/20 bg-text-primary/5 px-2.5 py-2">
             <Typography variant="bodyXs" colorRole="muted" className="text-[11px]">
               These requests will be reviewed by our team. They don&apos;t affect your
               quote total - we&apos;ll follow up with availability and pricing.

@@ -285,14 +285,14 @@ const MappingTab = ({ programmeId }: MappingTabProps) => {
               colorRole="muted"
               variant="outline"
               isDisabled={autoMap.isPending}
-              onClick={() => autoMap.mutate({ dryRun: true })}
+              onClick={() => autoMap.mutate({ programmeId, dryRun: true })}
             >
               Preview auto-map
             </Button>
             <Button
               colorRole="brand"
               isDisabled={autoMap.isPending}
-              onClick={() => autoMap.mutate({ dryRun: false })}
+              onClick={() => autoMap.mutate({ programmeId, dryRun: false })}
             >
               <IconWand className="mr-1 size-4" />
               {autoMap.isPending ? 'Matching…' : 'Auto-map confident matches'}
@@ -452,6 +452,7 @@ const MappingTab = ({ programmeId }: MappingTabProps) => {
                     isDisabled={setIgnored.isPending}
                     onClick={() =>
                       setIgnored.mutate({
+                        programmeId,
                         normalizedCode: row.normalizedCode,
                         ignore: !showIgnored,
                       })

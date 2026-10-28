@@ -27,6 +27,8 @@ export interface DistributorSkuCardProps {
   distributorRef: string | null;
   /** What the distributor's own feed says, for the admin mismatch warning */
   feedSku?: string | null;
+  /** One line, for under the order's paperwork chain rather than a card of its own */
+  compact?: boolean;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -54,6 +56,7 @@ const DistributorSkuCard = ({
   source,
   distributorRef,
   feedSku,
+  compact = false,
 }: DistributorSkuCardProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
@@ -93,6 +96,64 @@ const DistributorSkuCard = ({
 
   const mismatch = Boolean(sku && feedSku && sku !== feedSku);
   const missing = !sku && !locked;
+
+  if (compact) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className={`inline-flex items-center gap-1 font-medium ${missing ? 'text-amber-700 dark:text-amber-400' : 'text-text-muted'}`}>
+          <Icon icon={IconBarcode} size="xs" />
+          {distributorName} SKU{missing ? ' needed before payment' : ''}
+        </span>
+        {editing ? (
+          <>
+            <Input
+              placeholder="CDR0824592587"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              className="w-44 font-mono"
+              size="sm"
+            />
+            <Button size="sm" colorRole="bold" onClick={save} isDisabled={isPending || !value.trim()}>
+              {isPending ? 'Saving…' : 'Save'}
+            </Button>
+            {sku && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setValue(sku);
+                  setEditing(false);
+                }}
+              >
+                Cancel
+              </Button>
+            )}
+          </>
+        ) : sku ? (
+          <>
+            <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/10 px-2 py-0.5 font-mono text-text-primary">
+              <Icon icon={IconCheck} size="xs" className="text-text-success" />
+              {sku}
+            </span>
+            {source && <span className="text-text-muted">{SOURCE_LABELS[source] ?? source}</span>}
+            {canEdit && (
+              <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+                Change
+              </Button>
+            )}
+          </>
+        ) : (
+          <span className="text-text-muted">None recorded.</span>
+        )}
+        {mismatch && (
+          <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400">
+            <Icon icon={IconAlertTriangle} size="xs" />
+            {distributorName}&rsquo;s system has <span className="font-mono">{feedSku}</span>
+          </span>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Card

@@ -2,7 +2,8 @@ import { logger, task } from '@trigger.dev/sdk';
 import { eq } from 'drizzle-orm';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
-import { logisticsShipments, partners, users } from '@/database/schema';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
+import { users } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import triggerDb from '@/trigger/triggerDb';
@@ -60,8 +61,8 @@ interface ShipmentMilestonePayload {
  *
  * Triggered when a shipment status changes.
  * Sends notifications to:
- * - Admin users (all milestone updates)
- * - Partner users (their shipments only)
+ * - C&C staff admins (all milestone updates)
+ * - Partner users (their shipments only), when LOGISTICS_PARTNER_MILESTONES=on
  * - Client contacts (relevant updates only)
  */
 export const shipmentMilestoneNotificationJob = task({
@@ -82,8 +83,9 @@ export const shipmentMilestoneNotificationJob = task({
     });
 
     // Get shipment details
+    // Relational queries take the object filter form; eq() here throws "Unknown relational filter field"
     const shipment = await triggerDb.query.logisticsShipments.findFirst({
-      where: eq(logisticsShipments.id, shipmentId),
+      where: { id: shipmentId },
     });
 
     if (!shipment) {
@@ -95,11 +97,13 @@ export const shipmentMilestoneNotificationJob = task({
     const milestoneMessage = milestoneMessages[newStatus];
     const shipmentUrl = `${serverConfig.appUrl}/platform/admin/logistics/shipments/${shipmentId}`;
 
-    // 1. Notify admin users
-    const adminUsers = await triggerDb
-      .select({ id: users.id, email: users.email, name: users.name })
-      .from(users)
-      .where(eq(users.role, 'admin'));
+    // 1. Notify C&C staff admins (an admin login outside C&C is never told about other parties' shipments)
+    const adminUsers = (
+      await triggerDb
+        .select({ id: users.id, email: users.email, name: users.name, role: users.role })
+        .from(users)
+        .where(eq(users.role, 'admin'))
+    ).filter((u) => isTeamMember(u));
 
     for (const admin of adminUsers) {
       // Skip if this admin triggered the change
@@ -123,10 +127,15 @@ export const shipmentMilestoneNotificationJob = task({
       });
     }
 
-    // 2. Notify partner if shipment is associated with one
-    if (shipment.partnerId) {
+    // 2. Notify the partner, only once switched on. This job failed on every run
+    // until 27 Oct 2026, so no partner has ever received these; turning them on
+    // is a decision for Kevin (set LOGISTICS_PARTNER_MILESTONES=on), not a side
+    // effect of the fix.
+    // eslint-disable-next-line turbo/no-undeclared-env-vars
+    const partnerMilestonesOn = process.env.LOGISTICS_PARTNER_MILESTONES === 'on';
+    if (shipment.partnerId && partnerMilestonesOn) {
       const partner = await triggerDb.query.partners.findFirst({
-        where: eq(partners.id, shipment.partnerId),
+        where: { id: shipment.partnerId },
       });
 
       if (partner?.userId) {
@@ -183,14 +192,14 @@ export const shipmentMilestoneNotificationJob = task({
       shipmentId,
       newStatus,
       adminNotifications: adminUsers.length,
-      partnerNotified: !!shipment.partnerId,
+      partnerNotified: !!shipment.partnerId && partnerMilestonesOn,
     });
 
     return {
       success: true,
       shipmentId,
       newStatus,
-      notificationsSent: adminUsers.length + (shipment.partnerId ? 1 : 0),
+      notificationsSent: adminUsers.length + (shipment.partnerId && partnerMilestonesOn ? 1 : 0),
     };
   },
 });

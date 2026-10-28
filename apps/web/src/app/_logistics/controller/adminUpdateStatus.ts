@@ -1,17 +1,10 @@
-import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
-import db from '@/database/client';
-import { logisticsShipmentActivityLogs, logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
-import { shipmentMilestoneNotificationJob } from '@/trigger/jobs/logistics-alerts/shipmentMilestoneNotificationJob';
 import logger from '@/utils/logger';
 
-import { inboundStatusMessage } from '../notifications/logisticsSlackMessages';
-import queueLogisticsSlack from '../notifications/queueLogisticsSlack';
+import setShipmentStatus from '../data/setShipmentStatus';
 import { SHIPMENT_STATUS_KEYS } from '../utils/shipmentStatuses';
 
 const updateStatusSchema = z.object({
@@ -36,83 +29,7 @@ const adminUpdateStatus = adminProcedure
     try {
       const { id, status, notes } = input;
 
-      // Get current shipment
-      const [existing] = await db
-        .select()
-        .from(logisticsShipments)
-        .where(eq(logisticsShipments.id, id));
-
-      if (!existing) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Shipment not found',
-        });
-      }
-
-      const previousStatus = existing.status;
-
-      // Update timestamp based on status
-      const timestampUpdates: Record<string, Date> = {};
-      const now = new Date();
-
-      if (status === 'delivered') {
-        timestampUpdates.deliveredAt = now;
-      }
-
-      if (status === 'at_warehouse' && !existing.ata) {
-        timestampUpdates.ata = now;
-      }
-
-      // Update the shipment status
-      const [shipment] = await db
-        .update(logisticsShipments)
-        .set({
-          status,
-          ...timestampUpdates,
-        })
-        .where(eq(logisticsShipments.id, id))
-        .returning();
-
-      if (!shipment) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to update shipment status',
-        });
-      }
-
-      // Log the status change
-      await db.insert(logisticsShipmentActivityLogs).values({
-        shipmentId: id,
-        userId: user.id,
-        action: 'status_changed',
-        previousStatus,
-        newStatus: status,
-        notes,
-      });
-
-      // Members whose transfer rides on this shipment follow it
-      await advanceShipmentIntakes(id);
-
-      // Trigger milestone notification job (fire and forget)
-      tasks
-        .trigger(shipmentMilestoneNotificationJob.id, {
-          shipmentId: id,
-          newStatus: status,
-          previousStatus,
-          triggeredBy: user.id,
-        })
-        .catch((err) => {
-          logger.error('Failed to trigger milestone notification', { err, shipmentId: id });
-        });
-
-      // Tell #logistics when an inbound shipment departs or lands; never blocks the update
-      if (
-        shipment.type === 'inbound' &&
-        status !== previousStatus &&
-        (status === 'in_transit' || status === 'at_warehouse' || status === 'delivered')
-      ) {
-        queueLogisticsSlack(inboundStatusMessage(shipment, status));
-      }
+      const shipment = await setShipmentStatus({ id, status, notes, userId: user.id });
 
       return shipment;
     } catch (error) {

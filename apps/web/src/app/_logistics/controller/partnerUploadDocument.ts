@@ -1,10 +1,10 @@
 import { TRPCError } from '@trpc/server';
-import { put } from '@vercel/blob';
 import { and, eq } from 'drizzle-orm';
 import { fileTypeFromBuffer } from 'file-type';
 
 import db from '@/database/client';
 import { logisticsDocuments, logisticsShipments } from '@/database/schema';
+import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 import logger from '@/utils/logger';
@@ -57,8 +57,8 @@ const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).m
       finalSize = fileSize ?? 0;
       finalMimeType = fileType;
     } else if (file) {
-      if (!process.env.BLOB_READ_WRITE_TOKEN) {
-        logger.error('BLOB_READ_WRITE_TOKEN environment variable is not set');
+      if (!process.env.BLOB_PRIVATE_READ_WRITE_TOKEN) {
+        logger.error('BLOB_PRIVATE_READ_WRITE_TOKEN environment variable is not set');
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'File storage is not configured. Please contact support.',
@@ -95,11 +95,7 @@ const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).m
       const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
       const blobFilename = `logistics/${shipmentId}/${documentType}/${timestamp}-${sanitizedFilename}`;
 
-      const blob = await put(blobFilename, buffer, {
-        access: 'public',
-        contentType: detectedType.mime,
-        addRandomSuffix: true,
-      });
+      const blob = await putPrivateFile(blobFilename, buffer, detectedType.mime);
 
       finalUrl = blob.url;
       finalSize = buffer.length;

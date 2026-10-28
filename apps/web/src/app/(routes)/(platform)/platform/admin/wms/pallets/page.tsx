@@ -179,12 +179,12 @@ const WMSPalletsPage = () => {
             ) : (
               data.pallets.map((pallet) => (
                 <Link key={pallet.id} href={`/platform/admin/wms/pallets/${pallet.id}`}>
-                  <Card className="transition-shadow hover:shadow-md hover:border-border-brand">
+                  <Card className="transition-shadow hover:shadow-md hover:border-text-primary">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-brand/10">
-                            <Icon icon={IconBox} size="md" className="text-text-brand" />
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-text-primary/10">
+                            <Icon icon={IconBox} size="md" className="text-text-primary" />
                           </div>
                           <div>
                             <div className="mb-1 flex items-center gap-2">

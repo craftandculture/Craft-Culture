@@ -1,9 +1,10 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import useTRPC from '@/lib/trpc/browser';
+import displayWineName from '@/app/_wms/utils/displayWineName';
+import { useTRPCClient } from '@/lib/trpc/browser';
 
 export interface PartnerMovementsPanelProps {
   /** Narrow to one wine, for the history under a stock row. */
@@ -30,26 +31,30 @@ export interface PartnerMovementsPanelProps {
  * than quietly reporting one that does not add up.
  */
 const TYPES = [
-  { key: 'receive', label: 'Received', dir: 'in', tone: 'bg-blue-50 text-blue-700 ring-blue-200' },
-  { key: 'putaway', label: 'Put away', dir: 'move', tone: 'bg-sky-50 text-sky-700 ring-sky-200' },
-  { key: 'pick', label: 'Picked', dir: 'out', tone: 'bg-amber-50 text-amber-800 ring-amber-200' },
-  { key: 'transfer', label: 'Moved', dir: 'move', tone: 'bg-violet-50 text-violet-700 ring-violet-200' },
+  { key: 'receive', label: 'Received', dir: 'in' },
+  { key: 'putaway', label: 'Put away', dir: 'move' },
+  { key: 'pick', label: 'Picked', dir: 'out' },
+  { key: 'transfer', label: 'Moved', dir: 'move' },
   /*
     Repacks read as wine appearing and vanishing unless they are named for what
     they are. A case is opened and the bottles move from the case's code to the
     singles code — same wine, same warehouse, nothing gained or lost. "Repacked
     in / out" describes our records; these describe the shelf.
   */
-  { key: 'repack_in', label: 'From an opened case', dir: 'in', tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  { key: 'repack_out', label: 'Made into other packs', dir: 'out', tone: 'bg-rose-50 text-rose-700 ring-rose-200' },
-  { key: 'count', label: 'Counted', dir: 'unknown', tone: 'bg-cyan-50 text-cyan-700 ring-cyan-200' },
-  { key: 'adjust', label: 'Adjusted', dir: 'unknown', tone: 'bg-slate-100 text-slate-700 ring-slate-200' },
-  { key: 'dispatch', label: 'Dispatched', dir: 'out', tone: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
+  { key: 'repack_in', label: 'From an opened case', dir: 'in' },
+  { key: 'repack_out', label: 'Made into other packs', dir: 'out' },
+  { key: 'count', label: 'Counted', dir: 'unknown' },
+  { key: 'adjust', label: 'Adjusted', dir: 'unknown' },
+  { key: 'dispatch', label: 'Dispatched', dir: 'out' },
 ] as const;
 
 type TypeKey = (typeof TYPES)[number]['key'];
 
 const meta = (key: string) => TYPES.find((t) => t.key === key);
+
+/** Colour carries direction only: in is emerald, out is amber, the rest neutral. */
+const dotFor = (dir: string | undefined) =>
+  dir === 'in' ? 'bg-emerald-500' : dir === 'out' ? 'bg-amber-500' : 'bg-slate-400 dark:bg-slate-500';
 
 /**
  * Bottles per case, read off the code.
@@ -102,19 +107,34 @@ const PartnerMovementsPanel = ({
   limit = 50,
   currentCases,
 }: PartnerMovementsPanelProps) => {
-  const api = useTRPC();
+  const trpcClient = useTRPCClient();
   const [selected, setSelected] = useState<TypeKey[]>([]);
 
-  const { data, isLoading } = useQuery(
-    api.wms.partner.getMovements.queryOptions({
-      lwin18,
-      movementTypes: selected.length > 0 ? selected : undefined,
-      limit,
-      offset: 0,
-    }),
-  );
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['wms.partner.getMovements', { lwin18, selected, limit }],
+    queryFn: ({ pageParam }) =>
+      trpcClient.wms.partner.getMovements.query({
+        lwin18,
+        movementTypes: selected.length > 0 ? selected : undefined,
+        limit,
+        offset: pageParam,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.hasMore ? pages.length * limit : undefined,
+  });
 
-  const movements = data?.movements ?? [];
+  const movements = data?.pages.flatMap((page) => page.movements) ?? [];
+  const sharedWineCount = data?.pages[0]?.sharedWineCount ?? 0;
   const compact = variant === 'compact';
 
   /*
@@ -145,50 +165,115 @@ const PartnerMovementsPanel = ({
     return result;
   })();
 
+  /** "+3 cases · +18 bottles", or bottles alone on a singles code */
+  const describeQty = (row: (typeof movements)[number]) => {
+    const dir = meta(row.movementType)?.dir;
+    const sign = dir === 'in' ? '+' : dir === 'out' ? '−' : '';
+    // On a singles code a case IS a bottle, so cases and bottles would say one thing twice
+    if (packOf(row.lwin18) === 1) {
+      return {
+        main: `${sign}${row.quantityCases} ${row.quantityCases === 1 ? 'bottle' : 'bottles'}`,
+        sub: null,
+      };
+    }
+    return {
+      main: `${sign}${row.quantityCases} ${row.quantityCases === 1 ? 'case' : 'cases'}`,
+      sub: row.quantityBottles
+        ? `${sign}${row.quantityBottles} ${row.quantityBottles === 1 ? 'bottle' : 'bottles'}`
+        : null,
+    };
+  };
+
+  const qtyToneFor = (dir: string | undefined) =>
+    dir === 'in'
+      ? 'text-emerald-700 dark:text-emerald-300'
+      : dir === 'out'
+        ? 'text-amber-700 dark:text-amber-300'
+        : 'text-text-muted';
+
+  const typePill = (movementType: string) => {
+    const m = meta(movementType);
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-primary ring-1 ring-inset ring-border-muted">
+        <span className={`h-1.5 w-1.5 rounded-full ${dotFor(m?.dir)}`} />
+        {m?.label ?? movementType}
+      </span>
+    );
+  };
+
+  const filters = !compact && (
+    <div className="flex flex-wrap gap-1.5">
+      {TYPES.map((type) => {
+        const on = selected.includes(type.key);
+        return (
+          <button
+            key={type.key}
+            type="button"
+            onClick={() =>
+              setSelected((prev) =>
+                on ? prev.filter((k) => k !== type.key) : [...prev, type.key],
+              )
+            }
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              on
+                ? 'bg-text-primary text-surface-primary'
+                : 'bg-surface-muted text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            {(type.dir === 'in' || type.dir === 'out') && (
+              <span className={`h-1.5 w-1.5 rounded-full ${dotFor(type.dir)}`} />
+            )}
+            {type.label}
+          </button>
+        );
+      })}
+      {selected.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setSelected([])}
+          className="px-2 text-xs text-text-muted underline-offset-2 hover:underline"
+        >
+          Clear
+        </button>
+      )}
+    </div>
+  );
+
   if (isLoading) {
     return (
-      <p className="py-4 text-center text-[13px] text-text-muted">
-        Loading movements…
-      </p>
+      <div className={compact ? '' : 'space-y-4'}>
+        {filters}
+        <div className="space-y-2" aria-busy="true">
+          {Array.from({ length: compact ? 3 : 6 }).map((_, i) => (
+            <div key={i} className="h-12 w-full animate-pulse rounded-lg bg-surface-muted" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={compact ? '' : 'space-y-4'}>
+        {filters}
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-border-muted bg-surface-primary px-4 py-8 text-center">
+          <p className="text-[13px] text-text-primary">Movements could not be loaded.</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            className="rounded-lg bg-text-primary px-3 py-1.5 text-xs font-medium text-surface-primary transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {isRefetching ? 'Loading…' : 'Try again'}
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className={compact ? '' : 'space-y-4'}>
-      {!compact && (
-        <div className="flex flex-wrap gap-1.5">
-          {TYPES.map((type) => {
-            const on = selected.includes(type.key);
-            return (
-              <button
-                key={type.key}
-                type="button"
-                onClick={() =>
-                  setSelected((prev) =>
-                    on ? prev.filter((k) => k !== type.key) : [...prev, type.key],
-                  )
-                }
-                className={`rounded-full px-2.5 py-1 text-[12px] font-medium ring-1 ring-inset transition-colors ${
-                  on
-                    ? type.tone
-                    : 'bg-transparent text-text-muted ring-border-muted hover:bg-fill-secondary'
-                }`}
-              >
-                {type.label}
-              </button>
-            );
-          })}
-          {selected.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setSelected([])}
-              className="px-2 text-[12px] text-text-muted underline-offset-2 hover:underline"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      )}
+      {filters}
 
       {movements.length === 0 ? (
         <p className="py-4 text-center text-[13px] text-text-muted">
@@ -197,94 +282,115 @@ const PartnerMovementsPanel = ({
             : 'No movements recorded yet.'}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border-muted">
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="border-b border-border-muted text-left text-[10.5px] uppercase tracking-wide text-text-muted">
-                <th className="px-3 py-2 font-medium">What happened</th>
-                {!lwin18 && <th className="px-3 py-2 font-medium">Product</th>}
-                <th className="px-3 py-2 font-medium">Where</th>
-                <th className="px-3 py-2 text-right font-medium">Change</th>
-                {balances && (
-                  <th className="px-3 py-2 text-right font-medium">Balance</th>
-                )}
-                <th className="px-3 py-2 font-medium">When</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-muted">
-              {movements.map((row) => {
-                const m = meta(row.movementType);
-                const dir = m?.dir;
-                const sign = dir === 'in' ? '+' : dir === 'out' ? '−' : '';
-                const qtyTone =
-                  dir === 'in'
-                    ? 'text-emerald-600'
-                    : dir === 'out'
-                      ? 'text-amber-700'
-                      : 'text-text-muted';
-
-                return (
-                  <tr key={row.id}>
-                    <td className="px-3 py-2">
-                      <span
-                        className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${m?.tone ?? 'bg-slate-100 text-slate-700 ring-slate-200'}`}
-                      >
-                        {m?.label ?? row.movementType}
-                      </span>
-                      <div className="mt-0.5 font-mono text-[10px] text-text-muted">
-                        {row.movementNumber}
-                      </div>
-                    </td>
-                    {!lwin18 && (
-                      <td className="px-3 py-2">
-                        <div>{row.productName}</div>
-                        <div className="font-mono text-[10.5px] text-text-muted">
-                          {row.lwin18}
-                        </div>
-                      </td>
-                    )}
-                    <td className="px-3 py-2 whitespace-nowrap font-mono text-[11.5px]">
-                      {describeMove(row)}
-                    </td>
-                    <td
-                      className={`px-3 py-2 text-right whitespace-nowrap tabular-nums font-medium ${qtyTone}`}
-                    >
-                      {/*
-                        On a singles code a case IS a bottle, so "5 cs 5 btl"
-                        says one thing twice and reads as ten.
-                      */}
-                      {packOf(row.lwin18) === 1 ? (
-                        <>
-                          {sign}
-                          {row.quantityCases} btl
-                        </>
-                      ) : (
-                        <>
-                          {sign}
-                          {row.quantityCases} cs
-                          {row.quantityBottles ? (
-                            <span className="ml-1.5 font-normal opacity-70">
-                              {sign}
-                              {row.quantityBottles} btl
-                            </span>
-                          ) : null}
-                        </>
+        <>
+          {/* Phones: one card per movement */}
+          <div className="divide-y divide-border-muted overflow-hidden rounded-xl border border-border-muted bg-surface-primary md:hidden">
+            {movements.map((row) => {
+              const dir = meta(row.movementType)?.dir;
+              const qty = describeQty(row);
+              return (
+                <div key={row.id} className="space-y-1 px-3 py-2.5 text-[13px]">
+                  <div className="flex items-start justify-between gap-2">
+                    {typePill(row.movementType)}
+                    <div className={`text-right tabular-nums font-medium ${qtyToneFor(dir)}`}>
+                      {qty.main}
+                      {qty.sub && (
+                        <div className="text-[11px] font-normal opacity-70">{qty.sub}</div>
                       )}
-                    </td>
+                    </div>
+                  </div>
+                  {!lwin18 && (
+                    <div className="font-medium text-text-primary">
+                      {displayWineName(row.productName ?? '', { keepVintage: true })}
+                    </div>
+                  )}
+                  {row.detail && <div className="text-[12px]">{row.detail}</div>}
+                  <div className="flex flex-wrap items-center gap-x-2 text-[11.5px] text-text-muted">
+                    <span className="font-mono">{describeMove(row)}</span>
+                    <span>·</span>
+                    <span>{when(row.performedAt)}</span>
                     {balances && (
-                      <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums text-text-muted">
-                        {balances.get(row.id)} cs
-                      </td>
+                      <>
+                        <span>·</span>
+                        <span>{balances.get(row.id)} cases after</span>
+                      </>
                     )}
-                    <td className="px-3 py-2 whitespace-nowrap text-text-muted">
-                      {when(row.performedAt)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Wider screens: the ledger as a table */}
+          <div className="hidden overflow-x-auto rounded-xl border border-border-muted bg-surface-primary md:block">
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="border-b border-border-muted text-left text-[11px] uppercase tracking-wider text-text-muted">
+                  <th className="px-3 py-2 font-medium">What happened</th>
+                  {!lwin18 && <th className="px-3 py-2 font-medium">Wine</th>}
+                  <th className="px-3 py-2 font-medium">Where</th>
+                  <th className="px-3 py-2 text-right font-medium">Change</th>
+                  {balances && (
+                    <th className="px-3 py-2 text-right font-medium">Balance</th>
+                  )}
+                  <th className="px-3 py-2 font-medium">When</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-muted">
+                {movements.map((row) => {
+                  const dir = meta(row.movementType)?.dir;
+                  const qty = describeQty(row);
+
+                  return (
+                    <tr key={row.id} className="transition-colors hover:bg-surface-secondary/50">
+                      <td className="px-3 py-2">
+                        {typePill(row.movementType)}
+                        {row.detail && <div className="mt-0.5 text-[11px]">{row.detail}</div>}
+                      </td>
+                      {!lwin18 && (
+                        <td className="px-3 py-2">
+                          {displayWineName(row.productName ?? '', { keepVintage: true })}
+                        </td>
+                      )}
+                      <td className="whitespace-nowrap px-3 py-2 font-mono text-[11.5px]">
+                        {describeMove(row)}
+                      </td>
+                      <td
+                        className={`whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums ${qtyToneFor(dir)}`}
+                      >
+                        {qty.main}
+                        {qty.sub && (
+                          <span className="ml-1.5 font-normal opacity-70">{qty.sub}</span>
+                        )}
+                      </td>
+                      {balances && (
+                        <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-text-muted">
+                          {balances.get(row.id)} cases
+                        </td>
+                      )}
+                      <td className="whitespace-nowrap px-3 py-2 text-text-muted">
+                        {when(row.performedAt)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {hasNextPage && (
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="rounded-lg border border-border-muted bg-surface-primary px-3 py-1.5 text-xs font-medium text-text-primary shadow-sm transition-colors hover:bg-surface-secondary/50 disabled:opacity-50"
+              >
+                {isFetchingNextPage ? 'Loading…' : 'Load more'}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Only when a repack is on screen — a legend nobody reads is worse. */}
@@ -295,10 +401,9 @@ const PartnerMovementsPanel = ({
         </p>
       )}
 
-      {!compact && (data?.sharedWineCount ?? 0) > 0 && (
+      {!compact && sharedWineCount > 0 && (
         <p className="text-[11.5px] text-text-muted">
-          {data?.sharedWineCount} of your wines are also stored for another
-          owner. Only movements we can attribute to you are shown.
+          Some movements could not be matched to your account and are not shown.
         </p>
       )}
     </div>

@@ -17,6 +17,7 @@ import Popover from '@/app/_ui/components/Popover/Popover';
 import PopoverContent from '@/app/_ui/components/Popover/PopoverContent';
 import PopoverTrigger from '@/app/_ui/components/Popover/PopoverTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
@@ -102,7 +103,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
   }, [pricingDefaults?.importDutyPercent]);
 
   // Get exchange rate from pricing defaults or use fallback
-  const usdToAedRate = pricingDefaults?.usdToAed ?? 3.67;
+  const usdToAedRate = pricingDefaults?.usdToAed ?? USD_TO_AED;
 
   // Lead time from settings or defaults
   const leadTimeMin = leadTimeMinData ? Number(leadTimeMinData) : 14;
@@ -257,8 +258,8 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
         className="flex w-full items-center justify-between px-4 py-3 transition-colors hover:bg-fill-muted sm:px-5 sm:py-4"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10 sm:h-10 sm:w-10">
-            <IconCalculator className="h-5 w-5 text-text-brand sm:h-5 sm:w-5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-text-primary/10 sm:h-10 sm:w-10">
+            <IconCalculator className="h-5 w-5 text-text-primary sm:h-5 sm:w-5" />
           </div>
           <div className="flex flex-col items-start gap-0.5">
             <Typography variant="bodySm" className="font-semibold sm:text-base">
@@ -284,7 +285,7 @@ const B2BCalculator = ({ inBondPriceUsd, lineItems, onSaveWithMargins }: B2BCalc
       {isExpanded && (
         <div className="border-t border-border-muted px-4 py-5 sm:px-5 sm:py-6">
           {/* Description */}
-          <div className="mb-6 rounded-lg border border-border-brand/20 bg-fill-brand/5 px-4 py-3">
+          <div className="mb-6 rounded-lg border border-text-primary/20 bg-text-primary/5 px-4 py-3">
             <Typography variant="bodySm" colorRole="muted" className="leading-relaxed">
               Your personal pricing assistant. Quickly calculate customer quotes by adjusting margins,
               tax rates, and transfer costs to find the perfect price for your customers.

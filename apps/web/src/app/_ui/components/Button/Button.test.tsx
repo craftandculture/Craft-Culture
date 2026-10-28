@@ -42,8 +42,8 @@ describe('Button', () => {
     it('should render brand color role', () => {
       render(<Button colorRole="brand">Brand</Button>);
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('bg-fill-brand');
-      expect(button).toHaveClass('text-text-brand-on-fill');
+      expect(button).toHaveClass('bg-text-primary');
+      expect(button).toHaveClass('text-surface-primary');
     });
 
     it('should render bold color role', () => {
@@ -222,7 +222,7 @@ describe('Button', () => {
         </Button>
       );
       const link = screen.getByRole('link');
-      expect(link).toHaveClass('bg-fill-brand');
+      expect(link).toHaveClass('bg-text-primary');
     });
   });
 
@@ -245,7 +245,7 @@ describe('Button', () => {
         </Button>
       );
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('bg-fill-brand'); // colorRole
+      expect(button).toHaveClass('bg-text-primary'); // colorRole
       expect(button).toHaveClass('h-10'); // size lg
       expect(button).toHaveClass('rounded-full'); // shape pill
       expect(button).toHaveClass('border'); // variant outline

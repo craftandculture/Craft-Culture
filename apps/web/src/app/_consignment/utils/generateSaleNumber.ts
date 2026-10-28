@@ -1,5 +1,6 @@
-import { desc, like } from 'drizzle-orm';
-
+import nextYearNumber, {
+  type NumberExecutor,
+} from '@/app/_cellar/utils/nextYearNumber';
 import db from '@/database/client';
 import { poolSales } from '@/database/schema';
 
@@ -13,23 +14,11 @@ import { poolSales } from '@/database/schema';
  * @example
  *   await generateSaleNumber(); // 'PSL-2026-0007'
  *
+ * @param executor - The database, or the transaction the insert runs in
+ * @param offset - Steps past the next free number, after a clash (see withNumberRetry)
  * @returns A sequential, year-scoped sale reference
  */
-const generateSaleNumber = async () => {
-  const prefix = `PSL-${new Date().getFullYear()}-`;
-
-  const [latest] = await db
-    .select({ saleNumber: poolSales.saleNumber })
-    .from(poolSales)
-    .where(like(poolSales.saleNumber, `${prefix}%`))
-    .orderBy(desc(poolSales.saleNumber))
-    .limit(1);
-
-  const next = latest
-    ? parseInt(latest.saleNumber.replace(prefix, ''), 10) + 1
-    : 1;
-
-  return `${prefix}${String(next).padStart(4, '0')}`;
-};
+const generateSaleNumber = (executor: NumberExecutor = db, offset = 0) =>
+  nextYearNumber(executor, poolSales, poolSales.saleNumber, 'PSL', offset);
 
 export default generateSaleNumber;

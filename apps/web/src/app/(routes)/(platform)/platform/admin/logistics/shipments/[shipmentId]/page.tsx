@@ -5,6 +5,7 @@ import {
   IconArrowRight,
   IconCalculator,
   IconCheck,
+  IconChevronRight,
   IconCloud,
   IconDownload,
   IconFileText,
@@ -28,6 +29,7 @@ import { toast } from 'sonner';
 
 import ActivityLog from '@/app/_logistics/components/ActivityLog';
 import LogisticsDocumentUpload from '@/app/_logistics/components/DocumentUpload';
+import LogUpdateSheet from '@/app/_logistics/components/LogUpdateSheet';
 import EditableField from '@/app/_logistics/components/shipment/EditableField';
 import InlineConfirm from '@/app/_logistics/components/shipment/InlineConfirm';
 import ShipmentReconciliation from '@/app/_logistics/components/ShipmentReconciliation';
@@ -68,6 +70,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import OwnerBadge from '@/app/_wms/components/OwnerBadge';
 import type { LogisticsShipment } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 import formatPrice from '@/utils/formatPrice';
 
 const HS_CODES = [
@@ -234,7 +237,7 @@ const SHIP_COST_CATEGORIES = [
 type ShipCostCategory = (typeof SHIP_COST_CATEGORIES)[number];
 const catLabel = (c: string) => c.replace(/_/g, ' ');
 const ledgerSelectCls =
-  'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-border-brand focus:outline-none';
+  'rounded-lg border border-border-primary bg-background-primary px-2.5 py-2 text-sm text-text-primary focus:border-text-primary focus:outline-none';
 
 // Colour-coded tints per invoice/document, cycled — matches the group ledger.
 const LEDGER_TINTS = [
@@ -352,6 +355,8 @@ const ShipmentDetailPage = () => {
     notForSale: null as boolean | null,
   });
 
+  const [isLoggingUpdate, setIsLoggingUpdate] = useState(false);
+  const { data: teamData } = useQuery(api.logistics.admin.getTeam.queryOptions());
   const { data: shipment, isLoading, isError, error, refetch } = useQuery({
     ...api.logistics.admin.getOne.queryOptions({ id: shipmentId }),
   });
@@ -381,7 +386,7 @@ const ShipmentDetailPage = () => {
   );
 
   const { data: partners } = useQuery({
-    ...api.partners.getMany.queryOptions({ limit: 100 }),
+    ...api.partners.getMany.queryOptions({ limit: 1000 }),
   });
 
   const { data: partnersList } = useQuery({
@@ -638,10 +643,14 @@ const ShipmentDetailPage = () => {
   const { mutate: generateDeliveryNote, isPending: isGeneratingDN } = useMutation(
     api.logistics.admin.generateInboundDeliveryNote.mutationOptions({
       onSuccess: (r) => {
+        // Browsers block a window opened after a server call, so the PDF opens from the toast
         toast.success(
           `${r.deliveryNoteNumber} created — ${r.totalCases} cases, ${r.totalBottles} bottles`,
+          {
+            duration: 15000,
+            action: { label: 'Open PDF', onClick: () => window.open(fileHref(r.fileUrl), '_blank', 'noopener') },
+          },
         );
-        window.open(r.fileUrl, '_blank');
         setIsSignOpen(false);
         setSignature(null);
         setSignedBy('');
@@ -663,7 +672,12 @@ const ShipmentDetailPage = () => {
         );
         if (r.unresolvedCurrencies.length) {
           toast.warning(
-            `Couldn't auto-convert ${r.unresolvedCurrencies.join(', ')} — check those amounts.`,
+            `No rate for ${r.unresolvedCurrencies.join(', ')}, so those invoices were not added. Enter their charges by hand.`,
+          );
+        }
+        if (r.skippedPartnerDocuments.length) {
+          toast.warning(
+            `Not read because a partner uploaded them: ${r.skippedPartnerDocuments.join(', ')}. Check them and add the charges by hand.`,
           );
         }
         void refetch();
@@ -920,12 +934,29 @@ const ShipmentDetailPage = () => {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/platform/admin/logistics/shipments" aria-label="Back to shipments">
-              <Button variant="ghost" size="sm">
-                <Icon icon={IconArrowLeft} size="sm" />
-              </Button>
-            </Link>
             <div>
+              {/* The house breadcrumb; the title below stays click-to-rename */}
+              <nav
+                aria-label="Breadcrumb"
+                className="mb-1 flex flex-wrap items-center gap-1.5 text-sm text-text-muted"
+              >
+                <Link href="/platform/admin/home" className="transition-colors hover:text-text-primary">
+                  Admin
+                </Link>
+                <IconChevronRight className="size-4" />
+                <Link href="/platform/admin/logistics" className="transition-colors hover:text-text-primary">
+                  Logistics
+                </Link>
+                <IconChevronRight className="size-4" />
+                <Link
+                  href="/platform/admin/logistics/shipments"
+                  className="transition-colors hover:text-text-primary"
+                >
+                  Shipments
+                </Link>
+                <IconChevronRight className="size-4" />
+                <span className="text-text-primary">{shipment.shipmentNumber}</span>
+              </nav>
               <div className="flex items-center gap-3">
                 {isEditingName ? (
                   <form
@@ -978,9 +1009,9 @@ const ShipmentDetailPage = () => {
                       setIsEditingName(true);
                     }}
                   >
-                    <Typography variant="headingLg">
+                    <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
                       {shipment.name || shipment.shipmentNumber}
-                    </Typography>
+                    </h1>
                     <Icon
                       icon={IconPencil}
                       size="sm"
@@ -1035,6 +1066,13 @@ const ShipmentDetailPage = () => {
                 Get freight quotes
               </Link>
             )}
+            <button
+              type="button"
+              onClick={() => setIsLoggingUpdate(true)}
+              className="inline-flex h-8 items-center rounded-lg border border-border-primary px-3 text-sm font-semibold text-text-primary transition-colors hover:bg-fill-primary-hover"
+            >
+              Update
+            </button>
             <Button variant="outline" size="sm" onClick={() => void refetch()}>
               <Icon icon={IconRefresh} size="sm" />
             </Button>
@@ -1072,6 +1110,46 @@ const ShipmentDetailPage = () => {
           </div>
         </div>
 
+        {/* What moves it on next, and how fresh the news is: the line the board and the morning post read */}
+        {(shipment.nextAction || shipment.lastUpdateAt || shipment.eta) && (
+          <button
+            type="button"
+            onClick={() => setIsLoggingUpdate(true)}
+            className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-border-muted bg-surface-primary px-4 py-3 text-left text-sm transition-colors hover:bg-fill-primary-hover"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold uppercase tracking-wider text-text-muted">Next action</span>
+              <span className="text-text-primary">
+                {shipment.nextAction ?? 'None set'}
+                {shipment.nextActionOwnerId && (
+                  <span className="text-text-muted">
+                    {' · '}
+                    {teamData?.team.find((m) => m.id === shipment.nextActionOwnerId)?.name ?? 'Owner'}
+                  </span>
+                )}
+              </span>
+            </span>
+            {shipment.eta && (
+              <span className="text-text-muted">
+                ETA {new Date(shipment.eta).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                {', '}
+                <span className={shipment.etaConfirmed ? 'font-semibold text-emerald-700 dark:text-emerald-400' : ''}>
+                  {shipment.etaConfirmed ? 'confirmed' : 'estimate'}
+                </span>
+              </span>
+            )}
+            <span className="text-text-muted">
+              Last news{' '}
+              {new Date(shipment.lastUpdateAt ?? shipment.createdAt).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+              })}
+            </span>
+          </button>
+        )}
+
+        <LogUpdateSheet shipment={isLoggingUpdate ? shipment : null} onClose={() => setIsLoggingUpdate(false)} />
+
         {/* Status Stepper */}
         <Card>
           <CardContent className="p-4">
@@ -1092,7 +1170,7 @@ const ShipmentDetailPage = () => {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium whitespace-nowrap ${
                 activeTab === tab.id
-                  ? 'border-border-brand text-text-brand'
+                  ? 'border-text-primary text-text-primary'
                   : 'border-transparent text-text-muted hover:border-border-muted hover:text-text-primary'
               }`}
             >
@@ -1652,13 +1730,29 @@ const ShipmentDetailPage = () => {
 
             if (!near) return null;
 
+            /*
+              The vintage and pack go into the code's own digits, so they are
+              never invented: a line with no vintage (unless it is a
+              non-vintage wine, written 1000) or no bottles-per-case is left
+              for someone to map by hand rather than given 0000 or a pack equal
+              to the line's whole bottle count.
+            */
+            const vintage =
+              item.vintage != null
+                ? String(item.vintage).padStart(4, '0')
+                : isNonVintage(item.lwin, item.productName)
+                  ? '1000'
+                  : null;
+
+            if (!vintage || !item.bottlesPerCase) return null;
+
             return {
               from: near.from,
               exact: Boolean(exact),
               lwin18: [
                 near.lwin7,
-                String(item.vintage ?? 0).padStart(4, '0'),
-                String(item.bottlesPerCase ?? item.totalBottles ?? 1).padStart(2, '0'),
+                vintage,
+                String(item.bottlesPerCase).padStart(2, '0'),
                 String(item.bottleSizeMl ?? 750).padStart(5, '0'),
               ].join('-'),
             };
@@ -1890,7 +1984,7 @@ const ShipmentDetailPage = () => {
                             <button
                               onClick={() => void applyTwins(twinnable)}
                               disabled={isApplyingTwins || isUpdatingItem}
-                              className="flex items-center gap-1 text-xs font-medium text-text-brand hover:underline disabled:opacity-50"
+                              className="flex items-center gap-1 text-xs font-medium text-text-primary hover:underline disabled:opacity-50"
                             >
                               <Icon icon={IconWand} size="sm" />
                               {isApplyingTwins
@@ -1902,7 +1996,7 @@ const ShipmentDetailPage = () => {
                             <button
                               onClick={() => autoMatchLwins({ shipmentId, dryRun: false })}
                               disabled={isMatchingLwins}
-                              className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                              className="flex items-center gap-1 text-xs text-text-primary hover:underline disabled:opacity-50"
                             >
                               <Icon icon={IconWand} size="sm" />
                               {isMatchingLwins ? 'Matching...' : 'Match all'}
@@ -1926,7 +2020,7 @@ const ShipmentDetailPage = () => {
                             <button
                               onClick={() => autoAssignHs({ shipmentId })}
                               disabled={isAutoAssigningHs}
-                              className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                              className="flex items-center gap-1 text-xs text-text-primary hover:underline disabled:opacity-50"
                             >
                               <Icon icon={IconWand} size="sm" />
                               {isAutoAssigningHs ? 'Assigning...' : 'Auto-assign'}
@@ -1942,7 +2036,7 @@ const ShipmentDetailPage = () => {
                               backfillDetails({ shipmentId, dryRun: false })
                             }
                             disabled={isBackfilling}
-                            className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                            className="flex items-center gap-1 text-xs text-text-primary hover:underline disabled:opacity-50"
                           >
                             <Icon icon={IconWand} size="sm" />
                             {isBackfilling
@@ -2008,7 +2102,7 @@ const ShipmentDetailPage = () => {
                                 backfillDetails({ shipmentId, dryRun: false })
                               }
                               disabled={isBackfilling}
-                              className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                              className="flex items-center gap-1 text-xs text-text-primary hover:underline disabled:opacity-50"
                             >
                               <Icon icon={IconWand} size="sm" />
                               {isBackfilling ? 'Filling...' : 'Fill from LWIN'}
@@ -2059,7 +2153,7 @@ const ShipmentDetailPage = () => {
                           })
                         }
                         disabled={isUpdatingShipment}
-                        className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                        className="flex items-center gap-1 text-xs text-text-primary hover:underline disabled:opacity-50"
                       >
                         <Icon icon={IconLock} size="sm" />
                         {shipment.notForSale ? 'Mark for sale' : 'Hold for owner'}
@@ -2096,7 +2190,7 @@ const ShipmentDetailPage = () => {
                               })
                             }
                             disabled={isUpdatingShipment}
-                            className="text-xs text-text-brand hover:underline disabled:opacity-50"
+                            className="text-xs text-text-primary hover:underline disabled:opacity-50"
                           >
                             Use the shipment setting for all lines
                           </button>
@@ -2169,7 +2263,7 @@ const ShipmentDetailPage = () => {
                               })
                             }
                             disabled={isPricing}
-                            className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                            className="flex items-center gap-1 text-xs text-text-primary hover:underline disabled:opacity-50"
                           >
                             <Icon icon={IconWand} size="sm" />
                             {isPricing
@@ -2193,7 +2287,7 @@ const ShipmentDetailPage = () => {
                               })
                             }
                             disabled={isRepricing}
-                            className="flex items-center gap-1 text-xs text-text-brand hover:underline disabled:opacity-50"
+                            className="flex items-center gap-1 text-xs text-text-primary hover:underline disabled:opacity-50"
                           >
                             <Icon icon={IconWand} size="sm" />
                             {isRepricing
@@ -2310,7 +2404,7 @@ const ShipmentDetailPage = () => {
 
                   {/* Add Item Form */}
                   {isAddingItem && (
-                    <div className="mb-6 rounded-lg border border-border-brand/30 bg-fill-brand/5 p-4">
+                    <div className="mb-6 rounded-lg border border-text-primary/30 bg-text-primary/5 p-4">
                       <Typography variant="bodySm" className="mb-3 font-medium">
                         New Item
                       </Typography>
@@ -2345,7 +2439,7 @@ const ShipmentDetailPage = () => {
                           <select
                             value={newItem.bottleSizeMl}
                             onChange={(e) => setNewItem((p) => ({ ...p, bottleSizeMl: e.target.value }))}
-                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
                           >
                             <option value="375">375ml (Half)</option>
                             <option value="500">500ml</option>
@@ -2519,7 +2613,7 @@ const ShipmentDetailPage = () => {
                                     onClick={() => openSheet(item)}
                                     className="text-left group"
                                   >
-                                    <Typography variant="bodySm" className="font-medium leading-snug group-hover:text-text-brand transition-colors">
+                                    <Typography variant="bodySm" className="font-medium leading-snug group-hover:text-text-primary transition-colors">
                                       {item.productName}
                                     </Typography>
                                     {metadata && (
@@ -2572,7 +2666,7 @@ const ShipmentDetailPage = () => {
                                         <Badge colorRole="warning" size="xs">
                                           Not mapped
                                         </Badge>
-                                        <span className="flex items-center gap-0.5 text-xs text-text-brand opacity-0 transition-opacity group-hover:opacity-100">
+                                        <span className="flex items-center gap-0.5 text-xs text-text-primary opacity-0 transition-opacity group-hover:opacity-100">
                                           <Icon icon={IconSearch} size="sm" />
                                           Map
                                         </span>
@@ -2594,7 +2688,7 @@ const ShipmentDetailPage = () => {
                                             }
                                             disabled={isUpdatingItem}
                                             title={twin.lwin18}
-                                            className="rounded border border-border-brand bg-fill-brand/10 px-1.5 py-0.5 text-xs font-medium text-text-brand hover:bg-fill-brand/20 disabled:opacity-50"
+                                            className="rounded border border-text-primary bg-text-primary/10 px-1.5 py-0.5 text-xs font-medium text-text-primary hover:bg-text-primary/20 disabled:opacity-50"
                                           >
                                             Same wine as {twin.from} — map it
                                             {twin.exact ? '' : ' (check)'}
@@ -2617,7 +2711,7 @@ const ShipmentDetailPage = () => {
                                               }
                                               disabled={isUpdatingItem}
                                               title={`Map to ${candidate.displayName} — ${candidate.lwin18}`}
-                                              className="max-w-[16rem] text-left text-xs text-text-brand hover:underline disabled:opacity-50"
+                                              className="max-w-[16rem] text-left text-xs text-text-primary hover:underline disabled:opacity-50"
                                             >
                                               ＋ {candidate.displayName}
                                               {candidate.detail ? (
@@ -2638,7 +2732,7 @@ const ShipmentDetailPage = () => {
                                   {item.hsCode ? (
                                     <button
                                       onClick={() => openSheet(item)}
-                                      className="text-xs font-medium text-green-700 hover:text-text-brand transition-colors"
+                                      className="text-xs font-medium text-green-700 hover:text-text-primary transition-colors"
                                       title={item.hsCode}
                                     >
                                       {hsLabel(item.hsCode) ?? item.hsCode}
@@ -2646,7 +2740,7 @@ const ShipmentDetailPage = () => {
                                   ) : (
                                     <button
                                       onClick={() => openSheet(item)}
-                                      className="text-xs font-medium text-red-500 hover:text-text-brand transition-colors"
+                                      className="text-xs font-medium text-red-500 hover:text-text-primary transition-colors"
                                     >
                                       Missing
                                     </button>
@@ -2700,7 +2794,7 @@ const ShipmentDetailPage = () => {
                                           bottleSizeMl: String(item.bottleSizeMl || 750),
                                         });
                                       }}
-                                      className="inline-flex items-center rounded-md border border-border-muted bg-fill-secondary/50 px-2 py-0.5 text-xs font-medium transition-colors hover:border-border-brand hover:bg-fill-brand/5"
+                                      className="inline-flex items-center rounded-md border border-border-muted bg-fill-secondary/50 px-2 py-0.5 text-xs font-medium transition-colors hover:border-text-primary hover:bg-text-primary/5"
                                       title="Click to edit pack size"
                                     >
                                       {item.bottlesPerCase || 12} &times; {(item.bottleSizeMl || 750) / 10}cl
@@ -2710,7 +2804,7 @@ const ShipmentDetailPage = () => {
 
                                 {/* Cases */}
                                 <td className="py-3 pr-4 text-right tabular-nums">
-                                  <button onClick={() => openSheet(item)} className="hover:text-text-brand transition-colors">
+                                  <button onClick={() => openSheet(item)} className="hover:text-text-primary transition-colors">
                                     {item.cases}
                                   </button>
                                 </td>
@@ -2722,7 +2816,7 @@ const ShipmentDetailPage = () => {
 
                                 {/* Cost/Btl */}
                                 <td className="py-3 pr-4 text-right tabular-nums">
-                                  <button onClick={() => openSheet(item)} className="hover:text-text-brand transition-colors">
+                                  <button onClick={() => openSheet(item)} className="hover:text-text-primary transition-colors">
                                     {item.productCostPerBottle
                                       ? `$${item.productCostPerBottle.toFixed(2)}`
                                       : '-'}
@@ -3020,7 +3114,7 @@ const ShipmentDetailPage = () => {
                           <select
                             value={sheetForm.hsCode}
                             onChange={(e) => setSheetForm((f) => ({ ...f, hsCode: e.target.value }))}
-                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
                           >
                             <option value="">Not set</option>
                             {hsOptionsFor(sheetForm.hsCode).map((hs) => (
@@ -3061,7 +3155,7 @@ const ShipmentDetailPage = () => {
                             <select
                               value={sheetForm.bottleSizeMl}
                               onChange={(e) => setSheetForm((f) => ({ ...f, bottleSizeMl: e.target.value }))}
-                              className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                              className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
                             >
                               <option value="375">375ml</option>
                               <option value="500">500ml</option>
@@ -3096,7 +3190,7 @@ const ShipmentDetailPage = () => {
                                 overrideOwnerName: selectedPartner?.name ?? null,
                               }));
                             }}
-                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
                           >
                             <option value="">
                               {shipment.partner?.businessName
@@ -3131,7 +3225,7 @@ const ShipmentDetailPage = () => {
                                     : event.target.value === 'held',
                               }))
                             }
-                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                            className="w-full rounded-lg border border-border-primary bg-fill-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
                           >
                             <option value="">
                               {shipment.notForSale
@@ -3181,10 +3275,10 @@ const ShipmentDetailPage = () => {
                     {shipment.groupDocuments.map((d) => (
                       <div key={d.id} className="flex items-center justify-between gap-3 py-1.5">
                         <a
-                          href={d.fileUrl}
+                          href={fileHref(d.fileUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="min-w-0 truncate text-sm text-text-brand hover:underline"
+                          className="min-w-0 truncate text-sm text-text-primary hover:underline"
                         >
                           &#x1F4C4; {d.fileName}
                         </a>
@@ -3256,7 +3350,7 @@ const ShipmentDetailPage = () => {
                       {bills.map((d) => (
                         <div key={d.id} className="flex items-center justify-between gap-3 py-2">
                           <a
-                            href={d.fileUrl}
+                            href={fileHref(d.fileUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="min-w-0 truncate text-sm text-text-primary hover:underline"
@@ -3282,7 +3376,7 @@ const ShipmentDetailPage = () => {
                   {shipment.groupId ? (
                     <Link
                       href={`/platform/admin/logistics/groups/${shipment.groupId}`}
-                      className="text-sm font-medium text-text-brand hover:underline"
+                      className="text-sm font-medium text-text-primary hover:underline"
                     >
                       Managed by group →
                     </Link>
@@ -3377,7 +3471,7 @@ const ShipmentDetailPage = () => {
                               <Typography variant="bodySm" colorRole="muted">
                                 Freight / 75cl btl ({gBottles} bottles)
                               </Typography>
-                              <Typography variant="headingSm" className="text-text-brand">
+                              <Typography variant="headingSm" className="text-text-primary">
                                 {formatPrice(g75cl ? gFreight / g75cl : 0, 'USD')}
                               </Typography>
                             </div>
@@ -3622,7 +3716,7 @@ const ShipmentDetailPage = () => {
                               ) : (
                                 <button
                                   type="button"
-                                  className="cursor-pointer tabular-nums hover:text-text-brand transition-colors"
+                                  className="cursor-pointer tabular-nums hover:text-text-primary transition-colors"
                                   onClick={() => {
                                     setEditingCostField(field);
                                     setEditedCostValue(value ? String(value) : '');
@@ -3725,7 +3819,7 @@ const ShipmentDetailPage = () => {
                 onChange={(e) => setSupplierAddress(e.target.value)}
                 rows={3}
                 placeholder={'Supplier name\nStreet\nCity, Postcode\nCountry'}
-                className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
+                className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-text-primary focus:outline-none"
               />
               <Typography variant="bodyXs" colorRole="muted">
                 Who the goods were bought from, as it should read on the note. Saved to the
@@ -3742,7 +3836,7 @@ const ShipmentDetailPage = () => {
                 value={signedBy}
                 onChange={(e) => setSignedBy(e.target.value)}
                 placeholder="Name of the person checking the goods in"
-                className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
+                className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-text-primary focus:outline-none"
               />
             </div>
             <SignaturePad onChange={setSignature} label="Signature" />

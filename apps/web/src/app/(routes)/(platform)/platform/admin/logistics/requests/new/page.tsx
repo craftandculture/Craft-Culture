@@ -1,12 +1,13 @@
 'use client';
 
-import { IconArrowLeft, IconPlus } from '@tabler/icons-react';
+import { IconPlus } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import ForwarderPicker, {
   type NewForwarder,
 } from '@/app/_logistics/components/quotes/ForwarderPicker';
@@ -18,7 +19,6 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import CardTitle from '@/app/_ui/components/Card/CardTitle';
 import Checkbox from '@/app/_ui/components/Checkbox/Checkbox';
-import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Select from '@/app/_ui/components/Select/Select';
 import SelectContent from '@/app/_ui/components/Select/SelectContent';
@@ -280,21 +280,18 @@ const NewQuoteRequestPage = () => {
           ))}
         </datalist>
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/platform/admin/logistics/quotes">
-              <Icon icon={IconArrowLeft} size="sm" />
-            </Link>
-          </Button>
-          <div>
-            <Typography variant="headingLg">New Quote Request</Typography>
-            <Typography variant="bodySm" colorRole="muted">
-              {draft
-                ? `Filled in from ${draft.sourceLabel}; check the cargo, then choose forwarders on the next page`
-                : 'Describe the cargo, then choose forwarders on the next page'}
-            </Typography>
-          </div>
-        </div>
+        <AdminPageHeader
+          title="New Quote Request"
+          description={
+            draft
+              ? `Filled in from ${draft.sourceLabel}; check the cargo, then choose forwarders on the next page`
+              : 'Describe the cargo, then choose forwarders on the next page'
+          }
+          crumbs={[
+            { label: 'Logistics', href: '/platform/admin/logistics' },
+            { label: 'Freight quotes', href: '/platform/admin/logistics/quotes' },
+          ]}
+        />
 
         {/* Priority */}
         <Card>

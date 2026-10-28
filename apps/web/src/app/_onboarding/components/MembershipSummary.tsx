@@ -91,7 +91,11 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
             </div>
             {/* The allowance as room to grow into, not as a meter running towards a charge */}
             <div className="bg-surface-muted mt-2 h-1.5 overflow-hidden rounded-full">
-              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${used}%` }} />
+              {/* Beyond the allowance, the bar shows how much of the store is included rather than running off the end */}
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${beyond > 0 ? (includedCases / cases) * 100 : used}%` }}
+              />
             </div>
             {beyond > 0 && (
               <p className="text-text-muted mt-1.5 text-[11px]">

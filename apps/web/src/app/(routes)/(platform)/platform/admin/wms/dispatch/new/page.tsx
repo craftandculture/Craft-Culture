@@ -4,6 +4,8 @@ import {
   IconArrowLeft,
   IconArrowRight,
   IconCheck,
+  IconChevronDown,
+  IconChevronUp,
   IconFileText,
   IconLoader2,
   IconRefresh,
@@ -23,6 +25,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import ClientMark from '@/app/_wms/components/ClientMark';
 import useTRPC from '@/lib/trpc/browser';
 
 type Step = 'select-orders' | 'confirm';
@@ -45,6 +48,8 @@ interface SelectedOrder {
   salesOrderNumber: string | null;
   pickListNumber: string | null;
   customerName: string | null;
+  /** The customer's partner logo, so an order is recognised before it is read. */
+  logoUrl: string | null;
   /** What the list is sorted by — the Zoho order date, or the PCO's raised date. */
   orderedAt: Date | null;
   totalCases: number;
@@ -124,6 +129,20 @@ const DispatchWizardPage = () => {
       void queryClient.invalidateQueries();
       router.push(`/platform/admin/wms/dispatch/${data.batch.id}`);
     },
+    /*
+      The server refuses to ship lines that never left the shelf through a
+      scan (unscanned pick list lines, wine it cannot find) until someone says
+      yes. Ask, and only then send it again with the yes.
+    */
+    onError: (error, variables) => {
+      if (
+        error.data?.code === 'PRECONDITION_FAILED' &&
+        !variables.confirmUnpicked &&
+        window.confirm(`${error.message}\n\nDispatch anyway?`)
+      ) {
+        dispatchMutation.mutate({ ...variables, confirmUnpicked: true });
+      }
+    },
   });
 
   // Build combined order list
@@ -140,6 +159,7 @@ const DispatchWizardPage = () => {
       salesOrderNumber: o.salesOrderNumber,
       pickListNumber: o.pickListNumber,
       customerName: o.customerName,
+      logoUrl: o.customerLogoUrl,
       orderedAt: o.orderDate ? new Date(o.orderDate) : null,
       totalCases: o.totalCases,
       pickedBottles: o.pickedBottles,
@@ -157,6 +177,8 @@ const DispatchWizardPage = () => {
       salesOrderNumber: null,
       pickListNumber: null,
       customerName: o.clientName ?? null,
+      // A PCO is for a private client; the partner who placed it carries the logo.
+      logoUrl: o.partner?.logoUrl ?? null,
       orderedAt: o.createdAt ? new Date(o.createdAt) : null,
       totalCases: o.caseCount ?? 0,
       pickedBottles: 0,
@@ -275,36 +297,43 @@ const DispatchWizardPage = () => {
           )}
         </div>
 
-        {/* Step indicator */}
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-              step === 'select-orders'
-                ? 'bg-brand-500 text-white'
-                : 'bg-emerald-500 text-white'
-            }`}
-          >
-            {step === 'confirm' ? (
-              <Icon icon={IconCheck} size="sm" />
-            ) : (
-              '1'
-            )}
-          </div>
-          <div className="h-0.5 flex-1 bg-border-primary">
-            <div
-              className={`h-full transition-all ${
-                step === 'confirm' ? 'w-full bg-brand-500' : 'w-0'
+        {/*
+          Step indicator. The circles were drawn in brand-500, which the theme
+          does not define, so step 1 rendered as an empty space beside a lone "2".
+        */}
+        <div className="flex items-center gap-3 text-xs font-medium">
+          <div className="flex items-center gap-2">
+            <span
+              className={`flex size-6 items-center justify-center rounded-full ${
+                step === 'confirm'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-text-primary text-surface-primary'
               }`}
+            >
+              {step === 'confirm' ? <Icon icon={IconCheck} size="sm" /> : '1'}
+            </span>
+            <span className={step === 'select-orders' ? 'text-text-primary' : 'text-text-muted'}>
+              Orders
+            </span>
+          </div>
+          <div className="h-px flex-1 bg-border-muted">
+            <div
+              className={`h-full bg-emerald-500 transition-all ${step === 'confirm' ? 'w-full' : 'w-0'}`}
             />
           </div>
-          <div
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-              step === 'confirm'
-                ? 'bg-brand-500 text-white'
-                : 'bg-fill-secondary text-text-muted'
-            }`}
-          >
-            2
+          <div className="flex items-center gap-2">
+            <span
+              className={`flex size-6 items-center justify-center rounded-full ${
+                step === 'confirm'
+                  ? 'bg-text-primary text-surface-primary'
+                  : 'bg-fill-secondary text-text-muted'
+              }`}
+            >
+              2
+            </span>
+            <span className={step === 'confirm' ? 'text-text-primary' : 'text-text-muted'}>
+              Distributor &amp; dispatch
+            </span>
           </div>
         </div>
 
@@ -323,7 +352,7 @@ const DispatchWizardPage = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search order, customer, pick list or wine..."
-                className="h-12 w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-11 pr-4 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                className="h-12 w-full rounded-xl border border-border-muted bg-surface-primary py-2 pl-11 pr-4 text-base shadow-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/10"
               />
             </div>
 
@@ -364,15 +393,14 @@ const DispatchWizardPage = () => {
                         key={order.id}
                         /*
                           Selection has to read across a room, not from a
-                          ring that only shows up close. Tinting the card
-                          keeps the state legible on a bright loading bay.
-                          It is a real control, so it takes focus and the
-                          keyboard, which a bare div never did.
+                          ring that only shows up close: a selected card gets
+                          a dark border and a filled tick. It is a real
+                          control, so it takes focus and the keyboard.
                         */
-                        className={`cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                        className={`cursor-pointer rounded-xl shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary ${
                           selected
-                            ? 'border-2 border-brand-500 bg-brand-50 ring-2 ring-brand-500/20 dark:bg-brand-900/20'
-                            : 'hover:border-border-brand'
+                            ? 'border-2 border-text-primary bg-surface-secondary/60'
+                            : 'border border-border-muted hover:-translate-y-px hover:shadow-md'
                         }`}
                         role="button"
                         tabIndex={0}
@@ -386,37 +414,45 @@ const DispatchWizardPage = () => {
                         onClick={() => toggleOrder(order)}
                       >
                         <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-4">
+                            <ClientMark logoUrl={order.logoUrl} name={order.customerName} size="lg" />
                             <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Typography
-                                  variant="bodySm"
-                                  className="font-semibold"
-                                >
-                                  {order.orderNumber}
-                                </Typography>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm font-semibold text-text-primary">
+                                    {order.customerName ?? 'Unknown customer'}
+                                  </div>
+                                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                                    <span className="text-xs font-medium text-text-primary">
+                                      {order.orderNumber}
+                                    </span>
+                                    <span
+                                      className={`rounded-full px-1.5 py-px text-[10px] font-medium ring-1 ring-inset ${
+                                        order.type === 'zoho'
+                                          ? 'bg-slate-50 text-slate-600 ring-slate-200 dark:bg-slate-900/30 dark:text-slate-300 dark:ring-slate-700'
+                                          : 'bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:ring-violet-800'
+                                      }`}
+                                    >
+                                      {order.type === 'zoho' ? (order.orderNumber.startsWith('INV') ? 'INV' : 'SO') : 'PCO'}
+                                    </span>
+                                  </div>
+                                </div>
                                 <span
-                                  className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                                    order.type === 'zoho'
-                                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                      : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                                  className={`flex size-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                                    selected
+                                      ? 'border-emerald-500 bg-emerald-500 text-white'
+                                      : 'border-border-primary'
                                   }`}
                                 >
-                                  {order.type === 'zoho' ? (order.orderNumber.startsWith('INV') ? 'INV' : 'SO') : 'PCO'}
+                                  {selected && <Icon icon={IconCheck} size="sm" />}
                                 </span>
                               </div>
-                              <Typography variant="bodyXs" colorRole="muted">
-                                {order.customerName ?? 'Unknown customer'}
-                              </Typography>
                               {/*
                                 Every reference the order is known by, on one
-                                line. The card showed whichever of the invoice
-                                or SO number happened to exist, so two orders
-                                for the same customer were told apart only by a
-                                number that might not be the one written on the
+                                line, so it matches whichever number is on the
                                 paperwork in the operator's hand.
                               */}
-                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[10px] text-text-muted">
+                              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[10px] text-text-muted">
                                 {order.salesOrderNumber &&
                                 order.salesOrderNumber !== order.orderNumber ? (
                                   <span>{order.salesOrderNumber}</span>
@@ -429,26 +465,34 @@ const DispatchWizardPage = () => {
                                   <span>{format(order.orderedAt, 'dd MMM yyyy')}</span>
                                 ) : null}
                               </div>
-                              <div className="mt-1 flex flex-wrap items-center gap-2">
-                                <Typography variant="bodyXs" colorRole="muted">
-                                  {order.totalCases} cases
-                                  {order.pickedBottles > 0
-                                    ? ` · ${order.pickedBottles} btl`
-                                    : ''}
-                                </Typography>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-semibold tabular-nums text-text-primary">
+                                  {order.totalCases}{' '}
+                                  <span className="text-xs font-normal text-text-muted">
+                                    {order.totalCases === 1 ? 'case' : 'cases'}
+                                  </span>
+                                  {order.pickedBottles > 0 ? (
+                                    <span className="text-xs font-normal text-text-muted">
+                                      {' '}
+                                      · {order.pickedBottles} btl
+                                    </span>
+                                  ) : null}
+                                </span>
                                 {!order.isPickComplete && order.totalLines > 0 ? (
-                                  <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                    still picking — {order.pickedLines}/{order.totalLines}
+                                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:ring-blue-800">
+                                    Still picking · {order.pickedLines}/{order.totalLines}
                                   </span>
                                 ) : order.isShort ? (
-                                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                                    short pick
+                                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-800">
+                                    Short pick
                                   </span>
                                 ) : null}
                                 {order.lines.length > 0 ? (
                                   <button
                                     type="button"
-                                    className="text-[11px] font-medium text-text-brand underline-offset-2 hover:underline"
+                                    /* A plain grey "3 items" read as a label, not a
+                                       control, so the contents looked gone. */
+                                    className="ml-auto inline-flex items-center gap-1 rounded-full border border-border-muted bg-surface-primary px-2.5 py-1 text-xs font-medium text-text-primary shadow-sm hover:bg-surface-secondary"
                                     onClick={(e) => {
                                       // The card itself toggles selection, so
                                       // opening the contents must not also tick it.
@@ -461,24 +505,13 @@ const DispatchWizardPage = () => {
                                     {expandedOrderId === order.id
                                       ? 'Hide items'
                                       : `Show ${order.lines.length} item${order.lines.length === 1 ? '' : 's'}`}
+                                    <Icon
+                                      icon={expandedOrderId === order.id ? IconChevronUp : IconChevronDown}
+                                      size="sm"
+                                    />
                                   </button>
                                 ) : null}
                               </div>
-                            </div>
-                            <div
-                              className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
-                                selected
-                                  ? 'border-brand-500 bg-brand-500'
-                                  : 'border-border-primary'
-                              }`}
-                            >
-                              {selected && (
-                                <Icon
-                                  icon={IconCheck}
-                                  size="sm"
-                                  className="text-white"
-                                />
-                              )}
                             </div>
                           </div>
 
@@ -568,30 +601,36 @@ const DispatchWizardPage = () => {
             {/* Selected orders summary */}
             <Card>
               <CardContent className="p-4">
-                <Typography variant="headingSm" className="mb-3">
-                  Orders ({selectedOrders.length})
-                </Typography>
-                <div className="space-y-2">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+                    Orders
+                  </span>
+                  <span className="rounded-full bg-fill-secondary px-1.5 text-[10px] font-semibold text-text-muted">
+                    {selectedOrders.length}
+                  </span>
+                </div>
+                <div className="divide-y divide-border-muted">
                   {selectedOrders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between rounded-lg bg-fill-secondary p-3"
-                    >
-                      <div>
-                        <Typography variant="bodySm" className="font-medium">
-                          {order.orderNumber}
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {order.customerName}
-                        </Typography>
+                    <div key={order.id} className="flex items-center gap-3 py-2.5">
+                      <ClientMark logoUrl={order.logoUrl} name={order.customerName} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-text-primary">
+                          {order.customerName ?? 'Unknown customer'}
+                        </div>
+                        <div className="font-mono text-[10px] text-text-muted">
+                          {[order.orderNumber, order.pickListNumber].filter(Boolean).join(' · ')}
+                        </div>
                       </div>
-                      <Typography variant="bodySm" colorRole="muted">
-                        {order.totalCases} cases
-                      </Typography>
+                      <span className="shrink-0 text-sm font-semibold tabular-nums">
+                        {order.totalCases}{' '}
+                        <span className="text-xs font-normal text-text-muted">
+                          {order.totalCases === 1 ? 'case' : 'cases'}
+                        </span>
+                      </span>
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 border-t border-border-primary pt-3">
+                <div className="mt-1 border-t border-border-muted pt-3">
                   <div className="flex justify-between">
                     <Typography variant="bodySm" className="font-semibold">
                       Total
@@ -607,9 +646,9 @@ const DispatchWizardPage = () => {
             {/* Distributor selection */}
             <Card>
               <CardContent className="p-4">
-                <Typography variant="headingSm" className="mb-3">
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
                   Distributor
-                </Typography>
+                </div>
 
                 {/* Search distributors */}
                 <div className="relative mb-3">
@@ -623,7 +662,7 @@ const DispatchWizardPage = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search distributors..."
-                    className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    className="h-11 w-full rounded-xl border border-border-muted bg-surface-primary py-2 pl-10 pr-4 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/10"
                   />
                 </div>
 
@@ -636,7 +675,7 @@ const DispatchWizardPage = () => {
                     />
                   </div>
                 ) : (
-                  <div className="max-h-60 space-y-2 overflow-y-auto">
+                  <div className="max-h-80 space-y-1.5 overflow-y-auto p-0.5">
                     {filteredDistributors?.map((dist) => {
                       const selected = selectedDistributorId === dist.id;
                       return (
@@ -644,35 +683,27 @@ const DispatchWizardPage = () => {
                           key={dist.id}
                           type="button"
                           onClick={() => setSelectedDistributorId(dist.id)}
-                          className={`flex w-full items-center justify-between rounded-lg p-3 text-left transition-colors ${
+                          className={`flex w-full items-center justify-between gap-3 rounded-xl border p-2.5 text-left transition-colors ${
                             selected
-                              ? 'bg-brand-100 ring-2 ring-brand-500 dark:bg-brand-900/30'
-                              : 'bg-fill-secondary hover:bg-fill-secondary/70'
+                              ? 'border-text-primary bg-surface-secondary/60 ring-1 ring-text-primary'
+                              : 'border-border-muted hover:bg-surface-secondary/50'
                           }`}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-fill-brand/10">
-                              <Icon
-                                icon={IconTruck}
-                                size="sm"
-                                className="text-text-brand"
-                              />
-                            </div>
-                            <Typography variant="bodySm" className="font-medium">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <ClientMark logoUrl={dist.logoUrl} name={dist.name} size="lg" />
+                            <span className="truncate text-sm font-medium text-text-primary">
                               {dist.name}
-                            </Typography>
+                            </span>
                           </div>
-                          <div
-                            className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
+                          <span
+                            className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                               selected
-                                ? 'border-brand-500 bg-brand-500'
+                                ? 'border-emerald-500 bg-emerald-500 text-white'
                                 : 'border-border-primary'
                             }`}
                           >
-                            {selected && (
-                              <div className="h-2 w-2 rounded-full bg-white" />
-                            )}
-                          </div>
+                            {selected && <Icon icon={IconCheck} size="sm" />}
+                          </span>
                         </button>
                       );
                     })}
@@ -698,11 +729,11 @@ const DispatchWizardPage = () => {
                     aria-checked={generateDN}
                     onClick={() => setGenerateDN(!generateDN)}
                     className={`relative h-6 w-11 rounded-full transition-colors ${
-                      generateDN ? 'bg-brand-500' : 'bg-fill-secondary'
+                      generateDN ? 'bg-text-primary' : 'bg-fill-secondary'
                     }`}
                   >
                     <span
-                      className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-surface-primary shadow transition-transform ${
                         generateDN ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
@@ -723,7 +754,7 @@ const DispatchWizardPage = () => {
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="e.g. Truck #42, driver name..."
                     rows={2}
-                    className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    className="w-full rounded-xl border border-border-muted bg-surface-primary p-3 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/10"
                   />
                 </div>
               </CardContent>

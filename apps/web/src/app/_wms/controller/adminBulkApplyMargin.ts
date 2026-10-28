@@ -1,5 +1,5 @@
 import { client } from '@/database/client';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { bulkApplyMarginSchema } from '../schemas/pricingManagerSchema';
 
@@ -19,7 +19,7 @@ import { bulkApplyMarginSchema } from '../schemas/pricingManagerSchema';
  * @param logisticsPerBottle - Flat logistics cost added to import before margin
  * @param overwriteExisting - Whether to overwrite products that already have a price
  */
-const adminBulkApplyMargin = wmsOperatorProcedure
+const adminBulkApplyMargin = adminProcedure
   .input(bulkApplyMarginSchema)
   .mutation(async ({ input, ctx }) => {
     const { marginPercent, category, ownerId, logisticsPerBottle, inbondMarginPct, overwriteExisting } =

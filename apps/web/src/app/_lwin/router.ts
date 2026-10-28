@@ -8,11 +8,15 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminNextInternalLwin from './controller/adminNextInternalLwin';
+import adminReserveInternalLwin from './controller/adminReserveInternalLwin';
 import adminSearchLwin from './controller/adminSearchLwin';
+import adminSuggestLwin from './controller/adminSuggestLwin';
 
 const lwinRouter = createTRPCRouter({
   search: adminSearchLwin,
+  suggest: adminSuggestLwin,
   nextInternal: adminNextInternalLwin,
+  reserveInternal: adminReserveInternalLwin,
 });
 
 export default lwinRouter;

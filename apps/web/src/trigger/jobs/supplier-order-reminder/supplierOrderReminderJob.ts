@@ -1,13 +1,8 @@
 import { logger, schedules } from '@trigger.dev/sdk';
-import { and, eq, inArray, isNull, lt } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
-import {
-  partners,
-  sourceCustomerPos,
-  sourceSupplierOrders,
-  users,
-} from '@/database/schema';
+import { partners, sourceSupplierOrders, users } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import triggerDb from '@/trigger/triggerDb';
@@ -22,9 +17,10 @@ interface SendOrderReminderParams {
   userId: string | null;
   businessName: string;
   businessEmail: string | null;
-  customerPoNumber: string | null;
-  customerName: string | null;
 }
+
+/** Most confirmation reminders a supplier gets for one order */
+const MAX_REMINDERS = 3;
 
 /**
  * Send a confirmation reminder to a partner for an unconfirmed supplier order
@@ -39,8 +35,6 @@ const sendOrderReminder = async ({
   userId,
   businessName,
   businessEmail,
-  customerPoNumber,
-  customerName,
 }: SendOrderReminderParams) => {
   // Get user email if partner has a platform account
   let userEmail: string | null = null;
@@ -96,8 +90,6 @@ const sendOrderReminder = async ({
       actionUrl: orderUrl,
       metadata: {
         orderNumber,
-        customerPoNumber,
-        customerName,
         totalAmountUsd,
         itemCount,
         hoursSinceSent,
@@ -113,8 +105,10 @@ const sendOrderReminder = async ({
       dataVariables: {
         partnerName: recipientName,
         orderNumber,
-        customerPoNumber: customerPoNumber ?? 'N/A',
-        customerName: customerName ?? 'N/A',
+        // Template variables kept for compatibility; the C&C end customer is
+        // never shared with the supplier
+        customerPoNumber: orderNumber,
+        customerName: 'Craft & Culture',
         itemCount: String(itemCount ?? 0),
         totalAmount: totalFormatted,
         hoursSinceSent: String(hoursSinceSent),
@@ -122,10 +116,9 @@ const sendOrderReminder = async ({
       },
     });
 
-    logger.info(`Sent order reminder to ${notificationEmail} for order ${orderNumber}`);
+    logger.info(`Sent order reminder for order ${orderNumber}`);
   } catch (error) {
     logger.error('Failed to send order reminder email', {
-      email: notificationEmail,
       supplierOrderId,
       error,
     });
@@ -137,6 +130,8 @@ const sendOrderReminder = async ({
  *
  * Runs every 6 hours to send reminder notifications to partners who haven't
  * confirmed supplier orders within 24 hours.
+ *
+ * At most MAX_REMINDERS reminders per order, no more than one a day.
  *
  * Sends reminders when:
  * - Supplier order was sent more than 24 hours ago
@@ -162,14 +157,18 @@ export const supplierOrderReminderJob = schedules.task({
         totalAmountUsd: sourceSupplierOrders.totalAmountUsd,
         sentAt: sourceSupplierOrders.sentAt,
         partnerId: sourceSupplierOrders.partnerId,
-        customerPoId: sourceSupplierOrders.customerPoId,
       })
       .from(sourceSupplierOrders)
       .where(
         and(
           inArray(sourceSupplierOrders.status, ['sent', 'pending_confirmation']),
           lt(sourceSupplierOrders.sentAt, twentyFourHoursAgo),
-          isNull(sourceSupplierOrders.confirmedAt)
+          isNull(sourceSupplierOrders.confirmedAt),
+          lt(sourceSupplierOrders.reminderCount, MAX_REMINDERS),
+          or(
+            isNull(sourceSupplierOrders.lastReminderAt),
+            lt(sourceSupplierOrders.lastReminderAt, twentyFourHoursAgo),
+          ),
         )
       );
 
@@ -203,15 +202,29 @@ export const supplierOrderReminderJob = schedules.task({
         continue;
       }
 
-      // Get customer PO details for context
-      const [customerPo] = await triggerDb
-        .select({
-          ccPoNumber: sourceCustomerPos.ccPoNumber,
-          customerCompany: sourceCustomerPos.customerCompany,
-          customerName: sourceCustomerPos.customerName,
+      // Claim this reminder slot first so overlapping runs or retries
+      // cannot send it twice
+      const claimed = await triggerDb
+        .update(sourceSupplierOrders)
+        .set({
+          reminderCount: sql`${sourceSupplierOrders.reminderCount} + 1`,
+          lastReminderAt: now,
         })
-        .from(sourceCustomerPos)
-        .where(eq(sourceCustomerPos.id, order.customerPoId));
+        .where(
+          and(
+            eq(sourceSupplierOrders.id, order.id),
+            lt(sourceSupplierOrders.reminderCount, MAX_REMINDERS),
+            or(
+              isNull(sourceSupplierOrders.lastReminderAt),
+              lt(sourceSupplierOrders.lastReminderAt, twentyFourHoursAgo),
+            ),
+          ),
+        )
+        .returning({ id: sourceSupplierOrders.id });
+
+      if (claimed.length === 0) {
+        continue;
+      }
 
       try {
         await sendOrderReminder({
@@ -224,8 +237,6 @@ export const supplierOrderReminderJob = schedules.task({
           userId: partner.userId,
           businessName: partner.businessName,
           businessEmail: partner.businessEmail,
-          customerPoNumber: customerPo?.ccPoNumber ?? null,
-          customerName: customerPo?.customerCompany || customerPo?.customerName || null,
         });
         remindersCount++;
       } catch (error) {

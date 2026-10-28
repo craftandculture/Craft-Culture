@@ -192,7 +192,7 @@ const placeCellarPurchase = async ({
     } catch (error) {
       if (!isPurchaseNumberClash(error) || attempt === 2) throw error;
 
-      purchaseNumber = await generatePurchaseNumber();
+      purchaseNumber = await generatePurchaseNumber(db, attempt + 1);
     }
   }
 

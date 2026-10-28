@@ -15,8 +15,11 @@ const nextConfig: NextConfig = {
     reactCompiler: true,
     authInterrupts: true,
   },
-  allowedDevOrigins: ['jasper.ngrok.app'],
   poweredByHeader: false,
+  // The staff-only brief route reads these from disk at request time
+  outputFileTracingIncludes: {
+    '/api/internal-docs/[name]': ['./internal-docs/**'],
+  },
   /*
     Baseline security headers. Framing is limited to our own origin (the WMS
     label page prints through a same-origin iframe); no full CSP yet, as the
@@ -66,14 +69,11 @@ const nextConfig: NextConfig = {
   // Static-asset clean URLs. Update this list to add new shareable docs.
   rewrites: async () => {
     return [
-      {
-        source: '/platform-mvp',
-        destination: '/platform-mvp.html',
-      },
-      {
-        source: '/inbound-cellar',
-        destination: '/inbound-cellar.html',
-      },
+      // Internal briefs: served to staff only, from outside public/
+      ...['platform-mvp', 'logistics-plan', 'source-flows', 'inbound-cellar'].flatMap((name) => [
+        { source: `/${name}`, destination: `/api/internal-docs/${name}` },
+        { source: `/${name}.html`, destination: `/api/internal-docs/${name}` },
+      ]),
     ];
   },
   images: {
@@ -134,8 +134,11 @@ export default process.env.NODE_ENV === 'development'
       // For all available options, see:
       // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-      org: 'byont-ventures',
-      project: 'craft-and-culture',
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+
+      // Source maps upload only once a Craft & Culture Sentry org is configured
+      sourcemaps: { disable: !process.env.SENTRY_ORG },
 
       // Only print logs for uploading source maps in CI
       silent: !process.env.CI,

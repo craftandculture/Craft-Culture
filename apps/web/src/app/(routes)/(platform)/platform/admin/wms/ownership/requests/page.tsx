@@ -200,7 +200,7 @@ const WMSPartnerRequestsPage = () => {
               onClick={() => setTypeFilter(filter.id)}
               className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 typeFilter === filter.id
-                  ? 'bg-fill-brand text-text-on-brand'
+                  ? 'bg-text-primary text-text-on-brand'
                   : 'border-border-muted text-text-muted hover:text-text-primary border'
               }`}
             >
@@ -254,7 +254,7 @@ const WMSPartnerRequestsPage = () => {
               </Card>
             ) : (
               data.requests.map((request) => (
-                <Card key={request.id} className="hover:border-border-brand">
+                <Card key={request.id} className="hover:border-text-primary">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex-1">
@@ -374,7 +374,7 @@ const WMSPartnerRequestsPage = () => {
                       : 'Reason for rejection...'
                   }
                   rows={3}
-                  className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 text-sm focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
+                  className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 text-sm focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-text-primary"
                 />
               </div>
 

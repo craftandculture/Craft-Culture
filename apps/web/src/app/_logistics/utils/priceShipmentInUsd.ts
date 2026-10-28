@@ -10,6 +10,11 @@ export interface PriceShipmentOptions {
   agreedRate?: number;
   /** Overrides the currency read off the document */
   currency?: string;
+  /**
+   * Staff named the currency on purpose, so a single-currency shipment's lines
+   * may be re-labelled to it. Never set by an import.
+   */
+  relabel?: boolean;
 }
 
 /**
@@ -79,20 +84,46 @@ const priceShipmentInUsd = async (
     })
     .where(eq(logisticsShipments.id, shipmentId));
 
+  /*
+    Only the lines billed in this currency are priced at its rate.
+
+    A shipment can carry more than one document: a GBP invoice imported first
+    and a EUR one after. Re-labelling and re-converting every line at the
+    second document's rate turned the pound lines into "EUR" and left them
+    about 15% low, with nothing on screen to say it had happened.
+
+    A line's currency is only rewritten when staff name a currency on purpose
+    and the shipment is in one currency throughout. That is the correction this
+    exists for — a Wilkinson invoice names no currency, so pounds were stamped
+    as dollars — and it cannot reach a line that came from another document.
+  */
+  const lineCurrencies = await db
+    .selectDistinct({
+      currency: sql<string>`UPPER(${logisticsShipmentItems.sourceCurrency})`,
+    })
+    .from(logisticsShipmentItems)
+    .where(
+      sql`${logisticsShipmentItems.shipmentId} = ${shipmentId}
+          AND ${logisticsShipmentItems.sourceUnitPrice} IS NOT NULL
+          AND ${logisticsShipmentItems.sourceCurrency} IS NOT NULL`,
+    );
+
+  const relabel = !!options.relabel && lineCurrencies.length <= 1;
+
   const updated = await db
     .update(logisticsShipmentItems)
     .set({
-      // The lines carry the currency they were billed in, so correcting a
-      // shipment stamped with the wrong one has to reach them too — otherwise
-      // the header says GBP while every line still reads USD, and the next
-      // person to look cannot tell which is true.
-      sourceCurrency: currency,
+      ...(relabel ? { sourceCurrency: currency } : {}),
       productCostPerBottle: sql`ROUND((${logisticsShipmentItems.sourceUnitPrice} * ${resolved.rate})::numeric, 4)`,
       declaredValueUsd: sql`ROUND((${logisticsShipmentItems.sourceTotal} * ${resolved.rate})::numeric, 2)`,
     })
     .where(
-      sql`${logisticsShipmentItems.shipmentId} = ${shipmentId}
-          AND ${logisticsShipmentItems.sourceUnitPrice} IS NOT NULL`,
+      relabel
+        ? sql`${logisticsShipmentItems.shipmentId} = ${shipmentId}
+              AND ${logisticsShipmentItems.sourceUnitPrice} IS NOT NULL`
+        : sql`${logisticsShipmentItems.shipmentId} = ${shipmentId}
+              AND ${logisticsShipmentItems.sourceUnitPrice} IS NOT NULL
+              AND UPPER(${logisticsShipmentItems.sourceCurrency}) = ${currency}`,
     )
     .returning({ id: logisticsShipmentItems.id });
 

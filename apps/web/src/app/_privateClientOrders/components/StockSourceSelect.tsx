@@ -38,7 +38,7 @@ const stockSourceOptions: StockSourceOption[] = [
     label: 'Partner Local',
     description: 'Partner local stock',
     icon: IconPackage,
-    colorClass: 'text-text-brand',
+    colorClass: 'text-text-primary',
   },
 ];
 

@@ -84,10 +84,26 @@ const WMSStockPage = () => {
   const { mutate: syncToZoho, isPending: isSyncing } = useMutation({
     ...api.wms.admin.stock.syncToZoho.mutationOptions(),
     onSuccess: (data) => {
+      /*
+        Always a preview first. One tap used to write a stock adjustment
+        straight into Zoho; now it shows what would change and asks.
+      */
       if (data.dryRun) {
-        toast.info(
-          `Dry run: ${data.summary.adjusted} items would be adjusted, ${data.summary.matched} already match`,
-        );
+        if (data.summary.adjusted === 0) {
+          toast.info(`All ${data.summary.matched} items already match Zoho. Nothing to change.`);
+        } else if (
+          window.confirm(
+            `Zoho stock will be adjusted for ${data.summary.adjusted} item(s) to match the warehouse.\n` +
+              `${data.summary.matched} already match` +
+              (data.summary.notFound > 0
+                ? `, ${data.summary.notFound} have no Zoho item with the same SKU and are left alone`
+                : '') +
+              '.\n\nAdjust Zoho now?',
+          )
+        ) {
+          syncToZoho({ dryRun: false });
+        }
+        return;
       } else if (data.summary.adjusted > 0) {
         toast.success(
           `Synced ${data.summary.adjusted} items to Zoho. ${data.summary.matched} already matched.`,
@@ -134,7 +150,7 @@ const WMSStockPage = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => syncToZoho({ dryRun: false })}
+                onClick={() => syncToZoho({ dryRun: true })}
                 disabled={isSyncing}
               >
                 <ButtonContent iconLeft={isSyncing ? IconLoader2 : IconCloudUpload}>
@@ -182,7 +198,7 @@ const WMSStockPage = () => {
               placeholder="Search products, LWIN, or producer..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-text-primary"
             />
           </div>
         )}
@@ -213,7 +229,7 @@ const WMSStockPage = () => {
               </Card>
             ) : (
               productData.products.map((product) => (
-                <Card key={product.lwin18} className="hover:border-border-brand">
+                <Card key={product.lwin18} className="hover:border-text-primary">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex-1">
@@ -390,7 +406,7 @@ const WMSStockPage = () => {
                   key={location.id}
                   href={`/platform/admin/wms/locations/${location.id}`}
                 >
-                  <Card className="h-full cursor-pointer transition-colors hover:border-border-brand">
+                  <Card className="h-full cursor-pointer transition-colors hover:border-text-primary">
                     <CardContent className="p-4">
                       <div className="mb-3 flex items-start justify-between">
                         <LocationBadge
@@ -479,7 +495,7 @@ const WMSStockPage = () => {
               </Card>
             ) : (
               ownerData.owners.map((owner) => (
-                <Card key={owner.ownerId} className="hover:border-border-brand">
+                <Card key={owner.ownerId} className="hover:border-text-primary">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>

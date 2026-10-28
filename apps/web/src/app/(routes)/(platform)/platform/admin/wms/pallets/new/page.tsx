@@ -89,7 +89,7 @@ const NewPalletPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search owners..."
-            className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
           />
         </div>
 
@@ -120,16 +120,16 @@ const NewPalletPage = () => {
                   key={partner.id}
                   className={`cursor-pointer transition-all ${
                     selectedOwnerId === partner.id
-                      ? 'border-2 border-brand-500 ring-2 ring-brand-500/20'
-                      : 'hover:border-border-brand'
+                      ? 'border-2 border-text-primary ring-2 ring-text-primary/20'
+                      : 'hover:border-text-primary'
                   }`}
                   onClick={() => setSelectedOwnerId(partner.id)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-brand/10">
-                          <Icon icon={IconBox} size="md" className="text-text-brand" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-text-primary/10">
+                          <Icon icon={IconBox} size="md" className="text-text-primary" />
                         </div>
                         <div>
                           <Typography variant="bodySm" className="font-semibold">
@@ -145,12 +145,12 @@ const NewPalletPage = () => {
                       <div
                         className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
                           selectedOwnerId === partner.id
-                            ? 'border-brand-500 bg-brand-500'
+                            ? 'border-text-primary bg-surface-secondary0'
                             : 'border-border-primary'
                         }`}
                       >
                         {selectedOwnerId === partner.id && (
-                          <div className="h-2 w-2 rounded-full bg-white" />
+                          <div className="h-2 w-2 rounded-full bg-surface-primary" />
                         )}
                       </div>
                     </div>
@@ -171,7 +171,7 @@ const NewPalletPage = () => {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any notes about this pallet..."
-              className="w-full rounded-lg border border-border-primary bg-fill-primary px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary px-4 py-2 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
               rows={3}
             />
           </div>

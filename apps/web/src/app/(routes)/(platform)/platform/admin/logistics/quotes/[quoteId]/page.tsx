@@ -20,6 +20,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import {
   input as inputClass,
   label as labelClass,
@@ -40,6 +41,7 @@ import TextArea from '@/app/_ui/components/TextArea/TextArea';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { logisticsQuoteStatus, logisticsTransportMode } from '@/database/schema';
 import useTRPC from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 type QuoteStatus = (typeof logisticsQuoteStatus.enumValues)[number];
 type TransportMode = (typeof logisticsTransportMode.enumValues)[number];
@@ -100,10 +102,12 @@ const statusIcons: Record<QuoteStatus, typeof IconClock> = {
 };
 
 const formatCurrency = (amount: number, currency = 'USD') => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(amount);
+  // A code Intl does not know (a typo, "Dhs") would throw and blank the page
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+  } catch {
+    return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
 };
 
 const formatDate = (date: Date | null | undefined) => {
@@ -289,22 +293,21 @@ const QuoteDetailPage = () => {
     <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={backHref}>
-                <Icon icon={IconArrowLeft} size="sm" />
-              </Link>
-            </Button>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <Typography variant="headingLg">{quote.quoteNumber}</Typography>
-                <Badge colorRole={statusBadgeVariants[quote.status]}>
-                  <Icon icon={StatusIcon} size="xs" className="mr-1" />
-                  {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-                </Badge>
-              </div>
-              <Typography variant="bodySm" colorRole="muted">
+        <AdminPageHeader
+          title={quote.quoteNumber}
+          crumbs={[
+            { label: 'Logistics', href: '/platform/admin/logistics' },
+            quote.request
+              ? { label: quote.request.requestNumber, href: backHref }
+              : { label: 'Freight quotes', href: backHref },
+          ]}
+          description={
+            <span className="flex flex-wrap items-center gap-3">
+              <Badge colorRole={statusBadgeVariants[quote.status]}>
+                <Icon icon={StatusIcon} size="xs" className="mr-1" />
+                {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+              </Badge>
+              <span>
                 Created {formatDistanceToNow(new Date(quote.createdAt), { addSuffix: true })}
                 {quote.request && (
                   <>
@@ -317,28 +320,30 @@ const QuoteDetailPage = () => {
                     </Link>
                   </>
                 )}
-              </Typography>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {(isEditable || quote.status === 'expired') && quote.requestId && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/platform/admin/logistics/requests/${quote.requestId}?editQuote=${quote.id}`}>
-                  <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
-                </Link>
-              </Button>
-            )}
-            {others.length > 0 && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/platform/admin/logistics/quotes/compare?ids=${compareIds.join(',')}`}>
-                  <ButtonContent iconLeft={IconGitCompare}>
-                    Compare with other quotes ({others.length})
-                  </ButtonContent>
-                </Link>
-              </Button>
-            )}
-          </div>
-        </div>
+              </span>
+            </span>
+          }
+          actions={
+            <>
+              {(isEditable || quote.status === 'expired') && quote.requestId && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/platform/admin/logistics/requests/${quote.requestId}?editQuote=${quote.id}`}>
+                    <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
+                  </Link>
+                </Button>
+              )}
+              {others.length > 0 && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/platform/admin/logistics/quotes/compare?ids=${compareIds.join(',')}`}>
+                    <ButtonContent iconLeft={IconGitCompare}>
+                      Compare with other quotes ({others.length})
+                    </ButtonContent>
+                  </Link>
+                </Button>
+              )}
+            </>
+          }
+        />
 
         {/* Actions for pending quotes */}
         {canAcceptReject && !showAcceptPanel && (
@@ -358,7 +363,13 @@ const QuoteDetailPage = () => {
                   >
                     <ButtonContent iconLeft={IconX}>Reject</ButtonContent>
                   </Button>
-                  <button type="button" className={primaryButton} onClick={openAcceptPanel}>
+                  <button
+                    type="button"
+                    className={`${primaryButton} disabled:cursor-not-allowed disabled:opacity-50`}
+                    onClick={openAcceptPanel}
+                    // The server refuses an expired quote; the button says so first
+                    disabled={!!quote.validUntil && new Date(quote.validUntil).getTime() < Date.now()}
+                  >
                     <IconCheck size={16} /> Accept quote
                   </button>
                 </div>
@@ -593,7 +604,7 @@ const QuoteDetailPage = () => {
                   {quote.attachments.map((a) => (
                     <a
                       key={a.id}
-                      href={a.fileUrl}
+                      href={fileHref(a.fileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-1 block text-sm text-text-primary underline"
@@ -645,7 +656,7 @@ const QuoteDetailPage = () => {
               <CardTitle>Total Price</CardTitle>
             </div>
             <CardContent>
-              <Typography variant="headingLg" className="text-text-brand">
+              <Typography variant="headingLg" className="text-text-primary">
                 {formatCurrency(quote.totalPrice, quote.currency)}
               </Typography>
               <Typography variant="bodySm" colorRole="muted" className="mt-2">
@@ -667,7 +678,7 @@ const QuoteDetailPage = () => {
             <CardContent>
               <Link
                 href={`/platform/admin/logistics/shipments/${quote.shipment.id}`}
-                className="flex items-center justify-between rounded-lg border border-border-primary p-4 hover:border-border-brand transition-colors"
+                className="flex items-center justify-between rounded-lg border border-border-primary p-4 hover:border-text-primary transition-colors"
               >
                 <div>
                   <Typography variant="bodySm" className="font-mono text-text-muted">
@@ -753,7 +764,7 @@ const QuoteDetailPage = () => {
                 ))}
                 <div className="flex items-center justify-end gap-4 border-t border-border-primary pt-4">
                   <Typography variant="headingSm">Grand Total:</Typography>
-                  <Typography variant="headingMd" className="text-text-brand">
+                  <Typography variant="headingMd" className="text-text-primary">
                     {formatCurrency(quote.totalPrice, quote.currency)}
                   </Typography>
                 </div>

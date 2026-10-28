@@ -3,7 +3,6 @@
 import {
   IconAlertCircle,
   IconArrowLeft,
-  IconBuilding,
   IconCalendar,
   IconCheck,
   IconChevronDown,
@@ -47,12 +46,13 @@ import Input from '@/app/_ui/components/Input/Input';
 import MobileCard from '@/app/_ui/components/MobileCard/MobileCard';
 import MobileCardList from '@/app/_ui/components/MobileCard/MobileCardList';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 /** Statuses where partner can edit items */
 const EDITABLE_STATUSES = ['draft', 'revision_requested'];
@@ -314,6 +314,11 @@ const PrivateOrderDetailPage = () => {
 
   const handleSaveItem = () => {
     if (!editingItem) return;
+    // A cleared price field reads as 0; never save a line at no price by accident
+    if (!Number.isFinite(editingItem.pricePerCaseUsd) || editingItem.pricePerCaseUsd <= 0) {
+      toast.error('Price must be greater than 0');
+      return;
+    }
     updateItem({
       itemId: editingItem.id,
       quantity: editingItem.quantity,
@@ -396,9 +401,8 @@ const PrivateOrderDetailPage = () => {
   }
 
   // Calculate exchange rate for AED conversion (use actual rate if available, otherwise default)
-  const totalAed = Number(order.totalAed) || 0;
-  const totalUsd = Number(order.totalUsd) || 1;
-  const usdToAedRate = totalAed > 0 ? totalAed / totalUsd : DEFAULT_EXCHANGE_RATE;
+  // At the fixed peg; the stored ratio carried 3.67 on orders totalled before 28 Oct 2026
+  const usdToAedRate = USD_TO_AED;
 
   /**
    * Convert amount to selected currency
@@ -501,7 +505,7 @@ const PrivateOrderDetailPage = () => {
             tier={order.subscriptionTier}
             caseSize={order.subscriptionCaseSize}
             variant={order.subscriptionVariant}
-            clientTotalAed={order.totalAed}
+            clientTotalAed={order.totalUsd != null ? Number(order.totalUsd) * USD_TO_AED : null}
           />
         )}
 
@@ -598,7 +602,7 @@ const PrivateOrderDetailPage = () => {
                       Invoice Received - Acknowledgment Required
                     </Typography>
                     <Typography variant="bodySm" colorRole="muted">
-                      <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> has uploaded an invoice.
+                      The distributor has uploaded an invoice.
                       Please review and forward it to your client for payment.
                     </Typography>
                   </div>
@@ -744,7 +748,7 @@ const PrivateOrderDetailPage = () => {
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
                     Client payment has been confirmed.{' '}
-                    <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> will contact your client to arrange delivery.
+                    The distributor will contact your client to arrange delivery.
                   </Typography>
                   {order.clientPaidAt && (
                     <Typography variant="bodyXs" colorRole="muted" className="mt-1">
@@ -775,7 +779,7 @@ const PrivateOrderDetailPage = () => {
                     Delivery Being Scheduled
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    <strong>{order.distributor?.businessName ?? 'The distributor'}</strong> is contacting your client to arrange delivery.
+                    The distributor is contacting your client to arrange delivery.
                   </Typography>
                   {/* Show contact attempts if any */}
                   {order.deliveryContactAttempts && (order.deliveryContactAttempts as Array<{ attemptedAt: string; notes: string }>).length > 0 && (
@@ -853,8 +857,7 @@ const PrivateOrderDetailPage = () => {
                     Out for Delivery
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    Your client&apos;s order is currently being delivered by{' '}
-                    <strong>{order.distributor?.businessName ?? 'the distributor'}</strong>.
+                    Your client&apos;s order is currently being delivered by the distributor.
                   </Typography>
                   {order.outForDeliveryAt && (
                     <Typography variant="bodyXs" colorRole="muted" className="mt-1">
@@ -972,13 +975,13 @@ const PrivateOrderDetailPage = () => {
 
                       {order.deliveryPhoto && (
                         <a
-                          href={order.deliveryPhoto}
+                          href={fileHref(order.deliveryPhoto)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="group relative overflow-hidden rounded-lg border border-border-muted"
                         >
                           <Image
-                            src={order.deliveryPhoto}
+                            src={fileHref(order.deliveryPhoto)}
                             alt="Proof of delivery"
                             width={120}
                             height={80}
@@ -1028,7 +1031,7 @@ const PrivateOrderDetailPage = () => {
 
             {/* Add Item Form - ProductPicker with stock search */}
             {isAddingItem && (
-              <div className="mb-4 rounded-lg border-2 border-border-brand bg-fill-brand-muted/20 p-3">
+              <div className="mb-4 rounded-lg border-2 border-text-primary bg-text-primary-muted/20 p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <Typography variant="labelMd">Add New Item</Typography>
                   <Button variant="ghost" size="xs" onClick={() => setIsAddingItem(false)}>
@@ -1108,7 +1111,7 @@ const PrivateOrderDetailPage = () => {
 
                       if (isEditing && editingItem) {
                         return (
-                          <tr key={item.id} className="bg-fill-brand/5">
+                          <tr key={item.id} className="bg-text-primary/5">
                             <td className="px-2 py-1.5">
                               <span className="text-xs font-medium">{item.productName}</span>
                             </td>
@@ -1188,7 +1191,7 @@ const PrivateOrderDetailPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleEditItem(item)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-md bg-fill-brand/10 text-text-brand transition-colors hover:bg-fill-brand/20"
+                                  className="flex h-7 w-7 items-center justify-center rounded-md bg-text-primary/10 text-text-primary transition-colors hover:bg-text-primary/20"
                                   title="Edit item"
                                 >
                                   <Icon icon={IconEdit} size="xs" />
@@ -1325,47 +1328,6 @@ const PrivateOrderDetailPage = () => {
             </CardContent>
           </Card>
 
-          {/* Distributor Info */}
-          <Card>
-            <CardContent className="p-4">
-              <Typography variant="labelSm" colorRole="muted" className="mb-3">
-                Distributor
-              </Typography>
-              {order.distributor ? (
-                <div className="flex items-center gap-3">
-                  {order.distributor.logoUrl ? (
-                    <Image
-                      src={order.distributor.logoUrl}
-                      alt={order.distributor.businessName}
-                      width={44}
-                      height={44}
-                      className="rounded-lg object-contain"
-                    />
-                  ) : (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-fill-muted">
-                      <Icon icon={IconBuilding} size="md" colorRole="muted" />
-                    </div>
-                  )}
-                  <div>
-                    <Typography variant="bodySm" className="font-semibold">
-                      {order.distributor.businessName}
-                    </Typography>
-                    <Typography variant="bodyXs" colorRole="muted">
-                      Assigned Distributor
-                    </Typography>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 text-text-muted">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg border-2 border-dashed border-border-muted">
-                    <Icon icon={IconBuilding} size="md" colorRole="muted" />
-                  </div>
-                  <Typography variant="bodySm">Not yet assigned</Typography>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Key Dates */}
           <Card>
             <CardContent className="p-4">
@@ -1466,7 +1428,7 @@ const PrivateOrderDetailPage = () => {
             <OrderNoteComposer
               audience="partner"
               orderId={order.id}
-              distributorName={order.distributor?.businessName}
+              distributorName={order.distributor ? 'Distributor' : null}
             />
             <ActivityTimeline activities={order.activityLogs ?? []} />
           </CardContent>

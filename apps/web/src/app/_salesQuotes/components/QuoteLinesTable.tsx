@@ -9,9 +9,14 @@ import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 import type { QuoteLineDraft } from '../types';
+import LondonCheck, { type LondonMarket } from './LondonCheck';
 
 export interface QuoteLinesTableProps {
   lines: QuoteLineDraft[];
+  /** London in-bond market per LWIN18, for 75cl lines already priced */
+  london: Record<string, LondonMarket>;
+  askingLondon?: string;
+  onAskLondon: (lwin18: string) => void;
   onChange: (index: number, patch: Partial<QuoteLineDraft>) => void;
   onRemove: (index: number) => void;
 }
@@ -27,6 +32,9 @@ export interface QuoteLinesTableProps {
  */
 const QuoteLinesTable = ({
   lines,
+  london,
+  askingLondon,
+  onAskLondon,
   onChange,
   onRemove,
 }: QuoteLinesTableProps) => {
@@ -66,6 +74,13 @@ const QuoteLinesTable = ({
                     {line.busd.toFixed(2)}/btl
                   </p>
                 </Typography>
+                <LondonCheck
+                  market={london[line.lwin18]}
+                  ours={line.busd}
+                  canAsk={/^[1-8]\d{6}-?\d{4}-?\d{2}-?00750$/.test(line.lwin18)}
+                  asking={askingLondon === line.lwin18}
+                  onAsk={() => onAskLondon(line.lwin18)}
+                />
               </div>
 
               {repack ? <Badge colorRole="warning">Repack</Badge> : null}

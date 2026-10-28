@@ -1,3 +1,5 @@
+import escapeZpl from './escapeZpl';
+
 /**
  * Generate ZPL (Zebra Programming Language) code for a pallet label with QR code
  *
@@ -46,27 +48,6 @@ export interface PalletLabelData {
 }
 
 /**
- * Normalize accented characters to ASCII equivalents
- */
-const normalizeAccents = (str: string) => {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/œ/g, 'oe')
-    .replace(/Œ/g, 'OE')
-    .replace(/æ/g, 'ae')
-    .replace(/Æ/g, 'AE')
-    .replace(/ß/g, 'ss');
-};
-
-/**
- * Escape special characters for ZPL
- */
-const escapeZpl = (str: string) => {
-  return normalizeAccents(str).replace(/\^/g, ' ').replace(/~/g, ' ');
-};
-
-/**
  * Truncate string to max length with ellipsis
  */
 const truncate = (str: string, maxLen: number) => {
@@ -93,7 +74,7 @@ const formatDate = (date: Date | null | undefined) => {
 const generatePalletLabelZpl = (data: PalletLabelData) => {
   const palletCode = escapeZpl(data.palletCode);
   const ownerName = escapeZpl(truncate(data.ownerName, 30));
-  const status = data.status.toUpperCase();
+  const status = escapeZpl(data.status.toUpperCase());
   const sealedDate = formatDate(data.sealedAt);
   const locationCode = data.locationCode ? escapeZpl(data.locationCode) : '-';
 
@@ -134,7 +115,7 @@ const generatePalletLabelZpl = (data: PalletLabelData) => {
 ^FX -- Large QR Code centered at top --
 ^FO206,100
 ^BQN,2,12
-^FDMA,${data.barcode}^FS
+^FDMA,${escapeZpl(data.barcode)}^FS
 
 ^FX -- Pallet code (large, bold) --
 ^FO50,400
@@ -187,7 +168,7 @@ ${moreProductsLine}
 ^FX -- Barcode text at bottom --
 ^FO50,980
 ^A0N,20,20
-^FD${data.barcode}^FS
+^FD${escapeZpl(data.barcode)}^FS
 
 ^FX -- Scan instruction --
 ^FO50,1010

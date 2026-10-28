@@ -49,7 +49,7 @@ interface StatusFilter {
 const statusFilters: StatusFilter[] = [
   { label: 'All Quotes', value: 'all', icon: IconFileText, color: 'text-text-primary' },
   { label: 'Action Required', value: 'action_required', icon: IconAlertCircle, color: 'text-text-warning' },
-  { label: 'Processing', value: 'under_cc_review', icon: IconClock, color: 'text-text-brand' },
+  { label: 'Processing', value: 'under_cc_review', icon: IconClock, color: 'text-text-primary' },
   { label: 'Shipping', value: 'po_confirmed', icon: IconTruck, color: 'text-emerald-600 dark:text-emerald-400' },
   { label: 'Delivered', value: 'delivered', icon: IconCheck, color: 'text-text-muted' },
 ];
@@ -172,7 +172,7 @@ const QuotesList = () => {
     }
   };
 
-  const columns: ColumnDef<Quote & { createdBy?: { id: string; name: string | null; email: string } | null }>[] = [
+  const columns: ColumnDef<Quote>[] = [
     {
       accessorKey: 'name',
       header: 'Quote Name',
@@ -181,30 +181,6 @@ const QuotesList = () => {
           {row.original.name}
         </Typography>
       ),
-    },
-    {
-      accessorKey: 'createdBy',
-      header: () => <span className="hidden lg:inline">Created By</span>,
-      cell: ({ row }) => {
-        const createdBy = row.original.createdBy;
-        return (
-          <div className="hidden flex-col gap-0.5 lg:flex">
-            {createdBy?.name && (
-              <Typography variant="bodySm">{createdBy.name}</Typography>
-            )}
-            {createdBy?.email && (
-              <Typography variant="bodyXs" colorRole="muted">
-                {createdBy.email}
-              </Typography>
-            )}
-            {!createdBy?.name && (
-              <Typography variant="bodySm" colorRole="muted">
-                -
-              </Typography>
-            )}
-          </div>
-        );
-      },
     },
     {
       accessorKey: 'clientName',
@@ -431,15 +407,15 @@ const QuotesList = () => {
               onClick={() => setActiveFilter(filter.value)}
               className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-fill-brand text-text-brand-contrast shadow-md'
+                  ? 'bg-text-primary text-text-primary-contrast shadow-md'
                   : 'bg-fill-muted/50 text-text-muted hover:bg-fill-muted hover:text-text-primary dark:bg-background-secondary dark:hover:bg-background-tertiary'
               }`}
             >
-              <Icon icon={filter.icon} size="sm" className={isActive ? 'text-text-brand-contrast' : filter.color} />
+              <Icon icon={filter.icon} size="sm" className={isActive ? 'text-text-primary-contrast' : filter.color} />
               <span>{filter.label}</span>
               <span className={`rounded-full px-2 py-0.5 text-xs ${
                 isActive
-                  ? 'bg-white/20 text-text-brand-contrast'
+                  ? 'bg-white/20 text-text-primary-contrast'
                   : 'bg-fill-primary/50 text-text-muted'
               }`}>
                 {count}
@@ -479,12 +455,12 @@ const QuotesList = () => {
       ) : (
         <>
           {/* Desktop Table */}
-          <div className="hidden rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm md:block">
+          <div className="hidden rounded-lg border border-border-muted bg-surface-primary dark:bg-background-secondary shadow-sm md:block">
             <DataTable columns={columns} data={filteredQuotes} />
           </div>
 
           {/* Mobile Cards */}
-          <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted bg-white dark:bg-background-secondary shadow-sm md:hidden">
+          <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted bg-surface-primary dark:bg-background-secondary shadow-sm md:hidden">
             {filteredQuotes.map((quote) => (
               <div
                 key={quote.id}

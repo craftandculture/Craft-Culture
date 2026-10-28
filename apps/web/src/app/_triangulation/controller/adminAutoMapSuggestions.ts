@@ -66,7 +66,7 @@ interface Candidate {
 const adminAutoMapSuggestions = adminProcedure
   .input(autoMapSchema)
   .mutation(async ({ input, ctx }) => {
-    const { dryRun } = input;
+    const { dryRun, programmeId } = input;
 
     const candidates = await client<Candidate[]>`
       WITH unmapped AS (
@@ -83,7 +83,11 @@ const adminAutoMapSuggestions = adminProcedure
           )) AS "lineVintage"
         FROM tri_import_lines l
         JOIN tri_imports i ON i.id = l.import_id
+        LEFT JOIN tri_periods p ON p.id = i.period_id
         WHERE l.status = 'unmapped'
+          -- This client's queue, against this client's registry only
+          AND i.programme_id = ${programmeId}
+          AND COALESCE(p.status::text, 'open') <> 'locked'
           AND COALESCE(l.normalized_code, '') <> ''
           AND COALESCE(l.raw_description, '') <> ''
         GROUP BY l.normalized_code
@@ -110,7 +114,8 @@ const adminAutoMapSuggestions = adminProcedure
             s.id, s.w_code, s.product_name, s.vintage,
             similarity(s.product_name, u."rawDescription") AS score
           FROM tri_skus s
-          WHERE similarity(s.product_name, u."rawDescription") > 0.25
+          WHERE s.programme_id = ${programmeId}
+            AND similarity(s.product_name, u."rawDescription") > 0.25
           ORDER BY score DESC
           LIMIT 5
         ) x
@@ -123,7 +128,7 @@ const adminAutoMapSuggestions = adminProcedure
     const skus = await client<
       {
         id: string;
-        wCode: string;
+        wCode: string | null;
         productName: string;
         vintage: number | null;
         bottleSize: string | null;
@@ -133,6 +138,7 @@ const adminAutoMapSuggestions = adminProcedure
       SELECT id, w_code AS "wCode", product_name AS "productName",
              vintage, bottle_size AS "bottleSize", lwin18
       FROM tri_skus
+      WHERE programme_id = ${programmeId}
     `;
 
     const normalize = (value: string) =>
@@ -141,7 +147,8 @@ const adminAutoMapSuggestions = adminProcedure
     const identities = skus.map((sku) => ({
       sku,
       identity: wineIdentity(sku.productName, sku.vintage, sku.bottleSize),
-      keys: [normalize(sku.wCode), normalize(sku.lwin18 ?? '')].filter(
+      // w_code is NULL for every LWIN-identified client
+      keys: [normalize(sku.wCode ?? ''), normalize(sku.lwin18 ?? '')].filter(
         (key) => key.length >= 6,
       ),
     }));
@@ -201,7 +208,7 @@ const adminAutoMapSuggestions = adminProcedure
     const accepted: {
       code: string;
       description: string | null;
-      wCode: string;
+      wCode: string | null;
       score: number;
       method: 'code' | 'identity' | 'similarity';
     }[] = [];
@@ -219,7 +226,7 @@ const adminAutoMapSuggestions = adminProcedure
         accepted.push({
           code: candidate.normalizedCode,
           description: candidate.rawDescription,
-          wCode: certain.sku.wCode,
+          wCode: certain.sku.wCode ?? certain.sku.lwin18,
           score: 1,
           method: embedded ? 'code' : 'identity',
         });
@@ -247,7 +254,7 @@ const adminAutoMapSuggestions = adminProcedure
         continue;
       }
 
-      if (!bestSkuId || bestScore === null || !bestWCode) {
+      if (!bestSkuId || bestScore === null) {
         declined.push({
           code: candidate.normalizedCode,
           description: candidate.rawDescription,
@@ -324,6 +331,7 @@ const adminAutoMapSuggestions = adminProcedure
         FROM tri_imports i
         JOIN tri_import_lines l ON l.import_id = i.id
         WHERE l.status = 'unmapped'
+          AND i.programme_id = ${programmeId}
       `;
 
       for (const record of imports) {

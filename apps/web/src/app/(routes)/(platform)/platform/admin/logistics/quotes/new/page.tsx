@@ -1,12 +1,13 @@
 'use client';
 
-import { IconArrowLeft, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconPlus, IconTrash } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import pendingQuoteDraft from '@/app/_logistics/utils/pendingQuoteDraft';
 import type { PendingQuoteDraft } from '@/app/_logistics/utils/pendingQuoteDraft';
 import Button from '@/app/_ui/components/Button/Button';
@@ -210,10 +211,10 @@ const NewQuotePage = () => {
     },
   });
 
-  const totalPrice = lineItems.reduce(
-    (sum, item) => sum + (item.total || 0),
-    0,
-  );
+  // Only the lines that are saved count: a line with no description is dropped on save
+  const totalPrice = lineItems
+    .filter((item) => item.description && item.total > 0)
+    .reduce((sum, item) => sum + (item.total || 0), 0);
 
   const addLineItem = () => {
     setLineItems([
@@ -307,26 +308,23 @@ const NewQuotePage = () => {
     <div className="container mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={backHref}>
-              <Icon icon={IconArrowLeft} size="sm" />
-            </Link>
-          </Button>
-          <div>
-            <Typography variant="headingLg">New Freight Quote</Typography>
-            {shipment && (
-              <Typography variant="bodySm" colorRole="muted">
-                Linked to shipment: {shipment.shipmentNumber}
-              </Typography>
-            )}
-            {request && (
-              <Typography variant="bodySm" colorRole="muted">
-                Answering request {request.requestNumber}
-              </Typography>
-            )}
-          </div>
-        </div>
+        <AdminPageHeader
+          title="New Freight Quote"
+          crumbs={[
+            { label: 'Logistics', href: '/platform/admin/logistics' },
+            requestId
+              ? { label: request?.requestNumber ?? 'Quote request', href: backHref }
+              : { label: 'Freight quotes', href: backHref },
+          ]}
+          description={
+            shipment || request ? (
+              <>
+                {shipment && <span className="block">Linked to shipment: {shipment.shipmentNumber}</span>}
+                {request && <span className="block">Answering request {request.requestNumber}</span>}
+              </>
+            ) : undefined
+          }
+        />
 
         {/* The request being answered, so the cargo is in view while pricing */}
         {request && (

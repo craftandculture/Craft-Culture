@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -25,6 +26,7 @@ import DropdownMenuTrigger from '@/app/_ui/components/DropdownMenu/DropdownMenuT
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
@@ -57,9 +59,20 @@ const PrivateOrdersList = () => {
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
   const [currency, setCurrency] = useState<Currency>('USD');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const searchParams = useSearchParams();
 
-  const { data, isLoading } = useQuery({
+  /*
+    The dashboard's pipeline links here with ?status=<stage>. The list was
+    ignoring it and opening on All, so every tile showed every order.
+  */
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
+    const stage = searchParams.get('status');
+    if (stage === 'draft' || stage === 'pending' || stage === 'completed') return stage;
+    if (stage === 'verification' || stage === 'payment' || stage === 'fulfillment') return 'active';
+    return 'all';
+  });
+
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['privateClientOrders.getMany', { limit: 20, cursor, search: search || undefined }],
     queryFn: () =>
       trpcClient.privateClientOrders.getMany.query({
@@ -77,13 +90,17 @@ const PrivateOrdersList = () => {
   const filterByStatus = (orders: OrderWithDistributor[], filter: StatusFilter) => {
     if (filter === 'all') return orders;
 
-    const statusCategories: Record<StatusFilter, string[]> = {
-      all: [],
+    const statusCategories: Record<Exclude<StatusFilter, 'all' | 'active'>, string[]> = {
       draft: ['draft'],
       pending: ['submitted', 'under_cc_review', 'revision_requested'],
-      active: ['cc_approved', 'awaiting_client_payment', 'client_paid', 'awaiting_distributor_payment', 'distributor_paid', 'stock_in_transit', 'with_distributor', 'out_for_delivery'],
       completed: ['delivered', 'cancelled'],
     };
+
+    // In progress is everything still live, so no status can fall between the tabs
+    if (filter === 'active') {
+      const notLive = Object.values(statusCategories).flat();
+      return orders.filter((order) => !notLive.includes(order.status));
+    }
 
     return orders.filter((order) => statusCategories[filter].includes(order.status));
   };
@@ -91,7 +108,7 @@ const PrivateOrdersList = () => {
   const orders = filterByStatus(allOrders, statusFilter);
 
   const formatCurrencyValue = (order: OrderWithDistributor) => {
-    const amount = currency === 'USD' ? (order.totalUsd ?? 0) : (order.totalAed ?? 0);
+    const amount = currency === 'USD' ? (order.totalUsd ?? 0) : (order.totalUsd ?? 0) * USD_TO_AED;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
@@ -129,7 +146,7 @@ const PrivateOrdersList = () => {
               </span>
             )}
             {formatSubscriptionBox(row.original) && (
-              <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+              <span className="rounded-full bg-text-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-text-primary">
                 {formatSubscriptionBox(row.original)}
               </span>
             )}
@@ -209,9 +226,9 @@ const PrivateOrdersList = () => {
               key={filter.value}
               type="button"
               onClick={() => setStatusFilter(filter.value)}
-              className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
+              className={`flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-fill-brand text-white'
+                  ? 'bg-text-primary text-surface-primary'
                   : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
               }`}
             >
@@ -289,6 +306,15 @@ const PrivateOrdersList = () => {
             Loading orders...
           </Typography>
         </div>
+      ) : isError && !data ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border-muted bg-surface-secondary/30 py-12">
+          <Typography variant="bodySm" className="font-medium">
+            Your orders could not be loaded
+          </Typography>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Try again
+          </Button>
+        </div>
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-border-muted bg-surface-secondary/30 py-12">
           <Icon icon={IconFileText} size="lg" className="text-text-muted" />
@@ -339,7 +365,7 @@ const PrivateOrdersList = () => {
                     </span>
                   )}
                   {formatSubscriptionBox(order) && (
-                    <span className="rounded-full bg-fill-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-text-brand">
+                    <span className="rounded-full bg-text-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-text-primary">
                       {formatSubscriptionBox(order)}
                     </span>
                   )}

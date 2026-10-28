@@ -169,9 +169,9 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
                 step.status === 'completed'
-                  ? 'bg-fill-brand text-text-brand-contrast'
+                  ? 'bg-text-primary text-text-primary-contrast'
                   : step.status === 'current'
-                    ? 'bg-fill-brand/20 text-text-brand ring-2 ring-border-brand'
+                    ? 'bg-text-primary/20 text-text-primary ring-2 ring-text-primary'
                     : 'bg-fill-muted text-text-muted'
               }`}
             >
@@ -184,7 +184,7 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
             {index < steps.length - 1 && (
               <div
                 className={`h-0.5 w-8 transition-all ${
-                  step.status === 'completed' ? 'bg-fill-brand' : 'bg-border-muted'
+                  step.status === 'completed' ? 'bg-text-primary' : 'bg-border-muted'
                 }`}
               />
             )}
@@ -200,7 +200,7 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
         {/* Progress Line */}
         <div className="absolute left-6 top-6 h-full w-0.5 bg-border-muted" />
         <div
-          className="absolute left-6 top-6 w-0.5 bg-fill-brand transition-all duration-500"
+          className="absolute left-6 top-6 w-0.5 bg-text-primary transition-all duration-500"
           style={{
             height: `${(steps.findIndex((s) => s.status === 'current') / (steps.length - 1)) * 100}%`,
           }}
@@ -214,9 +214,9 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
               <div
                 className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border-4 border-white dark:border-background-primary transition-all ${
                   step.status === 'completed'
-                    ? 'bg-fill-brand text-text-brand-contrast shadow-md'
+                    ? 'bg-text-primary text-text-primary-contrast shadow-md'
                     : step.status === 'current'
-                      ? 'bg-fill-brand/10 text-text-brand ring-2 ring-border-brand shadow-md'
+                      ? 'bg-text-primary/10 text-text-primary ring-2 ring-text-primary shadow-md'
                       : 'bg-fill-muted text-text-muted'
                 }`}
               >
@@ -233,7 +233,7 @@ const QuoteWorkflowStepper = ({ quote, variant = 'default' }: QuoteWorkflowStepp
                   variant="bodySm"
                   className={`font-semibold ${
                     step.status === 'current'
-                      ? 'text-text-brand'
+                      ? 'text-text-primary'
                       : step.status === 'completed'
                         ? 'text-text-primary'
                         : 'text-text-muted'

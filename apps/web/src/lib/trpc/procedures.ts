@@ -1,10 +1,12 @@
 import crypto from 'node:crypto';
 
 import { TRPCError } from '@trpc/server';
+import { cookies, headers } from 'next/headers';
 
 import { STOCK_OWNER_PARTNER_TYPES } from '@/app/_auth/constants/accessProfiles';
 import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
+import { WMS_DEVICE_COOKIE, WMS_DEVICE_HEADER } from '@/lib/wms/deviceTokenCookie';
 import serverConfig from '@/server.config';
 
 import { t } from './trpc';
@@ -64,13 +66,17 @@ export const approvedProcedure = protectedProcedure.use(({ ctx, next }) => {
 /**
  * Admin procedure
  *
- * Only accessible to users with admin role.
- * Verifies the user is authenticated and has admin role.
+ * An admin on the C&C team: admin role AND a C&C email address. Role alone is
+ * not enough — an admin login handed to a partner would otherwise reach every
+ * client's data, costs and the user screens, where it could change a staff
+ * member's email and sign in as them.
  *
  * @see https://trpc.io/docs/procedures
  */
 export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  ctx.accessControl(() => ctx.user.role === 'admin');
+  ctx.accessControl(
+    () => ctx.user.role === 'admin' && isTeamMember(ctx.user),
+  );
 
   return await next({ ctx });
 });
@@ -78,14 +84,14 @@ export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 /**
  * WMS Operator procedure
  *
- * Accessible to users with admin or wms_operator role.
- * Use for WMS, Stock Explorer, and PCO endpoints that warehouse operators need.
+ * C&C staff with the admin or wms_operator role (a C&C email address is
+ * required, as for adminProcedure). Use for WMS, Stock Explorer, and PCO
+ * endpoints that warehouse operators need. Anything that changes prices,
+ * ownership or deletes stock belongs on adminProcedure instead.
  */
 export const wmsOperatorProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
-    ctx.accessControl(
-      () => ctx.user.role === 'admin' || ctx.user.role === 'wms_operator',
-    );
+    ctx.accessControl(() => isTeamMember(ctx.user));
 
     return await next({ ctx });
   },
@@ -175,6 +181,20 @@ export const partnerTaskProcedure = approvedProcedure.use(
       }
     }
 
+    // A wine partner's view-only colleague cannot tick or note a job either
+    if (partner.type === 'wine_partner' && type === 'mutation') {
+      const { default: getPartnerMemberRole } = await import(
+        '@/app/_partners/data/getPartnerMemberRole'
+      );
+      if ((await getPartnerMemberRole(partner.id, ctx.user.id)) === 'viewer') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            'You have view-only access to this account. Ask its owner to change your access.',
+        });
+      }
+    }
+
     return await next({
       ctx: { ...ctx, partner, partnerId: partner.id },
     });
@@ -193,7 +213,7 @@ export const partnerTaskProcedure = approvedProcedure.use(
  * Injects the partnerId into the context for data isolation.
  */
 export const winePartnerProcedure = approvedProcedure.use(
-  async ({ ctx, next }) => {
+  async ({ ctx, next, type }) => {
     const { default: resolvePartnerForUser } = await import(
       '@/app/_partners/data/resolvePartnerForUser'
     );
@@ -219,8 +239,25 @@ export const winePartnerProcedure = approvedProcedure.use(
       });
     }
 
+    /*
+      A partner can give a colleague view-only access. Held here, once, so a
+      mutation added later is covered without anyone remembering to gate it.
+    */
+    const { default: getPartnerMemberRole } = await import(
+      '@/app/_partners/data/getPartnerMemberRole'
+    );
+    const partnerRole = await getPartnerMemberRole(partner.id, ctx.user.id);
+
+    if (type === 'mutation' && partnerRole === 'viewer') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'You have view-only access to this account. Ask its owner to change your access.',
+      });
+    }
+
     return await next({
-      ctx: { ...ctx, partner, partnerId: partner.id },
+      ctx: { ...ctx, partner, partnerId: partner.id, partnerRole },
     });
   },
 );
@@ -237,7 +274,7 @@ export const winePartnerProcedure = approvedProcedure.use(
  * Injects the partnerId into the context for data isolation.
  */
 export const distributorProcedure = approvedProcedure.use(
-  async ({ ctx, next }) => {
+  async ({ ctx, next, type }) => {
     const { default: resolvePartnerForUser } = await import(
       '@/app/_partners/data/resolvePartnerForUser'
     );
@@ -260,6 +297,20 @@ export const distributorProcedure = approvedProcedure.use(
       throw new TRPCError({
         code: 'FORBIDDEN',
         message: 'Your distributor account is not active',
+      });
+    }
+
+    // A view-only colleague may look but not act, as on the wine-partner side
+    const { default: getPartnerMemberRole } = await import(
+      '@/app/_partners/data/getPartnerMemberRole'
+    );
+    const partnerRole = await getPartnerMemberRole(partner.id, ctx.user.id);
+
+    if (type === 'mutation' && partnerRole === 'viewer') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'You have view-only access to this account. Ask its owner to change your access.',
       });
     }
 
@@ -333,6 +384,20 @@ export const stockOwnerProcedure = approvedProcedure.use(
         ? await getCellarRole(partner.id, ctx.user.id)
         : ('holder' as const);
 
+    // A wine partner's view-only colleague, the same rule as winePartnerProcedure
+    if (partner.type === 'wine_partner' && type === 'mutation') {
+      const { default: getPartnerMemberRole } = await import(
+        '@/app/_partners/data/getPartnerMemberRole'
+      );
+      if ((await getPartnerMemberRole(partner.id, ctx.user.id)) === 'viewer') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            'You have view-only access to this account. Ask its owner to change your access.',
+        });
+      }
+    }
+
     if (cellarRole === 'revoked') {
       throw new TRPCError({
         code: 'FORBIDDEN',
@@ -389,6 +454,28 @@ export const cellarHolderProcedure = stockOwnerProcedure.use(
       throw new TRPCError({
         code: 'FORBIDDEN',
         message: 'Only the holder of this private cellar can do this.',
+      });
+    }
+
+    return await next();
+  },
+);
+
+/**
+ * Private collector procedure
+ *
+ * Member-only features of the Private Cellar — sourcing requests, allocations
+ * offered to members first, bringing wine into the cellar. Built on
+ * stockOwnerProcedure, so the cellar role rules still apply, but a trade wine
+ * partner (also a stock owner) is refused: those features carry member
+ * pricing and are not theirs to use.
+ */
+export const collectorProcedure = stockOwnerProcedure.use(
+  async ({ ctx, next }) => {
+    if (ctx.partner.type !== 'private_collector') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'This is available to Private Cellar members only.',
       });
     }
 
@@ -494,8 +581,8 @@ export const supplierProcedure = approvedProcedure.use(
  * For warehouse devices (TC27, Enterprise Browser) that authenticate via
  * a pre-shared device token instead of user sessions.
  *
- * The device token is passed as an input parameter and validated against
- * the WMS_DEVICE_TOKEN environment variable.
+ * The device token is sent as a header or cookie and validated against the
+ * WMS_DEVICE_TOKEN environment variable.
  */
 /**
  * Validates a device token against the expected WMS device token.
@@ -529,7 +616,19 @@ export const validateDeviceToken = (deviceToken: string | undefined) => {
 };
 
 /**
- * Device procedure - uses publicProcedure as base.
- * Token validation must be done in the query handler using validateDeviceToken().
+ * Device procedure
+ *
+ * Fails closed: every call must present the device token, either in the
+ * `x-device-token` header or the httpOnly cookie middleware sets when a
+ * device opens its WMS link. Tokens in the request input are not accepted.
  */
-export const deviceProcedure = publicProcedure;
+export const deviceProcedure = publicProcedure.use(async ({ next }) => {
+  const [headerList, cookieStore] = await Promise.all([headers(), cookies()]);
+  const presented =
+    headerList.get(WMS_DEVICE_HEADER) ??
+    cookieStore.get(WMS_DEVICE_COOKIE)?.value;
+
+  validateDeviceToken(presented ?? undefined);
+
+  return next();
+});

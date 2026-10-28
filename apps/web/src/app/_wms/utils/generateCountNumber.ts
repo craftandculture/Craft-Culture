@@ -1,36 +1,21 @@
-import { desc, like } from 'drizzle-orm';
-
-import db from '@/database/client';
-import { wmsCycleCounts } from '@/database/schema';
+import nextDocumentNumber, { type DbExecutor } from './nextDocumentNumber';
 
 /**
- * Generate a unique count number for WMS cycle counts
+ * Generate the next cycle count number (CC-YYYY-NNNN)
+ *
+ * Pass the transaction the row is inserted in, so numbers taken earlier in the
+ * same transaction are seen. Collision-free via the wms_count_number_seq sequence.
  *
  * @example
- *   await generateCountNumber(); // returns 'CC-2026-0001'
- *
- * @returns The generated count number in format CC-YYYY-NNNN
+ *   const number = await generateCountNumber(tx); // "CC-2026-0042"
  */
-const generateCountNumber = async () => {
-  const year = new Date().getFullYear();
-  const prefix = `CC-${year}-`;
-
-  const result = await db
-    .select({ countNumber: wmsCycleCounts.countNumber })
-    .from(wmsCycleCounts)
-    .where(like(wmsCycleCounts.countNumber, `${prefix}%`))
-    .orderBy(desc(wmsCycleCounts.countNumber))
-    .limit(1);
-
-  let nextSequence = 1;
-
-  if (result.length > 0 && result[0]) {
-    const lastNumber = result[0].countNumber;
-    const lastSequence = parseInt(lastNumber.replace(prefix, ''), 10);
-    nextSequence = lastSequence + 1;
-  }
-
-  return `${prefix}${nextSequence.toString().padStart(4, '0')}`;
-};
+const generateCountNumber = async (executor?: DbExecutor) =>
+  nextDocumentNumber({
+    executor,
+    code: 'CC',
+    table: 'wms_cycle_counts',
+    column: 'count_number',
+    sequence: 'wms_count_number_seq',
+  });
 
 export default generateCountNumber;

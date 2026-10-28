@@ -71,7 +71,7 @@ const adminCreatePallet = wmsOperatorProcedure
         palletCode,
         barcode,
         ownerId,
-        ownerName: owner.businessName,
+        ownerName: owner.name,
         totalCases: 0,
         storageType: storageType || 'customer_storage',
         status: 'active',

@@ -2,7 +2,6 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import {
-  IconArrowLeft,
   IconCheck,
   IconCloudUpload,
   IconDownload,
@@ -16,12 +15,12 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import CustomerPoStatusBadge from '@/app/_source/components/CustomerPoStatusBadge';
 import ProfitIndicator from '@/app/_source/components/ProfitIndicator';
 import Button from '@/app/_ui/components/Button/Button';
@@ -285,28 +284,25 @@ const CustomerPoDetailPage = () => {
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <Link
-              href="/platform/admin/source/customer-pos"
-              className="inline-flex items-center gap-1 text-text-muted hover:text-text-primary mb-4"
-            >
-              <IconArrowLeft className="h-4 w-4" />
-              <Typography variant="bodySm">Back to Customer POs</Typography>
-            </Link>
-            <div className="flex items-center gap-3 mb-2">
-              <Typography variant="headingLg">{customerPo.ccPoNumber}</Typography>
+        <AdminPageHeader
+          title={customerPo.ccPoNumber}
+          crumbs={[
+            { label: 'Source', href: '/platform/admin/source' },
+            { label: 'Customer POs', href: '/platform/admin/source/customer-pos' },
+          ]}
+          description={
+            <span className="inline-flex flex-wrap items-center gap-2">
               <CustomerPoStatusBadge status={customerPo.status} />
-            </div>
-            <Typography variant="bodyMd" colorRole="muted">
-              {customerPo.customerCompany || customerPo.customerName}
-              {' • Customer PO: '}
-              {customerPo.poNumber}
-              {customerPo.rfq?.rfqNumber && ` • Linked RFQ: ${customerPo.rfq.rfqNumber}`}
-            </Typography>
-          </div>
-          <div className="flex items-center gap-2">
+              <span>
+                {customerPo.customerCompany || customerPo.customerName}
+                {' • Customer PO: '}
+                {customerPo.poNumber}
+                {customerPo.rfq?.rfqNumber && ` • Linked RFQ: ${customerPo.rfq.rfqNumber}`}
+              </span>
+            </span>
+          }
+          actions={
+            <>
             {canAutoMatch && (
               <Button
                 variant="outline"
@@ -331,15 +327,16 @@ const CustomerPoDetailPage = () => {
                 </ButtonContent>
               </Button>
             )}
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {/* Upload Section - Show when no items */}
         {showUploadSection && (
-          <Card className="border-border-brand border-2 border-dashed">
+          <Card className="border-text-primary border-2 border-dashed">
             <CardContent className="p-6">
               <div className="text-center mb-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-fill-brand/10 text-text-brand mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-text-primary/10 text-text-primary mb-4">
                   <IconSparkles className="h-4 w-4" />
                   <Typography variant="bodySm" className="font-medium">
                     AI-Powered Parsing
@@ -358,10 +355,10 @@ const CustomerPoDetailPage = () => {
                 {...getRootProps()}
                 className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
                   isDragActive
-                    ? 'border-border-brand bg-fill-brand/5'
+                    ? 'border-text-primary bg-text-primary/5'
                     : isUploading || isParsing
                       ? 'cursor-wait border-border-muted bg-fill-muted/50'
-                      : 'cursor-pointer border-border-muted hover:border-border-brand hover:bg-fill-muted/50'
+                      : 'cursor-pointer border-border-muted hover:border-text-primary hover:bg-fill-muted/50'
                 }`}
               >
                 <input {...getInputProps()} />
@@ -554,7 +551,7 @@ const CustomerPoDetailPage = () => {
                           type="checkbox"
                           checked={selectedItems.size === customerPo.items.length && customerPo.items.length > 0}
                           onChange={toggleSelectAll}
-                          className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                          className="h-4 w-4 rounded border-border-primary text-text-primary focus:ring-text-primary"
                         />
                       </th>
                       <th className="text-left p-3 font-medium text-text-muted">Product</th>
@@ -583,14 +580,14 @@ const CustomerPoDetailPage = () => {
                           key={item.id}
                           className={`border-b border-border-primary hover:bg-fill-secondary/50 ${
                             item.isLosingItem ? 'bg-fill-danger/5' : ''
-                          } ${selectedItems.has(item.id) ? 'bg-fill-brand/5' : ''}`}
+                          } ${selectedItems.has(item.id) ? 'bg-text-primary/5' : ''}`}
                         >
                           <td className="p-3">
                             <input
                               type="checkbox"
                               checked={selectedItems.has(item.id)}
                               onChange={() => toggleItemSelection(item.id)}
-                              className="h-4 w-4 rounded border-border-primary text-fill-brand focus:ring-fill-brand"
+                              className="h-4 w-4 rounded border-border-primary text-text-primary focus:ring-text-primary"
                             />
                           </td>
                           <td className="p-3">
@@ -657,7 +654,7 @@ const CustomerPoDetailPage = () => {
                               <span className="text-text-warning text-xs">Unmatched</span>
                             )}
                             {item.status === 'ordered' && (
-                              <span className="text-text-brand text-xs">Ordered</span>
+                              <span className="text-text-primary text-xs">Ordered</span>
                             )}
                             {item.status === 'confirmed' && (
                               <IconCheck className="h-4 w-4 text-text-success mx-auto" />
@@ -694,7 +691,7 @@ const CustomerPoDetailPage = () => {
                         <span
                           className={`text-xs px-2 py-0.5 rounded ${
                             order.status === 'sent'
-                              ? 'bg-fill-brand/10 text-text-brand'
+                              ? 'bg-text-primary/10 text-text-primary'
                               : order.status === 'confirmed'
                                 ? 'bg-fill-success/10 text-text-success'
                                 : order.status === 'draft'
@@ -780,7 +777,7 @@ const CustomerPoDetailPage = () => {
                         })
                       }
                       disabled={isChangingSupplier}
-                      className="w-full text-left p-3 rounded-lg border border-border-primary hover:border-border-brand hover:bg-fill-secondary/50 transition-colors disabled:opacity-50"
+                      className="w-full text-left p-3 rounded-lg border border-border-primary hover:border-text-primary hover:bg-fill-secondary/50 transition-colors disabled:opacity-50"
                     >
                       <div className="flex items-center justify-between">
                         <Typography variant="bodySm" className="font-medium">

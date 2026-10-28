@@ -153,7 +153,7 @@ const CreateLocationsPage = () => {
                     value={aisles}
                     onChange={(e) => setAisles(e.target.value)}
                     placeholder="A, B, C"
-                    className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-text-primary"
                   />
                   <p className="mt-1 text-xs text-text-muted">
                     e.g., A or A, B, C for multiple aisles
@@ -168,7 +168,7 @@ const CreateLocationsPage = () => {
                       value={bayStart}
                       onChange={(e) => setBayStart(e.target.value)}
                       placeholder="01"
-                      className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary font-mono"
+                      className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-text-primary font-mono"
                     />
                   </div>
                   <div>
@@ -178,7 +178,7 @@ const CreateLocationsPage = () => {
                       value={bayEnd}
                       onChange={(e) => setBayEnd(e.target.value)}
                       placeholder="03"
-                      className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary font-mono"
+                      className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-text-primary font-mono"
                     />
                   </div>
                 </div>
@@ -191,7 +191,7 @@ const CreateLocationsPage = () => {
                       value={levelStart}
                       onChange={(e) => setLevelStart(e.target.value)}
                       placeholder="00"
-                      className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary font-mono"
+                      className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-text-primary font-mono"
                     />
                     <p className="mt-1 text-xs text-text-muted">00 = floor level</p>
                   </div>
@@ -202,7 +202,7 @@ const CreateLocationsPage = () => {
                       value={levelEnd}
                       onChange={(e) => setLevelEnd(e.target.value)}
                       placeholder="03"
-                      className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary font-mono"
+                      className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-text-primary font-mono"
                     />
                   </div>
                 </div>
@@ -216,7 +216,7 @@ const CreateLocationsPage = () => {
                     value={forkliftFromLevel}
                     onChange={(e) => setForkliftFromLevel(e.target.value)}
                     placeholder="01"
-                    className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary font-mono"
+                    className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-text-primary font-mono"
                   />
                   <p className="mt-1 text-xs text-text-muted">
                     Levels at or above this will be marked as requiring forklift
@@ -306,7 +306,7 @@ const CreateLocationsPage = () => {
                     value={specialName}
                     onChange={(e) => setSpecialName(e.target.value)}
                     placeholder="e.g., RECEIVING, SHIPPING, STAGING"
-                    className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-text-primary"
                   />
                 </div>
 
@@ -317,7 +317,7 @@ const CreateLocationsPage = () => {
                     onChange={(e) =>
                       setSpecialType(e.target.value as 'receiving' | 'shipping' | 'floor')
                     }
-                    className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    className="w-full px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-text-primary"
                   >
                     <option value="receiving">Receiving</option>
                     <option value="shipping">Shipping</option>

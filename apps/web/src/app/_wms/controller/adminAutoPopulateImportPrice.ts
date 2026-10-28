@@ -6,7 +6,7 @@ import {
   logisticsShipmentItems,
   wmsStock,
 } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { autoPopulateImportPriceSchema } from '../schemas/pricingSchema';
 import writeProductPricing from '../utils/writeProductPricing';
@@ -19,7 +19,7 @@ import writeProductPricing from '../utils/writeProductPricing';
  *
  * @param lwin18 - The product LWIN18 identifier
  */
-const adminAutoPopulateImportPrice = wmsOperatorProcedure
+const adminAutoPopulateImportPrice = adminProcedure
   .input(autoPopulateImportPriceSchema)
   .mutation(async ({ input, ctx }) => {
     const { lwin18 } = input;

@@ -8,6 +8,7 @@ import {
   privateClientOrderItems,
   privateClientOrders,
 } from '@/database/schema';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { DISTRIBUTOR_SKU_LOCKED_STATUSES, PCO_STAGES } from '../constants';
@@ -52,7 +53,7 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
       status: privateClientOrders.status,
       count: sql<number>`count(*)`,
       valueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-      valueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+      valueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
       // Time since each order last changed: how long work has sat in a stage
       oldestUpdatedAt: sql<string | null>`min(${privateClientOrders.updatedAt})`,
       idle: sql<number>`count(*) filter (where ${privateClientOrders.updatedAt} < now() - interval '7 days')`,
@@ -67,7 +68,7 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
       totalOrders: sql<number>`count(*)`,
       totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
       totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
     })
     .from(privateClientOrders)
     .where(inArray(privateClientOrders.status, activeStatuses));
@@ -78,7 +79,7 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
       totalOrders: sql<number>`count(*)`,
       totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
       totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
     })
     .from(privateClientOrders)
     .where(
@@ -123,7 +124,7 @@ const adminDashboard = wmsOperatorProcedure.query(async () => {
       activeCount: sql<number>`sum(case when ${privateClientOrders.status} not in ('draft', 'cancelled', 'delivered') then 1 else 0 end)`,
       totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
       totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
     })
     .from(privateClientOrders)
     .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))

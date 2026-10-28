@@ -200,7 +200,7 @@ const LocationDetailPage = () => {
           ) : (
             <div className="space-y-3">
               {data.stock.map((item) => (
-                <Card key={item.id} className="hover:border-border-brand">
+                <Card key={item.id} className="hover:border-text-primary">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex-1">

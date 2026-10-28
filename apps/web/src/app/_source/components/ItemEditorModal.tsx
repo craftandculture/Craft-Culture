@@ -227,7 +227,7 @@ const ItemEditorModal = ({
               {/* LWIN Row */}
               {lwin18 && (
                 <div className="mt-3 flex items-center gap-2">
-                  <div className="flex items-center gap-2 bg-white dark:bg-slate-950 rounded-lg px-3 py-1.5 border border-border-muted">
+                  <div className="flex items-center gap-2 bg-surface-primary dark:bg-slate-950 rounded-lg px-3 py-1.5 border border-border-muted">
                     <span className="text-xs text-text-muted font-medium">LWIN-18</span>
                     <span className="font-mono text-sm text-text-primary tracking-wide">
                       {lwin18}

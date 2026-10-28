@@ -1,3 +1,6 @@
+import { TRPCError } from '@trpc/server';
+
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import {
   adminProcedure,
   approvedProcedure,
@@ -5,8 +8,10 @@ import {
 } from '@/lib/trpc/procedures';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+
 import activityLogCreate from './controllers/activityLogCreate';
 import activityLogsGetManyController from './controllers/activityLogsGetMany';
+import adminMoveFilesToPrivate from './controllers/adminMoveFilesToPrivate';
 import localInventorySheetUpdate from './controllers/localInventorySheetUpdate';
 import settingsGetController from './controllers/settingsGetController';
 import settingsUpdateController from './controllers/settingsUpdateController';
@@ -43,15 +48,34 @@ const userActivityLogsRouter = createTRPCRouter({
   }),
 });
 
+/** Settings any approved account may read (shown on product and quote screens) */
+const PUBLIC_SETTING_KEYS = new Set(['leadTimeMin', 'leadTimeMax']);
+
+/**
+ * Settings the generic update endpoint may write. Everything else (member
+ * email mode, What's New, the UAE arrival rate card, sheet sync state) is
+ * owned by a dedicated controller with its own checks and must go through it.
+ */
+const EDITABLE_SETTING_KEYS = new Set(['leadTimeMin', 'leadTimeMax']);
+
 const settingsRouter = createTRPCRouter({
   get: approvedProcedure
     .input(settingsGetInputSchema)
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      if (!PUBLIC_SETTING_KEYS.has(input.key) && !isTeamMember(ctx.user)) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
       return await settingsGetController(input);
     }),
   update: adminProcedure
     .input(settingsUpdateInputSchema)
     .mutation(async ({ input }) => {
+      if (!EDITABLE_SETTING_KEYS.has(input.key)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This setting is managed from its own screen.',
+        });
+      }
       return await settingsUpdateController(input);
     }),
 });
@@ -85,6 +109,7 @@ const adminRouter = createTRPCRouter({
   userActivityLogs: userActivityLogsRouter,
   settings: settingsRouter,
   localInventorySheet: localInventorySheetRouter,
+  moveFilesToPrivate: adminMoveFilesToPrivate,
 });
 
 export default adminRouter;

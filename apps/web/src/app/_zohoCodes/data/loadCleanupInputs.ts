@@ -43,10 +43,25 @@ const fetchAllZohoItems = async () => {
 };
 
 /**
+ * Draft documents already read, by id, with the edit time they were read at
+ *
+ * Kept for the life of the server instance, so opening the plan again only
+ * re-reads drafts edited since; an unchanged draft costs no Zoho call.
+ */
+const draftCache = new Map<string, { modified: string; number: string; itemIds: string[] }>();
+
+/** Gap between Zoho detail calls, keeping well under its ~100 calls a minute */
+const ZOHO_CALL_GAP_MS = 650;
+
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
  * Items on draft sales orders and draft invoices, read live
  *
  * Drafts are never synced, and an inactive item on a draft stops it being
- * sent or converted, so they are read from Zoho one by one.
+ * sent or converted, so they are read from Zoho. Each draft is read once and
+ * re-read only when Zoho reports it edited since, and the reads are spaced out
+ * so a long list of drafts does not trip Zoho's rate limit.
  */
 const fetchDraftItemIds = async () => {
   const ids = new Map<string, string[]>();
@@ -54,17 +69,34 @@ const fetchDraftItemIds = async () => {
     listSalesOrders({ status: 'draft', perPage: 200 }),
     listInvoices({ status: 'draft', perPage: 200 }),
   ]);
-  const loaders = [
-    ...(sos.salesOrders ?? []).map((s) => () => getSalesOrder(s.salesorder_id)),
-    ...(invs.invoices ?? []).map((i) => () => getInvoice(i.invoice_id)),
+  const drafts = [
+    ...(sos.salesOrders ?? []).map((s) => ({
+      id: `so:${s.salesorder_id}`,
+      modified: s.last_modified_time ?? '',
+      load: () => getSalesOrder(s.salesorder_id),
+    })),
+    ...(invs.invoices ?? []).map((i) => ({
+      id: `inv:${i.invoice_id}`,
+      modified: i.last_modified_time ?? '',
+      load: () => getInvoice(i.invoice_id),
+    })),
   ];
-  // One at a time: Zoho rate-limits bursts
-  for (const load of loaders) {
-    const doc = await load();
-    const number = `${'salesorder_number' in doc ? doc.salesorder_number : doc.invoice_number} (draft)`;
-    for (const line of doc.line_items ?? []) {
-      if (line.item_id) ids.set(line.item_id, [...(ids.get(line.item_id) ?? []), number]);
+
+  let calls = 0;
+  for (const draft of drafts) {
+    let read = draftCache.get(draft.id);
+    if (!read || !draft.modified || read.modified !== draft.modified) {
+      if (calls > 0) await pause(ZOHO_CALL_GAP_MS);
+      calls += 1;
+      const doc = await draft.load();
+      read = {
+        modified: draft.modified,
+        number: `${'salesorder_number' in doc ? doc.salesorder_number : doc.invoice_number} (draft)`,
+        itemIds: (doc.line_items ?? []).map((line) => line.item_id).filter((id): id is string => Boolean(id)),
+      };
+      if (draft.modified) draftCache.set(draft.id, read);
     }
+    for (const itemId of read.itemIds) ids.set(itemId, [...(ids.get(itemId) ?? []), read.number]);
   }
   return ids;
 };

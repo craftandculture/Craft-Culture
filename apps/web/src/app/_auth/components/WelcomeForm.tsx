@@ -22,6 +22,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useZodForm from '@/app/_ui/hooks/useZodForm';
 import useTRPC from '@/lib/trpc/browser';
 
+import { resolveAccessProfile } from '../constants/accessProfiles';
 import customerTypeOptions from '../constants/customerTypeOptions';
 import type { CustomerTypeValue } from '../constants/customerTypeOptions';
 import { UpdateUserSchema } from '../schemas/updateUserSchema';
@@ -59,7 +60,7 @@ const WelcomeForm = () => {
     An account the admin has already set up does not get asked what it is.
 
     The role list writes customerType, and a private collector shares
-    `private_clients` with a wine partner — so the question cannot even express
+    `private_clients` with a wine partner, so the question cannot even express
     the difference, and answering it wrongly (Distributor, say) would strip the
     access an admin had just granted. Where a partner is already linked, the
     only things left to collect are a name and the terms.
@@ -71,6 +72,19 @@ const WelcomeForm = () => {
     for the answer rather than guessing at it.
   */
   const isProvisioned = Boolean(me?.partner);
+
+  /*
+    A private collector is never asked to pick a trade role, and is never told
+    the platform is a pricing and quotation tool: neither is true for them.
+  */
+  const isCollector =
+    !!me &&
+    resolveAccessProfile({
+      role: me.role,
+      customerType: me.customerType,
+      partnerType: me.partner?.type,
+    }).kind === 'collector';
+  const asksRole = !isProvisioned && !isCollector;
 
   const { mutateAsync: updateUser } = useMutation(
     trpc.users.update.mutationOptions({
@@ -89,7 +103,7 @@ const WelcomeForm = () => {
       toast.error('Please accept the Terms of Use to continue');
       return;
     }
-    if (!isProvisioned && !values.customerType) {
+    if (asksRole && !values.customerType) {
       toast.error('Please select your role');
       return;
     }
@@ -154,8 +168,8 @@ const WelcomeForm = () => {
             </FormFieldContent>
           </FormField>
 
-          {/* Role Selection — only where the admin has not already set one */}
-          {!isProvisioned && (
+          {/* Role selection, only where the admin has not already set one */}
+          {asksRole && (
             <FormField>
               <FormFieldLabel asChild>
                 <label>Select your role</label>
@@ -176,14 +190,14 @@ const WelcomeForm = () => {
                             disabled={isSubmitting || isRouting}
                             className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${
                               isSelected
-                                ? 'border-fill-brand bg-fill-brand/5'
+                                ? 'border-text-primary bg-text-primary/5'
                                 : 'border-border-secondary hover:border-border-primary hover:bg-fill-secondary/50'
                             } ${isSubmitting || isRouting ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                           >
                             <div
                               className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                                 isSelected
-                                  ? 'border-fill-brand bg-fill-brand'
+                                  ? 'border-text-primary bg-text-primary'
                                   : 'border-border-muted'
                               }`}
                             >
@@ -194,7 +208,7 @@ const WelcomeForm = () => {
                             <div className="flex-1">
                               <Typography
                                 variant="labelMd"
-                                className={isSelected ? 'text-text-brand' : ''}
+                                className={isSelected ? 'text-text-primary' : ''}
                               >
                                 {option.label}
                               </Typography>
@@ -225,13 +239,21 @@ const WelcomeForm = () => {
               {/* Private collectors sign up here too, so "approved business
                   users" was both wrong and the first thing a collector read
                   about whether they belonged. */}
-              <ul className="ml-4 list-disc space-y-1">
-                <li>This platform is a pricing and quotation tool only</li>
-                <li>All payments are processed through licensed distribution partners</li>
-                <li>Wine you store or consign remains yours; we never take title to it</li>
-                <li>You are at least 21 years of age</li>
-                <li>Access is by approval, for trade accounts and private collectors</li>
-              </ul>
+              {isCollector ? (
+                <ul className="ml-4 list-disc space-y-1">
+                  <li>Wine you store with us remains yours; we never take title to it</li>
+                  <li>All payments are processed through licensed distribution partners</li>
+                  <li>You are at least 21 years of age</li>
+                </ul>
+              ) : (
+                <ul className="ml-4 list-disc space-y-1">
+                  <li>This platform is a pricing and quotation tool only</li>
+                  <li>All payments are processed through licensed distribution partners</li>
+                  <li>Wine you store or consign remains yours; we never take title to it</li>
+                  <li>You are at least 21 years of age</li>
+                  <li>Access is by approval, for trade accounts and private collectors</li>
+                </ul>
+              )}
             </div>
             <div className="flex items-start gap-3">
               <Checkbox
@@ -252,7 +274,7 @@ const WelcomeForm = () => {
                   href="/terms-of-use"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-text-brand underline"
+                  className="text-text-primary underline"
                 >
                   Terms of Use
                 </a>
@@ -267,7 +289,7 @@ const WelcomeForm = () => {
             /* A provisioned account has no role to select, so requiring one
                here left Continue permanently disabled. */
             isDisabled={
-              (!isProvisioned && !selectedType) ||
+              (asksRole && !selectedType) ||
               !termsAccepted ||
               isSubmitting ||
               isRouting
@@ -282,7 +304,7 @@ const WelcomeForm = () => {
           </Button>
         </form>
 
-        {!isProvisioned && (
+        {asksRole && (
           <Typography variant="bodySm" colorRole="muted" className="text-center">
             Private collector?{' '}
             <Link

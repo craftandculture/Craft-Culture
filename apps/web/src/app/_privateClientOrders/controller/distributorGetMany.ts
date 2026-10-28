@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import db from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
-import { partners, privateClientContacts, privateClientOrders } from '@/database/schema';
+import { privateClientContacts, privateClientOrders } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
 import {
@@ -14,6 +14,8 @@ import {
 } from '../constants';
 import getOrdersSchema from '../schemas/getOrdersSchema';
 import distributorOrderView from '../utils/distributorOrderView';
+import distributorPartnerView from '../utils/distributorPartnerView';
+import getCraftCulturePartnerId from '../utils/getCraftCulturePartnerId';
 
 const distributorGetOrdersSchema = getOrdersSchema.extend({
   /** A pipeline stage: a group of statuses (see DISTRIBUTOR_STAGES) */
@@ -101,29 +103,26 @@ const distributorGetMany = distributorProcedure
             FROM private_client_order_items i
            WHERE i.order_id = ${privateClientOrders.id}
         )`,
-        partner: {
-          id: partners.id,
-          businessName: partners.businessName,
-          logoUrl: partners.logoUrl,
-        },
         client: {
           id: privateClientContacts.id,
           cityDrinksVerifiedAt: privateClientContacts.cityDrinksVerifiedAt,
         },
       })
       .from(privateClientOrders)
-      .leftJoin(partners, eq(privateClientOrders.partnerId, partners.id))
       .leftJoin(privateClientContacts, eq(privateClientOrders.clientId, privateClientContacts.id))
       .where(and(...conditions))
       .orderBy(desc(privateClientOrders.createdAt))
       .limit(limit)
       .offset(cursor);
 
+    // The wine partner is never named to the distributor
+    const craftCulturePartnerId = await getCraftCulturePartnerId();
+
     // Flatten the response
     const ordersWithPartner = ordersList.map((row) => ({
       ...distributorOrderView(row.order),
       bottleCount: Number(row.bottleCount ?? 0),
-      partner: row.partner,
+      partner: distributorPartnerView(row.order.partnerId, craftCulturePartnerId),
       client: row.client,
     }));
 

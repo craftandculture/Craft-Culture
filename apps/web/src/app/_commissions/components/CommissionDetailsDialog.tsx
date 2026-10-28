@@ -99,7 +99,7 @@ const CommissionDetailsDialog = ({ isOpen, onClose }: CommissionDetailsDialogPro
                         <Typography variant="bodyXs" className="text-text-muted mb-0.5">
                           Commission
                         </Typography>
-                        <Typography variant="bodySm" className="font-semibold text-fill-brand">
+                        <Typography variant="bodySm" className="font-semibold text-text-primary">
                           {formatPrice(item.commissionEarned, 'USD')}
                         </Typography>
                       </div>
@@ -165,7 +165,7 @@ const CommissionDetailsDialog = ({ isOpen, onClose }: CommissionDetailsDialogPro
                         </Typography>
                       </td>
                       <td className="py-4 pr-4">
-                        <Typography variant="bodySm" className="font-semibold text-fill-brand">
+                        <Typography variant="bodySm" className="font-semibold text-text-primary">
                           {formatPrice(item.commissionEarned, 'USD')}
                         </Typography>
                       </td>

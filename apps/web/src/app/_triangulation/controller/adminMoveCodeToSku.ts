@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import editableLinesInProgramme from '../data/editableLinesInProgramme';
 import mapImportLines from '../data/mapImportLines';
 import { moveCodeToSkuSchema } from '../schemas/triangulationSchemas';
 import type { TriAliasSource } from '../schemas/triangulationSchemas';
@@ -33,8 +34,11 @@ const adminMoveCodeToSku = adminProcedure
     // dashes and then shown back looking like a different code.
     const written = input.rawCode?.trim() || normalizedCode;
 
-    const [sku] = await client<{ id: string; wCode: string }[]>`
-      SELECT id, w_code AS "wCode" FROM tri_skus WHERE id = ${skuId} LIMIT 1
+    const [sku] = await client<
+      { id: string; wCode: string | null; programmeId: string }[]
+    >`
+      SELECT id, w_code AS "wCode", programme_id AS "programmeId"
+      FROM tri_skus WHERE id = ${skuId} LIMIT 1
     `;
 
     if (!sku) {
@@ -51,6 +55,7 @@ const adminMoveCodeToSku = adminProcedure
       FROM tri_import_lines l
       JOIN tri_imports i ON i.id = l.import_id
       WHERE l.normalized_code = ${normalizedCode}
+        AND i.programme_id = ${sku.programmeId}
       GROUP BY i.alias_source
     `;
 
@@ -99,6 +104,7 @@ const adminMoveCodeToSku = adminProcedure
       UPDATE tri_import_lines
       SET status = 'unmapped', updated_at = NOW()
       WHERE normalized_code = ${normalizedCode} AND status = 'ignored'
+        AND ${editableLinesInProgramme(sku.programmeId)}
     `;
 
     const affected = await client<
@@ -108,6 +114,7 @@ const adminMoveCodeToSku = adminProcedure
       FROM tri_imports i
       JOIN tri_import_lines l ON l.import_id = i.id
       WHERE l.normalized_code = ${normalizedCode}
+        AND i.programme_id = ${sku.programmeId}
     `;
 
     for (const record of affected) {

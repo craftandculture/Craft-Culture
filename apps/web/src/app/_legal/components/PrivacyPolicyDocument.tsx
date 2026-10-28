@@ -484,7 +484,7 @@ const PrivacyPolicyDocument = () => {
               <Typography variant="bodySm" colorRole="muted" className="mb-3 leading-relaxed">
                 For questions about this Policy, or to exercise your rights, contact our privacy
                 team at{' '}
-                <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} className="text-text-brand">
+                <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} className="text-text-primary">
                   {PRIVACY_CONTACT_EMAIL}
                 </a>
                 .

@@ -1,4 +1,4 @@
-import { count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { type AnyColumn, and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import {
@@ -21,10 +21,34 @@ import { getPickListsSchema } from '../schemas/pickListSchema';
 const adminGetPickLists = wmsOperatorProcedure
   .input(getPickListsSchema)
   .query(async ({ input }) => {
-    const { status, limit, offset } = input;
+    const { status, search, limit, offset } = input;
 
-    // Build where conditions
-    const whereConditions = status ? eq(wmsPickLists.status, status) : undefined;
+    /*
+      Search runs here, across every pick list, not over the page already
+      loaded — searching only the first 50 hid older picks entirely. Numbers
+      match with or without their leading zeros, so PL-2026-00062 finds
+      PL-2026-0062 and SO-182 finds SO-00182.
+    */
+    const term = search?.toLowerCase();
+    const searchCondition = term
+      ? (() => {
+          const like = `%${term.replace(/[%_\\]/g, '\\$&')}%`;
+          const loose = `%${term.replace(/-0+(\d)/g, '-$1').replace(/[%_\\]/g, '\\$&')}%`;
+          const matches = (column: AnyColumn) =>
+            sql`(lower(${column}) LIKE ${like} OR regexp_replace(lower(${column}), '-0+([0-9])', '-\\1', 'g') LIKE ${loose})`;
+          return sql`(${matches(wmsPickLists.pickListNumber)}
+            OR ${matches(wmsPickLists.orderNumber)}
+            OR ${matches(zohoSalesOrders.customerName)}
+            OR ${matches(zohoSalesOrders.referenceNumber)}
+            OR EXISTS (
+              SELECT 1 FROM ${zohoInvoices}
+              WHERE ${zohoInvoices.referenceNumber} = ${wmsPickLists.orderNumber}
+                AND ${matches(zohoInvoices.invoiceNumber)}
+            ))`;
+        })()
+      : undefined;
+
+    const whereConditions = and(status ? eq(wmsPickLists.status, status) : undefined, searchCondition);
 
     // Get pick lists with assignee info
     const pickLists = await db
@@ -86,6 +110,7 @@ const adminGetPickLists = wmsOperatorProcedure
     const [countResult] = await db
       .select({ count: count() })
       .from(wmsPickLists)
+      .leftJoin(zohoSalesOrders, eq(wmsPickLists.orderId, zohoSalesOrders.id))
       .where(whereConditions);
 
     // Get summary by status

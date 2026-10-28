@@ -8,6 +8,7 @@ import { z } from 'zod';
 import db from '@/database/client';
 import { logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import logger from '@/utils/logger';
 
 import { costLineCategories, parseGroupInvoiceSchema } from '../schemas/shipmentGroupSchemas';
 import readUploadedFile from '../utils/readUploadedFile';
@@ -119,9 +120,12 @@ const adminParseGroupInvoice = adminProcedure
         object = result.object;
       }
     } catch (error) {
+      logger.error('Group invoice parse failed', {
+        error: error instanceof Error ? error.message : 'unknown error',
+      });
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to parse invoice: ${error instanceof Error ? error.message : 'unknown error'}`,
+        message: 'Failed to read the invoice. Try again, or enter the charges by hand.',
       });
     }
 

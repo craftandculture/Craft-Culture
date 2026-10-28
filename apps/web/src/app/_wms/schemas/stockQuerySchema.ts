@@ -59,6 +59,12 @@ export const getMovementHistorySchema = z.object({
     ])
     .optional(),
   lwin18: z.string().optional(),
+  /*
+    Every pack of the same wine, vintage and size. Opening a case moves its
+    bottles to a single-bottle code, so the singles' own history starts at that
+    moment and hides the case's arrival and the pick that opened it.
+  */
+  allPacks: z.boolean().optional(),
   locationId: z.string().uuid().optional(),
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
