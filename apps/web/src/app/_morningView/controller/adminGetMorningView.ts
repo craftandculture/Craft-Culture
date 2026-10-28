@@ -72,11 +72,21 @@ const adminGetMorningView = adminProcedure.query(async () => {
   const thisMonthStart = new Date(Date.UTC(today.year, today.month, 1));
   const lastMonthStart = new Date(Date.UTC(today.year, today.month - 1, 1));
   const lastMonthEnd = thisMonthStart;
+  // The same stretch of last month (1st to today's date), so a part-month
+  // isn't compared with a whole one. Capped at the month's end on the 31st.
+  const lastMonthToDateEnd = new Date(
+    Math.min(Date.UTC(today.year, today.month - 1, today.day + 1), lastMonthEnd.getTime()),
+  );
+  // Two years of months for the revenue chart: 13 shown, 12 more for "vs a year ago"
+  const chartStart = new Date(Date.UTC(today.year, today.month - 24, 1));
 
   // Calendar year boundaries (compare the same period last year, today included)
   const thisYearStart = new Date(Date.UTC(today.year, 0, 1));
   const lastYearStart = new Date(Date.UTC(today.year - 1, 0, 1));
   const lastYearEnd = new Date(Date.UTC(today.year - 1, today.month, today.day + 1));
+
+  const usdTotal = sql<number>`coalesce(sum(CASE WHEN ${zohoInvoices.currencyCode} = 'AED' THEN ${zohoInvoices.total} / ${USD_TO_AED} ELSE ${zohoInvoices.total} END), 0)`;
+  const invoiceMonth = sql<string>`to_char(${zohoInvoices.invoiceDate}, 'YYYY-MM')`;
 
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -100,6 +110,8 @@ const adminGetMorningView = adminProcedure.query(async () => {
     recentPco,
     recentZoho,
     invoiceSyncResult,
+    revenueLastMonthToDate,
+    revenueByMonthRows,
   ] = await Promise.all([
     // 1. Open orders count (PCO — operational metric)
     db
@@ -296,6 +308,31 @@ const adminGetMorningView = adminProcedure.query(async () => {
       .select({ lastAt: sql<Date | null>`max(${zohoInvoices.updatedAt})` })
       .from(zohoInvoices)
       .then((r) => r[0]),
+
+    // 18. Revenue for the same stretch of last month (Zoho invoices, USD)
+    db
+      .select({ total: usdTotal })
+      .from(zohoInvoices)
+      .where(
+        and(
+          inArray(zohoInvoices.status, revenueStatuses),
+          gte(zohoInvoices.invoiceDate, lastMonthStart),
+          lt(zohoInvoices.invoiceDate, lastMonthToDateEnd),
+        ),
+      )
+      .then((r) => r[0]),
+
+    // 19. Revenue per calendar month for the chart (Zoho invoices, USD)
+    db
+      .select({ month: invoiceMonth, total: usdTotal })
+      .from(zohoInvoices)
+      .where(
+        and(
+          inArray(zohoInvoices.status, revenueStatuses),
+          gte(zohoInvoices.invoiceDate, chartStart),
+        ),
+      )
+      .groupBy(invoiceMonth),
   ]);
 
   // Flag the invoice sync as stale if its newest write is over 2 hours old
@@ -385,6 +422,27 @@ const adminGetMorningView = adminProcedure.query(async () => {
   const yearUsd = Number(revenueThisYear?.total ?? 0);
   const lastYearUsd = Number(revenueLastYear?.total ?? 0);
   const overdueUsd = Number(overdueResult?.totalAmount ?? 0);
+  const lastMonthToDateUsd = Number(revenueLastMonthToDate?.total ?? 0);
+
+  // Every month in the window, zero where nothing was invoiced, oldest first
+  const byMonth = new Map(revenueByMonthRows.map((r) => [r.month, Number(r.total ?? 0)]));
+  const monthKey = (offset: number) => {
+    const d = new Date(Date.UTC(today.year, today.month + offset, 1));
+    return d.toISOString().slice(0, 7);
+  };
+  const revenueByMonth = Array.from({ length: 13 }, (_, i) => {
+    const offset = i - 12;
+    const usd = byMonth.get(monthKey(offset)) ?? 0;
+    const yearAgoUsd = byMonth.get(monthKey(offset - 12)) ?? 0;
+    return {
+      month: monthKey(offset),
+      isCurrent: offset === 0,
+      usd,
+      aed: usd * USD_TO_AED,
+      yearAgoUsd,
+      yearAgoAed: yearAgoUsd * USD_TO_AED,
+    };
+  });
 
   // Merge + sort recent orders (both currencies for toggle)
   const mergedOrders = [
@@ -439,6 +497,8 @@ const adminGetMorningView = adminProcedure.query(async () => {
       revenueMonthAed: monthUsd * USD_TO_AED,
       revenueLastMonthUsd: lastMonthUsd,
       revenueLastMonthAed: lastMonthUsd * USD_TO_AED,
+      revenueLastMonthToDateUsd: lastMonthToDateUsd,
+      revenueLastMonthToDateAed: lastMonthToDateUsd * USD_TO_AED,
       revenueYearUsd: yearUsd,
       revenueYearAed: yearUsd * USD_TO_AED,
       revenueLastYearUsd: lastYearUsd,
@@ -454,6 +514,7 @@ const adminGetMorningView = adminProcedure.query(async () => {
       lastSyncedAt: invoicesLastSyncedAt,
       isStale: invoiceSyncStale,
     },
+    revenueByMonth,
     agentBriefs,
     recentOrders: mergedOrders,
   };
