@@ -8357,6 +8357,10 @@ export const winelabsWines = pgTable('winelabs_wines', {
   priceCount: integer('price_count'),
   priceFetchedAt: timestamp('price_fetched_at', { mode: 'date' }),
   matchedAt: timestamp('matched_at', { mode: 'date' }).notNull().defaultNow(),
+  /** A person's call on a disagreement: ours_right | change (our code should become wl_lwin7) */
+  review: text('review'),
+  reviewedBy: text('reviewed_by'),
+  reviewedAt: timestamp('reviewed_at', { mode: 'date' }),
   ...timestamps,
 });
 

@@ -3,12 +3,14 @@ import { redirect } from 'next/navigation';
 import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
 import isStaff from '@/app/_distribution/utils/isStaff';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import LwinReviewList from '@/app/_winelabs/components/LwinReviewList';
 import RunBatchForm from '@/app/_winelabs/components/RunBatchForm';
 import RunInBondForm from '@/app/_winelabs/components/RunInBondForm';
 import getCoverageSummary from '@/app/_winelabs/data/getCoverageSummary';
 import type { CoverageSummary } from '@/app/_winelabs/data/getCoverageSummary';
 import getInBondSummary from '@/app/_winelabs/data/getInBondSummary';
 import type { InBondSummary } from '@/app/_winelabs/data/getInBondSummary';
+import getLwinReview from '@/app/_winelabs/data/getLwinReview';
 
 export const dynamic = 'force-dynamic';
 // A batch of 25 wines is up to 75 calls; 50 wines priced in London up to 100
@@ -159,7 +161,7 @@ const WineLabsPage = async () => {
   const user = await getUserOrRedirect();
   if (!isStaff(user)) redirect('/platform');
 
-  const [summary, inBond] = await Promise.all([getCoverageSummary(), getInBondSummary()]);
+  const [summary, inBond, review] = await Promise.all([getCoverageSummary(), getInBondSummary(), getLwinReview()]);
   const capReached = summary.credits >= summary.cap;
   const pct = (n: number) => (summary.checked ? `${Math.round((n / summary.checked) * 100)}%` : '—');
 
@@ -275,21 +277,21 @@ const WineLabsPage = async () => {
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">
-          To look at
+          LWIN fix list
           <span className="ml-2 font-normal text-text-muted">
-            {summary.different} different wine · {summary.internalKnown} internal code known ·{' '}
-            {summary.notFound} not found
+            {review.filter((row) => row.verdict === 'likely_wrong').length} likely wrong ·{' '}
+            {review.filter((row) => row.verdict === 'check').length} to check by hand ·{' '}
+            {review.filter((row) => row.review === 'change').length} marked to change · {summary.notFound} not
+            found by name
           </span>
         </h2>
-        <p className="text-xs text-text-muted">
-          A different wine is usually the same producer, another cuvée: check which is right before changing
-          anything. An internal code Wine Labs can name may have a real LWIN to move to.
+        <p className="max-w-3xl text-xs text-text-muted">
+          Codes on our stock that Wine Labs&apos; name search placed on a different wine. Both codes are looked up
+          in the LWIN register and our product name is read against each: the one it reads as is probably right.
+          Recording a call changes nothing on our stock; the wines marked to change are then recoded deliberately,
+          as the code is also the Zoho SKU and the label barcode.
         </p>
-        {summary.exceptions.length ? (
-          <Rows rows={summary.exceptions} />
-        ) : (
-          <p className="text-sm text-text-muted">Nothing yet.</p>
-        )}
+        <LwinReviewList rows={review} />
       </section>
 
       {summary.sample.length > 0 && (

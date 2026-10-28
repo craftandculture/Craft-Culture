@@ -3613,6 +3613,14 @@ const runMigrations = async () => {
       UPDATE "winelabs_market" SET "trades_checked_at" = "checked_at"
       WHERE "status" = 'priced' AND "trades_checked_at" IS NULL
     `);
+    // A person's call on an LWIN Wine Labs disagrees with; recorded only, nothing is recoded
+    for (const ddl of [
+      `ALTER TABLE "winelabs_wines" ADD COLUMN IF NOT EXISTS "review" text`,
+      `ALTER TABLE "winelabs_wines" ADD COLUMN IF NOT EXISTS "reviewed_by" text`,
+      `ALTER TABLE "winelabs_wines" ADD COLUMN IF NOT EXISTS "reviewed_at" timestamp`,
+    ]) {
+      await client.unsafe(ddl);
+    }
     // One row per bottle size: magnums and larger trade at their own price, not twice a bottle's
     await client.unsafe(`ALTER TABLE "winelabs_market" ADD COLUMN IF NOT EXISTS "format" text DEFAULT '750' NOT NULL`);
     await client.unsafe(`
