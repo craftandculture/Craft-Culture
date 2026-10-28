@@ -171,6 +171,15 @@ const cloneOrderForClients = async (
             subscriptionTier: source.subscriptionTier,
             subscriptionCaseSize: source.subscriptionCaseSize,
             subscriptionVariant: source.subscriptionVariant,
+            // A box's price lives on the order, not its lines; carry it over
+            // so the recalculation below keeps it rather than zeroing it
+            subtotalUsd: source.subtotalUsd,
+            dutyUsd: source.dutyUsd,
+            vatUsd: source.vatUsd,
+            logisticsUsd: source.logisticsUsd,
+            totalUsd: source.totalUsd,
+            totalAed: source.totalAed,
+            usdToAedRate: source.usdToAedRate,
             status: 'draft',
           })
           .returning({
@@ -220,7 +229,8 @@ const cloneOrderForClients = async (
     });
   }
 
-  // Totals come from the pricing engine, exactly as for a hand-built order
+  // Totals come from the pricing engine, exactly as for a hand-built order;
+  // a box (zero-priced lines, priced order) keeps the source's copied totals
   for (const order of created) {
     await recalculateOrderTotals(order.id);
   }

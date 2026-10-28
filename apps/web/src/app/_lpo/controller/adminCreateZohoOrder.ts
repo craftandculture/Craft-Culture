@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { PEGGED } from '@/app/_logistics/utils/resolveFxToUsd';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { searchContacts } from '@/lib/zoho/contacts';
@@ -272,7 +273,7 @@ const createOrder = async (input: CreateOrderInput) => {
     */
     /** AED → the billing currency. The dirham is pegged, so this is exact. */
     const rateToBilling =
-      input.billingCurrency === 'AED' ? 1 : (PEGGED.AED ?? 0.2723);
+      input.billingCurrency === 'AED' ? 1 : (PEGGED.AED ?? 1 / USD_TO_AED);
 
     const lineItems = [];
     const createdCodes: string[] = [];
@@ -412,7 +413,7 @@ const createOrder = async (input: CreateOrderInput) => {
         `Created from ${input.poNumber ?? 'client LPO'} — check before confirming.` +
         (input.billingCurrency === 'AED'
           ? ''
-          : ` Stated in AED on the client's PO; billed in ${input.billingCurrency} at the dirham peg, ${rateToBilling} per AED.`) +
+          : ` Stated in AED on the client's PO; billed in ${input.billingCurrency} at the dirham peg, AED ${USD_TO_AED} per USD.`) +
         (input.excluded.length > 0
           ? ` NOT ON THIS ORDER — could not be identified: ${input.excluded.join('; ')}.`
           : ''),
