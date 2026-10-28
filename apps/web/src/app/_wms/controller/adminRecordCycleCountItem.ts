@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { wmsCycleCountItems, wmsCycleCounts } from '@/database/schema';
+import { wmsCycleCountItems, wmsCycleCounts, wmsStock } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
 import { recordCycleCountItemSchema } from '../schemas/cycleCountSchema';
@@ -71,22 +71,39 @@ const adminRecordCycleCountItem = wmsOperatorProcedure
       });
     }
 
+    /*
+      Expected is what the row holds at the moment the bay is counted, not when
+      the count was created. Reconcile applies counted minus expected to the
+      live row, so a pick made between creating the count and counting the bay
+      would otherwise be taken off the row a second time.
+    */
+    let expectedQuantity = item.expectedQuantity;
+    if (item.stockId) {
+      const [stockRow] = await db
+        .select({ quantityCases: wmsStock.quantityCases })
+        .from(wmsStock)
+        .where(eq(wmsStock.id, item.stockId));
+      if (stockRow) expectedQuantity = stockRow.quantityCases;
+    }
+
     // Update the item with counted quantity
     await db
       .update(wmsCycleCountItems)
       .set({
         countedQuantity,
+        expectedQuantity,
         notes: notes ?? item.notes,
         countedAt: new Date(),
         updatedAt: new Date(),
         // At review the discrepancy is already set, so it moves with the count
-        ...(isReview ? { discrepancy: countedQuantity - item.expectedQuantity } : {}),
+        ...(isReview ? { discrepancy: countedQuantity - expectedQuantity } : {}),
       })
       .where(eq(wmsCycleCountItems.id, itemId));
 
     if (isReview) {
       const items = await db
         .select({
+          expectedQuantity: wmsCycleCountItems.expectedQuantity,
           countedQuantity: wmsCycleCountItems.countedQuantity,
           discrepancy: wmsCycleCountItems.discrepancy,
         })
@@ -96,6 +113,7 @@ const adminRecordCycleCountItem = wmsOperatorProcedure
       await db
         .update(wmsCycleCounts)
         .set({
+          expectedItems: items.reduce((sum, i) => sum + i.expectedQuantity, 0),
           countedItems: items.reduce((sum, i) => sum + (i.countedQuantity ?? 0), 0),
           discrepancyCount: items.filter((i) => (i.discrepancy ?? 0) !== 0).length,
           updatedAt: new Date(),
@@ -107,7 +125,7 @@ const adminRecordCycleCountItem = wmsOperatorProcedure
       success: true,
       itemId,
       countedQuantity,
-      expectedQuantity: item.expectedQuantity,
+      expectedQuantity,
     };
   });
 

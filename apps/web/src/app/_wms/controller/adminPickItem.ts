@@ -23,6 +23,22 @@ import lwinPackAgnosticPattern from '../utils/lwinPackAgnosticPattern';
 import moveBottlesToSingles from '../utils/moveBottlesToSingles';
 import parseSkuPack from '../utils/parseSkuPack';
 import rankStockByPack from '../utils/rankStockByPack';
+import readLineVintage from '../utils/readLineVintage';
+
+/**
+ * Read a bottle size in millilitres from text such as "75cl", "1.5L" or "750ml"
+ *
+ * @param text - A product name or bottle size
+ * @returns The size in ml, or null when the text names none
+ */
+const readSizeMl = (text: string) => {
+  const match = text.match(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/i);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  const unit = match[2]!.toLowerCase();
+  const ml = Math.round(unit === 'l' ? amount * 1000 : unit === 'cl' ? amount * 10 : amount);
+  return ml > 0 ? ml : null;
+};
 
 /**
  * Mark a pick list item as picked and update stock
@@ -174,7 +190,14 @@ const adminPickItem = wmsOperatorProcedure
       // ever match — the operator is standing at the right bay being told the
       // stock doesn't exist. Only trusted when every significant word matches and
       // the hits are all the same wine, so a lookalike cuvée is never picked.
-      if (candidates.length === 0) {
+      /*
+        Only for a line with no usable code. A line with a proper LWIN that
+        finds nothing here is a different vintage or bottle size on the shelf,
+        and the name (which drops the year) matched it: a 2016 line was picked
+        and booked as the 2015 in the bay, or a 75cl line as the magnum, and the
+        operator was never told. That line now gets the "held elsewhere" answer.
+      */
+      if (candidates.length === 0 && packPattern === null) {
         const terms = pickListItem.productName
           .replace(/_/g, ' ')
           .replace(
@@ -213,10 +236,36 @@ const adminPickItem = wmsOperatorProcedure
             )
             .for('update');
 
-          const distinctWines = new Set(
-            byName.map((row) => row.lwin18.split('-')[0]).filter(Boolean),
+          /*
+            The name has the year and size stripped, so they are checked here:
+            a year or size the line names must be the row's, and every hit must
+            be one wine in one vintage and one bottle size, or nothing is picked.
+          */
+          const { vintage: lineVintage } = readLineVintage(
+            pickListItem.lwin18,
+            pickListItem.productName,
           );
-          if (distinctWines.size === 1) candidates = byName;
+          const lineSizeMl = readSizeMl(pickListItem.productName);
+          const rowKey = (row: (typeof byName)[number]) => {
+            const parts = row.lwin18.split('-');
+            return parts.length === 4
+              ? { wine: parts[0], vintage: Number(parts[1]) || null, sizeMl: Number(parts[3]) || null }
+              : { wine: row.lwin18, vintage: row.vintage ?? null, sizeMl: readSizeMl(row.bottleSize ?? '') };
+          };
+          const sameYearAndSize = byName.filter((row) => {
+            const key = rowKey(row);
+            if (lineVintage !== null && key.vintage !== lineVintage) return false;
+            if (lineSizeMl !== null && key.sizeMl !== null && key.sizeMl !== lineSizeMl) return false;
+            return true;
+          });
+
+          const distinctWines = new Set(
+            sameYearAndSize.map((row) => {
+              const key = rowKey(row);
+              return `${key.wine}|${key.vintage ?? ''}|${key.sizeMl ?? ''}`;
+            }),
+          );
+          if (distinctWines.size === 1) candidates = sameYearAndSize;
         }
       }
 

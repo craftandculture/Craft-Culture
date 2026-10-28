@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, ne, notInArray } from 'drizzle-orm';
 
 import announcePickList from '@/app/_wms/data/announcePickList';
 import db from '@/database/client';
@@ -116,7 +116,12 @@ const adminCompletePickList = wmsOperatorProcedure
       }
     }
 
-    // Update linked Zoho Sales Order status to 'picked' if this is a Zoho order
+    /*
+      Update linked Zoho Sales Order status to 'picked' if this is a Zoho order.
+      Never backwards: quick dispatch can ship an order whose list is still
+      open, and completing that list afterwards put a dispatched order back
+      to picked.
+    */
     if (pickList.orderId) {
       await db
         .update(zohoSalesOrders)
@@ -124,7 +129,12 @@ const adminCompletePickList = wmsOperatorProcedure
           status: 'picked',
           updatedAt: new Date(),
         })
-        .where(eq(zohoSalesOrders.id, pickList.orderId));
+        .where(
+          and(
+            eq(zohoSalesOrders.id, pickList.orderId),
+            notInArray(zohoSalesOrders.status, ['dispatched', 'delivered']),
+          ),
+        );
     }
 
     await announcePickList(pickListId, 'completed', ctx.user.name);

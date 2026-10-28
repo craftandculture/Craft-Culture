@@ -204,8 +204,17 @@ const adminResyncPickList = wmsOperatorProcedure
           item.description,
         );
         const orderedBottles = item.quantity * orderedPack;
-        const alreadyPicked = pickedBottlesByWine.get(wineKey(resolvedLwin18)) ?? 0;
-        const remainingBottles = orderedBottles - alreadyPicked;
+        /*
+          Picked bottles are used up by the line they cover. Read without being
+          taken off, the six-packs already picked counted against every line of
+          the same wine, and a second line (three singles beside two six-packs)
+          was dropped from the list and shipped short.
+        */
+        const key = wineKey(resolvedLwin18);
+        const alreadyPicked = pickedBottlesByWine.get(key) ?? 0;
+        const consumed = Math.min(alreadyPicked, orderedBottles);
+        pickedBottlesByWine.set(key, alreadyPicked - consumed);
+        const remainingBottles = orderedBottles - consumed;
         if (remainingBottles <= 0) continue;
         const remaining = Math.ceil(remainingBottles / orderedPack);
 
