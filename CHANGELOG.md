@@ -1,3 +1,9 @@
+## [2.1.29](https://github.com/craftandculture/Craft-Culture/compare/v2.1.28...v2.1.29) (2026-10-28)
+
+### Bug Fixes
+
+* home hides briefs from agents that are not running ([489d7e1](https://github.com/craftandculture/Craft-Culture/commit/489d7e1ab5d7dfa8104ae274b7b76a887165134b))
+
 ## [2.1.28](https://github.com/craftandculture/Craft-Culture/compare/v2.1.27...v2.1.28) (2026-10-28)
 
 ### Features
