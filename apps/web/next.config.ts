@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
     authInterrupts: true,
   },
   poweredByHeader: false,
+  // The staff-only brief route reads these from disk at request time
+  outputFileTracingIncludes: {
+    '/api/internal-docs/[name]': ['./internal-docs/**'],
+  },
   /*
     Baseline security headers. Framing is limited to our own origin (the WMS
     label page prints through a same-origin iframe); no full CSP yet, as the
@@ -65,14 +69,11 @@ const nextConfig: NextConfig = {
   // Static-asset clean URLs. Update this list to add new shareable docs.
   rewrites: async () => {
     return [
-      {
-        source: '/platform-mvp',
-        destination: '/platform-mvp.html',
-      },
-      {
-        source: '/inbound-cellar',
-        destination: '/inbound-cellar.html',
-      },
+      // Internal briefs: served to staff only, from outside public/
+      ...['platform-mvp', 'logistics-plan', 'source-flows', 'inbound-cellar'].flatMap((name) => [
+        { source: `/${name}`, destination: `/api/internal-docs/${name}` },
+        { source: `/${name}.html`, destination: `/api/internal-docs/${name}` },
+      ]),
     ];
   },
   images: {

@@ -104,11 +104,40 @@ const usersUpdate = protectedProcedure
             logger.error('Failed to notify admins of partner name match:', error);
           }
         } else {
-          await db.insert(partners).values({
-            userId: ctx.user.id,
-            type: 'wine_partner',
-            businessName: name,
-          });
+          /*
+            A fresh signup is still awaiting approval, so the partner record
+            it creates opens nothing until an admin approves the account. A
+            login that is already approved (a cellar delegate, a distributor's
+            colleague, a user staff created) has no such review ahead of it,
+            and an active record would hand it the trade portal on the spot.
+            Its record starts inactive, and the admins are asked to review it.
+          */
+          const alreadyApproved = ctx.user.approvalStatus === 'approved';
+          const [created] = await db
+            .insert(partners)
+            .values({
+              userId: ctx.user.id,
+              type: 'wine_partner',
+              businessName: name,
+              ...(alreadyApproved && { status: 'inactive' as const }),
+            })
+            .returning({ id: partners.id });
+
+          if (alreadyApproved) {
+            try {
+              await createAdminNotifications({
+                type: 'new_user_pending',
+                title: 'Approved user set up a wine partner',
+                message: `${name} (${ctx.user.email}) chose a wine partner account after approval. The partner record was created inactive; activate it if this business should trade.`,
+                entityType: 'user',
+                entityId: ctx.user.id,
+                actionUrl: `/platform/admin/users/${ctx.user.id}`,
+                metadata: { partnerId: created?.id },
+              });
+            } catch (error) {
+              logger.error('Failed to notify admins of a post-approval partner:', error);
+            }
+          }
         }
       }
     }

@@ -274,7 +274,7 @@ export const winePartnerProcedure = approvedProcedure.use(
  * Injects the partnerId into the context for data isolation.
  */
 export const distributorProcedure = approvedProcedure.use(
-  async ({ ctx, next }) => {
+  async ({ ctx, next, type }) => {
     const { default: resolvePartnerForUser } = await import(
       '@/app/_partners/data/resolvePartnerForUser'
     );
@@ -297,6 +297,20 @@ export const distributorProcedure = approvedProcedure.use(
       throw new TRPCError({
         code: 'FORBIDDEN',
         message: 'Your distributor account is not active',
+      });
+    }
+
+    // A view-only colleague may look but not act, as on the wine-partner side
+    const { default: getPartnerMemberRole } = await import(
+      '@/app/_partners/data/getPartnerMemberRole'
+    );
+    const partnerRole = await getPartnerMemberRole(partner.id, ctx.user.id);
+
+    if (type === 'mutation' && partnerRole === 'viewer') {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'You have view-only access to this account. Ask its owner to change your access.',
       });
     }
 

@@ -71,6 +71,9 @@ const authServerClient = betterAuth({
       // (Outlook / Safe Links queuing) delivers and the user clicks — landing
       // them back on /sign-in. Give a comfortable window; links are single-use.
       expiresIn: 60 * 30, // 30 minutes
+      // Keep only a hash of each token, so a read of the verifications table
+      // cannot be turned into a sign-in as whoever was just sent a link
+      storeToken: 'hashed',
       sendMagicLink: async ({ email, token, url }) => {
         // Build a landing page URL instead of the direct API verify URL.
         // Email clients often prefetch links for security scanning, which
@@ -387,7 +390,6 @@ const authServerClient = betterAuth({
       create: {
         before: async (verification) => {
           logger.info('[Better Auth] Verification create BEFORE', {
-            identifier: verification.identifier?.substring(0, 10) + '...',
             expiresAt: verification.expiresAt,
             hasValue: !!verification.value,
           });
@@ -396,7 +398,6 @@ const authServerClient = betterAuth({
         after: async (verification) => {
           logger.info('[Better Auth] Verification create AFTER', {
             id: verification.id,
-            identifier: verification.identifier?.substring(0, 10) + '...',
           });
         },
       },
