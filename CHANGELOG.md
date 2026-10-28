@@ -1,3 +1,10 @@
+## [2.1.3](https://github.com/craftandculture/Craft-Culture/compare/v2.1.2...v2.1.3) (2026-10-28)
+
+### Features
+
+* **cellar:** statement sales list the buyer without repeating "Sold to" ([8979dfb](https://github.com/craftandculture/Craft-Culture/commit/8979dfb1f24222596fe8cbba942c6aea4de5a4c5))
+* **ui:** soften white cards and deepen the page background ([1efa399](https://github.com/craftandculture/Craft-Culture/commit/1efa399a67aa83d125b395616311bcdc419de04b))
+
 ## [2.1.2](https://github.com/craftandculture/Craft-Culture/compare/v2.1.1...v2.1.2) (2026-10-28)
 
 ### Bug Fixes
