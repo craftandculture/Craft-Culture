@@ -1,3 +1,9 @@
+## [2.1.5](https://github.com/craftandculture/Craft-Culture/compare/v2.1.4...v2.1.5) (2026-10-28)
+
+### Bug Fixes
+
+* a member's delivery shows as delivered only when the distributor marks it delivered ([b243f4e](https://github.com/craftandculture/Craft-Culture/commit/b243f4e5517eee7b95b3daee4508bf85d0a18631))
+
 ## [2.1.4](https://github.com/craftandculture/Craft-Culture/compare/v2.1.3...v2.1.4) (2026-10-28)
 
 ### Bug Fixes
