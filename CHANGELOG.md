@@ -1,3 +1,9 @@
+## [2.1.11](https://github.com/craftandculture/Craft-Culture/compare/v2.1.10...v2.1.11) (2026-10-28)
+
+### Features
+
+* **cellar:** softer summary panels, opaque table header, no duplicate address card ([cb53f45](https://github.com/craftandculture/Craft-Culture/commit/cb53f45a9ce9e15c34924816176ff1f9b7a115a4))
+
 ## [2.1.10](https://github.com/craftandculture/Craft-Culture/compare/v2.1.9...v2.1.10) (2026-10-28)
 
 ### Features
