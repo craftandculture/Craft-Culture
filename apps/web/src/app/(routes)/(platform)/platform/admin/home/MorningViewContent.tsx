@@ -27,6 +27,8 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import useTRPC from '@/lib/trpc/browser';
 
+import HomeAttentionCard from './HomeAttentionCard';
+
 type Currency = 'USD' | 'AED';
 
 /** Time-based greeting */
@@ -170,6 +172,18 @@ const MorningViewContent = () => {
   });
 
   const firstName = user?.firstName ?? user?.name?.split(' ')[0] ?? '';
+
+  /*
+    The intelligence agents run on Trigger.dev, which is switched off. Their
+    last briefs read like today's news, so while nothing new has come in for
+    two days the home page leads with what is waiting on the team instead,
+    and drops the agent alerts tile.
+  */
+  const newestBrief = Math.max(
+    0,
+    ...(data?.agentBriefs ?? []).map((b) => (b?.createdAt ? new Date(b.createdAt).getTime() : 0)),
+  );
+  const briefsStale = Date.now() - newestBrief > 2 * 86_400_000;
 
   // Loading skeleton matching layout
   if (isLoading) {
@@ -350,10 +364,13 @@ const MorningViewContent = () => {
             tone: k.overdueInvoices > 0 ? 'red' : 'emerald',
           },
         ];
+        const shown = briefsStale ? tiles.filter((tile) => tile.label !== 'Agent alerts') : tiles;
 
         return (
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-            {tiles.map((tile) => {
+          <div
+            className={`grid grid-cols-2 gap-2.5 sm:grid-cols-3 ${shown.length === 6 ? 'lg:grid-cols-6' : 'lg:grid-cols-5'}`}
+          >
+            {shown.map((tile) => {
               const tone = TONES[tile.tone];
               const TileIcon = tile.icon;
               const body = (
@@ -390,8 +407,11 @@ const MorningViewContent = () => {
 
       {/* ── Two-column layout ────────────────────── */}
       <div className="grid gap-5 lg:grid-cols-5">
-        {/* Agent Briefing — left 3 cols */}
+        {/* Left 3 cols: the agents' briefing while they run, otherwise what is waiting */}
         <div className="min-w-0 lg:col-span-3">
+          {briefsStale ? (
+            <HomeAttentionCard overdueInvoices={data?.kpis?.overdueInvoices ?? 0} />
+          ) : (
           <Card>
             <CardContent className="p-0">
               <div className="flex items-center justify-between px-6 py-4">
@@ -474,6 +494,7 @@ const MorningViewContent = () => {
               )}
             </CardContent>
           </Card>
+          )}
         </div>
 
         {/* Right column — Recent Orders + Quick Actions */}

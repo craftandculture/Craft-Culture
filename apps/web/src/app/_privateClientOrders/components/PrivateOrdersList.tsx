@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -58,7 +59,18 @@ const PrivateOrdersList = () => {
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(0);
   const [currency, setCurrency] = useState<Currency>('USD');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const searchParams = useSearchParams();
+
+  /*
+    The dashboard's pipeline links here with ?status=<stage>. The list was
+    ignoring it and opening on All, so every tile showed every order.
+  */
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
+    const stage = searchParams.get('status');
+    if (stage === 'draft' || stage === 'pending' || stage === 'completed') return stage;
+    if (stage === 'verification' || stage === 'payment' || stage === 'fulfillment') return 'active';
+    return 'all';
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['privateClientOrders.getMany', { limit: 20, cursor, search: search || undefined }],
@@ -78,13 +90,17 @@ const PrivateOrdersList = () => {
   const filterByStatus = (orders: OrderWithDistributor[], filter: StatusFilter) => {
     if (filter === 'all') return orders;
 
-    const statusCategories: Record<StatusFilter, string[]> = {
-      all: [],
+    const statusCategories: Record<Exclude<StatusFilter, 'all' | 'active'>, string[]> = {
       draft: ['draft'],
       pending: ['submitted', 'under_cc_review', 'revision_requested'],
-      active: ['cc_approved', 'awaiting_client_payment', 'client_paid', 'awaiting_distributor_payment', 'distributor_paid', 'stock_in_transit', 'with_distributor', 'out_for_delivery'],
       completed: ['delivered', 'cancelled'],
     };
+
+    // In progress is everything still live, so no status can fall between the tabs
+    if (filter === 'active') {
+      const notLive = Object.values(statusCategories).flat();
+      return orders.filter((order) => !notLive.includes(order.status));
+    }
 
     return orders.filter((order) => statusCategories[filter].includes(order.status));
   };
@@ -210,9 +226,9 @@ const PrivateOrdersList = () => {
               key={filter.value}
               type="button"
               onClick={() => setStatusFilter(filter.value)}
-              className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
+              className={`flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-text-primary text-white'
+                  ? 'bg-text-primary text-surface-primary'
                   : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
               }`}
             >

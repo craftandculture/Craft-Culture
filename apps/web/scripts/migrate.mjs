@@ -3973,6 +3973,47 @@ const runMigrations = async () => {
       `),
     );
     console.log('✅ Platform audit fixes ready');
+    /*
+      Pricing releases left on the retired C&C partner (28 Oct 2026). Until
+      the run-once ledger existed, the "historic releases attributed to C&C"
+      backfill re-ran on every deploy and gave every record named like C&C a
+      release, the retired duplicate included. Each is moved to C&C's own
+      record (kept where C&C already has it), then removed from the retired
+      one, and the record's name loses the doubled merge note.
+    */
+    await dataFix('pricing releases moved off the retired C&C partner', async () => {
+      await client.unsafe(`
+        WITH cc AS (
+          SELECT id FROM partners
+           WHERE lower(trim(business_name)) = 'craft & culture'
+             AND status = 'active' AND type <> 'private_collector'
+           ORDER BY created_at LIMIT 1
+        ), retired AS (
+          SELECT p.id FROM partners p, cc
+           WHERE p.business_name ~* '^craft & culture \\(merged into'
+             AND p.status <> 'active' AND p.id <> cc.id
+        )
+        INSERT INTO wms_pricing_releases (lwin_key, owner_id, released_at, released_by)
+        SELECT r.lwin_key, cc.id, r.released_at, r.released_by
+          FROM wms_pricing_releases r, cc
+         WHERE r.owner_id IN (SELECT id FROM retired)
+        ON CONFLICT DO NOTHING
+      `);
+      await client.unsafe(`
+        DELETE FROM wms_pricing_releases r
+         USING partners p
+         WHERE p.id = r.owner_id
+           AND p.business_name ~* '^craft & culture \\(merged into'
+           AND p.status <> 'active'
+      `);
+      await client.unsafe(`
+        UPDATE partners
+           SET business_name = 'Craft & Culture (merged into Craft & Culture)'
+         WHERE business_name ~* '^craft & culture \\(merged into.*\\(merged into'
+           AND status <> 'active'
+      `);
+    });
+
 
     /*
       WMS document number sequences (27 Oct 2026). Movement, pick list, repack,
