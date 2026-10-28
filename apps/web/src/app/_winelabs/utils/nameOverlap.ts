@@ -1,9 +1,9 @@
 /** Words that say nothing about which wine it is */
 const NOISE = new Set(
   [
-    'domaine dom chateau ch maison cave caves tenuta bodega bodegas weingut cantina de des du',
-    'la le les el di del della and et e the of von van aoc aop igt doc docg do vdp grand cru',
-    'premier 1er vin wine red white rouge blanc nv bt btl magnum mag cl ml l case owc oc',
+    'domaine dom chateau ch maison marchesi fattoria azienda agricola cave caves tenuta bodega bodegas weingut',
+    'cantina de des du la le les el di del della and et e the of von van aux au aoc aop igt doc docg do vdp',
+    'vin wine red white rouge blanc nv bt btl magnum mag cl ml case owc oc abv',
   ]
     .join(' ')
     .split(' '),
@@ -13,7 +13,7 @@ const NOISE = new Set(
  * The distinctive words of a wine name: lower case, accents and punctuation
  * gone, vintages, sizes and words like "Domaine" or "Grand Cru" dropped
  */
-const wordsOf = (name: string) =>
+export const wordsOf = (name: string) =>
   name
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -30,7 +30,8 @@ const wordsOf = (name: string) =>
  * Measured against the reference (the LWIN register's name), since our names
  * carry extra words of their own: pack, owner shorthand, vintage. A word counts
  * when it matches, or when one starts with the other ("Gevrey" and
- * "Gevrey-Chambertin" both read as "gevrey").
+ * "Gevrey-Chambertin" both read as "gevrey"). A reference code word such as
+ * "23a" must be found exactly, or the overlap is held to a half.
  *
  * @example
  *   nameOverlap('Antinori, Solaia, IGT 2016', 'Antinori, Solaia'); // 1
@@ -55,7 +56,12 @@ const nameOverlap = (ours: string, reference: string) => {
           (own.startsWith(word) || word.startsWith(own))),
     ),
   );
-  return found.length / theirs.length;
+  const share = found.length / theirs.length;
+  // A code such as "Bin 23A" names one wine exactly: missing it means another wine
+  const codeMissing = theirs.some(
+    (word) => /\d/.test(word) && !mine.includes(word),
+  );
+  return codeMissing ? Math.min(share, 0.5) : share;
 };
 
 export default nameOverlap;

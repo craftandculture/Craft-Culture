@@ -44,7 +44,12 @@ const getLwinReview = async () => {
     : [];
   const nameOf = new Map(register.map((wine) => [wine.lwin, wine.displayName]));
 
-  const ORDER = { likely_wrong: 0, check: 1, ours_right: 2 } as const;
+  const ORDER = {
+    likely_wrong: 0,
+    check: 1,
+    ours_right: 2,
+    same_wine: 3,
+  } as const;
 
   return inStock
     .map((row) => {

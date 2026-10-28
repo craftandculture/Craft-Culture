@@ -15,6 +15,10 @@ const VERDICT = {
     label: 'Ours looks right',
     tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
   },
+  same_wine: {
+    label: 'Same wine, listed twice',
+    tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
+  },
 } as const;
 
 /** One wine: the code we hold, the code Wine Labs suggests, and the call */
@@ -129,11 +133,13 @@ const ReviewTable = ({ rows }: { rows: LwinReviewRow[] }) => (
 
 /**
  * The LWIN fix list: codes Wine Labs disagrees with, the likely-wrong ones
- * first; those where our code already reads right are folded away
+ * first; those where our code already reads right, or the register lists
+ * the wine twice, are folded away
  */
 const LwinReviewList = ({ rows }: { rows: LwinReviewRow[] }) => {
-  const open = rows.filter((row) => row.verdict !== 'ours_right');
-  const fine = rows.filter((row) => row.verdict === 'ours_right');
+  const settled = (row: LwinReviewRow) => row.verdict === 'ours_right' || row.verdict === 'same_wine';
+  const open = rows.filter((row) => !settled(row));
+  const fine = rows.filter(settled);
 
   return (
     <div className="space-y-3">
@@ -145,8 +151,8 @@ const LwinReviewList = ({ rows }: { rows: LwinReviewRow[] }) => {
       {fine.length > 0 && (
         <details className="text-sm">
           <summary className="text-text-muted cursor-pointer text-xs">
-            {fine.length} where our code already reads as the right wine (the
-            name search missed)
+            {fine.length} where our code already reads as the right wine, or the
+            register lists the wine twice
           </summary>
           <div className="mt-2">
             <ReviewTable rows={fine} />
