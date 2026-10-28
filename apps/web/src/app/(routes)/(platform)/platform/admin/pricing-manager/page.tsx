@@ -1019,6 +1019,9 @@ const VENUE_NAMES: Record<string, string> = {
  * leads; the last trade stands in when nothing is offered. The percentage is
  * how far our price sits above or below it. A check, never a price we set.
  */
+/** How far above London our price may sit before it is flagged, in percent */
+const LONDON_PREMIUM_BAND = 30;
+
 const LondonCell = ({
   market,
   ours,
@@ -1049,7 +1052,7 @@ const LondonCell = ({
       onClick={onAsk}
       disabled={asking}
       title="Ask Wine Labs for today's London price (15 to 30 credits)"
-      className="ml-1 inline-flex align-middle text-text-muted/50 hover:text-text-primary disabled:opacity-50"
+      className="inline-flex align-middle text-text-muted/50 hover:text-text-primary disabled:opacity-50"
     >
       {asking ? <IconLoader2 size={12} className="animate-spin" /> : <IconRefresh size={12} />}
     </button>
@@ -1076,18 +1079,32 @@ const LondonCell = ({
     `checked ${new Date(market.checkedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
   ].join(', ');
 
+  // Our price carries freight to Dubai, so up to 30% above London is the
+  // normal band and stays grey; below London is a selling point, well above
+  // it is a price a trade buyer will question
+  const tone =
+    gap == null
+      ? ''
+      : gap < 0
+        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+        : gap > LONDON_PREMIUM_BAND
+          ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
+          : 'bg-fill-secondary text-text-muted';
+
   return (
-    <td className="px-3 py-2.5 text-right tabular-nums" title={title}>
-      <span className="text-text-secondary">
-        {market.askUsd == null ? 'last ' : ''}
-        {money(lead, ccy, 0)}
+    <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums" title={title}>
+      <span className="inline-flex items-center justify-end gap-1.5">
+        <span className="font-medium text-text-primary">{money(lead, ccy, 0)}</span>
+        {market.askUsd == null && (
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-text-muted">last</span>
+        )}
+        {gap != null && (
+          <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${tone}`}>
+            {gap > 0 ? `+${gap}%` : gap < 0 ? `${gap}%` : '0%'}
+          </span>
+        )}
+        {askButton}
       </span>
-      {askButton}
-      {gap != null && (
-        <span className="pm-gap mt-0.5 block text-xs text-text-muted">
-          {gap > 0 ? `ours +${gap}%` : gap < 0 ? `ours ${gap}%` : 'level'}
-        </span>
-      )}
     </td>
   );
 };
@@ -2582,7 +2599,6 @@ const PricingManagerPage = () => {
               .pm-compact .pm-namerow > * { flex-shrink: 0; white-space: nowrap; }
               .pm-compact .pm-namerow > button { flex-shrink: 1; min-width: 0; }
               .pm-compact .pm-name { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-              .pm-compact .pm-gap { display: inline; margin-left: 6px; }
             `}</style>
             <table className={`w-full text-sm ${compact ? 'pm-compact' : ''}`}>
               <thead className="sticky top-0 z-10 hidden bg-surface-muted md:table-header-group shadow-[0_1px_0_rgba(0,0,0,0.06),0_4px_8px_-4px_rgba(0,0,0,0.08)]">
@@ -2732,7 +2748,7 @@ const PricingManagerPage = () => {
                   <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
                     <span className="flex items-center justify-end gap-1">
                       London
-                      <HeaderInfo text="London in-bond market for a 75cl bottle, from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not Liv-ex): the lowest ask, or the last trade when nothing is offered, and how far our In Bond price sits from it. Our price carries freight to Dubai, so expect it above London. Refreshed from the Wine Labs page." />
+                      <HeaderInfo text="London in-bond market for a 75cl bottle, from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not Liv-ex): the lowest ask, or the last trade when nothing is offered, and how far our In Bond price sits from it. Our price carries freight to Dubai, so expect it above London: green is below London, grey up to 30% above, red more than 30% above. LAST means no one is offering it and the last trade is shown. Refreshed from the Wine Labs page." />
                     </span>
                   </th>
                   <th
