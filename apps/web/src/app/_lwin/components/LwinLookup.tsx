@@ -7,7 +7,7 @@
  * Used when receiving stock without a known LWIN.
  */
 
-import { IconBottle, IconCheck, IconKeyboard, IconLoader2, IconSearch } from '@tabler/icons-react';
+import { IconBottle, IconCheck, IconKeyboard, IconLoader2, IconSearch, IconSparkles } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -134,6 +134,25 @@ const LwinLookup = ({
     onSuccess: ({ lwin7 }) => setManualLwin7(lwin7),
     onError: (error) => toast.error(error.message),
   });
+
+  /*
+    Wine Labs' name search, on a click (about 8 credits): it reads messy
+    supplier names our register search cannot, so a wine is coded right
+    before it gets an internal code or the wrong cuvée.
+  */
+  const {
+    mutate: askWinelabs,
+    data: suggestion,
+    isPending: isAsking,
+    reset: resetSuggestion,
+  } = useMutation({
+    ...api.lwin.suggest.mutationOptions(),
+    onSuccess: (result) => {
+      if (!result) toast.info('Wine Labs does not recognise this name either.');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const askQuery = [searchQuery || productName, vintage].filter(Boolean).join(' ');
 
   // Search query
   const { data: searchResults, isLoading } = useQuery({
@@ -340,6 +359,73 @@ const LwinLookup = ({
               />
             )}
           </div>
+        </div>
+      )}
+
+      {/* Wine Labs' suggestion, above our own register's results */}
+      {!manualMode && !selectedLwin && (
+        <div className="space-y-2">
+          {!suggestion && (
+            <button
+              type="button"
+              onClick={() => askWinelabs({ query: askQuery })}
+              disabled={isAsking || askQuery.trim().length < 3}
+              className="inline-flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary disabled:opacity-50"
+            >
+              <Icon icon={isAsking ? IconLoader2 : IconSparkles} size="xs" className={isAsking ? 'animate-spin' : ''} />
+              {isAsking ? 'Asking Wine Labs…' : 'Not sure which wine? Ask Wine Labs (about 8 credits)'}
+            </button>
+          )}
+          {suggestion && (
+            <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-2 dark:border-emerald-800 dark:bg-emerald-900/10">
+              <Typography variant="bodyXs" colorRole="muted" className="px-2 pb-1">
+                Wine Labs suggests
+              </Typography>
+              {suggestion.wine ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedLwin({
+                      lwin: suggestion.wine!.lwin,
+                      displayName: suggestion.wine!.displayName,
+                      producerName: suggestion.wine!.producerName,
+                      country: suggestion.wine!.country,
+                      region: suggestion.wine!.region,
+                      colour: suggestion.wine!.colour ?? null,
+                      type: suggestion.wine!.type ?? null,
+                      classification: suggestion.wine!.classification ?? null,
+                    })
+                  }
+                  className="flex w-full items-start gap-3 rounded-md p-2 text-left hover:bg-fill-primary"
+                >
+                  <Icon icon={IconSparkles} size="sm" className="mt-0.5 text-emerald-600" />
+                  <div className="flex-1">
+                    <Typography variant="bodySm" className="font-medium">
+                      {suggestion.wine.displayName}
+                    </Typography>
+                    <Typography variant="bodyXs" colorRole="muted">
+                      {suggestion.wine.producerName} · {suggestion.wine.region}, {suggestion.wine.country}
+                    </Typography>
+                    <Typography variant="bodyXs" className="font-mono text-brand-600">
+                      LWIN: {suggestion.wine.lwin}
+                    </Typography>
+                  </div>
+                </button>
+              ) : (
+                <Typography variant="bodyXs" className="px-2">
+                  {suggestion.winelabsName} (LWIN {suggestion.lwin7}), which is not in our LWIN register yet:
+                  enter it under Manual Entry if it is right.
+                </Typography>
+              )}
+              <button
+                type="button"
+                onClick={() => resetSuggestion()}
+                className="px-2 pt-1 text-[11px] text-text-muted underline hover:text-text-primary"
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
       )}
 
