@@ -1,3 +1,55 @@
+## [2.1.13](https://github.com/craftandculture/Craft-Culture/compare/v2.1.12...v2.1.13) (2026-10-28)
+
+### Features
+
+* **cellar:** staff can open any member's statement line by line ([9cf4327](https://github.com/craftandculture/Craft-Culture/commit/9cf4327ce3975eeb0408c9e08d0944a544eb778b))
+
+## [2.1.12](https://github.com/craftandculture/Craft-Culture/compare/v2.1.11...v2.1.12) (2026-10-28)
+
+### Features
+
+* **ui:** take the white out of the whole app ([829edc7](https://github.com/craftandculture/Craft-Culture/commit/829edc73014d84ae89b4b1e19ab5a45609cfc8bb))
+
+## [2.1.11](https://github.com/craftandculture/Craft-Culture/compare/v2.1.10...v2.1.11) (2026-10-28)
+
+### Features
+
+* **cellar:** softer summary panels, opaque table header, no duplicate address card ([cb53f45](https://github.com/craftandculture/Craft-Culture/commit/cb53f45a9ce9e15c34924816176ff1f9b7a115a4))
+
+## [2.1.10](https://github.com/craftandculture/Craft-Culture/compare/v2.1.9...v2.1.10) (2026-10-28)
+
+### Features
+
+* a condition report on loose bottles costs AED 50 per bottle ([3bf09f5](https://github.com/craftandculture/Craft-Culture/commit/3bf09f55bbbdcfdf9da3f8fd3db06f20ab2bc851))
+
+## [2.1.9](https://github.com/craftandculture/Craft-Culture/compare/v2.1.8...v2.1.9) (2026-10-28)
+
+### Features
+
+* wine that missed receiving can be added to stock from Stock Explorer, dated the day it arrived ([9c9bd48](https://github.com/craftandculture/Craft-Culture/commit/9c9bd48110ba944577422801bb5753bb3ac97e14))
+
+## [2.1.8](https://github.com/craftandculture/Craft-Culture/compare/v2.1.7...v2.1.8) (2026-10-28)
+
+### Features
+
+* the Private Cellar can count wine in bottles, naming a case only where a case is sealed, shown to staff first ([2d6c50a](https://github.com/craftandculture/Craft-Culture/commit/2d6c50a225a0f7b65872811e781d6e2c99cba201))
+
+### Bug Fixes
+
+* a take-out recorded this month can have its date corrected, however far back it is dated ([92151cb](https://github.com/craftandculture/Craft-Culture/commit/92151cbe78953f497be59ffe21a20fbc7be26b4b))
+
+## [2.1.7](https://github.com/craftandculture/Craft-Culture/compare/v2.1.6...v2.1.7) (2026-10-28)
+
+### Bug Fixes
+
+* **wms:** pick list search covers every pick list, with Show more ([cfb3548](https://github.com/craftandculture/Craft-Culture/commit/cfb35482126aa492ec6d507ad636579013ff1459))
+
+## [2.1.6](https://github.com/craftandculture/Craft-Culture/compare/v2.1.5...v2.1.6) (2026-10-28)
+
+### Bug Fixes
+
+* Stock Explorer history for bottles from an opened case now shows the case's arrival and the pick that opened it ([7b5b4c4](https://github.com/craftandculture/Craft-Culture/commit/7b5b4c42e229f836748d7c76efef4f897ad4a93c))
+
 ## [2.1.5](https://github.com/craftandculture/Craft-Culture/compare/v2.1.4...v2.1.5) (2026-10-28)
 
 ### Bug Fixes

@@ -5,6 +5,7 @@ import adminAddBay from './controller/adminAddBay';
 import adminAddCaseToPallet from './controller/adminAddCaseToPallet';
 import adminAddOrdersToBatch from './controller/adminAddOrdersToBatch';
 import adminAddZohoOrdersToBatch from './controller/adminAddZohoOrdersToBatch';
+import adminAddToStock from './controller/adminAddToStock';
 import adminAdjustStockQuantity from './controller/adminAdjustStockQuantity';
 import adminAssignPickList from './controller/adminAssignPickList';
 import adminAutoFixStock from './controller/adminAutoFixStock';
@@ -229,6 +230,8 @@ const stockRouter = createTRPCRouter({
   import: adminImportStock,
   validateImport: adminValidateImportItems,
   adjustQuantity: adminAdjustStockQuantity,
+  // Wine that never came through receiving, dated the day it arrived
+  addToStock: adminAddToStock,
   takeOut: adminTakeOutOfStock,
   changeTakeOutReason: adminChangeTakeOutReason,
   recordCorrectionAsTakeOut: adminRecordCorrectionAsTakeOut,

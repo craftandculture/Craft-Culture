@@ -135,6 +135,7 @@ const adminNav: AdminNavSection[] = [
       { label: 'Members', href: '/platform/admin/cellar-members' },
       { label: 'Consignment', href: '/platform/admin/consignment' },
       { label: 'Purchases', href: '/platform/admin/cellar-purchases' },
+      { label: 'Statements', href: '/platform/admin/cellar-statements' },
       { label: 'Releases', href: '/platform/admin/cellar-releases' },
       { label: 'Payouts', href: '/platform/admin/payouts' },
       // The page holds the UK bond tariff and the payment accounts, not release prices

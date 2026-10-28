@@ -21,6 +21,14 @@ const MODES: { mode: Mode; label: string; detail: string }[] = [
   { mode: 'live', label: 'Live', detail: 'Emails go to members.' },
 ];
 
+type WordingMode = 'off' | 'staff' | 'live';
+
+const WORDING_MODES: { mode: WordingMode; label: string; detail: string }[] = [
+  { mode: 'off', label: 'Off', detail: 'Everyone sees the cellar as before, in packs and cases.' },
+  { mode: 'staff', label: 'Staff', detail: 'Staff, and staff viewing a member’s cellar, see bottles; members see it as before.' },
+  { mode: 'live', label: 'Live', detail: 'Every member sees their cellar in bottles, with cases named only where a case is sealed.' },
+];
+
 const STATUS: Record<string, { label: string; tint: string }> = {
   pending: { label: 'Waiting', tint: 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300' },
   shadowed: { label: 'Sent to team', tint: 'bg-sky-50 text-sky-800 dark:bg-sky-500/10 dark:text-sky-300' },
@@ -74,6 +82,22 @@ const MemberEmailsAdmin = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  const { data: wording } = useQuery(api.cellar.admin.getBottleWordingMode.queryOptions());
+  const setWording = useMutation({
+    ...api.cellar.admin.setBottleWordingMode.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(
+        result.mode === 'live'
+          ? 'Members now see their cellar in bottles'
+          : result.mode === 'staff'
+            ? 'Bottle wording is shown to staff only'
+            : 'Bottle wording is off',
+      );
+      void queryClient.invalidateQueries({ queryKey: api.cellar.admin.getBottleWordingMode.queryKey() });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const rows = data?.rows ?? [];
   const count = (status: string) => rows.filter((row) => row.status === status).length;
 
@@ -108,6 +132,37 @@ const MemberEmailsAdmin = () => {
                 aria-pressed={data?.mode === option.mode}
                 className={data?.mode === option.mode ? primaryButton : smallButton}
                 onClick={() => setConfirm(option.mode)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/*
+        Not an email, but the same kind of switch for the same clients: a change
+        to what members read, shown to staff before anyone else.
+      */}
+      <div className="border-border-muted bg-surface-muted mb-5 rounded-xl border p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-text-primary text-sm">
+            <span className="font-semibold">Cellar in bottles:</span>{' '}
+            {WORDING_MODES.find((m) => m.mode === wording?.mode)?.detail}
+          </p>
+          <div className="flex gap-2">
+            {WORDING_MODES.map((option) => (
+              <button
+                key={option.mode}
+                type="button"
+                disabled={!wording || wording.mode === option.mode || setWording.isPending}
+                aria-pressed={wording?.mode === option.mode}
+                className={wording?.mode === option.mode ? primaryButton : smallButton}
+                onClick={() => {
+                  // Live changes what every member reads; ask once
+                  if (option.mode === 'live' && !window.confirm('Show every member their cellar in bottles?')) return;
+                  setWording.mutate({ mode: option.mode });
+                }}
               >
                 {option.label}
               </button>

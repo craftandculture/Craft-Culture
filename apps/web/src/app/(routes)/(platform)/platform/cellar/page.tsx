@@ -57,7 +57,10 @@ import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import type { MovementTypeBadgeProps } from '@/app/_wms/components/MovementTypeBadge';
-import CONDITION_REPORT_FEE_AED from '@/app/_wms/constants/conditionReportFee';
+import CONDITION_REPORT_FEE_AED, {
+  CONDITION_REPORT_FEE_PER_BOTTLE_AED,
+  conditionReportFee,
+} from '@/app/_wms/constants/conditionReportFee';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
@@ -81,6 +84,8 @@ interface CellarParcel {
   /** Where the shipment that brought it left from */
   originCity?: string | null;
   originCountry?: string | null;
+  /** Single bottles left when a case was opened: the bottles that case held */
+  openedFromPack?: number | null;
 }
 
 /** "Beaune, France", or whichever half is known */
@@ -137,6 +142,25 @@ interface UkLine {
 const ukBottlesOf = (wine: { uk?: UkLine[] }) =>
   (wine.uk ?? []).reduce((sum, line) => sum + line.bottles, 0);
 
+/** Sealed cases only: a case of one bottle is a bottle, not a case */
+const sealedCasesOf = (
+  wine: { totalCases: number; caseConfig: number | null; uk?: UkLine[] },
+  where: 'all' | 'uae' | 'uk' = 'all',
+) => {
+  const parts: { cases: number; pack: number }[] = [];
+  if (where !== 'uk' && (wine.caseConfig ?? 1) > 1 && wine.totalCases > 0) {
+    parts.push({ cases: wine.totalCases, pack: wine.caseConfig ?? 1 });
+  }
+  if (where !== 'uae') {
+    for (const line of wine.uk ?? []) {
+      if ((line.bottlesPerCase ?? 1) > 1 && line.cases > 0) {
+        parts.push({ cases: line.cases, pack: line.bottlesPerCase ?? 1 });
+      }
+    }
+  }
+  return parts;
+};
+
 /** "OWC" from "(OWC) Original Wooden Case", as the trade writes it */
 const packagingCode = (packaging: string | null) =>
   /\(([A-Z]{2,4})\)/.exec(packaging ?? '')?.[1] ?? null;
@@ -150,6 +174,20 @@ const bottlesOf = (wine: {
   caseConfig: number | null;
   openBottles?: number | null;
 }) => wine.totalCases * (wine.caseConfig ?? 1) + (wine.openBottles ?? 0);
+
+const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
+
+/*
+  Bottles, and a case only where a case is sealed. A wine held as single
+  bottles is "2 bottles", never "2 cases of 1": the old wording told a member
+  who had one bottle left that they held a case.
+*/
+const describeHolding = (bottles: number, sealedCases: number, pack: number) => {
+  if (sealedCases <= 0 || pack <= 1) return plural(bottles, 'bottle');
+  const loose = bottles - sealedCases * pack;
+  const cased = `${plural(sealedCases, 'case')} of ${pack}`;
+  return loose > 0 ? `${cased} + ${plural(loose, 'bottle')}` : cased;
+};
 
 const sizeMl = (size: string | null) => {
   if (!size) return 750;
@@ -195,6 +233,12 @@ const CellarPage = () => {
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     ...api.wms.partner.getStock.queryOptions(),
   });
+
+  /* Bottles-not-cases wording: staff first, members once it is switched to live */
+  const { data: displayOptions } = useQuery({
+    ...api.cellar.member.getDisplayOptions.queryOptions(),
+  });
+  const bottleWording = displayOptions?.bottleWording ?? false;
 
   /* What the member has picked, in bottles, keyed by the parcel it comes from. */
   const [basket, setBasket] = useState<Map<string, number>>(new Map());
@@ -635,6 +679,18 @@ const CellarPage = () => {
   const shownBottlesOf = (wine: CellarWine) =>
     (location === 'uk' ? 0 : bottlesOf(wine)) + (location === 'uae' ? 0 : ukBottlesOf(wine));
 
+  /** "2 bottles", "1 case of 6", "1 case of 6 + 2 bottles": cases only where sealed */
+  const shownHoldingOf = (wine: CellarWine) => {
+    const bottles = shownBottlesOf(wine);
+    const parts = sealedCasesOf(wine, location);
+    const sealed = parts.reduce((sum, part) => sum + part.cases, 0);
+    const packs = new Set(parts.map((part) => part.pack));
+    if (sealed === 0) return plural(bottles, 'bottle');
+    if (packs.size === 1) return describeHolding(bottles, sealed, [...packs][0] ?? 1);
+    const loose = bottles - parts.reduce((sum, part) => sum + part.cases * part.pack, 0);
+    return `${plural(sealed, 'case')}${loose > 0 ? ` + ${plural(loose, 'bottle')}` : ''}`;
+  };
+
   const requestByStock = useMemo(() => {
     const map = new Map<string, { requestNumber: string }>();
 
@@ -777,6 +833,10 @@ const CellarPage = () => {
         (sum, wine) => sum + wine.totalCases + (wine.uk ?? []).reduce((total, line) => total + line.cases, 0),
         0,
       ),
+      sealedCases: cellarWines.reduce(
+        (sum, wine) => sum + sealedCasesOf(wine).reduce((total, part) => total + part.cases, 0),
+        0,
+      ),
       wines: cellarWines.length,
       producers: new Set(cellarWines.map((wine) => wine.producer?.trim() || 'Other')).size,
       indicative:
@@ -794,16 +854,34 @@ const CellarPage = () => {
         trust a month later.
       */
       totals.isMemberValuation
-        ? ['Producer', 'Wine', 'Vintage', 'Size', 'Pack', 'Cases', 'Bottles', 'Indicative USD/btl', 'Basis']
-        : ['Producer', 'Wine', 'Vintage', 'Size', 'Pack', 'Cases', 'Bottles', 'Import USD/btl'],
+        ? [
+            'Producer',
+            'Wine',
+            'Vintage',
+            'Size',
+            ...(bottleWording ? ['Bottles', 'Sealed cases'] : ['Pack', 'Cases', 'Bottles']),
+            'Indicative USD/btl',
+            'Basis',
+          ]
+        : [
+            'Producer',
+            'Wine',
+            'Vintage',
+            'Size',
+            ...(bottleWording ? ['Bottles', 'Sealed cases'] : ['Pack', 'Cases', 'Bottles']),
+            'Import USD/btl',
+          ],
       ...wines.map((wine) => [
         wine.producer ?? '',
         wine.productName,
         wine.vintage ?? '',
         wine.bottleSize ?? '',
-        wine.caseConfig ?? '',
-        wine.totalCases,
-        bottlesOf(wine),
+        ...(bottleWording
+          ? [
+              bottlesOf(wine),
+              (wine.caseConfig ?? 1) > 1 ? `${wine.totalCases} of ${wine.caseConfig}` : '',
+            ]
+          : [wine.caseConfig ?? '', wine.totalCases, bottlesOf(wine)]),
         ...(totals.isMemberValuation
           ? [
               wine.indicativePerBottle ?? '',
@@ -1072,7 +1150,11 @@ const CellarPage = () => {
           {
             value: collection.bottles.toLocaleString(),
             label: 'Bottles',
-            detail: `${collection.cases.toLocaleString()} cases`,
+            detail: bottleWording
+              ? collection.sealedCases > 0
+                ? `including ${plural(collection.sealedCases, 'sealed case')}`
+                : 'all single bottles'
+              : `${collection.cases.toLocaleString()} cases`,
             icon: IconBottle,
             tone: 'blue' as const,
           },
@@ -1802,15 +1884,21 @@ const CellarPage = () => {
 
       <div className="border-border-muted hidden overflow-x-auto rounded-xl border sm:max-h-[72vh] sm:overflow-auto md:block">
         <table className="w-full text-sm">
-          <thead className="bg-fill-muted/60 border-border-muted sticky top-0 z-10 border-b backdrop-blur">
+          <thead className="bg-surface-quiet border-border-muted sticky top-0 z-10 border-b">
             <tr>
               <th className="w-8 px-2 py-2.5" />
               <th className={`${th} min-w-[220px] text-left`}>{sortHeading('wine', 'Wine')}</th>
               <th className={`${th} hidden text-left md:table-cell`}>{sortHeading('producer', 'Producer')}</th>
               <th className={`${th} hidden text-center sm:table-cell`}>{sortHeading('vintage', 'Vintage')}</th>
               <th className={`${th} hidden text-center sm:table-cell`}>{sortHeading('size', 'Size')}</th>
-              <th className={`${th} hidden text-center md:table-cell`}>Pack</th>
-              <th className={`${th} hidden text-right sm:table-cell`}>Cases</th>
+              {bottleWording ? (
+                <th className={`${th} hidden text-right sm:table-cell`}>Holding</th>
+              ) : (
+                <>
+                  <th className={`${th} hidden text-center md:table-cell`}>Pack</th>
+                  <th className={`${th} hidden text-right sm:table-cell`}>Cases</th>
+                </>
+              )}
               <th className={`${th} text-right`}>{sortHeading('bottles', 'Bottles')}</th>
               {/*
                 The definition sits on the thing it defines. As a glossary at
@@ -1920,9 +2008,11 @@ const CellarPage = () => {
                         {wine.producer}
                         {wine.vintage ? ` · ${wine.vintage}` : ''}
                         {wine.bottleSize ? ` · ${wine.bottleSize}` : ''}
-                        {wine.totalCases
-                          ? ` · ${wine.totalCases} ${wine.totalCases === 1 ? 'case' : 'cases'}`
-                          : ''}
+                        {bottleWording
+                          ? ` · ${shownHoldingOf(wine)}`
+                          : wine.totalCases
+                            ? ` · ${wine.totalCases} ${wine.totalCases === 1 ? 'case' : 'cases'}`
+                            : ''}
                       </span>
                     </td>
                     <td className={`${tdMuted} hidden md:table-cell`}>
@@ -1943,15 +2033,23 @@ const CellarPage = () => {
                     >
                       {wine.bottleSize ?? '—'}
                     </td>
-                    <td className={`${tdMuted} hidden text-center tabular-nums md:table-cell`}>
-                      {wine.caseConfig ?? '—'}
-                    </td>
-                    <td
-                      className={`${tdMuted} hidden text-right tabular-nums sm:table-cell`}
-                    >
-                      {(location === 'uk' ? 0 : wine.totalCases) +
-                        (location === 'uae' ? 0 : (wine.uk ?? []).reduce((sum, line) => sum + line.cases, 0))}
-                    </td>
+                    {bottleWording ? (
+                      <td className={`${tdMuted} hidden whitespace-nowrap text-right sm:table-cell`}>
+                        {shownHoldingOf(wine)}
+                      </td>
+                    ) : (
+                      <>
+                        <td className={`${tdMuted} hidden text-center tabular-nums md:table-cell`}>
+                          {wine.caseConfig ?? '—'}
+                        </td>
+                        <td
+                          className={`${tdMuted} hidden text-right tabular-nums sm:table-cell`}
+                        >
+                          {(location === 'uk' ? 0 : wine.totalCases) +
+                            (location === 'uae' ? 0 : (wine.uk ?? []).reduce((sum, line) => sum + line.cases, 0))}
+                        </td>
+                      </>
+                    )}
                     <td
                       className={`${td} text-text-primary text-right font-semibold tabular-nums`}
                     >
@@ -2173,7 +2271,7 @@ const CellarPage = () => {
                           className="text-text-muted mb-1.5 block text-[10px] font-semibold uppercase tracking-wider"
                         >
                           <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-emerald-400 align-middle" />
-                          Cases held
+                          {bottleWording ? 'Holdings' : 'Cases held'}
                         </Typography>
 
                         {/*
@@ -2188,9 +2286,15 @@ const CellarPage = () => {
                           <table className="w-auto text-xs">
                             <thead>
                               <tr className="text-text-muted border-border-muted border-b text-[11px] uppercase tracking-wider">
-                                <th className="whitespace-nowrap px-3 py-1.5 text-right">Cases</th>
-                                <th className="whitespace-nowrap px-3 py-1.5 text-center">Pack</th>
-                                <th className="whitespace-nowrap px-3 py-1.5 text-right">Bottles</th>
+                                {bottleWording ? (
+                                  <th className="whitespace-nowrap px-3 py-1.5 text-left">Holding</th>
+                                ) : (
+                                  <>
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-right">Cases</th>
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-center">Pack</th>
+                                    <th className="whitespace-nowrap px-3 py-1.5 text-right">Bottles</th>
+                                  </>
+                                )}
                                 <th className="hidden whitespace-nowrap px-3 py-1.5 text-left sm:table-cell">
                                   Lot
                                 </th>
@@ -2208,16 +2312,37 @@ const CellarPage = () => {
                                 <tr
                                   key={parcel.stockId}
                                 >
-                                  <td className="whitespace-nowrap px-3 py-1.5 text-right font-semibold tabular-nums">
-                                    {parcel.quantityCases}
-                                  </td>
-                                  <td className="text-text-muted whitespace-nowrap px-3 py-1.5 text-center tabular-nums">
-                                    {wine.caseConfig ?? 1} &times;{' '}
-                                    {wine.bottleSize ?? '75cl'}
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
-                                    {parcel.quantityCases * (wine.caseConfig ?? 1)}
-                                  </td>
+                                  {bottleWording ? (
+                                    <td className="whitespace-nowrap px-3 py-1.5">
+                                      <span className="font-semibold tabular-nums">
+                                        {(wine.caseConfig ?? 1) > 1
+                                          ? `${plural(parcel.quantityCases, 'case')} of ${wine.caseConfig} · ${plural(
+                                              parcel.quantityCases * (wine.caseConfig ?? 1),
+                                              'bottle',
+                                            )}`
+                                          : plural(parcel.quantityCases, 'bottle')}
+                                      </span>
+                                      {/* Where single bottles came from, so a row never appears from nowhere */}
+                                      {(wine.caseConfig ?? 1) === 1 && (parcel.openedFromPack ?? 0) > 1 && (
+                                        <span className="text-text-muted block text-[11px]">
+                                          From an opened {parcel.openedFromPack}-bottle case
+                                        </span>
+                                      )}
+                                    </td>
+                                  ) : (
+                                    <>
+                                      <td className="whitespace-nowrap px-3 py-1.5 text-right font-semibold tabular-nums">
+                                        {parcel.quantityCases}
+                                      </td>
+                                      <td className="text-text-muted whitespace-nowrap px-3 py-1.5 text-center tabular-nums">
+                                        {wine.caseConfig ?? 1} &times;{' '}
+                                        {wine.bottleSize ?? '75cl'}
+                                      </td>
+                                      <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
+                                        {parcel.quantityCases * (wine.caseConfig ?? 1)}
+                                      </td>
+                                    </>
+                                  )}
                                   <td className="text-text-muted hidden whitespace-nowrap px-3 py-1.5 font-mono text-xs sm:table-cell">
                                     {parcel.lotNumber ?? '—'}
                                   </td>
@@ -2328,16 +2453,20 @@ const CellarPage = () => {
                                                 level, label, capsule and
                                                 closure, and report with
                                                 photographs and written notes.
-                                                AED {CONDITION_REPORT_FEE_AED}{' '}
-                                                per case, so AED{' '}
-                                                {(
-                                                  CONDITION_REPORT_FEE_AED *
-                                                  parcel.quantityCases
-                                                ).toLocaleString('en-US')}{' '}
+                                                AED {conditionReportFee({ caseConfig: wine.caseConfig, quantityCases: parcel.quantityCases }).rateAed}{' '}
+                                                per {conditionReportFee({ caseConfig: wine.caseConfig, quantityCases: parcel.quantityCases }).unit}, so AED{' '}
+                                                {conditionReportFee({
+                                                  caseConfig: wine.caseConfig,
+                                                  quantityCases: parcel.quantityCases,
+                                                }).totalAed.toLocaleString('en-US')}{' '}
                                                 for{' '}
-                                                {parcel.quantityCases === 1
-                                                  ? 'this case'
-                                                  : `these ${parcel.quantityCases} cases`}
+                                                {(wine.caseConfig ?? 1) === 1
+                                                  ? parcel.quantityCases === 1
+                                                    ? 'this bottle'
+                                                    : `these ${parcel.quantityCases} bottles`
+                                                  : parcel.quantityCases === 1
+                                                    ? 'this case'
+                                                    : `these ${parcel.quantityCases} cases`}
                                                 , added to your next invoice.
                                               </p>
                                             }
@@ -2383,8 +2512,9 @@ const CellarPage = () => {
                                             >
                                               <Typography variant="bodyXs">
                                                 <strong>
-                                                  AED {CONDITION_REPORT_FEE_AED}{' '}
-                                                  per case
+                                                  {(wine.caseConfig ?? 1) === 1
+                                                    ? `AED ${CONDITION_REPORT_FEE_PER_BOTTLE_AED} per bottle`
+                                                    : `AED ${CONDITION_REPORT_FEE_AED} per case`}
                                                 </strong>
                                                 . We inspect every bottle for
                                                 fill level, label, capsule and
@@ -3058,52 +3188,6 @@ const CellarPage = () => {
           </div>
         </SheetContent>
       </Sheet>
-
-      {/*
-        One place to edit an account detail, and this is not it. The panel
-        summarises and links; two editors for one address is how they end up
-        disagreeing.
-      */}
-      <section className="border-border-muted mt-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-4">
-        <div className="min-w-0">
-          <Typography variant="bodySm" className="font-semibold">
-            Delivery details
-          </Typography>
-          {profile?.deliveryAddress ? (
-            <>
-              <Typography
-                variant="bodyXs"
-                colorRole="muted"
-                className="mt-0.5 block"
-              >
-                {profile.deliveryAddress}
-              </Typography>
-              {/*
-                A licensed delivery cannot be made without it, so it is a
-                blocker rather than a detail mentioned in passing.
-              */}
-              {profile.documents.length === 0 && (
-                <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                  Identification is required before we can deliver
-                </span>
-              )}
-            </>
-          ) : (
-            <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 block">
-              Save a delivery address and it will be used each time you
-              request a delivery.
-            </Typography>
-          )}
-        </div>
-        <Link href="/platform/cellar/profile">
-          <Button variant="outline" size="sm">
-            <ButtonContent>
-              {profile?.deliveryAddress ? 'Edit details' : 'Add address'}
-            </ButtonContent>
-          </Button>
-        </Link>
-      </section>
 
       <SellWinesDialog
         wines={sellingWines}

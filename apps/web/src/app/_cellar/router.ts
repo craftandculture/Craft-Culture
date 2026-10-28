@@ -11,6 +11,7 @@ import adminGetCellarAccess from './controller/adminGetCellarAccess';
 import adminGetMemberEmails from './controller/adminGetMemberEmails';
 import adminGetMemberIdentity from './controller/adminGetMemberIdentity';
 import adminGetMembers from './controller/adminGetMembers';
+import adminGetMemberStatement from './controller/adminGetMemberStatement';
 import adminGetPaymentDetails from './controller/adminGetPaymentDetails';
 import adminGetReleaseRates from './controller/adminGetReleaseRates';
 import adminGetReleases from './controller/adminGetReleases';
@@ -24,6 +25,7 @@ import adminQuoteRelease from './controller/adminQuoteRelease';
 import adminQuoteUkMove from './controller/adminQuoteUkMove';
 import adminRemoveUkRates from './controller/adminRemoveUkRates';
 import adminRevokeCellarAccess from './controller/adminRevokeCellarAccess';
+import adminSetBottleWordingMode, { adminGetBottleWordingMode } from './controller/adminSetBottleWordingMode';
 import adminSetMemberEmailMode from './controller/adminSetMemberEmailMode';
 import adminSetPaymentDetails from './controller/adminSetPaymentDetails';
 import adminSetReleaseRates from './controller/adminSetReleaseRates';
@@ -40,6 +42,7 @@ import memberEstimateRelease from './controller/memberEstimateRelease';
 import memberGetAccess from './controller/memberGetAccess';
 import memberGetActivity from './controller/memberGetActivity';
 import memberGetAddresses from './controller/memberGetAddresses';
+import memberGetDisplayOptions from './controller/memberGetDisplayOptions';
 import memberGetInvoicePdf from './controller/memberGetInvoicePdf';
 import memberGetInvoices from './controller/memberGetInvoices';
 import memberGetProfile from './controller/memberGetProfile';
@@ -84,6 +87,7 @@ const memberRouter = createTRPCRouter({
   saveRelease: memberSaveRelease,
   submitRelease: memberSubmitRelease,
   acceptRelease: memberAcceptRelease,
+  getDisplayOptions: memberGetDisplayOptions,
 });
 
 const adminRouter = createTRPCRouter({
@@ -94,6 +98,7 @@ const adminRouter = createTRPCRouter({
   confirmRelease: adminConfirmRelease,
   linkReleaseOrder: adminLinkReleaseOrder,
   getMembers: adminGetMembers,
+  getMemberStatement: adminGetMemberStatement,
   getUkStock: adminGetUkStock,
   importUkStock: adminImportUkStock,
   assignUkRotation: adminAssignUkRotation,
@@ -114,6 +119,8 @@ const adminRouter = createTRPCRouter({
   // Member emails: the off/shadow/live switch and the outbox
   getMemberEmails: adminGetMemberEmails,
   setMemberEmailMode: adminSetMemberEmailMode,
+  getBottleWordingMode: adminGetBottleWordingMode,
+  setBottleWordingMode: adminSetBottleWordingMode,
 });
 
 /*

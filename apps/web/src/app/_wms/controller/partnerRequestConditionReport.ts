@@ -6,7 +6,7 @@ import db from '@/database/client';
 import { wmsPartnerRequests, wmsStock } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
-import CONDITION_REPORT_FEE_AED from '../constants/conditionReportFee';
+import { conditionReportFee } from '../constants/conditionReportFee';
 import generateRequestNumber from '../utils/generateRequestNumber';
 
 /**
@@ -34,6 +34,7 @@ const partnerRequestConditionReport = stockOwnerProcedure
         lwin18: wmsStock.lwin18,
         productName: wmsStock.productName,
         quantityCases: wmsStock.quantityCases,
+        caseConfig: wmsStock.caseConfig,
         ownerId: wmsStock.ownerId,
       })
       .from(wmsStock)
@@ -69,6 +70,7 @@ const partnerRequestConditionReport = stockOwnerProcedure
       });
     }
 
+    const fee = conditionReportFee(stock);
     const requestNumber = await generateRequestNumber();
 
     const [request] = await db
@@ -84,7 +86,7 @@ const partnerRequestConditionReport = stockOwnerProcedure
         productName: stock.productName,
         quantityCases: stock.quantityCases,
         partnerNotes: [
-          `Condition report requested. Fee AED ${CONDITION_REPORT_FEE_AED} per case.`,
+          `Condition report requested. Fee AED ${fee.rateAed} per ${fee.unit}.`,
           input.notes?.trim(),
         ]
           .filter(Boolean)
@@ -94,7 +96,7 @@ const partnerRequestConditionReport = stockOwnerProcedure
 
     return {
       requestNumber: request?.requestNumber ?? requestNumber,
-      feeAed: CONDITION_REPORT_FEE_AED * stock.quantityCases,
+      feeAed: fee.totalAed,
       cases: stock.quantityCases,
     };
   });

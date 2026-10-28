@@ -333,7 +333,7 @@ const StatementPage = () => {
             went out, what sold and what is owed. Only the balance owed carries
             colour; a month with nothing in a column says so quietly.
           */}
-          <dl className="border-border-muted bg-surface-primary divide-border-muted mb-7 grid grid-cols-2 divide-x overflow-hidden rounded-xl border sm:grid-cols-4 [&>div:nth-child(n+3)]:border-t sm:[&>div:nth-child(n+3)]:border-t-0">
+          <dl className="border-border-muted bg-surface-quiet divide-border-muted mb-7 grid grid-cols-2 divide-x overflow-hidden rounded-xl border sm:grid-cols-4 [&>div:nth-child(n+3)]:border-t sm:[&>div:nth-child(n+3)]:border-t-0">
             {[
               {
                 label: 'Added',
