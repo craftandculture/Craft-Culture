@@ -33,7 +33,8 @@ const bottles = (count: number) => `${count} ${count === 1 ? 'bottle' : 'bottles
 const REFERENCE = /^(PCO|SO|INV)-[\d-]+$/;
 
 const splitLabel = (label: string) => {
-  const parts = label.split(' · ');
+  // Under the Sold heading, "Sold to" only repeats it: the buyer is the line
+  const parts = label.replace(/^Sold to /, '').split(' · ');
   return {
     title: parts.filter((part) => !REFERENCE.test(part)).join(' · '),
     references: parts.filter((part) => REFERENCE.test(part)),
