@@ -121,6 +121,25 @@ const sendDeliveryStageNotices = async () => {
     const stage = deliveryStage(row);
     const last = toldByRequest.get(row.id) ?? -1;
 
+    /*
+      Told of a stage the delivery has not reached. A rule that read our own
+      hand-over to the distributor as delivered told members their wine had
+      arrived; those notices are withdrawn here, and the real stages announced
+      as they come.
+    */
+    if (stage < last) {
+      await db
+        .delete(notifications)
+        .where(
+          and(
+            eq(notifications.entityType, 'cellar_release_request'),
+            eq(notifications.entityId, row.id),
+            sql`(${notifications.metadata}->>'deliveryStage')::int > ${stage}`,
+          ),
+        );
+      continue;
+    }
+
     if (stage <= last) continue;
 
     const content = DELIVERY_STAGES[stage];

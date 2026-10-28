@@ -79,13 +79,13 @@ const deliveryStage = ({
   salesOrderStatus,
   dispatchStatus,
 }: DeliveryProgress) => {
-  if (
-    orderStatus === 'delivered' ||
-    salesOrderStatus === 'delivered' ||
-    dispatchStatus === 'delivered'
-  ) {
-    return 5;
-  }
+  /*
+    Only the distributor delivers to the member, and only the order says so.
+    The Zoho order and the dispatch batch read "delivered" once our van has
+    handed the wine to the distributor; on 28 October that told Ihab Toma two
+    deliveries had reached him while both were still at City Drinks.
+  */
+  if (orderStatus === 'delivered') return 5;
 
   if (orderStatus === 'out_for_delivery') return 4;
 
@@ -93,7 +93,9 @@ const deliveryStage = ({
     orderStatus === 'with_distributor' ||
     orderStatus === 'stock_in_transit' ||
     salesOrderStatus === 'dispatched' ||
-    dispatchStatus === 'dispatched'
+    salesOrderStatus === 'delivered' ||
+    dispatchStatus === 'dispatched' ||
+    dispatchStatus === 'delivered'
   ) {
     return 3;
   }
