@@ -3111,6 +3111,15 @@ const PricingManagerPage = () => {
                                 {product.productName}
                               </span>
                             </button>
+                            {/* Vintage and a non-standard size ride in the pinned
+                                column, so a row still reads as one wine when the
+                                table is scrolled across to the prices */}
+                            <span className="text-[13px] font-semibold tabular-nums text-text-secondary">
+                              {product.vintage || 'NV'}
+                              {product.bottleSize && !/^75\s?cl$|^750\s?ml$/i.test(product.bottleSize) && (
+                                <span className="ml-1 font-normal text-text-muted">{product.bottleSize}</span>
+                              )}
+                            </span>
                             {ownerCue && (
                               <span
                                 title={
