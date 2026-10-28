@@ -1,3 +1,9 @@
+## [2.1.6](https://github.com/craftandculture/Craft-Culture/compare/v2.1.5...v2.1.6) (2026-10-28)
+
+### Bug Fixes
+
+* Stock Explorer history for bottles from an opened case now shows the case's arrival and the pick that opened it ([7b5b4c4](https://github.com/craftandculture/Craft-Culture/commit/7b5b4c42e229f836748d7c76efef4f897ad4a93c))
+
 ## [2.1.5](https://github.com/craftandculture/Craft-Culture/compare/v2.1.4...v2.1.5) (2026-10-28)
 
 ### Bug Fixes
