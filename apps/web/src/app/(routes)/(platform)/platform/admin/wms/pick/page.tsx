@@ -10,10 +10,10 @@ import {
   IconRefresh,
   IconSearch,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -24,6 +24,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import ClientMark from '@/app/_wms/components/ClientMark';
 import useTRPC from '@/lib/trpc/browser';
 
+const PAGE_SIZE = 50;
+
 type StatusFilter = 'all' | 'pending' | 'in_progress' | 'completed' | 'cancelled';
 
 /**
@@ -33,23 +35,27 @@ const WMSPickListsPage = () => {
   const api = useTRPC();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
   const [search, setSearch] = useState('');
+  const [term, setTerm] = useState('');
+  const [limit, setLimit] = useState(PAGE_SIZE);
 
-  const { data, isLoading, refetch } = useQuery({
+  // Search the server a moment after typing stops; a new search or filter starts from the top
+  useEffect(() => {
+    const timer = setTimeout(() => setTerm(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+  useEffect(() => setLimit(PAGE_SIZE), [term, statusFilter]);
+
+  const { data, isLoading, isFetching, refetch } = useQuery({
     ...api.wms.admin.picking.getMany.queryOptions({
       status: statusFilter === 'all' ? undefined : statusFilter,
-      limit: 50,
+      search: term || undefined,
+      limit,
       offset: 0,
     }),
+    placeholderData: keepPreviousData,
   });
 
-  const term = search.trim().toLowerCase();
-  const shown = (data?.pickLists ?? []).filter(
-    (pl) =>
-      !term ||
-      [pl.customerName, pl.pickListNumber, pl.invoiceNumber, pl.orderNumber, pl.referenceNumber].some((v) =>
-        v?.toLowerCase().includes(term),
-      ),
-  );
+  const shown = data?.pickLists ?? [];
 
   const statusFilters: { id: StatusFilter; label: string }[] = [
     { id: 'pending', label: 'Pending' },
@@ -282,9 +288,16 @@ const WMSPickListsPage = () => {
 
             {/* Pagination */}
             {data.pagination.total > 0 && (
-              <Typography variant="bodyXs" colorRole="muted" className="text-center md:col-span-2">
-                Showing {shown.length} of {data.pagination.total} pick lists
-              </Typography>
+              <div className="flex flex-col items-center gap-2 md:col-span-2">
+                <Typography variant="bodyXs" colorRole="muted">
+                  Showing {shown.length} of {data.pagination.total} pick lists
+                </Typography>
+                {shown.length < data.pagination.total && (
+                  <Button variant="outline" onClick={() => setLimit((n) => n + PAGE_SIZE)} isDisabled={isFetching}>
+                    <ButtonContent>{isFetching ? 'Loading…' : `Show ${Math.min(PAGE_SIZE, data.pagination.total - shown.length)} more`}</ButtonContent>
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         )}
