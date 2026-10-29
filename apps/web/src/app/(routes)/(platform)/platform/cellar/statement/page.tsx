@@ -384,7 +384,13 @@ const StatementPage = () => {
               {
                 label: 'Owed to you',
                 value: money(Math.max(0, data.owedUsd)),
-                detail: data.paidUsd > 0 ? `${money(data.paidUsd)} paid this month` : 'Paid monthly',
+                // Says what the balance is made of, so it is not read as this month's sales alone
+                detail:
+                  Math.abs(data.broughtForwardUsd) >= 0.01
+                    ? `incl. ${money(data.broughtForwardUsd)} still owed from ${previousMonthLabel}`
+                    : data.paidUsd > 0
+                      ? `${money(data.paidUsd)} paid this month`
+                      : 'Paid monthly',
                 accent: data.owedUsd > 0,
                 quiet: data.owedUsd <= 0 && data.paidUsd <= 0,
               },
@@ -430,6 +436,35 @@ const StatementPage = () => {
               </dl>
             );
           })()}
+
+          {balance?.shown && (
+            <section className="mb-7">
+              <h2 className="text-text-muted mb-2 px-1 text-[11px] font-medium uppercase tracking-wider">
+                Your balance
+              </h2>
+              <dl className="border-border-muted bg-surface-quiet divide-border-muted divide-y rounded-xl border text-sm">
+                {[
+                  { label: `Still owed from ${previousMonthLabel} and earlier`, value: money(data.broughtForwardUsd) },
+                  { label: `Sold in ${monthLabel}`, value: money(balance.sold) },
+                  ...(Math.abs(balance.other) >= 0.01
+                    ? [{ label: 'Reimbursed to you', value: money(balance.other) }]
+                    : []),
+                  { label: `Paid to you in ${monthLabel}`, value: data.paidUsd > 0 ? `− ${money(data.paidUsd)}` : '—' },
+                ].map((line) => (
+                  <div key={line.label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+                    <dt className="text-text-muted">{line.label}</dt>
+                    <dd className="text-text-primary tabular-nums">{line.value}</dd>
+                  </div>
+                ))}
+                <div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+                  <dt className="text-text-primary font-semibold">Owed to you at the end of {monthLabel}</dt>
+                  <dd className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                    {money(Math.max(0, data.owedUsd))}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          )}
 
           <StatementGroups
             title="Deliveries"
@@ -481,35 +516,6 @@ const StatementPage = () => {
                 : undefined
             }
           />
-
-          {balance?.shown && (
-            <section className="mb-7">
-              <h2 className="text-text-muted mb-2 px-1 text-[11px] font-medium uppercase tracking-wider">
-                Your balance
-              </h2>
-              <dl className="border-border-muted bg-surface-quiet divide-border-muted divide-y rounded-xl border text-sm">
-                {[
-                  { label: `Brought forward from ${previousMonthLabel}`, value: money(data.broughtForwardUsd) },
-                  { label: `Sold in ${monthLabel}`, value: money(balance.sold) },
-                  ...(Math.abs(balance.other) >= 0.01
-                    ? [{ label: 'Reimbursed to you', value: money(balance.other) }]
-                    : []),
-                  { label: 'Paid to you', value: data.paidUsd > 0 ? `− ${money(data.paidUsd)}` : '—' },
-                ].map((line) => (
-                  <div key={line.label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
-                    <dt className="text-text-muted">{line.label}</dt>
-                    <dd className="text-text-primary tabular-nums">{line.value}</dd>
-                  </div>
-                ))}
-                <div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
-                  <dt className="text-text-primary font-semibold">Owed to you</dt>
-                  <dd className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
-                    {money(Math.max(0, data.owedUsd))}
-                  </dd>
-                </div>
-              </dl>
-            </section>
-          )}
 
           {data.left.some((row) => !['delivery', 'sale'].includes(row.outcome)) && (
             <StatementGroups
