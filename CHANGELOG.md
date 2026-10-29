@@ -1,3 +1,9 @@
+## [2.1.33](https://github.com/craftandculture/Craft-Culture/compare/v2.1.32...v2.1.33) (2026-10-29)
+
+### Bug Fixes
+
+* Recording agreed prices no longer fails on save with "rate is not defined" ([9a9e10f](https://github.com/craftandculture/Craft-Culture/commit/9a9e10f63ac6d5f1f7d568136b07b392068b6966))
+
 ## [2.1.32](https://github.com/craftandculture/Craft-Culture/compare/v2.1.31...v2.1.32) (2026-10-29)
 
 ### Features
