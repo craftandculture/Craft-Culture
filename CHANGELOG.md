@@ -1,3 +1,9 @@
+## [2.1.30](https://github.com/craftandculture/Craft-Culture/compare/v2.1.29...v2.1.30) (2026-10-29)
+
+### Features
+
+* home revenue graph is a slim line instead of tall bars ([398ed58](https://github.com/craftandculture/Craft-Culture/commit/398ed58c22c174046434a107a48931bff3438db0))
+
 ## [2.1.29](https://github.com/craftandculture/Craft-Culture/compare/v2.1.28...v2.1.29) (2026-10-28)
 
 ### Bug Fixes
