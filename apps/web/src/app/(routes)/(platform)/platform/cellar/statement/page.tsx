@@ -157,6 +157,7 @@ const StatementPage = () => {
 
   // The month before, by name, for the balance brought forward
   const previousMonthLabel = format(subMonths(new Date(`${month}-01T12:00:00`), 1), 'MMMM');
+  const monthName = format(new Date(`${month}-01T12:00:00`), 'MMMM');
 
   /*
     How "Owed to you" is reached: what was owed at the start of the month, plus
@@ -376,13 +377,14 @@ const StatementPage = () => {
                 quiet: totals.delivered + totals.onItsWay === 0,
               },
               {
-                label: 'Sold',
+                // This month's sales, so it is not mistaken for the balance due
+                label: `${monthName} sales`,
                 value: money(data.soldUsd + data.soldLeftUsd),
                 detail: `${bottles(totals.sold)}${data.unpricedBottles ? ` · ${data.unpricedBottles} awaiting a price` : ''}`,
                 quiet: totals.sold === 0,
               },
               {
-                label: 'Owed to you',
+                label: 'Total due to you',
                 value: money(Math.max(0, data.owedUsd)),
                 // Says what the balance is made of, so it is not read as this month's sales alone
                 detail:
@@ -445,11 +447,11 @@ const StatementPage = () => {
               <dl className="border-border-muted bg-surface-quiet divide-border-muted divide-y rounded-xl border text-sm">
                 {[
                   { label: `Still owed from ${previousMonthLabel} and earlier`, value: money(data.broughtForwardUsd) },
-                  { label: `Sold in ${monthLabel}`, value: money(balance.sold) },
+                  { label: `${monthName} sales`, value: money(balance.sold) },
                   ...(Math.abs(balance.other) >= 0.01
                     ? [{ label: 'Reimbursed to you', value: money(balance.other) }]
                     : []),
-                  { label: `Paid to you in ${monthLabel}`, value: data.paidUsd > 0 ? `− ${money(data.paidUsd)}` : '—' },
+                  { label: `Paid to you in ${monthName}`, value: data.paidUsd > 0 ? `− ${money(data.paidUsd)}` : '—' },
                 ].map((line) => (
                   <div key={line.label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
                     <dt className="text-text-muted">{line.label}</dt>
@@ -457,7 +459,7 @@ const StatementPage = () => {
                   </div>
                 ))}
                 <div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
-                  <dt className="text-text-primary font-semibold">Owed to you at the end of {monthLabel}</dt>
+                  <dt className="text-text-primary font-semibold">Total due to you</dt>
                   <dd className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
                     {money(Math.max(0, data.owedUsd))}
                   </dd>
@@ -488,7 +490,7 @@ const StatementPage = () => {
           />
 
           <StatementGroups
-            title="Sold"
+            title={`${monthName} sales`}
             empty="Nothing sold this month."
             total={totals.sold ? money(data.soldUsd + data.soldLeftUsd) : undefined}
             groups={[
