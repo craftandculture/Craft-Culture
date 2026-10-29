@@ -548,7 +548,7 @@ const WMSPickListDetailPage = () => {
           <div className="mt-1.5 flex items-center gap-2">
             <div className="h-1.5 flex-1 rounded-full bg-fill-secondary">
               <div
-                className="h-1.5 rounded-full bg-brand-600 transition-all"
+                className="h-1.5 rounded-full bg-text-primary transition-all"
                 style={{ width: `${data.progress.percent}%` }}
               />
             </div>
@@ -584,15 +584,15 @@ const WMSPickListDetailPage = () => {
           href={`/api/admin/wms/picking-list/${pickListId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mb-3 flex w-full items-center gap-3 rounded-xl border-2 border-brand-500 bg-brand-50 px-4 py-3 transition-colors hover:bg-brand-100 active:scale-[0.99] dark:border-brand-700 dark:bg-brand-900/20"
+          className="mb-3 flex w-full items-center gap-3 rounded-xl border-2 border-text-primary bg-surface-secondary px-4 py-3 transition-colors hover:bg-surface-secondary active:scale-[0.99] dark:border-text-primary dark:bg-surface-secondary"
         >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-white">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-surface-secondary0 text-white">
             <Icon icon={IconPrinter} size="md" />
           </span>
           <span className="min-w-0 flex-1">
             <Typography
               variant="bodyMd"
-              className="font-bold text-brand-700 dark:text-brand-300"
+              className="font-bold text-text-primary dark:text-text-primary"
             >
               Print Pick List
             </Typography>
@@ -603,7 +603,7 @@ const WMSPickListDetailPage = () => {
           <Icon
             icon={IconChevronRight}
             size="sm"
-            className="shrink-0 text-brand-400"
+            className="shrink-0 text-text-primary"
           />
         </a>
       )}
@@ -676,7 +676,7 @@ const WMSPickListDetailPage = () => {
               title="Print every case label for this order"
               className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-border-primary bg-fill-secondary px-4 py-2.5 text-left transition-colors hover:bg-fill-muted disabled:opacity-60"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-brand text-text-brand">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface-brand text-text-primary">
                 <Icon
                   icon={isPrintingLabels ? IconLoader2 : IconTag}
                   size="sm"
@@ -692,7 +692,7 @@ const WMSPickListDetailPage = () => {
                 </Typography>
               </span>
               {pcoRef.labelCount ? (
-                <span className="shrink-0 rounded-full bg-surface-brand px-2.5 py-1 text-xs font-semibold text-text-brand">
+                <span className="shrink-0 rounded-full bg-surface-brand px-2.5 py-1 text-xs font-semibold text-text-primary">
                   {pcoRef.labelCount} label{pcoRef.labelCount === 1 ? '' : 's'}
                 </span>
               ) : null}
@@ -797,12 +797,12 @@ const WMSPickListDetailPage = () => {
       {/* ── Pre-Pick: Current Item Card ── */}
       {!isComplete && !allPicked && !pickingItem && currentItem && (
         <div className="space-y-3">
-          <Card className="border-2 border-brand-500">
+          <Card className="border-2 border-text-primary">
             <CardContent className="p-0">
               {/* Item counter + location row */}
               <div className="flex items-center justify-between border-b border-border-primary px-4 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-brand-600">
+                  <span className="text-xs font-semibold text-text-primary">
                     {currentItemIndex + 1}/{unpickedItems.length}
                   </span>
                   {formatCaseConfig(currentItem) &&
@@ -874,7 +874,7 @@ const WMSPickListDetailPage = () => {
                   <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
                     Pick Qty
                   </span>
-                  <div className="text-3xl font-bold text-brand-600">
+                  <div className="text-3xl font-bold text-text-primary">
                     {currentItem.quantityBottles ?? currentItem.quantityCases}
                   </div>
                   <span className="text-[10px] text-text-muted">
@@ -959,10 +959,10 @@ const WMSPickListDetailPage = () => {
       {pickingItem && (
         <div className="space-y-3">
           {/* Picking header bar — product + qty + location */}
-          <div className="flex items-start gap-3 rounded-lg bg-brand-50 p-3 dark:bg-brand-900/20">
+          <div className="flex items-start gap-3 rounded-lg bg-surface-secondary p-3 dark:bg-surface-secondary">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-600">Picking</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-text-primary">Picking</span>
                 {formatCaseConfig(pickingLine ?? { caseConfig: null, bottleSize: null }) && (
                   <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                     {formatCaseConfig(pickingLine ?? { caseConfig: null, bottleSize: null })}
@@ -974,7 +974,7 @@ const WMSPickListDetailPage = () => {
               </Typography>
             </div>
             <div className="shrink-0 text-right">
-              <div className="text-2xl font-bold text-brand-600">{pickingItem.quantityNeeded}</div>
+              <div className="text-2xl font-bold text-text-primary">{pickingItem.quantityNeeded}</div>
               <span className="text-[10px] text-text-muted">
                 {pickingItem.isBottlePick ? 'bottles' : 'cases'}
               </span>
@@ -1066,13 +1066,13 @@ const WMSPickListDetailPage = () => {
           <Card className="overflow-hidden">
             <CardContent className="p-0">
               {/* Step 1: Location */}
-              <div className={`p-3 ${scanStep === 'location' ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}>
+              <div className={`p-3 ${scanStep === 'location' ? 'bg-surface-secondary dark:bg-surface-secondary' : ''}`}>
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                       pickedLocationCode
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                        : 'bg-surface-secondary text-text-primary dark:bg-surface-secondary dark:text-text-primary'
                     }`}>
                       {pickedLocationCode ? <Icon icon={IconCheck} size="sm" /> : '1'}
                     </span>
@@ -1118,14 +1118,14 @@ const WMSPickListDetailPage = () => {
               <div className="border-t border-border-primary" />
 
               {/* Step 2: Case */}
-              <div className={`p-3 ${scanStep === 'case' ? 'bg-brand-50/50 dark:bg-brand-900/10' : !pickedLocationCode ? 'opacity-40' : ''}`}>
+              <div className={`p-3 ${scanStep === 'case' ? 'bg-surface-secondary dark:bg-surface-secondary' : !pickedLocationCode ? 'opacity-40' : ''}`}>
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                       caseVerified
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                         : scanStep === 'case'
-                          ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                          ? 'bg-surface-secondary text-text-primary dark:bg-surface-secondary dark:text-text-primary'
                           : 'bg-fill-secondary text-text-muted'
                     }`}>
                       {caseVerified ? <Icon icon={IconCheck} size="sm" /> : '2'}

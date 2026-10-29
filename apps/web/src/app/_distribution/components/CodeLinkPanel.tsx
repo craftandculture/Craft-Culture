@@ -185,7 +185,7 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
           type="button"
           disabled={sweep.isPending || !outletId}
           onClick={() => sweep.mutate({ outletId: outletId, mode: 'apply' })}
-          className="bg-fill-brand text-text-on-brand hover:bg-fill-brand/90 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+          className="bg-text-primary text-text-on-brand hover:bg-text-primary/90 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
         >
           {sweep.isPending ? 'Matching…' : 'Match the names that agree'}
         </button>
@@ -242,7 +242,7 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                           ourProductName: candidate.productName,
                         })
                       }
-                      className="border-border-primary hover:border-fill-brand hover:bg-fill-muted/30 focus-visible:ring-fill-brand max-w-sm rounded-lg border p-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50"
+                      className="border-border-primary hover:border-text-primary hover:bg-fill-muted/30 focus-visible:ring-text-primary max-w-sm rounded-lg border p-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50"
                     >
                       <Typography variant="bodyXs" asChild>
                         <span className="block">{candidate.productName}</span>
@@ -301,7 +301,7 @@ const CodeLinkPanel = ({ outletId, onLinked }: CodeLinkPanelProps) => {
                     value={term}
                     onChange={(event) => setTerm(event.target.value)}
                     placeholder="Search our wines by name"
-                    className="border-border-primary focus-visible:ring-fill-brand w-full max-w-sm rounded-lg border px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2"
+                    className="border-border-primary focus-visible:ring-text-primary w-full max-w-sm rounded-lg border px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2"
                   />
                   {matches.map((wine) => (
                     <button

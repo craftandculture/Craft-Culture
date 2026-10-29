@@ -63,7 +63,7 @@ const LineFixPanel = ({
   }
 
   return (
-    <div className="border-border-brand bg-fill-brand/5 space-y-2 rounded-lg border p-3 text-sm">
+    <div className="border-text-primary bg-text-primary/5 space-y-2 rounded-lg border p-3 text-sm">
       <p className="text-text-primary">
         Linked to one of our wines, but no invoice of ours to the outlet carries it, so it has no owner or price.
         Whose is it?
@@ -85,7 +85,7 @@ const LineFixPanel = ({
       </div>
       <p className="text-text-muted text-xs">
         It stays unvalued until it appears on an invoice to the outlet.{' '}
-        <button type="button" onClick={() => setRelink(true)} className="text-text-brand font-medium hover:underline">
+        <button type="button" onClick={() => setRelink(true)} className="text-text-primary font-medium hover:underline">
           Linked to the wrong wine? Re-link
         </button>{' '}
         ·{' '}

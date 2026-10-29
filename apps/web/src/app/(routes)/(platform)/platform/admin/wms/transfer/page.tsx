@@ -428,7 +428,7 @@ const WMSTransferPage = () => {
                         placeholder="Search product, vintage, owner..."
                         value={stockSearch}
                         onChange={(e) => setStockSearch(e.target.value)}
-                        className="h-12 w-full rounded-lg border border-border bg-fill-primary pl-10 pr-4 text-sm focus:border-border-brand focus:outline-none"
+                        className="h-12 w-full rounded-lg border border-border bg-fill-primary pl-10 pr-4 text-sm focus:border-text-primary focus:outline-none"
                       />
                     </div>
                   )}
@@ -449,7 +449,7 @@ const WMSTransferPage = () => {
                         <button
                           key={stock.id}
                           onClick={() => handleSelectStock(stock)}
-                          className="w-full rounded-lg border border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand"
+                          className="w-full rounded-lg border border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-text-primary"
                         >
                           <Typography variant="bodySm" className="font-medium">
                             {stock.productName}

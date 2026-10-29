@@ -131,14 +131,14 @@ const WmsStockCombobox = ({
                 {value.productName}
                 {value.vintage ? ` ${value.vintage}` : ''}
               </span>
-              <span className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
+              <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-xs tabular-nums text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                 {(value.caseConfig ?? 1) === 1
                   ? `${value.availableCases} btl`
                   : `${value.availableCases} cs`}
               </span>
               {value.isInTransit ? (
                 <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                  in transit
+                  In transit
                 </span>
               ) : null}
             </div>
@@ -166,12 +166,18 @@ const WmsStockCombobox = ({
           />
           <CommandList ref={listRef} className="max-h-[300px] overflow-y-auto">
             {isLoading ? (
-              <div className="py-6 text-center text-sm">Loading stock...</div>
+              <div className="py-6 text-center text-sm text-text-muted">Loading stock...</div>
+            ) : queryResult.isError && items.length === 0 ? (
+              <div className="py-6 text-center text-sm text-text-muted">
+                Stock could not be loaded. Close and reopen to try again.
+              </div>
             ) : items.length === 0 ? (
               <CommandEmpty>
                 {isDebouncing || queryResult.isFetching
                   ? 'Searching...'
-                  : 'No stock found'}
+                  : normalizedSearch
+                    ? 'No stock matches this search'
+                    : 'No stock available'}
               </CommandEmpty>
             ) : (
               items.map((item) => (
@@ -194,14 +200,14 @@ const WmsStockCombobox = ({
                       <span className="text-text-muted/60">{item.lwin18}</span>
                     </Typography>
                   </div>
-                  <span className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
+                  <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium tabular-nums text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                     {(item.caseConfig ?? 1) === 1
                       ? `${item.availableCases} btl`
                       : `${item.availableCases} cs`}
                   </span>
                   {item.isInTransit ? (
                     <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                      in transit
+                      In transit
                     </span>
                   ) : null}
                 </CommandItem>

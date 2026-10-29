@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  IconBuilding,
   IconCheck,
   IconDots,
   IconDownload,
@@ -14,11 +13,18 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
+import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
+import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
+import AlertDialogContent from '@/app/_ui/components/AlertDialog/AlertDialogContent';
+import AlertDialogDescription from '@/app/_ui/components/AlertDialog/AlertDialogDescription';
+import AlertDialogFooter from '@/app/_ui/components/AlertDialog/AlertDialogFooter';
+import AlertDialogHeader from '@/app/_ui/components/AlertDialog/AlertDialogHeader';
+import AlertDialogTitle from '@/app/_ui/components/AlertDialog/AlertDialogTitle';
 import Badge from '@/app/_ui/components/Badge/Badge';
 import Button from '@/app/_ui/components/Button/Button';
 import DataTable from '@/app/_ui/components/DataTable/DataTable';
@@ -30,6 +36,7 @@ import DropdownMenuTrigger from '@/app/_ui/components/DropdownMenu/DropdownMenuT
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
 import type { DistributorQueue, DistributorStage } from '../constants';
@@ -44,7 +51,6 @@ import type { DistributorOrder } from '../utils/distributorOrderView';
 type Currency = 'USD' | 'AED';
 
 /** Default UAE exchange rate for AED/USD conversion */
-const DEFAULT_EXCHANGE_RATE = 3.67;
 
 type OrderWithPartner = DistributorOrder & {
   bottleCount: number;
@@ -61,6 +67,59 @@ const stageTabs: { value: DistributorStage | 'all'; label: string }[] = [
   { value: 'delivery', label: 'Delivery' },
   { value: 'delivered', label: 'Delivered' },
 ];
+
+/** The queues shown as "Needs your action", in the order the work happens */
+const actionQueues: DistributorQueue[] = ['verify', 'clientPayment', 'payCc', 'receive', 'deliver'];
+
+/**
+ * What happens next on an order, and whether it is the distributor's move
+ *
+ * Read from the status only, so the list can say it without loading each
+ * order. The order page holds the buttons.
+ */
+const nextStepFor = (status: string): { label: string; yours: boolean } | null => {
+  switch (status) {
+    case 'awaiting_distributor_verification':
+      return { label: 'Verify the client', yours: true };
+    case 'verification_suspended':
+      return { label: 'Unlock once the client is registered', yours: true };
+    case 'awaiting_client_payment':
+      return { label: 'Confirm client payment', yours: true };
+    case 'awaiting_payment_verification':
+      return { label: 'Verify client payment', yours: true };
+    case 'client_paid':
+      return { label: 'Raise payment to C&C', yours: true };
+    case 'awaiting_distributor_payment':
+      return { label: 'Confirm payment to C&C', yours: true };
+    case 'distributor_paid':
+      return { label: 'Waiting for C&C to send the stock', yours: false };
+    case 'stock_in_transit':
+      return { label: 'Confirm stock received', yours: true };
+    case 'awaiting_partner_payment':
+    case 'partner_paid':
+    case 'with_distributor':
+    case 'scheduling_delivery':
+      return { label: 'Schedule delivery', yours: true };
+    case 'delivery_scheduled':
+      return { label: 'Mark out for delivery', yours: true };
+    case 'out_for_delivery':
+      return { label: 'Mark delivered', yours: true };
+    default:
+      return null;
+  }
+};
+
+/** What each quick action records, shown before it is confirmed */
+const actionConfirmCopy: Record<string, string> = {
+  client_paid:
+    'Confirm that the client has paid you in full. Your invoice must already be on the order. This cannot be undone from the portal.',
+  awaiting_distributor_payment:
+    'Record that your payment to Craft & Culture is being raised.',
+  distributor_paid:
+    'Confirm that your payment to Craft & Culture has been sent. Craft & Culture then releases the stock to you.',
+  with_distributor:
+    'Confirm that the stock for this order has arrived at your warehouse.',
+};
 
 /**
  * DistributorOrdersList displays a table of assigned orders
@@ -116,6 +175,28 @@ const DistributorOrdersList = () => {
     setCursor(0);
   };
 
+  /** Open one "Needs your action" queue, across all stages, as a dashboard tile does */
+  const openQueue = (queue: DistributorQueue) => {
+    const isActive = queueFilter === queue;
+    const params = new URLSearchParams(window.location.search);
+    params.delete('stage');
+    if (isActive) params.delete('queue');
+    else params.set('queue', queue);
+    const query = params.toString();
+    window.history.replaceState(null, '', query ? `?${query}` : window.location.pathname);
+    setStageFilter('all');
+    setQueueFilter(isActive ? null : queue);
+    setCursor(0);
+  };
+
+  // A quick action from the row menu waits here until it is confirmed
+  const [pendingAction, setPendingAction] = useState<{
+    orderId: string;
+    orderNumber: string;
+    label: string;
+    status: string;
+  } | null>(null);
+
   // Tab counts come from the dashboard, which counts the same status groups
   const { data: counts } = useQuery({
     queryKey: ['privateClientOrders.distributorDashboard'],
@@ -124,7 +205,7 @@ const DistributorOrdersList = () => {
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: [
       'privateClientOrders.distributorGetMany',
       {
@@ -155,7 +236,12 @@ const DistributorOrdersList = () => {
     requiresOrderSku &&
     !order.distributorSku &&
     !DISTRIBUTOR_SKU_LOCKED_STATUSES.includes(order.status);
-  const skuNeededCount = (data?.data ?? []).filter(needsSku).length;
+  // Counted across every order by the dashboard; this page's rows as a fallback
+  const skuNeededCount = counts?.requiresOrderSku
+    ? counts.queues.skuMissing
+    : (data?.data ?? []).filter(needsSku).length;
+  const hasFilters =
+    stageFilter !== 'all' || !!queueFilter || skuMissingFilter || idleFilter || !!search;
 
   const updateStatus = useMutation({
     mutationFn: (params: { orderId: string; status: string }) =>
@@ -174,6 +260,7 @@ const DistributorOrdersList = () => {
     onSuccess: () => {
       void refetch();
       void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+      setPendingAction(null);
       toast.success('Order status updated');
     },
     onError: (error) => {
@@ -236,13 +323,12 @@ const DistributorOrdersList = () => {
 
   const formatCurrencyValue = (order: OrderWithPartner) => {
     const usdAmount = order.totalUsd ?? 0;
-    const aedAmount = order.totalAed ?? 0;
     let amount: number;
     if (currency === 'USD') {
       amount = usdAmount;
     } else {
-      // Use AED if available, otherwise calculate from USD
-      amount = aedAmount > 0 ? aedAmount : usdAmount * DEFAULT_EXCHANGE_RATE;
+      // At the fixed peg; stored AED totals before 28 Oct 2026 used 3.67
+      amount = usdAmount * USD_TO_AED;
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -274,7 +360,7 @@ const DistributorOrdersList = () => {
       case 'client_paid':
         // After client pays, transition to awaiting distributor payment
         actions.push({
-          label: 'Awaiting Distributor Payment',
+          label: 'Mark Awaiting Distributor Payment',
           status: 'awaiting_distributor_payment',
           icon: IconCheck,
         });
@@ -315,7 +401,8 @@ const DistributorOrdersList = () => {
           type="checkbox"
           checked={orders.length > 0 && selectedOrderIds.size === orders.length}
           onChange={toggleSelectAll}
-          className="h-5 w-5 rounded border-border-muted accent-fill-brand"
+          aria-label="Select all orders on this page"
+          className="h-5 w-5 rounded border-border-muted accent-text-primary"
         />
       ),
       cell: ({ row }) => (
@@ -324,7 +411,8 @@ const DistributorOrdersList = () => {
           checked={selectedOrderIds.has(row.original.id)}
           onChange={() => toggleOrderSelection(row.original.id)}
           onClick={(e) => e.stopPropagation()}
-          className="h-5 w-5 rounded border-border-muted accent-fill-brand"
+          aria-label={`Select ${row.original.orderNumber}`}
+          className="h-5 w-5 rounded border-border-muted accent-text-primary"
         />
       ),
     },
@@ -345,30 +433,6 @@ const DistributorOrdersList = () => {
       ),
     },
     {
-      accessorKey: 'partner.businessName',
-      header: 'Partner',
-      cell: ({ row }) => (
-        <div className="flex flex-col items-center gap-1.5">
-          {row.original.partner?.logoUrl ? (
-            <Image
-              src={row.original.partner.logoUrl}
-              alt={row.original.partner?.businessName ?? 'Partner'}
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded-lg object-contain"
-            />
-          ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-secondary">
-              <Icon icon={IconBuilding} size="md" colorRole="muted" />
-            </div>
-          )}
-          <Typography variant="bodyXs" className="text-center">
-            {row.original.partner?.businessName ?? '-'}
-          </Typography>
-        </div>
-      ),
-    },
-    {
       accessorKey: 'clientName',
       header: 'Client',
       cell: ({ row }) => (
@@ -378,8 +442,11 @@ const DistributorOrdersList = () => {
               {row.original.clientName}
             </Typography>
             {row.original.client?.cityDrinksVerifiedAt && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                <IconShieldCheck className="h-3 w-3" />
+              <span
+                className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                title="Client verified by City Drinks"
+              >
+                <IconShieldCheck className="h-3 w-3" aria-hidden />
                 CD
               </span>
             )}
@@ -395,21 +462,40 @@ const DistributorOrdersList = () => {
     {
       accessorKey: 'bottleCount',
       header: 'Bottles',
-      cell: ({ row }) => <Typography variant="bodySm">{row.original.bottleCount}</Typography>,
+      cell: ({ row }) => (
+        <Typography variant="bodySm" className="tabular-nums">
+          {row.original.bottleCount}
+        </Typography>
+      ),
     },
     {
       accessorKey: 'total',
       header: () => <span>Total ({currency})</span>,
       cell: ({ row }) => (
-        <Typography variant="bodySm" className="font-medium">
+        <Typography variant="bodySm" className="font-medium tabular-nums">
           {formatCurrencyValue(row.original)}
         </Typography>
       ),
     },
     {
       accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }) => <PrivateOrderStatusBadge status={row.original.status} />,
+      header: 'Status · next step',
+      cell: ({ row }) => {
+        const next = nextStepFor(row.original.status);
+        return (
+          <div className="flex flex-col items-start gap-1">
+            <PrivateOrderStatusBadge status={row.original.status} />
+            {next && (
+              <Typography
+                variant="bodyXs"
+                className={next.yours ? 'font-medium text-text-warning' : 'text-text-muted'}
+              >
+                {next.label}
+              </Typography>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'distributorAssignedAt',
@@ -428,9 +514,14 @@ const DistributorOrdersList = () => {
         const availableActions = getAvailableActions(row.original);
 
         return (
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label={`Actions for ${row.original.orderNumber}`}
+              >
                 <Icon icon={IconDots} size="sm" />
               </Button>
             </DropdownMenuTrigger>
@@ -438,7 +529,7 @@ const DistributorOrdersList = () => {
               <DropdownMenuItem asChild>
                 <Link href={`/platform/distributor/orders/${row.original.id}`}>
                   <Icon icon={IconEye} size="sm" className="mr-2" />
-                  View Details
+                  Open order
                 </Link>
               </DropdownMenuItem>
 
@@ -448,9 +539,11 @@ const DistributorOrdersList = () => {
                   {availableActions.map((action) => (
                     <DropdownMenuItem
                       key={action.status}
-                      onClick={() =>
-                        updateStatus.mutate({
+                      onSelect={() =>
+                        setPendingAction({
                           orderId: row.original.id,
+                          orderNumber: row.original.orderNumber,
+                          label: action.label,
                           status: action.status,
                         })
                       }
@@ -469,22 +562,83 @@ const DistributorOrdersList = () => {
     },
   ];
 
+  const actionTotal = counts
+    ? actionQueues.reduce((sum, queue) => sum + (counts.queues[queue] ?? 0), 0)
+    : 0;
+
+  const segmentClass = (isActive: boolean) =>
+    `min-h-9 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+      isActive
+        ? 'bg-background-primary text-text-primary shadow-sm'
+        : 'text-text-muted hover:text-text-primary'
+    }`;
+
   return (
     <div className="flex flex-col gap-4">
+      {/* Needs your action: the dashboard's task queues, one tap to the orders behind each */}
+      {counts && (
+        <div className="flex flex-col gap-2">
+          <Typography variant="bodyXs" colorRole="muted" className="uppercase tracking-wider">
+            {actionTotal > 0 ? `Needs your action · ${actionTotal}` : 'Needs your action · all clear'}
+          </Typography>
+          {actionTotal > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {actionQueues
+                .filter((queue) => (counts.queues[queue] ?? 0) > 0)
+                .map((queue) => {
+                  const isActive = queueFilter === queue;
+                  return (
+                    <button
+                      key={queue}
+                      type="button"
+                      onClick={() => openQueue(queue)}
+                      aria-pressed={isActive}
+                      className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'border-text-primary bg-text-primary text-surface-primary'
+                          : 'border-fill-warning/50 bg-fill-warning/5 text-text-primary hover:bg-fill-warning/10'
+                      }`}
+                    >
+                      {DISTRIBUTOR_QUEUES[queue].label}
+                      <span className="tabular-nums font-semibold">{counts.queues[queue]}</span>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      )}
+
       {skuNeededCount > 0 && (
-        <div className="rounded-lg border border-fill-warning/50 bg-fill-warning/5 px-3 py-2">
-          <Typography variant="bodySm" className="font-medium">
-            {skuNeededCount} order{skuNeededCount === 1 ? ' needs' : 's need'} your bundle SKU
-          </Typography>
-          <Typography variant="bodyXs" colorRole="muted">
-            Create the bundle under the PCO number and enter its SKU on the order.
-            Payment can&rsquo;t be confirmed until it&rsquo;s in.
-          </Typography>
+        <div className="flex flex-col gap-2 rounded-lg border border-fill-warning/50 bg-fill-warning/5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Typography variant="bodySm" className="font-medium">
+              {skuNeededCount} order{skuNeededCount === 1 ? ' needs' : 's need'} your bundle SKU
+            </Typography>
+            <Typography variant="bodyXs" colorRole="muted">
+              Create the bundle under the PCO number and enter its SKU on the order. Client
+              payment cannot be confirmed until it is recorded.
+            </Typography>
+          </div>
+          {!skuMissingFilter && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => {
+                setSkuMissingFilter(true);
+                setCursor(0);
+              }}
+            >
+              Show these orders
+            </Button>
+          )}
         </div>
       )}
 
       {/* Pipeline stage tabs — filtered on the server, counted like the dashboard */}
-      <div className="-mx-1 flex gap-1 overflow-x-auto pb-1">
+      <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Order stage">
         {stageTabs.map((tab) => {
           const count =
             tab.value === 'all'
@@ -496,14 +650,16 @@ const DistributorOrdersList = () => {
             <button
               key={tab.value}
               type="button"
+              role="tab"
+              aria-selected={isActive}
               onClick={() => {
                 setStageFilter(tab.value);
                 clearParam('stage');
                 setCursor(0);
               }}
-              className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
+              className={`flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-fill-brand text-white'
+                  ? 'bg-text-primary text-surface-primary'
                   : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
               }`}
             >
@@ -512,7 +668,7 @@ const DistributorOrdersList = () => {
                 <Badge
                   size="sm"
                   colorRole={isActive ? 'brand' : 'muted'}
-                  className={isActive ? 'bg-white/20 text-white' : ''}
+                  className={`tabular-nums ${isActive ? 'bg-surface-primary/20 text-surface-primary' : ''}`}
                 >
                   {count}
                 </Badge>
@@ -551,7 +707,8 @@ const DistributorOrdersList = () => {
                   chip.clear();
                   clearParam(chip.key);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border-muted bg-fill-muted/40 px-3 py-1 text-xs font-medium hover:bg-fill-muted"
+                aria-label={`Remove filter: ${chip.label}`}
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-border-muted bg-fill-muted/40 px-3 py-1 text-xs font-medium hover:bg-fill-muted"
               >
                 {chip.label}
                 <Icon icon={IconX} size="xs" />
@@ -562,14 +719,16 @@ const DistributorOrdersList = () => {
 
       {/* Header with search and currency toggle */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-sm flex-1">
+        <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Icon
             icon={IconSearch}
             size="sm"
             className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
           />
           <Input
-            placeholder="Search orders..."
+            type="search"
+            placeholder="Search by order, client or phone"
+            aria-label="Search orders by order number, client name or phone"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -579,10 +738,11 @@ const DistributorOrdersList = () => {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Download Summary */}
           {selectedOrderIds.size > 0 && (
             <Button
+              type="button"
               variant="outline"
               size="sm"
               onClick={handleDownloadSummary}
@@ -590,34 +750,27 @@ const DistributorOrdersList = () => {
               className="gap-1.5"
             >
               <Icon icon={IconDownload} size="sm" />
-              {isDownloading ? 'Generating...' : `Download PDF (${selectedOrderIds.size})`}
+              {isDownloading ? 'Generating…' : `Download summary PDF (${selectedOrderIds.size})`}
             </Button>
           )}
 
           {/* Currency Toggle */}
-          <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
-          <button
-            type="button"
-            onClick={() => setCurrency('USD')}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
-              currency === 'USD'
-                ? 'bg-background-primary text-text-primary shadow-sm'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
+          <div
+            className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5"
+            role="group"
+            aria-label="Currency"
           >
-            USD
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrency('AED')}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
-              currency === 'AED'
-                ? 'bg-background-primary text-text-primary shadow-sm'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
-          >
-            AED
-          </button>
+            {(['AED', 'USD'] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCurrency(c)}
+                aria-pressed={currency === c}
+                className={segmentClass(currency === c)}
+              >
+                {c}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -626,18 +779,29 @@ const DistributorOrdersList = () => {
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Typography variant="bodySm" colorRole="muted">
-            Loading orders...
+            Loading orders…
           </Typography>
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border-muted bg-surface-secondary/30 py-12">
+          <Typography variant="bodySm" className="font-medium">
+            The orders could not be loaded.
+          </Typography>
+          <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
+            Try again
+          </Button>
         </div>
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-border-muted bg-surface-secondary/30 py-12">
           <Icon icon={IconPackage} size="lg" className="text-text-muted" />
-          <div className="text-center">
+          <div className="px-4 text-center">
             <Typography variant="bodySm" className="font-medium">
-              No assigned orders
+              {hasFilters ? 'No orders match these filters' : 'No assigned orders'}
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              Orders will appear here when assigned to you
+              {hasFilters
+                ? 'Clear a filter, choose another stage or change the search.'
+                : 'Orders appear here when Craft & Culture assigns them to you.'}
             </Typography>
           </div>
         </div>
@@ -650,93 +814,97 @@ const DistributorOrdersList = () => {
 
           {/* Mobile Cards */}
           <div className="flex flex-col divide-y divide-border-muted rounded-lg border border-border-muted md:hidden">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className="flex gap-3 p-4 transition-colors hover:bg-surface-secondary/50"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedOrderIds.has(order.id)}
-                  onChange={() => toggleOrderSelection(order.id)}
-                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-border-muted accent-fill-brand"
-                />
-                <Link
-                  href={`/platform/distributor/orders/${order.id}`}
-                  className="flex min-w-0 flex-1 flex-col gap-3"
+            {orders.map((order) => {
+              const next = nextStepFor(order.status);
+              return (
+                <div
+                  key={order.id}
+                  className="flex gap-3 p-4 transition-colors hover:bg-surface-secondary/50"
                 >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    {order.partner?.logoUrl ? (
-                      <Image
-                        src={order.partner.logoUrl}
-                        alt={order.partner?.businessName ?? 'Partner'}
-                        width={32}
-                        height={32}
-                        className="h-8 w-8 rounded-lg object-contain"
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
-                        <Icon icon={IconBuilding} size="sm" colorRole="muted" />
+                  <input
+                    type="checkbox"
+                    checked={selectedOrderIds.has(order.id)}
+                    onChange={() => toggleOrderSelection(order.id)}
+                    aria-label={`Select ${order.orderNumber}`}
+                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-border-muted accent-text-primary"
+                  />
+                  <Link
+                    href={`/platform/distributor/orders/${order.id}`}
+                    className="flex min-w-0 flex-1 flex-col gap-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <Typography variant="bodySm" className="font-mono font-medium">
+                          {order.orderNumber}
+                        </Typography>
+                        {needsSku(order) && (
+                          <span className="mt-0.5 inline-block rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
+                            SKU needed
+                          </span>
+                        )}
                       </div>
-                    )}
-                    <div>
-                      <Typography variant="bodySm" className="font-mono font-medium">
-                        {order.orderNumber}
+                      <PrivateOrderStatusBadge status={order.status} />
+                    </div>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <Typography variant="bodySm" className="truncate font-medium">
+                        {order.clientName}
                       </Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {order.partner?.businessName ?? '-'}
-                      </Typography>
-                      {needsSku(order) && (
-                        <span className="mt-0.5 inline-block rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
-                          SKU needed
+                      {order.client?.cityDrinksVerifiedAt && (
+                        <span
+                          className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-green-100 px-1 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          title="Client verified by City Drinks"
+                          aria-label="Client verified by City Drinks"
+                        >
+                          <Icon icon={IconShieldCheck} size="xs" />
                         </span>
                       )}
                     </div>
-                  </div>
-                  <PrivateOrderStatusBadge status={order.status} />
+                    {order.clientPhone && (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        {order.clientPhone}
+                      </Typography>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <Typography variant="bodyXs" colorRole="muted" className="tabular-nums">
+                        {order.bottleCount} {order.bottleCount === 1 ? 'bottle' : 'bottles'}
+                      </Typography>
+                      <Typography variant="bodySm" className="font-semibold tabular-nums">
+                        {formatCurrencyValue(order)}
+                      </Typography>
+                    </div>
+                    {next && (
+                      <Typography
+                        variant="bodyXs"
+                        className={next.yours ? 'font-medium text-text-warning' : 'text-text-muted'}
+                      >
+                        {next.yours ? 'Next: ' : ''}
+                        {next.label}
+                      </Typography>
+                    )}
+                  </Link>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Typography variant="bodySm" className="font-medium">
-                    {order.clientName}
-                  </Typography>
-                  {order.client?.cityDrinksVerifiedAt && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                      <Icon icon={IconShieldCheck} size="xs" />
-                    </span>
-                  )}
-                </div>
-                {order.clientPhone && (
-                  <Typography variant="bodyXs" colorRole="muted">
-                    {order.clientPhone}
-                  </Typography>
-                )}
-                <div className="flex items-center justify-between">
-                  <Typography variant="bodyXs" colorRole="muted">
-                    {order.bottleCount} {order.bottleCount === 1 ? 'bottle' : 'bottles'}
-                  </Typography>
-                  <Typography variant="bodySm" className="font-semibold">
-                    {formatCurrencyValue(order)}
-                  </Typography>
-                </div>
-                </Link>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <Typography variant="bodyXs" colorRole="muted">
-              Showing {cursor + 1}-{Math.min(cursor + orders.length, totalCount)} of {totalCount}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Typography variant="bodyXs" colorRole="muted" className="tabular-nums">
+              Showing {cursor + 1}–{Math.min(cursor + orders.length, totalCount)} of {totalCount}
             </Typography>
-            <div className="flex items-center gap-2">
-              <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <div
+                className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5"
+                role="group"
+                aria-label="Orders per page"
+              >
                 {([20, 50] as const).map((size) => (
                   <button
                     key={size}
                     type="button"
                     onClick={() => changePageSize(size)}
-                    className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                    aria-pressed={pageSize === size}
+                    className={`min-h-9 rounded-md px-3 py-1 text-xs font-medium transition-all ${
                       pageSize === size
                         ? 'bg-background-primary text-text-primary shadow-sm'
                         : 'text-text-muted hover:text-text-primary'
@@ -747,6 +915,7 @@ const DistributorOrdersList = () => {
                 ))}
               </div>
               <Button
+                type="button"
                 variant="outline"
                 size="md"
                 onClick={() => setCursor(Math.max(0, cursor - pageSize))}
@@ -755,6 +924,7 @@ const DistributorOrdersList = () => {
                 Previous
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 size="md"
                 onClick={() => setCursor(cursor + pageSize)}
@@ -766,6 +936,51 @@ const DistributorOrdersList = () => {
           </div>
         </>
       )}
+
+      {/* Quick actions change the order for everyone, so each is confirmed first */}
+      <AlertDialog
+        open={!!pendingAction}
+        onOpenChange={(open) => {
+          if (!open && !updateStatus.isPending) setPendingAction(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction?.label} · {pendingAction?.orderNumber}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction ? actionConfirmCopy[pendingAction.status] ?? '' : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button type="button" variant="outline" disabled={updateStatus.isPending}>
+                Cancel
+              </Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                type="button"
+                colorRole="brand"
+                disabled={updateStatus.isPending}
+                onClick={(event) => {
+                  // Stay open until the change lands, so a failure is seen here
+                  event.preventDefault();
+                  if (pendingAction) {
+                    updateStatus.mutate({
+                      orderId: pendingAction.orderId,
+                      status: pendingAction.status,
+                    });
+                  }
+                }}
+              >
+                {updateStatus.isPending ? 'Saving…' : 'Confirm'}
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

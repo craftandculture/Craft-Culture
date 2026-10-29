@@ -517,7 +517,7 @@ const WMSStockImportPage = () => {
                     <select
                       value={selectedOwnerId}
                       onChange={(e) => setSelectedOwnerId(e.target.value)}
-                      className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
+                      className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-text-primary"
                     >
                       <option value="">Select owner...</option>
                       {partnersData?.map((partner) => (
@@ -534,7 +534,7 @@ const WMSStockImportPage = () => {
                     <select
                       value={selectedLocationId}
                       onChange={(e) => setSelectedLocationId(e.target.value)}
-                      className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
+                      className="w-full rounded-lg border border-border-primary bg-background-primary px-3 py-2.5 text-sm focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-text-primary"
                     >
                       <option value="">Select location...</option>
                       {locationsData?.map((location) => (
@@ -914,7 +914,7 @@ const WMSStockImportPage = () => {
                                             if (e.key === 'Escape') { setManualLwinRowIndex(null); setManualLwinValue(''); }
                                           }}
                                           placeholder="e.g. 1870592 or full LWIN18"
-                                          className="w-56 rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 font-mono text-xs focus:border-border-brand focus:outline-none dark:bg-transparent"
+                                          className="w-56 rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 font-mono text-xs focus:border-text-primary focus:outline-none dark:bg-transparent"
                                           autoFocus
                                         />
                                         <button
@@ -942,7 +942,7 @@ const WMSStockImportPage = () => {
                                             value={lwinSearchQuery}
                                             onChange={(e) => handleLwinSearch(e.target.value)}
                                             placeholder="Search LWIN database..."
-                                            className="flex-1 rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 text-xs focus:border-border-brand focus:outline-none dark:bg-transparent"
+                                            className="flex-1 rounded-md border border-border-primary bg-surface-primary px-2.5 py-1.5 text-xs focus:border-text-primary focus:outline-none dark:bg-transparent"
                                             autoFocus
                                           />
                                           <button

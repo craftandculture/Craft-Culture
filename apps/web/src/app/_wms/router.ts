@@ -1,4 +1,5 @@
 import getLondonInBond from '@/app/_winelabs/controller/getLondonInBond';
+import refreshLondonInBond from '@/app/_winelabs/controller/refreshLondonInBond';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddBay from './controller/adminAddBay';
@@ -17,6 +18,7 @@ import adminChangeTakeOutReason from './controller/adminChangeTakeOutReason';
 import adminCompleteCycleCount from './controller/adminCompleteCycleCount';
 import adminCompletePickList from './controller/adminCompletePickList';
 import adminCorrectPackConfig from './controller/adminCorrectPackConfig';
+import adminCorrectMovementRecord from './controller/adminCorrectMovementRecord';
 import adminCorrectPickSource from './controller/adminCorrectPickSource';
 import adminCreateCaseLabels from './controller/adminCreateCaseLabels';
 import adminCreateCycleCount from './controller/adminCreateCycleCount';
@@ -197,6 +199,8 @@ const stockPricingRouter = createTRPCRouter({
   getOwnerPricing: adminGetOwnerPricing,
   // London in-bond market beside In Bond, from the Wine Labs snapshot
   getLondonInBond,
+  // One wine asked again now, for a price about to be quoted (spends credits)
+  refreshLondonInBond,
   autoPopulate: adminAutoPopulateImportPrice,
   getProducts: adminGetPricingProducts,
   getBands: adminGetPricingBands,
@@ -237,6 +241,7 @@ const stockRouter = createTRPCRouter({
   recordCorrectionAsTakeOut: adminRecordCorrectionAsTakeOut,
   // A pick booked to the wrong owner's row, moved to the bottles that left
   correctPickSource: adminCorrectPickSource,
+  correctMovementRecord: adminCorrectMovementRecord,
   // Fills blanks a repacked row never inherited — producer, re-export BOE
   backfillDetails: adminBackfillStockDetails,
   correctPackConfig: adminCorrectPackConfig,

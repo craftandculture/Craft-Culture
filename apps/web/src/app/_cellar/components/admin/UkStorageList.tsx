@@ -50,7 +50,7 @@ const UkStorageList = () => {
                 <td className="px-3 py-2.5 text-right tabular-nums">{row.bottles}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{row.units}</td>
                 <td className="text-text-muted px-3 py-2.5 text-right tabular-nums">
-                  {row.costGbp !== null ? gbp(row.costGbp) : '—'}
+                  {row.costGbp !== null ? gbp(row.costGbp) : ''}
                 </td>
                 <td className="px-4 py-2.5 text-right tabular-nums">
                   {row.chargedGbp !== null ? (
@@ -61,7 +61,7 @@ const UkStorageList = () => {
                       )}
                     </>
                   ) : (
-                    '—'
+                    ''
                   )}
                 </td>
               </tr>

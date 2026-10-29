@@ -247,7 +247,7 @@ const ConciergeBrief = () => {
                   <Typography variant="bodyXs" colorRole="muted" className="mt-2">
                     {lead.reason}
                   </Typography>
-                  <Typography variant="bodyXs" className="mt-1.5 font-medium text-text-brand">
+                  <Typography variant="bodyXs" className="mt-1.5 font-medium text-text-primary">
                     Action: {lead.suggestedAction}
                   </Typography>
                   <div className="mt-2 rounded-md bg-surface-secondary p-2.5">

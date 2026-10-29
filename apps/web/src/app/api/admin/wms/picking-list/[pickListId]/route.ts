@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
+import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import type { PickingListLineItem } from '@/app/_wms/components/PickingListPDFTemplate';
 import renderPickingListPDF from '@/app/_wms/utils/renderPickingListPDF';
 import db from '@/database/client';
@@ -54,7 +55,7 @@ export async function GET(
   try {
     // Verify admin user
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || user.role !== 'admin' || !isTeamMember(user)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

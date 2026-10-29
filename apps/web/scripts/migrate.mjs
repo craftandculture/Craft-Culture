@@ -564,11 +564,15 @@ const runMigrations = async () => {
     );
     // Backfill the split-case picks already recorded — their bottle count only
     // ever survived in the note text ("... — 3 bottle(s) (split-case)").
-    await client.unsafe(
-      `UPDATE "wms_stock_movements"
-         SET "quantity_bottles" = NULLIF(substring("notes" from '([0-9]+) bottle'), '')::int
-       WHERE "quantity_bottles" IS NULL
-         AND "notes" ~ '[0-9]+ bottle'`,
+    // Once only: later movements leave it NULL on purpose (full-case moves),
+    // and re-reading their notes on every deploy rewrote them.
+    await dataFix('movement bottle counts read from split-case notes', () =>
+      client.unsafe(
+        `UPDATE "wms_stock_movements"
+           SET "quantity_bottles" = NULLIF(substring("notes" from '([0-9]+) bottle'), '')::int
+         WHERE "quantity_bottles" IS NULL
+           AND "notes" ~ '[0-9]+ bottle'`,
+      ),
     );
     console.log('✅ wms_stock_movements.quantity_bottles ready');
 
@@ -781,29 +785,35 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "tri_programmes" ADD COLUMN IF NOT EXISTS "takes_unattributed" boolean NOT NULL DEFAULT false`,
     );
-    await client.unsafe(`
-      UPDATE "tri_programmes"
-      SET "consignment_tag" = 'CRURATED', "takes_unattributed" = true
-      WHERE "id" = '${CRURATED_PROGRAMME_ID}' AND "consignment_tag" IS NULL
-    `);
     /*
-      Everyone else is matched on the letters of their name, which is reliable
-      for the four tags that are a word from it. Anything it does not match is
-      left null and simply claims nothing until someone sets it — an unclaimed
-      client is visible, whereas a wrongly claimed one is not.
+      Once only: a tag staff later clear must stay cleared, and a programme
+      added later must not be claimed by its name on the next deploy.
     */
-    for (const [tag, pattern] of [
-      ['CULT', '%cult%'],
-      ['CRU', '%cru wine%'],
-      ['RARE', '%rare%'],
-    ]) {
+    await dataFix('tri_programmes consignment tags seeded by name', async () => {
       await client.unsafe(`
         UPDATE "tri_programmes"
-        SET "consignment_tag" = '${tag}'
-        WHERE "consignment_tag" IS NULL
-          AND LOWER("name") LIKE '${pattern}'
+        SET "consignment_tag" = 'CRURATED', "takes_unattributed" = true
+        WHERE "id" = '${CRURATED_PROGRAMME_ID}' AND "consignment_tag" IS NULL
       `);
-    }
+      /*
+        Everyone else is matched on the letters of their name, which is reliable
+        for the four tags that are a word from it. Anything it does not match is
+        left null and simply claims nothing until someone sets it — an unclaimed
+        client is visible, whereas a wrongly claimed one is not.
+      */
+      for (const [tag, pattern] of [
+        ['CULT', '%cult%'],
+        ['CRU', '%cru wine%'],
+        ['RARE', '%rare%'],
+      ]) {
+        await client.unsafe(`
+          UPDATE "tri_programmes"
+          SET "consignment_tag" = '${tag}'
+          WHERE "consignment_tag" IS NULL
+            AND LOWER("name") LIKE '${pattern}'
+        `);
+      }
+    });
     console.log('✅ tri_programmes consignment tags ready');
 
     /*
@@ -2135,12 +2145,15 @@ const runMigrations = async () => {
       happened to be Crurated, so the answer was right by accident and would
       have become wrong the moment the catch-all changed hands.
     */
-    await client.unsafe(`
+    // Once only, so an alias staff remove stays removed
+    await dataFix('OpenCellar alias added to Crurated', () =>
+      client.unsafe(`
       UPDATE "cons_owners"
       SET "owner_aliases" = array_append(COALESCE("owner_aliases", '{}'), 'OPENCELLAR')
       WHERE UPPER("consignment_tag") = 'CRURATED'
         AND NOT ('OPENCELLAR' = ANY(COALESCE("owner_aliases", '{}')))
-    `);
+    `),
+    );
     console.log('✅ OpenCellar reads as Crurated');
 
     /*
@@ -3607,6 +3620,34 @@ const runMigrations = async () => {
         "checked_at" timestamp DEFAULT now() NOT NULL
       )
     `);
+    // When the trades were last asked for: they are refreshed quarterly, the order book monthly
+    await client.unsafe(`ALTER TABLE "winelabs_market" ADD COLUMN IF NOT EXISTS "trades_checked_at" timestamp`);
+    await client.unsafe(`
+      UPDATE "winelabs_market" SET "trades_checked_at" = "checked_at"
+      WHERE "status" = 'priced' AND "trades_checked_at" IS NULL
+    `);
+    // A person's call on an LWIN Wine Labs disagrees with; recorded only, nothing is recoded
+    for (const ddl of [
+      `ALTER TABLE "winelabs_wines" ADD COLUMN IF NOT EXISTS "review" text`,
+      `ALTER TABLE "winelabs_wines" ADD COLUMN IF NOT EXISTS "reviewed_by" text`,
+      `ALTER TABLE "winelabs_wines" ADD COLUMN IF NOT EXISTS "reviewed_at" timestamp`,
+    ]) {
+      await client.unsafe(ddl);
+    }
+    // One row per bottle size: magnums and larger trade at their own price, not twice a bottle's
+    await client.unsafe(`ALTER TABLE "winelabs_market" ADD COLUMN IF NOT EXISTS "format" text DEFAULT '750' NOT NULL`);
+    await client.unsafe(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint c
+          JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+          WHERE c.conrelid = 'winelabs_market'::regclass AND c.contype = 'p' AND a.attname = 'format'
+        ) THEN
+          ALTER TABLE "winelabs_market" DROP CONSTRAINT IF EXISTS "winelabs_market_pkey";
+          ALTER TABLE "winelabs_market" ADD CONSTRAINT "winelabs_market_pkey" PRIMARY KEY ("lwin11", "format");
+        END IF;
+      END $$
+    `);
     console.log('✅ winelabs market ready');
 
     /*
@@ -3945,6 +3986,47 @@ const runMigrations = async () => {
       `),
     );
     console.log('✅ Platform audit fixes ready');
+    /*
+      Pricing releases left on the retired C&C partner (28 Oct 2026). Until
+      the run-once ledger existed, the "historic releases attributed to C&C"
+      backfill re-ran on every deploy and gave every record named like C&C a
+      release, the retired duplicate included. Each is moved to C&C's own
+      record (kept where C&C already has it), then removed from the retired
+      one, and the record's name loses the doubled merge note.
+    */
+    await dataFix('pricing releases moved off the retired C&C partner', async () => {
+      await client.unsafe(`
+        WITH cc AS (
+          SELECT id FROM partners
+           WHERE lower(trim(business_name)) = 'craft & culture'
+             AND status = 'active' AND type <> 'private_collector'
+           ORDER BY created_at LIMIT 1
+        ), retired AS (
+          SELECT p.id FROM partners p, cc
+           WHERE p.business_name ~* '^craft & culture \\(merged into'
+             AND p.status <> 'active' AND p.id <> cc.id
+        )
+        INSERT INTO wms_pricing_releases (lwin_key, owner_id, released_at, released_by)
+        SELECT r.lwin_key, cc.id, r.released_at, r.released_by
+          FROM wms_pricing_releases r, cc
+         WHERE r.owner_id IN (SELECT id FROM retired)
+        ON CONFLICT DO NOTHING
+      `);
+      await client.unsafe(`
+        DELETE FROM wms_pricing_releases r
+         USING partners p
+         WHERE p.id = r.owner_id
+           AND p.business_name ~* '^craft & culture \\(merged into'
+           AND p.status <> 'active'
+      `);
+      await client.unsafe(`
+        UPDATE partners
+           SET business_name = 'Craft & Culture (merged into Craft & Culture)'
+         WHERE business_name ~* '^craft & culture \\(merged into.*\\(merged into'
+           AND status <> 'active'
+      `);
+    });
+
 
     /*
       WMS document number sequences (27 Oct 2026). Movement, pick list, repack,
@@ -4109,6 +4191,24 @@ const runMigrations = async () => {
         AND p."type" = 'private_collector'
     `),
     );
+
+    /*
+      Shipment next actions (28 Oct 2026). Who moves each shipment on next,
+      whether its ETA is confirmed, and when news was last logged, so the
+      board, an owner's own list and the morning digest replace the daily
+      Word tracker.
+    */
+    for (const [column, type] of [
+      ['next_action', 'text'],
+      ['next_action_owner_id', 'uuid REFERENCES "users"("id") ON DELETE SET NULL'],
+      ['eta_confirmed', 'boolean NOT NULL DEFAULT false'],
+      ['last_update_at', 'timestamp'],
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "logistics_shipments" ADD COLUMN IF NOT EXISTS "${column}" ${type}`,
+      );
+    }
+    console.log('✅ Shipment next actions ready');
 
     await client.end();
     process.exit(0);

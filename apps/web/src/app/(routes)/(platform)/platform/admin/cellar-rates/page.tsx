@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import UkRatesCard from '@/app/_cellar/components/admin/UkRatesCard';
 import PaymentDetailsCard from '@/app/_cellar/components/PaymentDetailsCard';
 import type { MembershipTermsCard } from '@/app/_cellar/utils/monthlyMembershipCharge';
@@ -72,11 +73,11 @@ const FIELD_GROUPS: {
     hint: 'Moving it out of the free zone, then the run itself',
     fields: [
       { key: 'transferPerBottle', label: 'Transfer, per bottle', suffix: '$' },
-      {
-        key: 'repackPerCase',
-        label: 'Repack, per case opened (AED 25)',
-        suffix: '$',
-      },
+      /*
+        No repack here. Packages built for a member's deliveries are billed on
+        their monthly warehouse invoice (Cellar members → Storage → Repacks),
+        never on a delivery quote. The stored figure is kept, untouched.
+      */
       { key: 'deliveryFlat', label: 'Delivery call-out, flat', suffix: '$' },
       { key: 'deliveryPerCase', label: 'Delivery, per case', suffix: '$' },
     ],
@@ -140,15 +141,11 @@ const CellarRatesPage = () => {
     Cases are rounded up from bottles exactly as the quote does it — half a
     case still gets opened, handled and carried.
   */
-  /*
-    The preview assumes a whole number of cases, so it shows no repack. Type a
-    quantity that is not a multiple of the case and the fee appears, which is
-    the only way to see what it does before saving the card.
-  */
+  // A delivery quote carries no repack; it is billed monthly instead
   const volume = {
     bottles,
     cases: Math.ceil(bottles / caseConfig),
-    repackCases: caseConfig > 1 && bottles % caseConfig !== 0 ? 1 : 0,
+    repackCases: 0,
     goodsValueUsd: bottles * perBottle,
   };
 
@@ -315,10 +312,10 @@ const CellarRatesPage = () => {
               </div>
             ))}
             <div className="border-border-muted mt-1 flex justify-between border-t pt-1">
-              <dt className="text-text-brand text-xs font-semibold">
+              <dt className="text-text-primary text-xs font-semibold">
                 C&amp;C service fee
               </dt>
-              <dd className="text-text-brand text-xs font-semibold tabular-nums">
+              <dd className="text-text-primary text-xs font-semibold tabular-nums">
                 {money(preview.serviceFeeUsd)}
               </dd>
             </div>
@@ -386,22 +383,20 @@ const CellarRatesPage = () => {
     <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 sm:py-8">
       <UkRatesCard />
       <PaymentDetailsCard />
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Typography variant="headingLg">Release rates</Typography>
-          <Typography variant="bodySm" colorRole="muted" className="mt-1 block">
-            Charges applied when a member releases wine from bond
-          </Typography>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          isDisabled={isRefetching}
-        >
-          <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Release rates"
+        description="Charges applied when a member releases wine from bond"
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            isDisabled={isRefetching}
+          >
+            <ButtonContent iconLeft={IconRefresh}>Refresh</ButtonContent>
+          </Button>
+        }
+      />
 
       {isLoading && (
         <Typography variant="bodySm" colorRole="muted">

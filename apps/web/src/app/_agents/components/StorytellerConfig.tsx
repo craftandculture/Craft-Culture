@@ -42,7 +42,7 @@ const StorytellerConfig = () => {
     }
   }, [configs]);
 
-  const { mutate: upsertConfig } = useMutation({
+  const { mutate: upsertConfig, isPending: isSaving } = useMutation({
     ...api.agents.upsertAgentConfig.mutationOptions(),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
@@ -100,13 +100,13 @@ const StorytellerConfig = () => {
             onChange={(e) => setBrandVoice(e.target.value)}
             placeholder="e.g. Sophisticated but approachable. We don't talk down to our audience — we invite them into the world of wine. Use warm, conversational language. Reference Dubai lifestyle, dining, and entertaining..."
             rows={5}
-            className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm focus:border-border-brand focus:outline-none"
+            className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none"
           />
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleSave(CONFIG_KEYS.brandVoice, brandVoice)}
-            disabled={upsertMutation.isPending}
+            disabled={isSaving}
           >
             {savedKey === CONFIG_KEYS.brandVoice ? (
               <>
@@ -140,13 +140,13 @@ const StorytellerConfig = () => {
             onChange={(e) => setContentIdeas(e.target.value)}
             placeholder="e.g.&#10;- Feature our new Burgundy arrivals&#10;- Behind the scenes at the warehouse&#10;- Wine pairing tips for Dubai summer&#10;- Spotlight on our Champagne producers&#10;- Client testimonials and dinner party stories"
             rows={6}
-            className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm focus:border-border-brand focus:outline-none"
+            className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none"
           />
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleSave(CONFIG_KEYS.contentIdeas, contentIdeas)}
-            disabled={upsertMutation.isPending}
+            disabled={isSaving}
           >
             {savedKey === CONFIG_KEYS.contentIdeas ? (
               <>
@@ -180,13 +180,13 @@ const StorytellerConfig = () => {
             onChange={(e) => setCalendarContext(e.target.value)}
             placeholder="e.g.&#10;- Art Dubai starts March 5 — focus on art + wine content&#10;- Ramadan begins March 10 — shift to gifting content&#10;- We have a tasting event on March 15&#10;- Dubai Food Festival runs Feb 25 - Mar 12"
             rows={5}
-            className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm focus:border-border-brand focus:outline-none"
+            className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none"
           />
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleSave(CONFIG_KEYS.calendarContext, calendarContext)}
-            disabled={upsertMutation.isPending}
+            disabled={isSaving}
           >
             {savedKey === CONFIG_KEYS.calendarContext ? (
               <>

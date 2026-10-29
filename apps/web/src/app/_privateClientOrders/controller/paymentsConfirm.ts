@@ -12,6 +12,7 @@ import {
 import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import partnerOrderView from '../utils/partnerOrderView';
+import isRoutinePcoTransition from '../utils/pcoStatusTransitions';
 import resolveOrderParty from '../utils/resolveOrderParty';
 
 const confirmPaymentSchema = z.object({
@@ -24,7 +25,7 @@ const confirmPaymentSchema = z.object({
  * Confirm a payment for a private client order
  *
  * Updates the payment timestamp and reference for the specified stage.
- * Also updates the order status to the next appropriate state.
+ * Also moves the order status on, but only when that is the routine next step.
  */
 const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(async ({ input, ctx }) => {
   const { orderId, paymentStage, reference } = input;
@@ -122,7 +123,11 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
       if (reference) {
         updateData.distributorPaymentReference = reference;
       }
-      updateData.status = 'distributor_paid';
+      // Record the payment always, but only move the status on when it is the
+      // next step; a delivered or cancelled order never goes backwards
+      if (isRoutinePcoTransition(order.status, 'distributor_paid')) {
+        updateData.status = 'distributor_paid';
+      }
       break;
 
     case 'partner':
@@ -137,7 +142,10 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
       if (reference) {
         updateData.partnerPaymentReference = reference;
       }
-      updateData.status = 'partner_paid';
+      // As adminMarkPartnerPaid: record the payout without regressing status
+      if (isRoutinePcoTransition(order.status, 'partner_paid')) {
+        updateData.status = 'partner_paid';
+      }
       break;
   }
 
@@ -168,14 +176,7 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
       notes: 'Partner confirmed client payment received. Awaiting distributor verification.',
     });
 
-    // Get partner name for notification
-    const partner = order.partnerId
-      ? await db.query.partners.findFirst({
-          where: { id: order.partnerId },
-          columns: { businessName: true },
-        })
-      : null;
-
+    // The distributor is never told which trade partner placed the order
     // Notify distributor members to verify the payment
     if (order.distributorId) {
       const distributorMembers = await db
@@ -189,7 +190,7 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
           partnerId: order.distributorId,
           type: 'action_required',
           title: 'Payment Verification Required',
-          message: `${partner?.businessName ?? 'Partner'} confirmed client payment for order ${updatedOrder.orderNumber}. Please verify and schedule delivery.`,
+          message: `Client payment confirmed for order ${updatedOrder.orderNumber}. Please verify and schedule delivery.`,
           entityType: 'private_client_order',
           entityId: orderId,
           actionUrl: `/platform/distributor/orders/${orderId}`,

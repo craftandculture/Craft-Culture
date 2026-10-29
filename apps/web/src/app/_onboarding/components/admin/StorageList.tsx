@@ -104,15 +104,15 @@ const StorageList = () => {
                 <td className="text-text-primary px-4 py-2.5 font-semibold">{row.name}</td>
                 <td className="text-text-muted px-3 py-2.5 text-xs">{statusLabel[row.status] ?? row.status}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{row.cases}</td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{row.extraCases || '—'}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{row.extraCases || ''}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">
-                  {row.status === 'active' ? aed(row.totalAed) : '—'}
+                  {row.status === 'active' ? aed(row.totalAed) : ''}
                 </td>
                 <td className="text-text-muted px-3 py-2.5 text-xs">
                   {row.zohoSubscriptionId ? 'Card' : 'Invoice'}
                 </td>
                 <td className="text-text-muted px-4 py-2.5 text-right text-xs">
-                  {row.zohoSubscriptionId ? (row.isPushed ? 'Yes' : '—') : 'Add to invoice'}
+                  {row.zohoSubscriptionId ? (row.isPushed ? 'Yes' : '') : 'Add to invoice'}
                 </td>
                 <td className="px-4 py-2.5 text-right">
                   {!row.zohoSubscriptionId && (row.status === 'active' || row.status === 'past_due') && (
@@ -182,7 +182,7 @@ const StorageList = () => {
 
       <p className="text-text-muted text-xs leading-5">
         Cases are counted as held now, in standard 75cl bottles (magnum = 2, Imperial = 8): a case of up to 6
-        bottles is half, 7–12 bottles one, loose bottles in sixes at half each — so push close to month end. Zoho is
+        bottles is half, 7–12 bottles one, loose bottles in sixes at half each, so push close to month end. Zoho is
         sent 6-bottle units (two per 12-bottle case): price the CELLAR-EXTRA-CASE add-on at half the Release Rates
         extra-case price.
       </p>

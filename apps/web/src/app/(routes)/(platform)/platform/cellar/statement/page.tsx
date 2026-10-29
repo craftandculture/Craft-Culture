@@ -155,6 +155,28 @@ const StatementPage = () => {
   const monthLabel =
     options.find((option) => option.value === month)?.label ?? month;
 
+  // The month before, by name, for the balance brought forward
+  const previousMonthLabel = format(subMonths(new Date(`${month}-01T12:00:00`), 1), 'MMMM');
+  const monthName = format(new Date(`${month}-01T12:00:00`), 'MMMM');
+
+  /*
+    How "Owed to you" is reached: what was owed at the start of the month, plus
+    this month's sales and anything reimbursed, less what was paid. Left out
+    when nothing was brought forward or paid, since the sold figure then is
+    the balance.
+  */
+  const balance = data
+    ? (() => {
+        const sold = data.soldUsd + data.soldLeftUsd;
+        const other = Math.round((data.owedUsd - data.broughtForwardUsd - sold + data.paidUsd) * 100) / 100;
+        return {
+          sold,
+          other,
+          shown: Math.abs(data.broughtForwardUsd) >= 0.01 || data.paidUsd > 0,
+        };
+      })()
+    : null;
+
   const totals = data
     ? {
         added: data.added.reduce((sum, row) => sum + row.bottles, 0),
@@ -210,7 +232,9 @@ const StatementPage = () => {
         row.bottles,
         row.amountUsd.toFixed(2),
       ]),
+      ['Brought forward', '', '', '', data.broughtForwardUsd.toFixed(2)],
       ['Paid to you', '', '', '', data.paidUsd.toFixed(2)],
+      ['Owed to you', '', '', '', Math.max(0, data.owedUsd).toFixed(2)],
       ...data.holdings.map((row) => [
         'Held in the UAE',
         format(new Date(data.generatedAt), 'yyyy-MM-dd'),
@@ -272,8 +296,8 @@ const StatementPage = () => {
 
       <CellarPageHeader
         className="statement-header mb-5"
-        title={data?.memberName ?? 'Your statements'}
-        description={`${monthLabel}${
+        title="Statements"
+        description={`${data?.memberName ? `${data.memberName} · ` : ''}${monthLabel}${
           data ? ` · issued ${format(new Date(data.generatedAt), 'd MMMM yyyy')}` : ''
         }`}
         actions={
@@ -304,7 +328,7 @@ const StatementPage = () => {
               window.print();
             }}
             disabled={!data}
-            className="border-border-muted bg-surface-primary text-text-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold shadow-sm disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center gap-1.5 px-2 text-sm font-semibold text-emerald-700 hover:underline disabled:opacity-50 dark:text-emerald-400"
           >
             <IconPrinter size={16} />
             Print
@@ -331,10 +355,11 @@ const StatementPage = () => {
           {/*
             One strip, read left to right like a statement: what came in, what
             went out, what sold and what is owed. Only the balance owed carries
-            colour; a month with nothing in a column says so quietly.
+            colour. A figure that reads 0 is left out rather than shown, and a
+            month with nothing in any of them says so in one sentence.
           */}
-          <dl className="border-border-muted bg-surface-quiet divide-border-muted mb-7 grid grid-cols-2 divide-x overflow-hidden rounded-xl border sm:grid-cols-4 [&>div:nth-child(n+3)]:border-t sm:[&>div:nth-child(n+3)]:border-t-0">
-            {[
+          {(() => {
+            const strip = [
               {
                 label: 'Added',
                 value: bottles(totals.added),
@@ -352,37 +377,96 @@ const StatementPage = () => {
                 quiet: totals.delivered + totals.onItsWay === 0,
               },
               {
-                label: 'Sold',
+                // This month's sales, so it is not mistaken for the balance due
+                label: `${monthName} sales`,
                 value: money(data.soldUsd + data.soldLeftUsd),
                 detail: `${bottles(totals.sold)}${data.unpricedBottles ? ` · ${data.unpricedBottles} awaiting a price` : ''}`,
                 quiet: totals.sold === 0,
               },
               {
-                label: 'Owed to you',
+                label: 'Total due to you',
                 value: money(Math.max(0, data.owedUsd)),
-                detail: data.paidUsd > 0 ? `${money(data.paidUsd)} paid this month` : 'Paid monthly',
+                // Says what the balance is made of, so it is not read as this month's sales alone
+                detail:
+                  Math.abs(data.broughtForwardUsd) >= 0.01
+                    ? `incl. ${money(data.broughtForwardUsd)} still owed from ${previousMonthLabel}`
+                    : data.paidUsd > 0
+                      ? `${money(data.paidUsd)} paid this month`
+                      : 'Paid monthly',
                 accent: data.owedUsd > 0,
+                quiet: data.owedUsd <= 0 && data.paidUsd <= 0,
               },
-            ].map((item) => (
-              <div key={item.label} className="min-w-0 px-4 py-3">
-                <dt className="text-text-muted text-[11px] font-medium uppercase tracking-wider">
-                  {item.label}
-                </dt>
-                <dd
-                  className={`mt-1 text-xl font-semibold leading-tight tabular-nums ${
-                    item.accent
-                      ? 'text-emerald-700 dark:text-emerald-400'
-                      : item.quiet
-                        ? 'text-text-muted'
-                        : 'text-text-primary'
-                  }`}
-                >
-                  {item.value}
-                </dd>
-                <dd className="text-text-muted mt-0.5 truncate text-xs">{item.detail}</dd>
-              </div>
-            ))}
-          </dl>
+            ].filter((item) => !item.quiet);
+
+            if (strip.length === 0) {
+              return (
+                <p className="text-text-muted mb-7 text-sm">
+                  A quiet month: no wine was added, delivered or sold.
+                </p>
+              );
+            }
+
+            return (
+              <dl
+                className={`border-border-muted bg-surface-quiet divide-border-muted mb-7 grid divide-x overflow-hidden rounded-xl border ${
+                  strip.length === 1
+                    ? 'grid-cols-1'
+                    : strip.length === 3
+                      ? 'grid-cols-3'
+                      : strip.length === 2
+                        ? 'grid-cols-2'
+                        : 'grid-cols-2 sm:grid-cols-4 [&>div:nth-child(n+3)]:border-t sm:[&>div:nth-child(n+3)]:border-t-0'
+                }`}
+              >
+                {strip.map((item) => (
+                  <div key={item.label} className="min-w-0 px-4 py-3">
+                    <dt className="text-text-muted text-[11px] font-medium uppercase tracking-wider">
+                      {item.label}
+                    </dt>
+                    <dd
+                      className={`mt-1 text-xl font-semibold leading-tight tabular-nums ${
+                        item.accent
+                          ? 'text-emerald-700 dark:text-emerald-400'
+                          : 'text-text-primary'
+                      }`}
+                    >
+                      {item.value}
+                    </dd>
+                    <dd className="text-text-muted mt-0.5 truncate text-xs">{item.detail}</dd>
+                  </div>
+                ))}
+              </dl>
+            );
+          })()}
+
+          {balance?.shown && (
+            <section className="mb-7">
+              <h2 className="text-text-muted mb-2 px-1 text-[11px] font-medium uppercase tracking-wider">
+                Your balance
+              </h2>
+              <dl className="border-border-muted bg-surface-quiet divide-border-muted divide-y rounded-xl border text-sm">
+                {[
+                  { label: `Still owed from ${previousMonthLabel} and earlier`, value: money(data.broughtForwardUsd) },
+                  { label: `${monthName} sales`, value: money(balance.sold) },
+                  ...(Math.abs(balance.other) >= 0.01
+                    ? [{ label: 'Reimbursed to you', value: money(balance.other) }]
+                    : []),
+                  { label: `Paid to you in ${monthName}`, value: data.paidUsd > 0 ? `− ${money(data.paidUsd)}` : '—' },
+                ].map((line) => (
+                  <div key={line.label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+                    <dt className="text-text-muted">{line.label}</dt>
+                    <dd className="text-text-primary tabular-nums">{line.value}</dd>
+                  </div>
+                ))}
+                <div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+                  <dt className="text-text-primary font-semibold">Total due to you</dt>
+                  <dd className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                    {money(Math.max(0, data.owedUsd))}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          )}
 
           <StatementGroups
             title="Deliveries"
@@ -406,7 +490,7 @@ const StatementPage = () => {
           />
 
           <StatementGroups
-            title="Sold"
+            title={`${monthName} sales`}
             empty="Nothing sold this month."
             total={totals.sold ? money(data.soldUsd + data.soldLeftUsd) : undefined}
             groups={[
@@ -502,7 +586,11 @@ const StatementPage = () => {
                       <td className="text-text-muted hidden px-3 py-2 text-xs sm:table-cell">UAE</td>
                       <td className="px-3 py-2 text-right tabular-nums">{row.bottles}</td>
                       <td className="px-3 py-2 text-right tabular-nums">
-                        {row.valueUsd != null ? money(row.valueUsd) : '—'}
+                        {row.valueUsd != null ? (
+                          money(row.valueUsd)
+                        ) : (
+                          <span className="text-text-muted text-xs">Not valued</span>
+                        )}
                         {row.valueBasis === 'your price' && (
                           <span className="text-text-muted block text-[10px]">your price</span>
                         )}
@@ -522,7 +610,7 @@ const StatementPage = () => {
                       </td>
                       <td className="text-text-muted hidden px-3 py-2 text-xs sm:table-cell">United Kingdom</td>
                       <td className="px-3 py-2 text-right tabular-nums">{row.totalBottles}</td>
-                      <td className="text-text-muted px-3 py-2 text-right">—</td>
+                      <td className="text-text-muted px-3 py-2 text-right text-xs">Not valued</td>
                     </tr>
                   ))}
                   {data.holdings.length === 0 && data.ukHoldings.length === 0 && (

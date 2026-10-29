@@ -93,10 +93,10 @@ const UploadStep = ({ onUploadComplete }: UploadStepProps) => {
         {...getRootProps()}
         className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
           isDragActive
-            ? 'border-border-brand bg-surface-brand/5'
+            ? 'border-text-primary bg-surface-brand/5'
             : isProcessing
               ? 'cursor-wait border-border-muted bg-surface-secondary/50'
-              : 'cursor-pointer border-border-muted hover:border-border-brand hover:bg-surface-secondary/50'
+              : 'cursor-pointer border-border-muted hover:border-text-primary hover:bg-surface-secondary/50'
         }`}
       >
         <input {...getInputProps()} />

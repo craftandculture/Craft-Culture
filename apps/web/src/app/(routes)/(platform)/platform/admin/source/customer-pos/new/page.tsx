@@ -1,12 +1,12 @@
 'use client';
 
-import { IconArrowLeft, IconLink } from '@tabler/icons-react';
+import { IconLink } from '@tabler/icons-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -113,20 +113,14 @@ const NewCustomerPoPage = () => {
   return (
     <div className="container mx-auto max-w-2xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link href="/platform/admin/source/customer-pos">
-            <Button variant="ghost" size="sm">
-              <ButtonContent iconLeft={IconArrowLeft}>Back</ButtonContent>
-            </Button>
-          </Link>
-          <div>
-            <Typography variant="headingLg">New Customer PO</Typography>
-            <Typography variant="bodySm" colorRole="muted">
-              Create a new customer purchase order
-            </Typography>
-          </div>
-        </div>
+        <AdminPageHeader
+          title="New Customer PO"
+          description="Create a new customer purchase order"
+          crumbs={[
+            { label: 'Source', href: '/platform/admin/source' },
+            { label: 'Customer POs', href: '/platform/admin/source/customer-pos' },
+          ]}
+        />
 
         <form onSubmit={handleSubmit}>
           <Card>
@@ -175,8 +169,8 @@ const NewCustomerPoPage = () => {
               </div>
 
               {selectedRfq && (
-                <div className="p-3 bg-fill-brand/5 border border-border-brand rounded-lg">
-                  <Typography variant="bodySm" className="font-medium text-text-brand">
+                <div className="p-3 bg-text-primary/5 border border-text-primary rounded-lg">
+                  <Typography variant="bodySm" className="font-medium text-text-primary">
                     Linked RFQ: {selectedRfq.rfqNumber}
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted">

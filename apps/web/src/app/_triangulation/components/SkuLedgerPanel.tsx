@@ -243,7 +243,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
             {([
               {
                 party: 'Craft & Culture',
-                dot: 'bg-fill-brand',
+                dot: 'bg-text-primary',
                 inLabel: 'Received',
                 inValue: totals.cc_opening,
                 outLabel: 'Sold to CD',
@@ -333,7 +333,7 @@ const SkuLedgerPanel = ({ skuId, periodId, onClose }: SkuLedgerPanelProps) => {
                       <div className="flex min-w-0 items-center gap-2">
                         <span
                           className={`size-2 shrink-0 rounded-full ${
-                            meta.side === 'cc' ? 'bg-fill-brand' : 'bg-fill-info'
+                            meta.side === 'cc' ? 'bg-text-primary' : 'bg-fill-info'
                           }`}
                         />
                         <div className="min-w-0">

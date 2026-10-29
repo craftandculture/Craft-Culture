@@ -48,6 +48,8 @@ interface PaymentTrackerProps {
   };
   isAdmin?: boolean;
   canVerifyPayments?: boolean;
+  /** Distributors are not shown C&C's payment to the partner */
+  audience?: 'distributor';
   onPaymentConfirmed?: () => void;
 }
 
@@ -151,11 +153,14 @@ const PaymentTracker = ({
   order,
   isAdmin = false,
   canVerifyPayments = false,
+  audience,
   onPaymentConfirmed,
 }: PaymentTrackerProps) => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
-  const payments = buildPaymentInfo(order);
+  const payments = buildPaymentInfo(order).filter(
+    (payment) => !(audience === 'distributor' && payment.stage === 'partner'),
+  );
   const [expandedStage, setExpandedStage] = useState<PaymentStage | null>(null);
   const [paymentRef, setPaymentRef] = useState('');
 
@@ -229,7 +234,7 @@ const PaymentTracker = ({
                       : payment.status === 'awaiting'
                         ? 'bg-fill-warning'
                         : payment.status === 'awaiting_verification'
-                          ? 'bg-fill-brand'
+                          ? 'bg-text-primary'
                           : 'bg-fill-muted'
                   }`}
                 >
@@ -280,7 +285,7 @@ const PaymentTracker = ({
 
                   {/* Message for awaiting verification status */}
                   {payment.status === 'awaiting_verification' && (
-                    <Typography variant="bodyXs" className="mt-2 text-text-brand">
+                    <Typography variant="bodyXs" className="mt-2 text-text-primary">
                       Partner confirmed payment received. Awaiting distributor verification.
                     </Typography>
                   )}
@@ -294,6 +299,7 @@ const PaymentTracker = ({
                         size="sm"
                         onClick={() => verifyPaymentMutation.mutate()}
                         isDisabled={verifyPaymentMutation.isPending}
+                        disabled={verifyPaymentMutation.isPending}
                       >
                         {verifyPaymentMutation.isPending ? (
                           <Icon icon={IconLoader2} size="sm" className="animate-spin" />
@@ -318,7 +324,7 @@ const PaymentTracker = ({
                           />
                           <Button
                             size="sm"
-                            colorRole="success"
+                            colorRole="brand"
                             onClick={() =>
                               markPaidMutation.mutate({
                                 stage: payment.stage,
@@ -326,6 +332,7 @@ const PaymentTracker = ({
                               })
                             }
                             isDisabled={markPaidMutation.isPending}
+                            disabled={markPaidMutation.isPending}
                           >
                             {markPaidMutation.isPending ? (
                               <Icon icon={IconLoader2} size="xs" className="animate-spin" />
@@ -353,7 +360,7 @@ const PaymentTracker = ({
                             setExpandedStage(payment.stage);
                             setPaymentRef('');
                           }}
-                          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-muted hover:text-text-brand"
+                          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-muted hover:text-text-primary"
                         >
                           <IconCurrencyDollar size={14} />
                           Mark Paid

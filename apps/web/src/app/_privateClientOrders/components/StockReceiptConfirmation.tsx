@@ -14,12 +14,17 @@ import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
 
+import describePcoLine from '../utils/describePcoLine';
+
 interface LineItem {
   id: string;
   productName: string;
   vintage: number | string | null;
   quantity: number;
   stockStatus: string | null;
+  /** Bottles per unit; 1 is a single bottle. Without it the quantity reads as units */
+  caseConfig?: number | null;
+  bottleSize?: string | null;
 }
 
 export interface StockReceiptConfirmationProps {
@@ -57,7 +62,9 @@ const StockReceiptConfirmation = ({
         itemIds,
       }),
     onSuccess: (result) => {
-      toast.success(`${result.updatedCount} items marked as received`);
+      toast.success(
+        `${result.updatedCount} ${result.updatedCount === 1 ? 'line' : 'lines'} marked as received`,
+      );
       setSelectedItems(new Set());
       void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
       onConfirmed?.();
@@ -88,7 +95,7 @@ const StockReceiptConfirmation = ({
   const handleConfirm = () => {
     const itemIds = Array.from(selectedItems);
     if (itemIds.length === 0) {
-      toast.error('Please select items to confirm receipt');
+      toast.error('Select the lines you have received');
       return;
     }
     confirmReceipt(itemIds);
@@ -114,12 +121,12 @@ const StockReceiptConfirmation = ({
             </div>
             <div className="flex-1">
               <Typography variant="headingSm" className="mb-1">
-                Stock Arriving - Confirm Receipt
+                Stock Arriving: Confirm Receipt
               </Typography>
               <Typography variant="bodySm" colorRole="muted">
                 {inTransitCount > 0
-                  ? `${inTransitCount} item(s) are in transit to your warehouse. Select items and confirm when you receive them.`
-                  : `${pendingItems.length} item(s) at C&C ready for collection. Confirm when received.`}
+                  ? `${inTransitCount} ${inTransitCount === 1 ? 'line is' : 'lines are'} on the way to your warehouse. Tick each line as it arrives, then confirm.`
+                  : `${pendingItems.length} ${pendingItems.length === 1 ? 'line is' : 'lines are'} at C&C, ready for collection. Tick each line once you have it, then confirm.`}
               </Typography>
             </div>
           </div>
@@ -128,14 +135,14 @@ const StockReceiptConfirmation = ({
           <div className="ml-0 sm:ml-16">
             <div className="rounded-lg border border-border-muted bg-surface-secondary/50">
               {/* Select All Header */}
-              <div className="flex items-center gap-3 border-b border-border-muted px-4 py-2.5">
+              <div className="flex min-h-11 items-center gap-3 border-b border-border-muted px-4 py-2.5">
                 <Checkbox
                   id="select-all"
                   checked={selectedItems.size === pendingItems.length && pendingItems.length > 0}
                   onCheckedChange={handleSelectAll}
                 />
-                <label htmlFor="select-all" className="text-xs font-medium text-text-muted cursor-pointer">
-                  Select All ({pendingItems.length} items)
+                <label htmlFor="select-all" className="cursor-pointer text-xs font-medium text-text-muted">
+                  Select all ({pendingItems.length} {pendingItems.length === 1 ? 'line' : 'lines'})
                 </label>
               </div>
 
@@ -144,7 +151,7 @@ const StockReceiptConfirmation = ({
                 {pendingItems.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-muted/20"
+                    className="flex min-h-12 items-center gap-3 px-4 py-2.5 hover:bg-surface-muted/20"
                   >
                     <Checkbox
                       id={`item-${item.id}`}
@@ -162,7 +169,11 @@ const StockReceiptConfirmation = ({
                         )}
                       </label>
                       <div className="flex items-center gap-2 text-xs text-text-muted">
-                        <span>{item.quantity} cases</span>
+                        <span>
+                          {item.caseConfig !== undefined
+                            ? describePcoLine(item).qty
+                            : `Quantity ${item.quantity}`}
+                        </span>
                         <span className="text-text-muted/50">|</span>
                         <span
                           className={
@@ -192,14 +203,21 @@ const StockReceiptConfirmation = ({
             </div>
 
             {/* Confirm Button */}
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+              {selectedItems.size === 0 && (
+                <Typography variant="bodyXs" colorRole="muted">
+                  Tick at least one line to confirm.
+                </Typography>
+              )}
               <Button
+                type="button"
                 onClick={handleConfirm}
                 disabled={selectedItems.size === 0 || isPending}
                 colorRole="brand"
               >
                 <ButtonContent iconLeft={IconCheck} isLoading={isPending}>
-                  Confirm Receipt ({selectedItems.size} items)
+                  Confirm Receipt ({selectedItems.size}{' '}
+                  {selectedItems.size === 1 ? 'line' : 'lines'})
                 </ButtonContent>
               </Button>
             </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { IconArrowRight, IconX } from '@tabler/icons-react';
+import { IconX } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -14,11 +14,13 @@ import linkLabelFor from '../utils/linkLabelFor';
 const BANNER_DAYS = 21;
 
 /**
- * A one-line note of the latest feature, where the member lands
+ * A quiet one-line note of the latest feature, where the member lands
  *
  * Taken from What's New, so it needs no upkeep: the newest published feature
- * or improvement that points to a screen, for three weeks. It goes once the
- * member closes it or reads What's New, and the next feature replaces it.
+ * or improvement that points to a screen, for three weeks, and only while the
+ * member has not yet seen it. It goes once the member closes it or reads
+ * What's New, and the next feature replaces it. A pale tint and a dot, never a
+ * dark panel, so it never competes with the wine.
  */
 const WhatsNewBanner = () => {
   const api = useTRPC();
@@ -47,7 +49,13 @@ const WhatsNewBanner = () => {
       )
     : undefined;
 
-  if (!ready || !latest || done === latest.id) return null;
+  // Already read on What's New: nothing new to say
+  const seen =
+    !!latest &&
+    !!data?.seenAt &&
+    new Date(latest.date).getTime() <= new Date(data.seenAt).getTime();
+
+  if (!ready || !latest || seen || done === latest.id) return null;
 
   const close = () => {
     setDone(latest.id);
@@ -59,34 +67,23 @@ const WhatsNewBanner = () => {
   };
 
   return (
-    <section className="mb-4 flex items-center gap-3 rounded-xl bg-neutral-950 py-2.5 pr-2 pl-4 text-white dark:border dark:border-emerald-500/20 dark:bg-emerald-950/40">
-      <span className="size-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden />
-      <p className="min-w-0 flex-1 truncate text-sm">
-        <span className="font-semibold text-emerald-300">New</span>
-        <span className="mx-2 text-white/30">·</span>
-        <span className="font-medium">{latest.title}</span>
-      </p>
+    <section className="mb-4 flex items-center gap-3 rounded-xl bg-emerald-50/70 py-2 pr-1.5 pl-4 dark:bg-emerald-500/10">
+      <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+      <p className="text-text-primary min-w-0 flex-1 truncate text-sm">{latest.title}</p>
       {latest.linkPath && (
         <Link
           href={latest.linkPath}
           onClick={close}
-          className="hidden shrink-0 items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold hover:bg-white/20 sm:inline-flex"
+          className="shrink-0 px-1 text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
         >
-          {linkLabelFor(latest.linkPath)}
-          <IconArrowRight size={13} />
+          {linkLabelFor(latest.linkPath) ?? 'View'}
         </Link>
       )}
-      <Link
-        href="/platform/cellar/whats-new"
-        className="shrink-0 px-1 text-xs font-semibold text-white/60 hover:text-white"
-      >
-        All updates
-      </Link>
       <button
         type="button"
         onClick={close}
-        aria-label="Close"
-        className="grid size-7 shrink-0 place-items-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
+        aria-label="Dismiss"
+        className="text-text-muted hover:text-text-primary grid size-7 shrink-0 place-items-center rounded-full"
       >
         <IconX size={14} />
       </button>

@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, gt, inArray, like, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import announceDispatch from '@/app/_wms/data/announceDispatch';
 import db from '@/database/client';
 import {
@@ -218,6 +219,9 @@ const adminQuickDispatch = wmsOperatorProcedure
 
         const problems: string[] = [];
 
+        // A member's own delivery may come as the PCO or as a Zoho order quoting it
+        const ownDeliveries = await getOwnerDeliveryOwners(allIds);
+
         if (unpickedLines.length > 0 && !confirmUnpicked) {
           const lists = openLists
             .filter((list) => unpickedLines.some((line) => line.pickListId === list.id))
@@ -299,6 +303,8 @@ const adminQuickDispatch = wmsOperatorProcedure
             tx
               .select({
                 id: wmsStock.id,
+                lwin18: wmsStock.lwin18,
+                locationId: wmsStock.locationId,
                 quantityCases: wmsStock.quantityCases,
                 ownerId: wmsStock.ownerId,
                 notForSale: wmsStock.notForSale,
@@ -329,8 +335,20 @@ const adminQuickDispatch = wmsOperatorProcedure
             ).map((row) => row.stockId),
           );
 
+          /*
+            A member's own delivery is their bottles and nobody else's, held or
+            not, as the pick screen already enforces. Owner was only a sort
+            preference here, so an unreserved own delivery was filled from
+            another partner's for-sale row of the same wine.
+          */
+          const ownDeliveryOwnerId = ownDeliveries.get(orderId)?.ownerId;
+
           const usable = rows
-            .filter((row) => reservedHere.has(row.id) || !row.notForSale)
+            .filter((row) =>
+              ownDeliveryOwnerId
+                ? row.ownerId === ownDeliveryOwnerId
+                : reservedHere.has(row.id) || !row.notForSale,
+            )
             .filter((row) =>
               isBottleLine
                 ? (row.caseConfig ?? 12) === 1
@@ -357,12 +375,19 @@ const adminQuickDispatch = wmsOperatorProcedure
 
             remaining -= result.totalPicked;
 
-            // One movement per row drawn, so each owner's bottles are accounted for (Index 3.0)
+            /*
+              One movement per row drawn, so each owner's bottles are accounted
+              for (Index 3.0). The bay and code are the row's own: a row found by
+              the singles or prefix match carries a different code from the
+              line, and the stock rebuild and auto-fix ledgers read both, so a
+              movement without them showed the bay as still holding the wine.
+            */
             if (result.totalPicked > 0) {
               await tx.insert(wmsStockMovements).values({
                 movementNumber: await generateMovementNumber(tx),
                 movementType: 'pick',
-                lwin18: lwin,
+                lwin18: stock.lwin18,
+                fromLocationId: stock.locationId,
                 productName,
                 quantityCases: result.totalPicked,
                 quantityBottles: result.totalPicked * (stock.caseConfig ?? 1),

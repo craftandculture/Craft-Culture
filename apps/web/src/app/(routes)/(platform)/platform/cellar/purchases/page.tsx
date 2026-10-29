@@ -171,7 +171,7 @@ const PurchasesPage = () => {
           action={
             <Link
               href="/platform/cellar/available"
-              className="bg-text-primary text-surface-primary inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold"
+              className="inline-flex h-10 items-center text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
             >
               Browse the C&C Cellar List
             </Link>

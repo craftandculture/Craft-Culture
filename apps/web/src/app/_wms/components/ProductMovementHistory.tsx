@@ -72,7 +72,7 @@ const ProductMovementHistory = ({ lwin18, limit = 50 }: ProductMovementHistoryPr
   return (
     <div className="mt-3 rounded-lg border border-border-muted bg-background-primary">
       <div className="flex items-center gap-2 border-b border-border-muted px-4 py-2.5">
-        <IconHistory className="h-4 w-4 text-text-brand" />
+        <IconHistory className="h-4 w-4 text-text-primary" />
         <Typography variant="bodyXs" className="font-semibold uppercase tracking-wider text-text-muted">
           Movement History — {data?.pagination.total ?? movements.length} record
           {(data?.pagination.total ?? movements.length) !== 1 ? 's' : ''}

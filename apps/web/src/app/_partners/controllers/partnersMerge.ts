@@ -277,7 +277,8 @@ const partnersMerge = adminProcedure
         .update(partners)
         .set({
           status: 'inactive',
-          businessName: `${duplicate.businessName} (merged into ${survivor.businessName})`,
+          // A record merged before carries the note already; it is said once
+          businessName: `${duplicate.businessName.replace(/\s*\(merged into .*\)\s*$/i, '')} (merged into ${survivor.businessName})`,
           notes: sql`COALESCE(${partners.notes} || E'\n', '') || ${`Merged into ${survivor.businessName} (${survivorId}) by ${ctx.user.email} on ${new Date().toISOString().slice(0, 10)}`}`,
         })
         .where(eq(partners.id, duplicateId));

@@ -59,7 +59,7 @@ const DeliveriesPage = () => {
         <FirstStepsCard
           eyebrow="Your first delivery"
           title="Bring your wine home"
-          message="Choose the bottles you would like in your cellar and we will arrange the rest. You can follow every delivery here until it reaches you."
+          message="Choose the wine you would like delivered and we will arrange the rest. You can follow every delivery here until it reaches you."
           steps={[
             {
               icon: IconBottle,

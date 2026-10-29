@@ -198,7 +198,7 @@ const WMSStockPage = () => {
               placeholder="Search products, LWIN, or producer..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
+              className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-10 pr-4 text-sm focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-text-primary"
             />
           </div>
         )}
@@ -229,7 +229,7 @@ const WMSStockPage = () => {
               </Card>
             ) : (
               productData.products.map((product) => (
-                <Card key={product.lwin18} className="hover:border-border-brand">
+                <Card key={product.lwin18} className="hover:border-text-primary">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex-1">
@@ -406,7 +406,7 @@ const WMSStockPage = () => {
                   key={location.id}
                   href={`/platform/admin/wms/locations/${location.id}`}
                 >
-                  <Card className="h-full cursor-pointer transition-colors hover:border-border-brand">
+                  <Card className="h-full cursor-pointer transition-colors hover:border-text-primary">
                     <CardContent className="p-4">
                       <div className="mb-3 flex items-start justify-between">
                         <LocationBadge
@@ -495,7 +495,7 @@ const WMSStockPage = () => {
               </Card>
             ) : (
               ownerData.owners.map((owner) => (
-                <Card key={owner.ownerId} className="hover:border-border-brand">
+                <Card key={owner.ownerId} className="hover:border-text-primary">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>

@@ -109,8 +109,11 @@ const quotesAcceptAlternative = approvedProcedure
 
       // Handle removing accepted alternative (alternativeIndex === -1)
       if (alternativeIndex === -1) {
-        // Type assertion to access originalBasePriceUsd
-        const lineItemWithOriginal = lineItem as typeof lineItem & { originalBasePriceUsd?: number };
+        // Type assertion to access the original price and quantity
+        const lineItemWithOriginal = lineItem as typeof lineItem & {
+          originalBasePriceUsd?: number;
+          originalConfirmedQuantity?: number;
+        };
 
         // Remove the accepted alternative and revert to original pricing
         const updatedLineItem = {
@@ -118,12 +121,16 @@ const quotesAcceptAlternative = approvedProcedure
           acceptedAlternative: undefined,
           // Revert to original pricing stored when alternative was accepted
           basePriceUsd: lineItemWithOriginal.originalBasePriceUsd ?? lineItem.basePriceUsd,
-          // Clean up the stored original price
+          // Revert to the quantity confirmed before the alternative capped it
+          confirmedQuantity: lineItemWithOriginal.originalConfirmedQuantity ?? lineItem.confirmedQuantity,
+          // Clean up the stored originals
           originalBasePriceUsd: undefined,
+          originalConfirmedQuantity: undefined,
         };
 
         updatedLineItem.lineItemTotalUsd =
-          (updatedLineItem.basePriceUsd ?? 0) * (lineItem.confirmedQuantity || lineItem.originalQuantity || 0);
+          (updatedLineItem.basePriceUsd ?? 0) *
+          (updatedLineItem.confirmedQuantity || lineItem.originalQuantity || 0);
 
         const updatedLineItems = [...lineItems];
         updatedLineItems[lineItemIndex] = updatedLineItem;
@@ -161,7 +168,10 @@ const quotesAcceptAlternative = approvedProcedure
       const selectedAlternative = lineItem.adminAlternatives[alternativeIndex];
 
       // Type assertion to check if we already have an original price stored
-      const lineItemWithOriginal = lineItem as typeof lineItem & { originalBasePriceUsd?: number };
+      const lineItemWithOriginal = lineItem as typeof lineItem & {
+        originalBasePriceUsd?: number;
+        originalConfirmedQuantity?: number;
+      };
 
       // Update the line item with the accepted alternative
       const updatedLineItem = {
@@ -172,6 +182,10 @@ const quotesAcceptAlternative = approvedProcedure
         },
         // Store original price before replacing (only if not already stored)
         originalBasePriceUsd: lineItemWithOriginal.originalBasePriceUsd ?? lineItem.basePriceUsd,
+        // Store original quantity too, so undoing restores it (first time only)
+        originalConfirmedQuantity:
+          lineItemWithOriginal.originalConfirmedQuantity ??
+          (lineItem.confirmedQuantity || lineItem.originalQuantity || 0),
         // Update pricing to use alternative price
         basePriceUsd: selectedAlternative.pricePerCase,
         // Ensure quantity doesn't exceed available quantity

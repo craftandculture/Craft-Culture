@@ -250,7 +250,7 @@ const CellarAccessPanel = () => {
         <button
           type="button"
           disabled={!canInvite || isInviting}
-          className="bg-text-primary text-surface-primary mt-3 h-10 rounded-lg px-4 text-sm font-semibold disabled:opacity-50"
+          className="mt-3 h-10 text-sm font-semibold disabled:opacity-50 text-emerald-700 hover:underline dark:text-emerald-400"
         >
           {isInviting ? 'Sending…' : 'Invite'}
         </button>

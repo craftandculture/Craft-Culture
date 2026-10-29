@@ -47,7 +47,7 @@ const FirstStepsCard = ({ eyebrow, title, message, steps, action }: FirstStepsCa
           >
             <span className="relative grid size-11 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
               <step.icon size={20} />
-              <span className="absolute -top-1 -left-1 grid size-5 place-items-center rounded-full bg-neutral-950 text-[10px] font-semibold text-white dark:bg-white dark:text-neutral-950">
+              <span className="absolute -top-1 -left-1 grid size-5 place-items-center rounded-full bg-surface-primary text-[10px] font-semibold text-text-muted ring-1 ring-border-muted">
                 {index + 1}
               </span>
             </span>
@@ -60,7 +60,7 @@ const FirstStepsCard = ({ eyebrow, title, message, steps, action }: FirstStepsCa
       <div className="mt-7 flex justify-center">
         <Link
           href={action.href}
-          className="inline-flex h-11 items-center rounded-full bg-neutral-950 px-6 text-sm font-semibold text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+          className="inline-flex h-11 items-center text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
         >
           {action.label}
         </Link>

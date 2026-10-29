@@ -1,5 +1,5 @@
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import DistributionClient from '@/app/_distribution/components/DistributionClient';
-import Typography from '@/app/_ui/components/Typography/Typography';
 
 /**
  * Consignment & Distribution
@@ -11,18 +11,14 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 const DistributionPage = () => {
   return (
     <main className="container space-y-6 py-8">
-      <div>
-        <Typography variant="headingLg" asChild>
-          <h1>Consignment &amp; Distribution</h1>
-        </Typography>
-        <Typography variant="bodySm" colorRole="muted" asChild>
-          <p className="mt-1">
-            Wine placed with a distributor — what went out, what they hold,
-            what sold, and whose it is. In bottles. A line they take onto their
-            own book stops counting as consignment.
-          </p>
-        </Typography>
-      </div>
+      <AdminPageHeader
+        title="Consignment & Distribution"
+        description={
+          <>
+            Wine placed with a distributor — what went out, what they hold, what sold, and whose it is. In bottles. A line they take onto their own book stops counting as consignment.
+          </>
+        }
+      />
       <DistributionClient />
     </main>
   );

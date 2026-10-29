@@ -11,6 +11,7 @@ import {
   products,
   wmsStock,
 } from '@/database/schema';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 
 import toDutyPaidPrice from '../utils/toDutyPaidPrice';
 
@@ -208,7 +209,7 @@ const runScout = async () => {
     // Currency to AED conversion rates
     const toAed: Record<string, number> = {
       AED: 1,
-      USD: 3.67,
+      USD: USD_TO_AED,
       GBP: 4.67,
       EUR: 4.00,
     };
@@ -219,7 +220,7 @@ const runScout = async () => {
         if (p.offerPrice && p.offerCurrency) {
           const units = p.unitCount && p.unitCount > 0 ? p.unitCount : 1;
           const perBottle = p.offerPrice / units;
-          const rate = toAed[p.offerCurrency.toUpperCase()] ?? 3.67;
+          const rate = toAed[p.offerCurrency.toUpperCase()] ?? USD_TO_AED;
           const perBottleAed = perBottle * rate;
           priceStr = `IB cost ${perBottleAed.toFixed(0)} AED/bottle duty free → duty-paid equivalent ${toDutyPaidPrice(perBottleAed).toFixed(0)} AED (${perBottle.toFixed(0)} ${p.offerCurrency} x${units})`;
         }

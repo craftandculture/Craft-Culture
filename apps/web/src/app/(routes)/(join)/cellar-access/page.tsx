@@ -3,7 +3,7 @@ import AcceptCellarAccess from '@/app/_cellar/components/AcceptCellarAccess';
 import findAccessInvitation from '@/app/_cellar/data/findAccessInvitation';
 
 export const metadata = {
-  title: 'Private Cellar — Craft & Culture',
+  title: 'Private Cellar',
   robots: { index: false, follow: false },
 };
 

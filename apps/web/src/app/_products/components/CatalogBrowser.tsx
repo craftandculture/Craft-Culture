@@ -12,6 +12,7 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
 
@@ -226,7 +227,7 @@ const CatalogBrowser = ({
             value={catalogSearch}
             onChange={(e) => setCatalogSearch(e.target.value)}
             placeholder="Search catalogue..."
-            className="h-10 w-full rounded-lg border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] placeholder:text-text-muted/60 hover:border-border-primary focus:border-border-brand focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-border-brand/20"
+            className="h-10 w-full rounded-lg border border-border-muted bg-background-primary pl-9 pr-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] placeholder:text-text-muted/60 hover:border-border-primary focus:border-text-primary focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-text-primary/20"
           />
         </div>
 
@@ -276,7 +277,7 @@ const CatalogBrowser = ({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="h-10 rounded-lg border border-border-muted bg-background-primary px-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-border-primary focus:border-border-brand focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-border-brand/20"
+            className="h-10 rounded-lg border border-border-muted bg-background-primary px-3 text-sm transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-border-primary focus:border-text-primary focus:shadow-sm focus:outline-none focus:ring-2 focus:ring-text-primary/20"
           >
             <option value="name-asc">Name (A-Z)</option>
             <option value="name-desc">Name (Z-A)</option>
@@ -418,11 +419,11 @@ const CatalogBrowser = ({
 
                   const price = offer?.inBondPriceUsd ?? offer?.price ?? 0;
                   const displayPrice =
-                    displayCurrency === 'AED' ? price * 3.67 : price;
+                    displayCurrency === 'AED' ? price * USD_TO_AED : price;
                   const displayLocalPrice =
-                    displayCurrency === 'AED' ? localPrice * 3.67 : localPrice;
+                    displayCurrency === 'AED' ? localPrice * USD_TO_AED : localPrice;
                   const displayCultxPrice =
-                    displayCurrency === 'AED' ? cultxPrice * 3.67 : cultxPrice;
+                    displayCurrency === 'AED' ? cultxPrice * USD_TO_AED : cultxPrice;
                   const hasBothPrices =
                     displayLocalPrice > 0 && displayCultxPrice > 0;
 

@@ -37,7 +37,7 @@ const membershipPill: Record<string, string> = {
 };
 
 const since = (value: string | Date | null) =>
-  value ? formatDistanceToNowStrict(new Date(value), { addSuffix: true }) : '—';
+  value ? formatDistanceToNowStrict(new Date(value), { addSuffix: true }) : '';
 
 /**
  * The cellar membership, one row per member
@@ -231,16 +231,16 @@ const CellarMembersList = () => {
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
-                    {member.wines || '—'}
+                    {member.wines || ''}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
-                    {member.cases || '—'}
+                    {member.cases || ''}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
-                    {member.bottles || '—'}
+                    {member.bottles || ''}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
-                    {member.valueUsd ? money(member.valueUsd) : '—'}
+                    {member.valueUsd ? money(member.valueUsd) : ''}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
                     {member.overageCases > 0 ? (
@@ -248,7 +248,7 @@ const CellarMembersList = () => {
                         {member.overageCases}
                       </span>
                     ) : (
-                      '—'
+                      ''
                     )}
                   </td>
                   <td className="px-3 py-2.5">
@@ -269,7 +269,7 @@ const CellarMembersList = () => {
                         {member.waitingOnThem} with them
                       </span>
                     ) : (
-                      <span className="text-text-muted text-xs">—</span>
+                      <span className="text-text-muted text-xs" />
                     )}
                   </td>
                   <td className="text-text-muted px-3 py-2.5 text-right text-xs">
@@ -307,10 +307,10 @@ const CellarMembersList = () => {
               }
               meta={[member.code, `last movement ${since(member.lastMovementAt)}`].filter(Boolean).join(' · ')}
               fields={[
-                { label: 'Cases', value: member.cases || '—' },
-                { label: 'Bottles', value: member.bottles || '—' },
-                { label: 'Value', value: member.valueUsd ? money(member.valueUsd) : '—' },
-                { label: `Over ${includedCases}`, value: member.overageCases > 0 ? member.overageCases : '—' },
+                { label: 'Cases', value: member.cases || '' },
+                { label: 'Bottles', value: member.bottles || '' },
+                { label: 'Value', value: member.valueUsd ? money(member.valueUsd) : '' },
+                { label: `Over ${includedCases}`, value: member.overageCases > 0 ? member.overageCases : '' },
               ]}
             >
               <div className="flex flex-wrap items-center gap-2">
@@ -339,7 +339,7 @@ const CellarMembersList = () => {
       )}
 
       <Typography variant="bodyXs" colorRole="muted" className="mt-3 block">
-        Value is what the wine cost on import, not what it is worth today — the
+        Value is what the wine cost on import, not what it is worth today; the
         platform does not price a member&rsquo;s collection.
       </Typography>
     </div>

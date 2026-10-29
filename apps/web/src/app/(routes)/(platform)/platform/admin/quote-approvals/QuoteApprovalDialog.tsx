@@ -718,7 +718,7 @@ const QuoteApprovalDialog = ({
                 {quote.clientEmail && (
                   <a
                     href={`mailto:${quote.clientEmail}`}
-                    className="flex items-center gap-1.5 text-sm text-text-brand hover:underline"
+                    className="flex items-center gap-1.5 text-sm text-text-primary hover:underline"
                   >
                     <span>📧</span>
                     {quote.clientEmail}
@@ -737,9 +737,9 @@ const QuoteApprovalDialog = ({
                 </div>
 
                 {/* Status Badge */}
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-fill-brand/10 px-2.5 py-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-fill-brand animate-pulse" />
-                  <span className="text-xs font-bold capitalize text-text-brand">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-text-primary/10 px-2.5 py-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-text-primary animate-pulse" />
+                  <span className="text-xs font-bold capitalize text-text-primary">
                     {quote.status.replace(/_/g, ' ')}
                   </span>
                 </div>
@@ -764,7 +764,7 @@ const QuoteApprovalDialog = ({
                     onClick={() => setDisplayCurrency('USD')}
                     className={`px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-md font-semibold text-xs sm:text-sm transition-all duration-200 ${
                       displayCurrency === 'USD'
-                        ? 'bg-surface-primary text-text-brand shadow-sm border border-border-muted'
+                        ? 'bg-surface-primary text-text-primary shadow-sm border border-border-muted'
                         : 'text-text-muted hover:text-text'
                     }`}
                   >
@@ -774,7 +774,7 @@ const QuoteApprovalDialog = ({
                     onClick={() => setDisplayCurrency('AED')}
                     className={`px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-md font-semibold text-xs sm:text-sm transition-all duration-200 ${
                       displayCurrency === 'AED'
-                        ? 'bg-surface-primary text-text-brand shadow-sm border border-border-muted'
+                        ? 'bg-surface-primary text-text-primary shadow-sm border border-border-muted'
                         : 'text-text-muted hover:text-text'
                     }`}
                   >
@@ -784,11 +784,11 @@ const QuoteApprovalDialog = ({
               </div>
 
               {quote.status === 'under_cc_review' && (
-                <div className="mb-4 rounded-xl border-2 border-border-brand bg-gradient-to-r from-fill-brand/5 to-fill-brand/10 p-4 shadow-sm">
+                <div className="mb-4 rounded-xl border-2 border-text-primary bg-gradient-to-r from-text-primary/5 to-text-primary/10 p-4 shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 text-2xl">📝</div>
                     <div className="flex-1">
-                      <Typography variant="bodyMd" className="font-bold text-text-brand mb-1">
+                      <Typography variant="bodyMd" className="font-bold text-text-primary mb-1">
                         Review Mode Active
                       </Typography>
                       <Typography variant="bodySm" colorRole="muted">
@@ -880,7 +880,7 @@ const QuoteApprovalDialog = ({
                             <span className="shrink-0 rounded bg-fill-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">ALT</span>
                           )}
                           {/* Price */}
-                          <span className={`shrink-0 font-semibold tabular-nums ${isTrulyUnavailable ? 'text-text-muted' : 'text-text-brand'}`}>
+                          <span className={`shrink-0 font-semibold tabular-nums ${isTrulyUnavailable ? 'text-text-muted' : 'text-text-primary'}`}>
                             {formatPrice(displayCurrency === 'AED' ? convertUsdToAed(lineTotal) : lineTotal, displayCurrency)}
                           </span>
                         </div>
@@ -1013,9 +1013,9 @@ const QuoteApprovalDialog = ({
 
               {/* Order Total - Compact */}
               <div className="mt-4 flex justify-end">
-                <div className="rounded-lg bg-fill-brand/10 border border-border-brand/30 px-6 py-3 flex items-center gap-4">
+                <div className="rounded-lg bg-text-primary/10 border border-text-primary/30 px-6 py-3 flex items-center gap-4">
                   <span className="text-sm font-semibold text-text-muted uppercase">Total:</span>
-                  <Typography variant="headingMd" className="font-bold text-text-brand">
+                  <Typography variant="headingMd" className="font-bold text-text-primary">
                     {formatPrice(displayTotal, displayCurrency)}
                   </Typography>
                 </div>
@@ -1123,7 +1123,7 @@ const QuoteApprovalDialog = ({
                                           },
                                         });
                                       }}
-                                      className="w-16 rounded-md border border-border-muted px-2 py-1 text-sm text-center focus:border-border-brand focus:ring-1 focus:ring-fill-brand"
+                                      className="w-16 rounded-md border border-border-muted px-2 py-1 text-sm text-center focus:border-text-primary focus:ring-1 focus:ring-text-primary"
                                     />
                                   </div>
 
@@ -1147,7 +1147,7 @@ const QuoteApprovalDialog = ({
                                             },
                                           });
                                         }}
-                                        className="w-24 rounded-md border border-border-muted pl-5 pr-2 py-1 text-sm text-right focus:border-border-brand focus:ring-1 focus:ring-fill-brand"
+                                        className="w-24 rounded-md border border-border-muted pl-5 pr-2 py-1 text-sm text-right focus:border-text-primary focus:ring-1 focus:ring-text-primary"
                                         placeholder="0.00"
                                       />
                                     </div>
@@ -1190,13 +1190,13 @@ const QuoteApprovalDialog = ({
 
             {/* Delivery, Partner & Payment - Under Review */}
             {quote.status === 'under_cc_review' && !showRevisionForm && (
-              <div className="rounded-xl bg-gradient-to-br from-fill-brand/5 to-fill-brand/10 p-6 shadow-md border-2 border-border-brand/30 space-y-5">
+              <div className="rounded-xl bg-gradient-to-br from-text-primary/5 to-text-primary/10 p-6 shadow-md border-2 border-text-primary/30 space-y-5">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-brand/20">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-text-primary/20">
                     <span className="text-lg">{isB2C ? '💳' : '🚚'}</span>
                   </div>
                   <div>
-                    <Typography variant="headingMd" className="font-bold text-text-brand">
+                    <Typography variant="headingMd" className="font-bold text-text-primary">
                       {isB2C ? 'Payment & Delivery Details' : 'Delivery Details'}
                     </Typography>
                     <Typography variant="bodyXs" colorRole="muted">
@@ -1215,7 +1215,7 @@ const QuoteApprovalDialog = ({
                       <select
                         value={selectedPartnerId}
                         onChange={(e) => setSelectedPartnerId(e.target.value)}
-                        className="w-full rounded-lg border-2 border-border-muted bg-surface-primary px-4 py-2.5 text-sm font-medium focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                        className="w-full rounded-lg border-2 border-border-muted bg-surface-primary px-4 py-2.5 text-sm font-medium focus:border-text-primary focus:ring-2 focus:ring-text-primary/20 transition-all"
                       >
                         <option value="">Select a partner...</option>
                         {partnersData?.map((partner) => {
@@ -1255,7 +1255,7 @@ const QuoteApprovalDialog = ({
                       if (!hasBankTransfer && !hasPaymentLink) return null;
 
                       return (
-                        <div className="rounded-lg bg-gradient-to-br from-fill-brand/5 to-fill-brand/10 p-5 border-2 border-border-brand/30">
+                        <div className="rounded-lg bg-gradient-to-br from-text-primary/5 to-text-primary/10 p-5 border-2 border-text-primary/30">
                           <div className="flex items-center gap-3 mb-4">
                             {selectedPartner.logoUrl && (
                               <Image
@@ -1268,7 +1268,7 @@ const QuoteApprovalDialog = ({
                               />
                             )}
                             <div className="flex-1">
-                              <Typography variant="bodySm" className="font-bold text-text-brand">
+                              <Typography variant="bodySm" className="font-bold text-text-primary">
                                 {selectedPartner.businessName}
                               </Typography>
                               <div className="flex items-center gap-2 mt-1">
@@ -1304,8 +1304,8 @@ const QuoteApprovalDialog = ({
                                   />
                                   <div className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
                                     paymentMethod === 'bank_transfer'
-                                      ? 'border-border-brand bg-fill-brand/10 text-text-brand'
-                                      : 'border-border-muted hover:border-border-brand/50'
+                                      ? 'border-text-primary bg-text-primary/10 text-text-primary'
+                                      : 'border-border-muted hover:border-text-primary/50'
                                   }`}>
                                     <span className="text-lg">🏦</span>
                                     <span className="text-sm font-semibold">Bank Transfer</span>
@@ -1322,8 +1322,8 @@ const QuoteApprovalDialog = ({
                                   />
                                   <div className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
                                     paymentMethod === 'link'
-                                      ? 'border-border-brand bg-fill-brand/10 text-text-brand'
-                                      : 'border-border-muted hover:border-border-brand/50'
+                                      ? 'border-text-primary bg-text-primary/10 text-text-primary'
+                                      : 'border-border-muted hover:border-text-primary/50'
                                   }`}>
                                     <span className="text-lg">🔗</span>
                                     <span className="text-sm font-semibold">Payment Link</span>
@@ -1378,7 +1378,7 @@ const QuoteApprovalDialog = ({
                                 href={safeHref(selectedPartner.paymentDetails.paymentUrl)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sm text-text-brand hover:underline break-all"
+                                className="text-sm text-text-primary hover:underline break-all"
                               >
                                 {selectedPartner.paymentDetails.paymentUrl}
                               </a>
@@ -1431,7 +1431,7 @@ const QuoteApprovalDialog = ({
                       value={deliveryLeadTime}
                       onChange={(e) => setDeliveryLeadTime(e.target.value)}
                       placeholder="e.g., 14-21 days, 3-4 weeks"
-                      className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                      className="border-2 focus:border-text-primary focus:ring-2 focus:ring-text-primary/20 transition-all"
                     />
                     <Typography variant="bodyXs" colorRole="muted" className="mt-2">
                       <strong>Required:</strong> This will be shown to the customer
@@ -1447,7 +1447,7 @@ const QuoteApprovalDialog = ({
                       onChange={(e) => setConfirmationNotes(e.target.value)}
                       placeholder="Add any notes about this confirmation..."
                       rows={3}
-                      className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                      className="border-2 focus:border-text-primary focus:ring-2 focus:ring-text-primary/20 transition-all"
                     />
                   </div>
                 </div>
@@ -1458,7 +1458,7 @@ const QuoteApprovalDialog = ({
             {quote.status === 'po_submitted' && (
               <div className="rounded-xl bg-surface-primary p-6 shadow-sm border border-border-muted space-y-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fill-brand/10">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-text-primary/10">
                     <span className="text-base">📦</span>
                   </div>
                   <Typography variant="bodyLg" className="font-bold">
@@ -1485,7 +1485,7 @@ const QuoteApprovalDialog = ({
                           href={safeHref(fileHref(quote.poAttachmentUrl))}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-lg bg-surface-primary px-4 py-2 text-text-brand hover:bg-fill-brand/10 font-semibold transition-all border border-border-muted"
+                          className="inline-flex items-center gap-2 rounded-lg bg-surface-primary px-4 py-2 text-text-primary hover:bg-text-primary/10 font-semibold transition-all border border-border-muted"
                         >
                           <span>📄</span>
                           View Document
@@ -1525,7 +1525,7 @@ const QuoteApprovalDialog = ({
                     onChange={(e) => setConfirmationNotes(e.target.value)}
                     placeholder="Add any notes about this PO confirmation..."
                     rows={4}
-                    className="border-2 focus:border-border-brand focus:ring-2 focus:ring-fill-brand/20 transition-all"
+                    className="border-2 focus:border-text-primary focus:ring-2 focus:ring-text-primary/20 transition-all"
                   />
                 </div>
               </div>
@@ -1548,13 +1548,13 @@ const QuoteApprovalDialog = ({
             {(quote.status === 'buy_request_submitted' ||
               quote.status === 'under_cc_review' ||
               quote.status === 'po_submitted') && (
-              <div className="rounded-lg border-2 border-border-brand bg-fill-brand/5 p-6">
+              <div className="rounded-lg border-2 border-text-primary bg-text-primary/5 p-6">
                 <div className="flex items-start gap-3 mb-5">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-fill-brand text-text-brand-contrast">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-text-primary text-text-primary-contrast">
                     <span className="text-lg">✓</span>
                   </div>
                   <div className="flex-1">
-                    <Typography variant="bodyLg" className="font-semibold mb-1 text-text-brand">
+                    <Typography variant="bodyLg" className="font-semibold mb-1 text-text-primary">
                       {quote.status === 'buy_request_submitted' && 'Ready to Review'}
                       {quote.status === 'under_cc_review' && !showRevisionForm && 'Complete Review'}
                       {quote.status === 'under_cc_review' && showRevisionForm && 'Request Changes'}
@@ -1794,9 +1794,9 @@ const QuoteApprovalDialog = ({
                         {/* Payment Reference - highlighted */}
                         {quote.paymentDetails.reference && (
                           <div className="mt-3 pt-2 border-t border-border-muted">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 bg-fill-brand/10 rounded px-3 py-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 bg-text-primary/10 rounded px-3 py-2">
                               <span className="text-sm text-text-muted">Payment Reference</span>
-                              <span className="font-mono font-bold text-text-brand">{quote.paymentDetails.reference}</span>
+                              <span className="font-mono font-bold text-text-primary">{quote.paymentDetails.reference}</span>
                             </div>
                           </div>
                         )}
@@ -1813,7 +1813,7 @@ const QuoteApprovalDialog = ({
                           href={safeHref(quote.paymentDetails.paymentUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-text-brand hover:underline break-all"
+                          className="text-sm text-text-primary hover:underline break-all"
                         >
                           {quote.paymentDetails.paymentUrl}
                         </a>
@@ -1872,13 +1872,13 @@ const QuoteApprovalDialog = ({
 
             {/* Ready for Delivery Action - Shows for paid (B2C) or po_confirmed (B2B) */}
             {(quote.status === 'paid' || quote.status === 'po_confirmed') && (
-              <div className="rounded-lg border-2 border-border-brand bg-fill-brand/5 p-6">
+              <div className="rounded-lg border-2 border-text-primary bg-text-primary/5 p-6">
                 <div className="flex items-start gap-3 mb-5">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-fill-brand text-text-brand-contrast">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-text-primary text-text-primary-contrast">
                     <IconTruck size={20} />
                   </div>
                   <div className="flex-1">
-                    <Typography variant="bodyLg" className="font-semibold mb-1 text-text-brand">
+                    <Typography variant="bodyLg" className="font-semibold mb-1 text-text-primary">
                       {quote.status === 'paid' ? 'Payment Confirmed' : 'Purchase Order Confirmed'}
                     </Typography>
                     <Typography variant="bodySm" colorRole="muted">
@@ -1896,7 +1896,7 @@ const QuoteApprovalDialog = ({
                       <Typography variant="bodyXs" className="font-semibold text-text-muted uppercase tracking-wide mb-1">
                         Order Total
                       </Typography>
-                      <Typography variant="bodyLg" className="font-bold text-text-brand">
+                      <Typography variant="bodyLg" className="font-bold text-text-primary">
                         {formatPrice(displayTotal, displayCurrency)}
                       </Typography>
                     </div>

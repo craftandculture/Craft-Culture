@@ -51,7 +51,7 @@ const mergeDuplicateStockRows = async () => {
     return { merged: [] as MergedDuplicate[], skipped: [] as string[] };
 
   // Every column anywhere that points at a wms_stock row
-  const references = rowsOf(
+  const foreignKeys = rowsOf(
     await db.execute(sql`
       SELECT cl.relname AS table_name, att.attname AS column_name
         FROM pg_constraint con
@@ -63,6 +63,27 @@ const mergeDuplicateStockRows = async () => {
     table: String(row.table_name),
     column: String(row.column_name),
   }));
+
+  /*
+    Columns that hold a wms_stock id with no foreign key, so the catalogue
+    query above cannot see them. Left behind, a cellar release pinned to the
+    merged-away parcel, the movement and pick history, and take-out outflows
+    (the payout source) all pointed at a row that no longer existed. Zoho
+    order lines are listed too in case their foreign key was never applied.
+  */
+  const unconstrained = [
+    { table: 'private_client_order_items', column: 'source_stock_id' },
+    { table: 'wms_stock_movements', column: 'stock_id' },
+    { table: 'wms_pick_list_items', column: 'picked_stock_id' },
+    { table: 'wms_stock_outflows', column: 'stock_id' },
+    { table: 'zoho_sales_order_items', column: 'stock_id' },
+  ];
+
+  const references = [...foreignKeys, ...unconstrained].filter(
+    (ref, index, all) =>
+      all.findIndex((other) => other.table === ref.table && other.column === ref.column) ===
+      index,
+  );
 
   const merged: MergedDuplicate[] = [];
   const skipped: string[] = [];

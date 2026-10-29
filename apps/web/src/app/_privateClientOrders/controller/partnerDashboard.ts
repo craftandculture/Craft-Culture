@@ -2,6 +2,7 @@ import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { privateClientContacts, privateClientOrders } from '@/database/schema';
+import USD_TO_AED from '@/lib/currency/usdToAed';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 /**
@@ -62,7 +63,7 @@ const partnerDashboard = winePartnerProcedure.query(
       totalOrders: sql<number>`count(*)`,
       totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
       totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
     })
     .from(privateClientOrders)
     .where(
@@ -78,7 +79,7 @@ const partnerDashboard = winePartnerProcedure.query(
       totalOrders: sql<number>`count(*)`,
       totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
       totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
     })
     .from(privateClientOrders)
     .where(
@@ -142,7 +143,7 @@ const partnerDashboard = winePartnerProcedure.query(
       orderCount: sql<number>`count(*)`,
       totalCases: sql<number>`coalesce(sum(${privateClientOrders.caseCount}), 0)`,
       totalValueUsd: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0)`,
-      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalAed}), 0)`,
+      totalValueAed: sql<number>`coalesce(sum(${privateClientOrders.totalUsd}), 0) * ${USD_TO_AED}`,
       isVerified: sql<boolean>`max(case when ${privateClientContacts.cityDrinksVerifiedAt} is not null then 1 else 0 end) = 1`,
     })
     .from(privateClientOrders)

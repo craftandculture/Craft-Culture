@@ -1,14 +1,16 @@
 import { redirect } from 'next/navigation';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import getUserOrRedirect from '@/app/_auth/data/getUserOrRedirect';
 import isStaff from '@/app/_distribution/utils/isStaff';
-import Typography from '@/app/_ui/components/Typography/Typography';
+import LwinReviewList from '@/app/_winelabs/components/LwinReviewList';
 import RunBatchForm from '@/app/_winelabs/components/RunBatchForm';
 import RunInBondForm from '@/app/_winelabs/components/RunInBondForm';
 import getCoverageSummary from '@/app/_winelabs/data/getCoverageSummary';
 import type { CoverageSummary } from '@/app/_winelabs/data/getCoverageSummary';
 import getInBondSummary from '@/app/_winelabs/data/getInBondSummary';
 import type { InBondSummary } from '@/app/_winelabs/data/getInBondSummary';
+import getLwinReview from '@/app/_winelabs/data/getLwinReview';
 
 export const dynamic = 'force-dynamic';
 // A batch of 25 wines is up to 75 calls; 50 wines priced in London up to 100
@@ -118,10 +120,13 @@ const InBondRows = ({ rows }: { rows: InBondSummary['rows'] }) => (
       </thead>
       <tbody className="divide-y divide-border-muted">
         {rows.map((row) => (
-          <tr key={row.lwin11}>
+          <tr key={`${row.lwin11}:${row.format}`}>
             <td className="px-3 py-2">
               <span className="font-medium">{row.name}</span>
               <span className="text-text-muted"> {row.vintage === '1000' ? 'NV' : row.vintage}</span>
+              {row.format !== '750' && (
+                <span className="text-text-muted"> · {Number(row.format) / 10}cl</span>
+              )}
             </td>
             <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{row.bottles}</td>
             <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{usd(row.bidUsd)}</td>
@@ -156,25 +161,20 @@ const WineLabsPage = async () => {
   const user = await getUserOrRedirect();
   if (!isStaff(user)) redirect('/platform');
 
-  const [summary, inBond] = await Promise.all([getCoverageSummary(), getInBondSummary()]);
+  const [summary, inBond, review] = await Promise.all([getCoverageSummary(), getInBondSummary(), getLwinReview()]);
   const capReached = summary.credits >= summary.cap;
   const pct = (n: number) => (summary.checked ? `${Math.round((n / summary.checked) * 100)}%` : '—');
 
   return (
     <main className="container space-y-8 py-8">
-      <div>
-        <Typography variant="headingLg" asChild>
-          <h1>Wine Labs check</h1>
-        </Typography>
-        <Typography variant="bodySm" colorRole="muted" asChild>
-          <p className="mt-1 max-w-3xl">
-            Our stock checked against Wine Labs: whether a search by name finds the LWIN we hold, and whether
-            Wine Labs has a drinking window and a market price for it. Prices are retail, mostly duty-paid, in
-            USD, worldwide; they are not our in-bond prices. Nothing on this page changes our records. C&amp;C
-            staff only.
-          </p>
-        </Typography>
-      </div>
+      <AdminPageHeader
+        title="Wine Labs check"
+        description={
+          <>
+            Our stock checked against Wine Labs: whether a search by name finds the LWIN we hold, and whether Wine Labs has a drinking window and a market price for it. Prices are retail, mostly duty-paid, in USD, worldwide; they are not our in-bond prices. Nothing on this page changes our records. C&amp;C staff only.
+          </>
+        }
+      />
 
       {!summary.configured && (
         <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
@@ -229,7 +229,7 @@ const WineLabsPage = async () => {
             </span>
           </h2>
           <p className="mt-1 max-w-3xl text-xs text-text-muted">
-            What a 75cl bottle bids, asks and last traded for in bond on the London exchanges Wine Labs reads
+            What each bottle size we hold (75cl, magnum and larger) bids, asks and last traded for in bond on the London exchanges Wine Labs reads
             (Bordeaux Index, BBX and others; not Liv-ex), in USD. Our UAE in-bond price carries freight to Dubai,
             so expect it above London. These prices also show beside In Bond in the Pricing Manager.
           </p>
@@ -272,21 +272,21 @@ const WineLabsPage = async () => {
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">
-          To look at
+          LWIN fix list
           <span className="ml-2 font-normal text-text-muted">
-            {summary.different} different wine · {summary.internalKnown} internal code known ·{' '}
-            {summary.notFound} not found
+            {review.filter((row) => row.verdict === 'likely_wrong').length} likely wrong ·{' '}
+            {review.filter((row) => row.verdict === 'check').length} to check by hand ·{' '}
+            {review.filter((row) => row.review === 'change').length} marked to change · {summary.notFound} not
+            found by name
           </span>
         </h2>
-        <p className="text-xs text-text-muted">
-          A different wine is usually the same producer, another cuvée: check which is right before changing
-          anything. An internal code Wine Labs can name may have a real LWIN to move to.
+        <p className="max-w-3xl text-xs text-text-muted">
+          Codes on our stock that Wine Labs&apos; name search placed on a different wine. Both codes are looked up
+          in the LWIN register and our product name is read against each: the one it reads as is probably right.
+          Recording a call changes nothing on our stock; the wines marked to change are then recoded deliberately,
+          as the code is also the Zoho SKU and the label barcode.
         </p>
-        {summary.exceptions.length ? (
-          <Rows rows={summary.exceptions} />
-        ) : (
-          <p className="text-sm text-text-muted">Nothing yet.</p>
-        )}
+        <LwinReviewList rows={review} />
       </section>
 
       {summary.sample.length > 0 && (

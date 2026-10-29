@@ -38,7 +38,7 @@ const IntakesList = () => {
   const setStage = useMutation(
     api.onboarding.admin.setIntakeStage.mutationOptions({
       onSuccess: () => {
-        toast.success('Stage updated — the member has been told');
+        toast.success('Stage updated. The member has been told');
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -56,7 +56,7 @@ const IntakesList = () => {
   const linkShipment = useMutation(
     api.onboarding.admin.linkIntakeShipment.mutationOptions({
       onSuccess: ({ linked }) => {
-        toast.success(linked ? 'Shipment linked — the tracker now follows it' : 'Shipment unlinked');
+        toast.success(linked ? 'Shipment linked. The tracker now follows it' : 'Shipment unlinked');
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -117,7 +117,7 @@ const IntakesList = () => {
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-300">
-                        <IconAlertTriangle size={12} /> No lines assigned to {memberName} — set the owner on their lines
+                        <IconAlertTriangle size={12} /> No lines assigned to {memberName}. Set the owner on their lines
                       </span>
                     )}
                   </p>

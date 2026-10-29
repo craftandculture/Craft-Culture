@@ -34,6 +34,8 @@ import ConnectionStatus from '@/app/_wms/components/ConnectionStatus';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import useTRPC from '@/lib/trpc/browser';
 
+import WMSDashboardSkeleton from './WMSDashboardSkeleton';
+
 // Quick action configuration
 interface QuickAction {
   id: string;
@@ -165,7 +167,7 @@ const WMSDashboardContent = () => {
   })();
 
   // Fetch comprehensive overview (will use prefetched data)
-  const { data: overview } = useQuery({
+  const { data: overview, isLoading: isOverviewLoading } = useQuery({
     ...api.wms.admin.stock.getOverview.queryOptions({}),
   });
 
@@ -195,6 +197,8 @@ const WMSDashboardContent = () => {
 
   const pendingRequestCount = partnerRequests?.summary?.pendingCount ?? 0;
   const hasReconcileIssues = reconcileData?.summary && !reconcileData.summary.isReconciled;
+
+  if (isOverviewLoading) return <WMSDashboardSkeleton />;
 
   return (
     <>
@@ -434,7 +438,7 @@ const WMSDashboardContent = () => {
               className={`${isDragging && draggedId === action.id ? 'opacity-50' : ''}`}
             >
               <Link href={action.href}>
-                <Card className="cursor-pointer transition-colors hover:border-border-brand active:bg-fill-secondary">
+                <Card className="cursor-pointer transition-colors hover:border-text-primary active:bg-fill-secondary">
                   <CardContent className="relative flex flex-col items-center justify-center p-6">
                     <div className="absolute right-2 top-2 hidden cursor-grab opacity-30 hover:opacity-60 sm:block">
                       <Icon icon={IconGripVertical} size="sm" />
@@ -453,7 +457,7 @@ const WMSDashboardContent = () => {
         {/* Secondary Actions */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           <Link href="/platform/admin/wms/stock">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+            <Card className="cursor-pointer transition-colors hover:border-text-primary">
               <CardContent className="flex items-center gap-3 p-4">
                 <Icon icon={IconBox} size="md" className="text-text-muted" />
                 <Typography variant="bodySm" className="font-medium">Stock</Typography>
@@ -461,7 +465,7 @@ const WMSDashboardContent = () => {
             </Card>
           </Link>
           <Link href="/platform/admin/wms/pallets">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+            <Card className="cursor-pointer transition-colors hover:border-text-primary">
               <CardContent className="flex items-center gap-3 p-4">
                 <Icon icon={IconBoxSeam} size="md" className="text-text-muted" />
                 <Typography variant="bodySm" className="font-medium">Pallets</Typography>
@@ -469,7 +473,7 @@ const WMSDashboardContent = () => {
             </Card>
           </Link>
           <Link href="/platform/admin/wms/labels">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+            <Card className="cursor-pointer transition-colors hover:border-text-primary">
               <CardContent className="flex items-center gap-3 p-4">
                 <Icon icon={IconBarcode} size="md" className="text-text-muted" />
                 <Typography variant="bodySm" className="font-medium">Labels</Typography>
@@ -477,7 +481,7 @@ const WMSDashboardContent = () => {
             </Card>
           </Link>
           <Link href="/platform/admin/wms/locations">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+            <Card className="cursor-pointer transition-colors hover:border-text-primary">
               <CardContent className="flex items-center gap-3 p-4">
                 <Icon icon={IconMapPin} size="md" className="text-text-muted" />
                 <Typography variant="bodySm" className="font-medium">Locations</Typography>
@@ -485,7 +489,7 @@ const WMSDashboardContent = () => {
             </Card>
           </Link>
           <Link href="/platform/admin/wms/bin-map">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+            <Card className="cursor-pointer transition-colors hover:border-text-primary">
               <CardContent className="flex items-center gap-3 p-4">
                 <Icon icon={IconBuildingWarehouse} size="md" className="text-text-muted" />
                 <Typography variant="bodySm" className="font-medium">Bin Map</Typography>
@@ -493,7 +497,7 @@ const WMSDashboardContent = () => {
             </Card>
           </Link>
           <Link href="/platform/admin/wms/cycle-count">
-            <Card className="cursor-pointer transition-colors hover:border-border-brand">
+            <Card className="cursor-pointer transition-colors hover:border-text-primary">
               <CardContent className="flex items-center gap-3 p-4">
                 <Icon icon={IconClipboardCheck} size="md" className="text-text-muted" />
                 <Typography variant="bodySm" className="font-medium">Count</Typography>

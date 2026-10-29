@@ -58,7 +58,7 @@ const JoinStartForm = ({ invite, greeting }: JoinStartFormProps) => {
     setIsSending(false);
 
     if (error) {
-      toast.error(error.message ?? 'Could not send the link — please try again');
+      toast.error(error.message ?? 'The link could not be sent. Please try again.');
       return;
     }
 

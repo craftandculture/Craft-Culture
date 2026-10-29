@@ -241,11 +241,11 @@ const SaveQuoteDialog = ({
             {marginConfig && (
               <>
                 <Divider />
-                <div className="rounded-lg border border-border-brand bg-fill-brand/10 p-3">
+                <div className="rounded-lg border border-text-primary bg-text-primary/10 p-3">
                   <Typography variant="bodyXs" colorRole="muted" className="mb-1">
                     Customer Quote Price (from Margin Calculator)
                   </Typography>
-                  <Typography variant="bodyLg" className="font-bold text-text-brand">
+                  <Typography variant="bodyLg" className="font-bold text-text-primary">
                     {formatPrice(
                       marginConfig.displayCurrency === 'AED'
                         ? convertUsdToAed(marginConfig.customerQuotePrice)

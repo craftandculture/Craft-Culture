@@ -210,12 +210,12 @@ const B2BCalculatorProductBreakdown = ({
               <Divider />
 
               {/* Customer Price - Prominent */}
-              <div className="flex flex-col space-y-2 rounded-md bg-fill-brand/5 p-2.5">
+              <div className="flex flex-col space-y-2 rounded-md bg-text-primary/5 p-2.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <Typography variant="bodySm" className="font-medium">
                     Customer price
                   </Typography>
-                  <Typography variant="bodySm" className="tabular-nums font-bold text-text-brand">
+                  <Typography variant="bodySm" className="tabular-nums font-bold text-text-primary">
                     {formatPrice(convertValue(getCustomerPricePerCase(item, index)), currency)}/case
                   </Typography>
                 </div>

@@ -13,6 +13,7 @@ import {
 } from '@tabler/icons-react';
 import Link from 'next/link';
 
+import DistributorNav from '@/app/_privateClientOrders/components/DistributorNav';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
@@ -64,7 +65,7 @@ const faqItems = [
   {
     question: 'What if a client cannot be verified?',
     answer:
-      'Mark the order Verification Suspended and add a note explaining why. C&C and the wine partner are notified and will resolve it with you.',
+      'Click Not Verified on the order, then add a note on the order explaining why. The order is suspended, and C&C and the wine partner resolve it with you. If the client registers later, click Client Verified - Unlock Order on the same page.',
   },
   {
     question: 'Who contacts the client?',
@@ -75,12 +76,13 @@ const faqItems = [
 
 const DistributorSupportPage = () => {
   return (
-    <main className="container py-6 md:py-10">
-      <div className="mx-auto w-full max-w-3xl">
+    <main className="container py-4 landscape:py-2 md:py-8">
+      <DistributorNav />
+      <div className="mx-auto mt-6 w-full max-w-3xl">
         {/* Header */}
         <div className="mb-6 text-center">
           <Typography variant="headingLg" className="mb-2">
-            Distributor Help Center
+            Distributor Help Centre
           </Typography>
           <Typography variant="bodySm" colorRole="muted">
             How to verify clients, collect payment and deliver Private Client Orders
@@ -90,10 +92,10 @@ const DistributorSupportPage = () => {
         {/* Flow Diagrams Link */}
         <Link
           href="/platform/support/flows"
-          className="mb-6 flex items-center justify-between rounded-xl border border-border-brand bg-fill-brand/5 p-4 transition-colors hover:bg-fill-brand/10"
+          className="mb-6 flex items-center justify-between rounded-xl border border-text-primary bg-text-primary/5 p-4 transition-colors hover:bg-text-primary/10"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fill-brand/10">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-text-primary/10">
               <Icon icon={IconChartDots} size="md" colorRole="brand" />
             </div>
             <div>
@@ -153,8 +155,8 @@ const DistributorSupportPage = () => {
               Before collecting payment, you must verify each client:
             </Typography>
 
-            <div className="mt-4 rounded-lg border border-border-brand bg-fill-brand/5 p-4">
-              <Typography variant="bodyXs" className="font-medium text-text-brand">
+            <div className="mt-4 rounded-lg border border-text-primary bg-text-primary/5 p-4">
+              <Typography variant="bodyXs" className="font-medium text-text-primary">
                 Why Verification Matters
               </Typography>
               <Typography variant="bodyXs" className="mt-1 text-text-muted">
@@ -171,7 +173,7 @@ const DistributorSupportPage = () => {
 
               <ol className="space-y-3">
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-text-primary text-xs font-medium text-surface-primary">
                     1
                   </span>
                   <div>
@@ -185,7 +187,7 @@ const DistributorSupportPage = () => {
                 </li>
 
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-text-primary text-xs font-medium text-surface-primary">
                     2
                   </span>
                   <div>
@@ -199,7 +201,7 @@ const DistributorSupportPage = () => {
                 </li>
 
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-text-primary text-xs font-medium text-surface-primary">
                     3
                   </span>
                   <div>
@@ -213,7 +215,7 @@ const DistributorSupportPage = () => {
                 </li>
 
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-text-primary text-xs font-medium text-surface-primary">
                     4
                   </span>
                   <div>
@@ -221,7 +223,7 @@ const DistributorSupportPage = () => {
                       Confirm in Portal
                     </Typography>
                     <Typography variant="bodyXs" colorRole="muted">
-                      Mark order as verified to proceed to payment collection.
+                      Click Client Verified on the order to move it on to payment collection.
                     </Typography>
                   </div>
                 </li>
@@ -233,8 +235,8 @@ const DistributorSupportPage = () => {
                 Verification Issues?
               </Typography>
               <Typography variant="bodyXs" className="mt-1 text-amber-700 dark:text-amber-300">
-                If client cannot be verified, mark as Verification Suspended with notes. C&C and the
-                wine partner will be notified.
+                If the client cannot be verified, click Not Verified on the order and add a note
+                explaining why. The order is suspended, and C&C and the wine partner are notified.
               </Typography>
             </div>
           </HelpSection>
@@ -270,7 +272,7 @@ const DistributorSupportPage = () => {
                 },
               ].map((step, index) => (
                 <li key={step.title} className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fill-brand text-xs font-medium text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-text-primary text-xs font-medium text-surface-primary">
                     {index + 1}
                   </span>
                   <div>
@@ -395,7 +397,7 @@ const DistributorSupportPage = () => {
                 },
                 {
                   title: 'Schedule and deliver',
-                  body: 'Agree a delivery date with the client and record it on the order. When the delivery leaves, mark it Out for Delivery; when the client has it, mark it Delivered.',
+                  body: 'Agree a delivery date with the client and record it with Schedule Delivery (or log Could Not Reach Client). When the delivery leaves, click Mark Out for Delivery; when the client has it, click Mark Delivered and upload the proof of delivery.',
                 },
               ].map((step, index) => (
                 <div key={step.title} className="rounded-lg bg-fill-secondary/50 p-4">
@@ -452,7 +454,7 @@ const DistributorSupportPage = () => {
               Need help? The Craft & Culture team is here to assist.
             </Typography>
 
-            <div className="mt-4 rounded-lg border border-border-brand bg-fill-brand/5 p-5">
+            <div className="mt-4 rounded-lg border border-text-primary bg-text-primary/5 p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <Typography variant="bodySm" className="font-medium">
@@ -464,7 +466,7 @@ const DistributorSupportPage = () => {
                 </div>
                 <Link
                   href="mailto:support@craftculture.xyz"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-fill-brand px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-fill-brand-hover"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-text-primary px-4 py-2.5 text-sm font-medium text-surface-primary transition-colors hover:bg-text-primary/90"
                 >
                   <Icon icon={IconMail} size="sm" />
                   support@craftculture.xyz

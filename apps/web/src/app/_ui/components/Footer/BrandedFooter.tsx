@@ -45,6 +45,39 @@ const BrandedFooter = ({
   };
   const supportHref = getSupportHref();
 
+  /*
+    Staff were shown the trade marketing footer: a line about building bridges
+    across the GCC and a link to a retired quote tool. They need the live
+    sensor strip, help, the development log and the version, on one line.
+  */
+  if (isTeamMember) {
+    return (
+      <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
+        <WarehouseDataFeed />
+        <div className="container flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-4 text-xs text-text-muted">
+          <span>© {currentYear} Craft & Culture</span>
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link href={supportHref} className="transition-colors hover:text-text-primary">
+              Help Centre
+            </Link>
+            <Link
+              href="/platform/development-log"
+              className="transition-colors hover:text-text-primary"
+            >
+              Development Log
+            </Link>
+            <Link
+              href="/platform/development-log"
+              className="font-light transition-colors hover:text-text-primary"
+            >
+              v{latestVersion}
+            </Link>
+          </nav>
+        </div>
+      </footer>
+    );
+  }
+
   return (
     <footer className="border-border-primary mt-auto border-t bg-fill-secondary/30">
       {/*
@@ -122,7 +155,7 @@ const BrandedFooter = ({
                 href={supportHref}
                 className="text-text-muted hover:text-text-primary text-xs transition-colors"
               >
-                Help Center
+                Help Centre
               </Link>
               {/*
                 A member consolidating a purchase or offering wine for resale

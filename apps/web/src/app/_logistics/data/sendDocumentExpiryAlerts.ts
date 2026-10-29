@@ -1,9 +1,9 @@
-import { and, eq, isNotNull, lt } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, lt, notInArray } from 'drizzle-orm';
 
 import createNotification from '@/app/_notifications/utils/createNotification';
 import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
-import { logisticsDocuments, logisticsShipments, users } from '@/database/schema';
+import { logisticsDocuments, logisticsShipments, notifications, users } from '@/database/schema';
 import loops from '@/lib/loops/client';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
@@ -60,7 +60,8 @@ const sendDocumentExpiryAlerts = async () => {
     return;
   }
 
-  // Find documents expiring within 30 days
+  // Find documents expiring within 30 days on shipments still under way: a
+  // delivered or cancelled shipment's paperwork has nothing left to do
   const expiringDocuments = await db
     .select({
       id: logisticsDocuments.id,
@@ -76,6 +77,7 @@ const sendDocumentExpiryAlerts = async () => {
       and(
         isNotNull(logisticsDocuments.expiryDate),
         lt(logisticsDocuments.expiryDate, thirtyDaysFromNow),
+        notInArray(logisticsShipments.status, ['delivered', 'cancelled']),
       ),
     );
 
@@ -83,6 +85,33 @@ const sendDocumentExpiryAlerts = async () => {
     logger.info('No expiring documents found');
     return;
   }
+
+  /*
+    Each document is raised once per stage, not every morning.
+
+    The check ran daily and notified on every document still in its window,
+    so one expired certificate produced a fresh alert per admin per day,
+    indefinitely. Documents carry no alerted-at of their own, so the
+    notifications already sent are the record: a document already raised as
+    expiring soon is raised again only when it expires.
+  */
+  const alreadyAlerted = new Set(
+    (
+      await db
+        .select({ type: notifications.type, entityId: notifications.entityId })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.entityType, 'logistics_document'),
+            inArray(notifications.type, ['document_expired', 'document_expiring_soon']),
+            inArray(
+              notifications.entityId,
+              expiringDocuments.map((doc) => doc.id),
+            ),
+          ),
+        )
+    ).map((row) => `${row.type}|${row.entityId}`),
+  );
 
   // Categorize by urgency
   const expired: typeof expiringDocuments = [];
@@ -93,9 +122,9 @@ const sendDocumentExpiryAlerts = async () => {
     if (!doc.expiryDate) continue;
 
     if (doc.expiryDate < now) {
-      expired.push(doc);
+      if (!alreadyAlerted.has(`document_expired|${doc.id}`)) expired.push(doc);
     } else if (doc.expiryDate < sevenDaysFromNow) {
-      urgent.push(doc);
+      if (!alreadyAlerted.has(`document_expiring_soon|${doc.id}`)) urgent.push(doc);
     } else {
       warning.push(doc);
     }

@@ -317,7 +317,7 @@ const PartnerConfirmationsPage = () => {
                                 </span>
                               )}
                               {(quote.quotedVintage || quote.alternativeVintage || quote.vintage) && (
-                                <span className="px-1.5 py-0.5 bg-fill-brand/10 text-text-brand rounded text-xs font-medium">
+                                <span className="px-1.5 py-0.5 bg-text-primary/10 text-text-primary rounded text-xs font-medium">
                                   {quote.quoteType === 'alternative' && quote.alternativeVintage
                                     ? quote.alternativeVintage
                                     : quote.quotedVintage || quote.vintage}
@@ -339,8 +339,8 @@ const PartnerConfirmationsPage = () => {
                           </div>
 
                           {/* Price highlight */}
-                          <div className="bg-fill-brand/5 border border-border-brand/30 rounded-lg p-3 text-right min-w-[140px]">
-                            <div className="text-xl font-bold text-text-brand">
+                          <div className="bg-text-primary/5 border border-text-primary/30 rounded-lg p-3 text-right min-w-[140px]">
+                            <div className="text-xl font-bold text-text-primary">
                               ${quote.costPricePerCaseUsd?.toFixed(2)}
                             </div>
                             <div className="text-xs text-text-muted">per case</div>

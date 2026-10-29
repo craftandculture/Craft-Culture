@@ -37,7 +37,7 @@ const ExportSummaryStrip = ({ document: doc }: ExportSummaryStripProps) => {
       {items.map((item, i) => {
         const isTotal = i === items.length - 1;
         return (
-          <div key={item.label} className={`px-3 py-2.5 ${isTotal ? 'bg-fill-brand/10' : 'bg-fill-primary'}`}>
+          <div key={item.label} className={`px-3 py-2.5 ${isTotal ? 'bg-text-primary/10' : 'bg-fill-primary'}`}>
             <p className="text-[10px] uppercase tracking-wide text-text-muted">{item.label}</p>
             <p className={`tabular-nums ${isTotal ? 'text-base font-bold' : 'text-sm font-semibold'} ${item.missing ? 'text-text-warning' : ''}`}>
               {item.value}

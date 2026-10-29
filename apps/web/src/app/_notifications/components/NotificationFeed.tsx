@@ -1,6 +1,6 @@
 'use client';
 
-import { IconBellOff, IconChecks } from '@tabler/icons-react';
+import { IconAlertCircle, IconBellOff, IconChecks } from '@tabler/icons-react';
 import {
   useInfiniteQuery,
   useQuery,
@@ -71,7 +71,15 @@ const NotificationFeed = ({
   const view: View =
     chosenView ?? ((counts?.actionCount ?? 0) > 0 ? 'action' : 'all');
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } =
     useInfiniteQuery({
       queryKey: ['notifications-list', view, area, pageSize],
       queryFn: ({ pageParam }) =>
@@ -218,6 +226,20 @@ const NotificationFeed = ({
                 </div>
               </div>
             ))}
+          </div>
+        ) : isError && items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 px-5 py-16 text-center">
+            <Icon icon={IconAlertCircle} size="lg" colorRole="muted" />
+            <p className="text-sm text-text-muted">
+              Notifications could not be loaded.
+            </p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="text-xs font-medium text-text-primary underline underline-offset-2"
+            >
+              Try again
+            </button>
           </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 px-5 py-16 text-center">

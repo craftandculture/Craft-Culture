@@ -192,7 +192,7 @@ const WMSOwnershipTransferPage = () => {
                   placeholder="Search products, LWIN, owner..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-3 pl-10 pr-4 text-sm focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
+                  className="w-full rounded-lg border border-border-primary bg-fill-primary py-3 pl-10 pr-4 text-sm focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-text-primary"
                   autoFocus
                 />
               </div>
@@ -222,7 +222,7 @@ const WMSOwnershipTransferPage = () => {
                           notForSale: stock.notForSale,
                         })
                       }
-                      className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-left transition-colors hover:border-border-brand"
+                      className="w-full rounded-lg border border-border-primary bg-fill-primary p-3 text-left transition-colors hover:border-text-primary"
                     >
                       <Typography variant="bodySm" className="font-medium">
                         {stock.productName}
@@ -293,7 +293,7 @@ const WMSOwnershipTransferPage = () => {
                       className={`w-full rounded-lg border p-3 text-left transition-colors ${
                         partner.id === selectedStock.ownerId
                           ? 'cursor-not-allowed border-border-primary bg-fill-secondary opacity-50'
-                          : 'border-border-primary bg-fill-primary hover:border-border-brand'
+                          : 'border-border-primary bg-fill-primary hover:border-text-primary'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -383,7 +383,7 @@ const WMSOwnershipTransferPage = () => {
                     onClick={() => setSalesArrangement('consignment')}
                     className={`flex-1 rounded-lg border p-3 text-left transition-colors ${
                       salesArrangement === 'consignment'
-                        ? 'border-border-brand bg-blue-50 dark:bg-blue-900/20'
+                        ? 'border-text-primary bg-blue-50 dark:bg-blue-900/20'
                         : 'border-border-primary bg-fill-primary'
                     }`}
                   >
@@ -398,7 +398,7 @@ const WMSOwnershipTransferPage = () => {
                     onClick={() => setSalesArrangement('purchased')}
                     className={`flex-1 rounded-lg border p-3 text-left transition-colors ${
                       salesArrangement === 'purchased'
-                        ? 'border-border-brand bg-blue-50 dark:bg-blue-900/20'
+                        ? 'border-text-primary bg-blue-50 dark:bg-blue-900/20'
                         : 'border-border-primary bg-fill-primary'
                     }`}
                   >
@@ -420,7 +420,7 @@ const WMSOwnershipTransferPage = () => {
                       onChange={(e) => setCommissionPercent(Number(e.target.value))}
                       min={0}
                       max={100}
-                      className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 text-sm focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
+                      className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 text-sm focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-text-primary"
                     />
                   </div>
                 )}
@@ -462,7 +462,7 @@ const WMSOwnershipTransferPage = () => {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Reason for transfer..."
                   rows={2}
-                  className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 text-sm focus:border-border-brand focus:outline-none focus:ring-1 focus:ring-border-brand"
+                  className="w-full rounded-lg border border-border-primary bg-fill-primary p-2 text-sm focus:border-text-primary focus:outline-none focus:ring-1 focus:ring-text-primary"
                 />
               </CardContent>
             </Card>

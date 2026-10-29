@@ -308,7 +308,7 @@ const MemberUpdatesAdmin = () => {
                   {row.releaseVersion ? `From v${row.releaseVersion}` : 'Written by hand'}
                 </p>
                 <p className="text-text-secondary font-mono text-xs leading-relaxed break-words whitespace-pre-line">
-                  {row.sourceText ?? '—'}
+                  {row.sourceText ?? ''}
                 </p>
               </div>
               <div className="flex flex-wrap gap-1.5 md:justify-end">

@@ -261,7 +261,7 @@ const CloneOrderDialog = ({
             <DialogTitle>
               Clone {orderNumber}
               {boxLabel && (
-                <span className="ml-2 inline-flex items-center rounded-full bg-fill-brand/10 px-2 py-0.5 align-middle text-sm font-medium text-text-brand">
+                <span className="ml-2 inline-flex items-center rounded-full bg-text-primary/10 px-2 py-0.5 align-middle text-sm font-medium text-text-primary">
                   {boxLabel}
                 </span>
               )}
@@ -305,7 +305,7 @@ const CloneOrderDialog = ({
                           ? `/platform/admin/private-orders/${o.id}`
                           : `/platform/private-orders/${o.id}`
                       }
-                      className="text-sm text-text-brand hover:underline"
+                      className="text-sm text-text-primary hover:underline"
                     >
                       {o.orderNumber}
                     </Link>
@@ -330,6 +330,7 @@ const CloneOrderDialog = ({
                     />
                     <Input
                       placeholder="Search name, email or phone"
+                      aria-label="Search clients"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="pl-9"
@@ -341,7 +342,7 @@ const CloneOrderDialog = ({
                     onClick={selectAllVisible}
                     disabled={selectable.length === 0}
                   >
-                    Select all
+                    Select all shown
                   </Button>
                   {selected.size > 0 && (
                     <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
@@ -369,7 +370,7 @@ const CloneOrderDialog = ({
                           className={`flex items-center gap-3 border-b border-border-muted px-3 py-2 last:border-b-0 ${
                             existing
                               ? 'cursor-not-allowed opacity-60'
-                              : `cursor-pointer hover:bg-fill-muted/40 ${isSelected ? 'bg-fill-brand/5' : ''}`
+                              : `cursor-pointer hover:bg-fill-muted/40 ${isSelected ? 'bg-text-primary/5' : ''}`
                           }`}
                         >
                           <Checkbox
@@ -379,7 +380,7 @@ const CloneOrderDialog = ({
                           />
                           <span className="flex min-w-0 flex-1 flex-col">
                             <span className="flex items-center gap-1.5 text-sm text-text-primary">
-                              <span className="truncate">{client.name}</span>
+                              <span className="truncate" title={client.name}>{client.name}</span>
                               {!client.verifiedAt && (
                                 <span className="shrink-0 rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
                                   Unverified
@@ -419,6 +420,7 @@ const CloneOrderDialog = ({
                     </div>
                     <TextArea
                       rows={3}
+                      aria-label="New clients, one per line"
                       placeholder="Jane Smith, jane@example.com, +971 50 123 4567"
                       value={pasted}
                       onChange={(e) => setPasted(e.target.value)}
@@ -429,7 +431,7 @@ const CloneOrderDialog = ({
                   <button
                     type="button"
                     onClick={() => setShowPaste(true)}
-                    className="flex items-center gap-1.5 self-start text-sm text-text-brand hover:underline"
+                    className="flex items-center gap-1.5 self-start text-sm text-text-primary hover:underline"
                   >
                     <Icon icon={IconPlus} size="sm" />
                     Add clients not on the list

@@ -1217,7 +1217,7 @@ const WMSReceiveShipmentPage = () => {
               <input
                 type="text"
                 placeholder="Search products by name, producer, or LWIN..."
-                className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-border-brand focus:outline-none"
+                className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-text-primary focus:outline-none"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -1228,7 +1228,7 @@ const WMSReceiveShipmentPage = () => {
               <button
                 type="button"
                 onClick={() => setShowAddItem(true)}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border-primary bg-fill-primary text-base font-medium text-text-muted transition-colors hover:border-border-brand hover:text-text-primary"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border-primary bg-fill-primary text-base font-medium text-text-muted transition-colors hover:border-text-primary hover:text-text-primary"
               >
                 <IconPlus className="h-5 w-5" />
                 Add Item
@@ -1259,7 +1259,7 @@ const WMSReceiveShipmentPage = () => {
                       placeholder="Search existing stock..."
                       value={addItemSearch}
                       onChange={(e) => handleAddItemSearchChange(e.target.value)}
-                      className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-border-brand focus:outline-none"
+                      className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-text-primary focus:outline-none"
                     />
                     {/* Search results dropdown */}
                     {addItemSearchDebounce.length >= 2 && stockSearchResults?.results && stockSearchResults.results.length > 0 && addItemSearch && (
@@ -1296,7 +1296,7 @@ const WMSReceiveShipmentPage = () => {
                         value={addItemForm.productName}
                         onChange={(e) => setAddItemForm({ ...addItemForm, productName: e.target.value })}
                         placeholder="e.g. Chateau Margaux"
-                        className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-border-brand focus:outline-none"
+                        className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-text-primary focus:outline-none"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -1308,7 +1308,7 @@ const WMSReceiveShipmentPage = () => {
                           type="text"
                           value={addItemForm.producer}
                           onChange={(e) => setAddItemForm({ ...addItemForm, producer: e.target.value })}
-                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-border-brand focus:outline-none"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-text-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -1321,7 +1321,7 @@ const WMSReceiveShipmentPage = () => {
                           value={addItemForm.vintage}
                           onChange={(e) => setAddItemForm({ ...addItemForm, vintage: e.target.value })}
                           placeholder="2020"
-                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-border-brand focus:outline-none"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-base focus:border-text-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1335,7 +1335,7 @@ const WMSReceiveShipmentPage = () => {
                           inputMode="numeric"
                           value={addItemForm.bottlesPerCase}
                           onChange={(e) => setAddItemForm({ ...addItemForm, bottlesPerCase: parseInt(e.target.value) || 12 })}
-                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-border-brand focus:outline-none"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-text-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -1347,7 +1347,7 @@ const WMSReceiveShipmentPage = () => {
                           inputMode="numeric"
                           value={addItemForm.bottleSizeMl}
                           onChange={(e) => setAddItemForm({ ...addItemForm, bottleSizeMl: parseInt(e.target.value) || 750 })}
-                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-border-brand focus:outline-none"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-text-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -1360,7 +1360,7 @@ const WMSReceiveShipmentPage = () => {
                           min={1}
                           value={addItemForm.cases}
                           onChange={(e) => setAddItemForm({ ...addItemForm, cases: parseInt(e.target.value) || 1 })}
-                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-border-brand focus:outline-none"
+                          className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-base focus:border-text-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1402,7 +1402,7 @@ const WMSReceiveShipmentPage = () => {
                     <button
                       key={item.id}
                       onClick={() => selectProduct(index)}
-                      className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-border-brand hover:bg-fill-secondary"
+                      className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-4 text-left transition-colors hover:border-text-primary hover:bg-fill-secondary"
                     >
                       {/* Top row: Status badge and case count */}
                       <div className="mb-2 flex items-center justify-between">
@@ -1593,7 +1593,7 @@ const WMSReceiveShipmentPage = () => {
                       <input
                         type="number"
                         inputMode="numeric"
-                        className="h-14 w-20 rounded-lg border-2 border-border-primary bg-fill-primary text-center text-xl font-bold focus:border-border-brand focus:outline-none"
+                        className="h-14 w-20 rounded-lg border-2 border-border-primary bg-fill-primary text-center text-xl font-bold focus:border-text-primary focus:outline-none"
                         value={currentItem.receivedCases}
                         onChange={(e) => updateReceivedCases(parseInt(e.target.value) || 0)}
                         min={0}
@@ -1802,7 +1802,7 @@ const WMSReceiveShipmentPage = () => {
                                 onBlur={() => {
                                   if (casesForThisBay < 1) setCasesForThisBay(1);
                                 }}
-                                className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
+                                className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-text-primary focus:outline-none"
                               />
                             </div>
                             <div className="text-center text-sm text-text-muted">
@@ -1863,7 +1863,7 @@ const WMSReceiveShipmentPage = () => {
                                     const parsed = parseInt(e.target.value);
                                     if (!isNaN(parsed)) setPalletLabelQty(Math.max(1, Math.min(10, parsed)));
                                   }}
-                                  className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-border-brand focus:outline-none"
+                                  className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary px-3 text-center text-lg font-semibold focus:border-text-primary focus:outline-none"
                                 />
                               </div>
                               <div className="text-center text-sm text-text-muted">
@@ -2024,7 +2024,7 @@ const WMSReceiveShipmentPage = () => {
                                       setReprintQty({ ...reprintQty, [index]: Math.max(1, Math.min(assignment.cases, parsed)) });
                                     }
                                   }}
-                                  className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-border-brand focus:outline-none"
+                                  className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-text-primary focus:outline-none"
                                 />
                                 <button
                                   onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? (assignment.isPalletized ? 1 : assignment.cases))}
@@ -2107,7 +2107,7 @@ const WMSReceiveShipmentPage = () => {
                                   setReprintQty({ ...reprintQty, [index]: Math.max(1, Math.min(assignment.cases, parsed)) });
                                 }
                               }}
-                              className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-border-brand focus:outline-none"
+                              className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-text-primary focus:outline-none"
                             />
                             <button
                               onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? (assignment.isPalletized ? 1 : assignment.cases))}
@@ -2180,7 +2180,7 @@ const WMSReceiveShipmentPage = () => {
                 <CardContent className="p-4">
                   <CardTitle className="mb-2 text-base">Notes for this product (Optional)</CardTitle>
                   <textarea
-                    className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-border-brand focus:outline-none"
+                    className="w-full rounded-lg border-2 border-border-primary bg-fill-primary p-3 text-base focus:border-text-primary focus:outline-none"
                     rows={2}
                     placeholder="Add notes about discrepancies, damage, etc."
                     value={currentItem.notes ?? ''}

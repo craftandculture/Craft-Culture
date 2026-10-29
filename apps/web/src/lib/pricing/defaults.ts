@@ -1,3 +1,5 @@
+import USD_TO_AED from '@/lib/currency/usdToAed';
+
 import type {
   B2BPricingVariables,
   ExchangeRates,
@@ -38,7 +40,8 @@ export const DEFAULT_POCKET_CELLAR_VARIABLES: PocketCellarPricingVariables = {
 export const DEFAULT_EXCHANGE_RATES: ExchangeRates = {
   gbpToUsd: 1.27,
   eurToUsd: 1.08,
-  usdToAed: 3.67,
+  // The dirham's fixed peg; one definition for the whole app
+  usdToAed: USD_TO_AED,
 };
 
 const pricingDefaults = {

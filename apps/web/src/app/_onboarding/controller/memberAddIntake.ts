@@ -55,7 +55,7 @@ const memberAddIntake = collectorProcedure
         createNotification({
           userId: member.id,
           type: 'action_required',
-          title: `${memberName} — ${source.label}`,
+          title: `${memberName}: ${source.label}`,
           message: [intake!.holderName, intake!.approxCases && `about ${intake!.approxCases} cases`, intake!.note]
             .filter(Boolean)
             .join(' · '),

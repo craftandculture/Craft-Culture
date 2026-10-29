@@ -439,7 +439,7 @@ const WMSMovementsPage = () => {
                 const isPallet = movement.notes?.includes('(pallet)');
                 const vintage = vintageFromLwin18(movement.lwin18);
                 return (
-                <Card key={movement.id} className={`hover:border-border-brand ${isPallet ? 'border-l-4 border-l-indigo-500' : ''}`}>
+                <Card key={movement.id} className={`hover:border-text-primary ${isPallet ? 'border-l-4 border-l-indigo-500' : ''}`}>
                   {isPallet && (
                     <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2">
                       <IconBoxSeam size={20} className="text-indigo-600" />

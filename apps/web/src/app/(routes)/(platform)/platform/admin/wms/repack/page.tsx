@@ -546,7 +546,7 @@ const WMSRepackPage = () => {
                     <button
                       key={stock.id}
                       onClick={() => handleSelectStock(stock)}
-                      className="flex w-full items-center gap-3 rounded-xl border border-border-primary bg-fill-primary p-3.5 text-left transition-colors hover:border-border-brand active:bg-fill-secondary"
+                      className="flex w-full items-center gap-3 rounded-xl border border-border-primary bg-fill-primary p-3.5 text-left transition-colors hover:border-text-primary active:bg-fill-secondary"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline gap-1.5">
@@ -554,7 +554,7 @@ const WMSRepackPage = () => {
                             {stock.productName}
                           </span>
                           {stock.vintage ? (
-                            <span className="shrink-0 text-[14px] font-bold text-brand-600">
+                            <span className="shrink-0 text-[14px] font-bold text-text-primary">
                               {stock.vintage}
                             </span>
                           ) : (
@@ -686,7 +686,7 @@ const WMSRepackPage = () => {
                           className={`rounded-lg border-2 p-3 text-center transition-colors ${
                             targetCaseConfig === config
                               ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                              : 'border-border-primary hover:border-border-brand'
+                              : 'border-border-primary hover:border-text-primary'
                           }`}
                         >
                           <Typography variant="headingMd">{config}</Typography>
@@ -728,7 +728,7 @@ const WMSRepackPage = () => {
                             setCombineTargetCases(1);
                           }}
                           disabled={targetCaseConfig <= selectedStock.caseConfig + 1}
-                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-border-brand disabled:opacity-30"
+                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-text-primary disabled:opacity-30"
                         >
                           <IconMinus className="h-5 w-5" />
                         </button>
@@ -740,7 +740,7 @@ const WMSRepackPage = () => {
                             setTargetCaseConfig(targetCaseConfig + 1);
                             setCombineTargetCases(1);
                           }}
-                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-border-brand"
+                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-text-primary"
                         >
                           <IconPlus className="h-5 w-5" />
                         </button>
@@ -758,7 +758,7 @@ const WMSRepackPage = () => {
                         <button
                           onClick={() => setCombineTargetCases(Math.max(1, combineTargetCases - 1))}
                           disabled={combineTargetCases <= 1}
-                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-border-brand disabled:opacity-30"
+                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-text-primary disabled:opacity-30"
                         >
                           <IconMinus className="h-5 w-5" />
                         </button>
@@ -772,7 +772,7 @@ const WMSRepackPage = () => {
                             )
                           }
                           disabled={combineTargetCases >= getCombineMaxCases()}
-                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-border-brand disabled:opacity-30"
+                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-text-primary disabled:opacity-30"
                         >
                           <IconPlus className="h-5 w-5" />
                         </button>
@@ -811,7 +811,7 @@ const WMSRepackPage = () => {
                         <button
                           onClick={() => setBottlesToRemove(Math.max(1, bottlesToRemove - 1))}
                           disabled={bottlesToRemove <= 1}
-                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-border-brand disabled:opacity-30"
+                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-text-primary disabled:opacity-30"
                         >
                           <IconMinus className="h-5 w-5" />
                         </button>
@@ -821,7 +821,7 @@ const WMSRepackPage = () => {
                         <button
                           onClick={() => setBottlesToRemove(Math.min(selectedStock.caseConfig - 1, bottlesToRemove + 1))}
                           disabled={bottlesToRemove >= selectedStock.caseConfig - 1}
-                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-border-brand disabled:opacity-30"
+                          className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-fill-primary transition-colors hover:border-text-primary disabled:opacity-30"
                         >
                           <IconPlus className="h-5 w-5" />
                         </button>

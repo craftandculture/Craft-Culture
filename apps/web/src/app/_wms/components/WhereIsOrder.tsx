@@ -94,7 +94,7 @@ const WhereIsOrder = ({ query }: { query: string }) => {
           {r.pickListId && (
             <Link
               href={`/platform/admin/wms/pick/${r.pickListId}`}
-              className="text-[12px] font-medium text-text-brand underline"
+              className="text-[12px] font-medium text-text-primary underline"
             >
               Open {r.pickListNumber ?? 'pick list'}
             </Link>

@@ -2,13 +2,13 @@ import { IconPlus } from '@tabler/icons-react';
 import Link from 'next/link';
 import { Suspense } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import SessionsList from '@/app/_pricingCalculator/components/SessionsList';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Skeleton from '@/app/_ui/components/Skeleton/Skeleton';
-import Typography from '@/app/_ui/components/Typography/Typography';
 
 /**
  * Pricing Calculator admin page
@@ -18,22 +18,17 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 const PricingCalculatorPage = () => {
   return (
     <main className="container mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Typography variant="headingMd" className="mb-1">
-            Pricing Calculator
-          </Typography>
-          <Typography variant="bodySm" colorRole="muted">
-            Calculate B2B and D2C prices from supplier sheets
-          </Typography>
-        </div>
-        <Link href="/platform/admin/pricing-calculator/new">
-          <Button variant="default" colorRole="brand">
-            <ButtonContent iconLeft={IconPlus}>New Session</ButtonContent>
-          </Button>
-        </Link>
-      </div>
+      <AdminPageHeader
+        title="Pricing Calculator"
+        description="Calculate B2B and D2C prices from supplier sheets"
+        actions={
+          <Link href="/platform/admin/pricing-calculator/new">
+            <Button variant="default" colorRole="brand">
+              <ButtonContent iconLeft={IconPlus}>New Session</ButtonContent>
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Sessions List */}
       <Suspense

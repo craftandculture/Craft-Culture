@@ -13,6 +13,7 @@ import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import CustomerPoStatusBadge from '@/app/_source/components/CustomerPoStatusBadge';
 import ProfitIndicator from '@/app/_source/components/ProfitIndicator';
 import Button from '@/app/_ui/components/Button/Button';
@@ -65,22 +66,17 @@ const CustomerPosPage = () => {
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <Typography variant="headingLg" className="mb-2">
-              SOURCE
-            </Typography>
-            <Typography variant="bodyMd" colorRole="muted">
-              Manage customer purchase orders and track profit margins
-            </Typography>
-          </div>
-          <Link href="/platform/admin/source/customer-pos/new">
-            <Button variant="default" colorRole="brand">
-              <ButtonContent iconLeft={IconPlus}>New Customer PO</ButtonContent>
-            </Button>
-          </Link>
-        </div>
+        <AdminPageHeader
+          title="SOURCE"
+          description="Manage customer purchase orders and track profit margins"
+          actions={
+            <Link href="/platform/admin/source/customer-pos/new">
+              <Button variant="default" colorRole="brand">
+                <ButtonContent iconLeft={IconPlus}>New Customer PO</ButtonContent>
+              </Button>
+            </Link>
+          }
+        />
 
         {/* Sub-navigation */}
         <div className="flex gap-1 border-b border-border-muted">
@@ -93,7 +89,7 @@ const CustomerPosPage = () => {
           </Link>
           <Link
             href="/platform/admin/source/customer-pos"
-            className="flex items-center gap-2 border-b-2 border-border-brand px-4 py-2 text-sm font-medium text-text-brand"
+            className="flex items-center gap-2 border-b-2 border-text-primary px-4 py-2 text-sm font-medium text-text-primary"
           >
             <IconFileText className="h-4 w-4" />
             Customer POs
@@ -160,7 +156,7 @@ const CustomerPosPage = () => {
                 href={`/platform/admin/source/customer-pos/${po.id}`}
                 className="block"
               >
-                <Card className="hover:border-border-brand transition-colors cursor-pointer">
+                <Card className="hover:border-text-primary transition-colors cursor-pointer">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">

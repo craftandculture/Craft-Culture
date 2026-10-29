@@ -161,7 +161,7 @@ const SubscriptionBoxPicker = ({
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_7rem_1fr_auto]">
           <Select value={draftTier} onValueChange={setDraftTier}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Subscription tier">
               <SelectValue placeholder="Tier" />
             </SelectTrigger>
             <SelectContent>
@@ -175,7 +175,7 @@ const SubscriptionBoxPicker = ({
           </Select>
 
           <Select value={draftSize} onValueChange={setDraftSize} disabled={!isBox}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Case size">
               <SelectValue placeholder="Case" />
             </SelectTrigger>
             <SelectContent>
@@ -189,6 +189,7 @@ const SubscriptionBoxPicker = ({
 
           {draftVariant === OTHER ? (
             <Input
+              aria-label="New variant"
               placeholder="New variant, e.g. Red only"
               value={customVariant}
               onChange={(e) => setCustomVariant(e.target.value)}
@@ -196,7 +197,7 @@ const SubscriptionBoxPicker = ({
             />
           ) : (
             <Select value={draftVariant} onValueChange={setDraftVariant} disabled={!isBox}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Variant">
                 <SelectValue placeholder="Variant" />
               </SelectTrigger>
               <SelectContent>
@@ -211,7 +212,12 @@ const SubscriptionBoxPicker = ({
             </Select>
           )}
 
-          <Button onClick={handleSave} disabled={!dirty || !canSave || isPending}>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={!dirty || !canSave || isPending}
+            isDisabled={!dirty || !canSave || isPending}
+          >
             {isPending ? 'Saving…' : 'Save'}
           </Button>
         </div>
@@ -219,7 +225,7 @@ const SubscriptionBoxPicker = ({
         {clubPrice !== null && (
           <Typography
             variant="bodyXs"
-            className={closeEnough ? 'text-text-muted' : 'text-text-warning'}
+            className={`tabular-nums ${closeEnough ? 'text-text-muted' : 'text-text-warning'}`}
           >
             Club price {aed(clubPrice)} · this order&rsquo;s client total{' '}
             {clientTotalAed !== null ? aed(clientTotalAed) : '—'}

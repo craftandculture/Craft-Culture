@@ -156,8 +156,8 @@ const LocationEditPage = () => {
                     onClick={() => setStorageMethod('shelf')}
                     className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
                       storageMethod === 'shelf'
-                        ? 'border-brand-primary bg-fill-brand-secondary'
-                        : 'border-border-primary hover:border-border-brand'
+                        ? 'border-text-primary bg-text-primary-secondary'
+                        : 'border-border-primary hover:border-text-primary'
                     }`}
                   >
                     <Icon
@@ -180,8 +180,8 @@ const LocationEditPage = () => {
                     onClick={() => setStorageMethod('pallet')}
                     className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
                       storageMethod === 'pallet'
-                        ? 'border-brand-primary bg-fill-brand-secondary'
-                        : 'border-border-primary hover:border-border-brand'
+                        ? 'border-text-primary bg-text-primary-secondary'
+                        : 'border-border-primary hover:border-text-primary'
                     }`}
                   >
                     <Icon
@@ -204,8 +204,8 @@ const LocationEditPage = () => {
                     onClick={() => setStorageMethod('mixed')}
                     className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
                       storageMethod === 'mixed'
-                        ? 'border-brand-primary bg-fill-brand-secondary'
-                        : 'border-border-primary hover:border-border-brand'
+                        ? 'border-text-primary bg-text-primary-secondary'
+                        : 'border-border-primary hover:border-text-primary'
                     }`}
                   >
                     <div className="flex">
@@ -251,7 +251,7 @@ const LocationEditPage = () => {
                   onChange={(e) => setPosition(e.target.value.toUpperCase())}
                   placeholder="e.g., L, R, A, B"
                   maxLength={5}
-                  className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-text-primary"
                 />
               </div>
 
@@ -272,7 +272,7 @@ const LocationEditPage = () => {
                   onChange={(e) => setCapacityCases(e.target.value)}
                   placeholder="e.g., 50"
                   min={1}
-                  className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-text-primary"
                 />
               </div>
 
@@ -354,7 +354,7 @@ const LocationEditPage = () => {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Add any notes about this location..."
                   rows={3}
-                  className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  className="w-full rounded-lg border border-border-primary bg-fill-secondary px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-text-primary"
                 />
               </div>
             </CardContent>

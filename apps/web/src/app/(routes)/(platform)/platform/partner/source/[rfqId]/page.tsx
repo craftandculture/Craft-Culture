@@ -809,7 +809,7 @@ const PartnerRfqDetailPage = () => {
               onClick={() => setEntryMode('manual')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 entryMode === 'manual'
-                  ? 'bg-fill-brand text-text-on-brand'
+                  ? 'bg-text-primary text-text-on-brand'
                   : 'bg-fill-muted text-text-muted hover:bg-fill-muted/80'
               }`}
             >
@@ -820,7 +820,7 @@ const PartnerRfqDetailPage = () => {
               onClick={() => setEntryMode('excel')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 entryMode === 'excel'
-                  ? 'bg-fill-brand text-text-on-brand'
+                  ? 'bg-text-primary text-text-on-brand'
                   : 'bg-fill-muted text-text-muted hover:bg-fill-muted/80'
               }`}
             >
@@ -1036,7 +1036,7 @@ const PartnerRfqDetailPage = () => {
                     {/* Mobile: Compact card layout */}
                     <div className="lg:hidden flex items-start gap-2">
                       {/* Item Number */}
-                      <span className="flex-shrink-0 w-6 h-6 rounded bg-fill-brand/10 text-text-brand text-xs font-bold flex items-center justify-center">
+                      <span className="flex-shrink-0 w-6 h-6 rounded bg-text-primary/10 text-text-primary text-xs font-bold flex items-center justify-center">
                         {index + 1}
                       </span>
 
@@ -1048,7 +1048,7 @@ const PartnerRfqDetailPage = () => {
                             <span className={`text-xs font-semibold px-1 py-0.5 rounded ${
                               hasMultipleVintages
                                 ? 'text-purple-700 bg-purple-100'
-                                : 'text-text-brand bg-fill-brand/10'
+                                : 'text-text-primary bg-text-primary/10'
                             }`}>
                               {item.vintage}
                             </span>
@@ -1274,8 +1274,8 @@ const PartnerRfqDetailPage = () => {
                               </div>
                             </div>
 
-                            {/* Pricing & Stock Grid */}
-                            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                            {/* Pricing & Stock Grid: stacked on phones */}
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-7">
                               <div>
                                 <label className="block text-[10px] font-medium text-text-muted mb-0.5">Price/cs *</label>
                                 <div className="relative">

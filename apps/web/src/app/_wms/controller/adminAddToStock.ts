@@ -8,6 +8,7 @@ import { partners, wmsLocations, wmsStock, wmsStockMovements } from '@/database/
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import generateMovementNumber from '../utils/generateMovementNumber';
+import normalizeLwin18 from '../utils/normalizeLwin18';
 
 /**
  * Add wine to stock that never came through receiving
@@ -101,28 +102,45 @@ const adminAddToStock = staffAdminProcedure
     const productName = input.productName || template?.productName;
     if (!productName) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Enter the wine name.' });
     const producer = input.producer || template?.producer || null;
-    // NV is stored as no vintage
-    const vintageInput = input.vintage && /^\d{4}$/.test(input.vintage) ? parseInt(input.vintage, 10) : null;
-    const vintage: number | null = vintageInput ?? template?.vintage ?? null;
+    /*
+      A compact 18-digit LWIN, as Cult Wines and Liv-ex send it, is dashed
+      first. Without it the code had no dash and was not seven digits, so the
+      wine was booked under a made-up name code that matched nothing.
+    */
+    const lwin = input.lwin ? normalizeLwin18(input.lwin) : undefined;
 
     /*
       The wine's code with this row's pack. A template or an LWIN18 gives the
       wine and vintage; a seven-digit LWIN is built out; a wine with no LWIN
       gets a name-based code, as the bulk import gives one.
     */
-    const sourceCode = template?.lwin18 ?? (input.lwin && input.lwin.includes('-') ? input.lwin : null);
+    const sourceCode = template?.lwin18 ?? (lwin && lwin.includes('-') ? lwin : null);
+
+    /*
+      NV is stored as no vintage. When the code carries the year, the vintage
+      column takes it too, so the row cannot say one year in its code and
+      another in its vintage.
+    */
+    const codeVintage = sourceCode?.split('-')[1];
+    const vintageInput = input.vintage && /^\d{4}$/.test(input.vintage) ? parseInt(input.vintage, 10) : null;
+    const vintage: number | null =
+      codeVintage === '0000' || codeVintage === '1000'
+        ? null
+        : codeVintage && /^\d{4}$/.test(codeVintage)
+          ? parseInt(codeVintage, 10)
+          : (vintageInput ?? template?.vintage ?? null);
     const codeFor = (pack: number) => {
       const sizePart = (input.bottleSizeMl || 750).toString().padStart(5, '0');
       const packPart = pack.toString().padStart(2, '0');
       if (sourceCode) {
         const [wine, vintagePart] = sourceCode.split('-');
         // The size comes from the template unless one was chosen
-        const size = template && !input.lwin ? (sourceCode.split('-')[3] ?? sizePart) : sizePart;
+        const size = template && !lwin ? (sourceCode.split('-')[3] ?? sizePart) : sizePart;
         return `${wine}-${vintagePart ?? '0000'}-${packPart}-${size}`;
       }
-      if (input.lwin && /^\d{7}$/.test(input.lwin)) {
+      if (lwin && /^\d{7}$/.test(lwin)) {
         return buildLwin18({
-          lwin7: input.lwin,
+          lwin7: lwin,
           vintage,
           caseSize: pack,
           bottleSizeMl: input.bottleSizeMl,
@@ -133,7 +151,7 @@ const adminAddToStock = staffAdminProcedure
     };
 
     const bottleSizeMl =
-      template && !input.lwin ? Number(template.lwin18.split('-')[3]) || input.bottleSizeMl : input.bottleSizeMl;
+      template && !lwin ? Number(template.lwin18.split('-')[3]) || input.bottleSizeMl : input.bottleSizeMl;
     const bottleSize = template?.bottleSize ?? `${bottleSizeMl / 10}cl`;
     // A member's own wine is theirs to keep until they offer it, as receiving records it
     const notForSale = owner.type === 'private_collector';

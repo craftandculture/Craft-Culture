@@ -227,7 +227,7 @@ const SignInForm = () => {
           </form>
 
           <Typography variant="bodyXs" colorRole="muted" className="-mt-2">
-            New to Index? Enter your email to request an account. Our team reviews and approves every new account.
+            New to Craft &amp; Culture? Enter your email to request an account. Our team reviews and approves every new account.
           </Typography>
 
           {supportsPasskey && (

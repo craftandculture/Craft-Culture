@@ -168,13 +168,18 @@ const SubRow = ({
  */
 type Topic = 'all' | 'arrivals' | 'deliveries' | 'sales' | 'other' | 'handling' | 'orders';
 
-/** Which filter an event belongs to, read from its kind and how it is worded */
-const topicOf = (entry: PartnerActivityEntry): Exclude<Topic, 'all'> => {
+/**
+ * Which filter an event belongs to, read from its kind and how it is worded
+ *
+ * A member's transfers and adjustments sit with their arrivals, under
+ * "Arrivals and moves", rather than in a filter of their own.
+ */
+const topicOf = (entry: PartnerActivityEntry, isCellar = false): Exclude<Topic, 'all'> => {
   if (entry.kind === 'in') return 'arrivals';
   if (entry.kind === 'internal' || entry.kind === 'correction') return 'handling';
   if (entry.kind === 'update') return 'orders';
   if (/delivery|delivered|collected/i.test(entry.title)) return 'deliveries';
-  if (/damaged|lost|transferred|adjust/i.test(entry.title)) return 'other';
+  if (/damaged|lost|transferred|adjust/i.test(entry.title)) return isCellar ? 'arrivals' : 'other';
   return 'sales';
 };
 
@@ -237,18 +242,18 @@ const PartnerActivityFeed = ({ source = 'partner' }: PartnerActivityFeedProps) =
           .some((text) => text!.toLowerCase().includes(needle))),
   );
   const topicCount = (key: Exclude<Topic, 'all'>) =>
-    inScope.filter((entry) => topicOf(entry) === key).length;
+    inScope.filter((entry) => topicOf(entry, isCellar) === key).length;
   const topics: { key: Topic; label: string; count: number }[] = [
     { key: 'all', label: 'All', count: inScope.length },
-    { key: 'arrivals', label: isCellar ? 'Arrivals' : 'Received', count: topicCount('arrivals') },
+    { key: 'arrivals', label: isCellar ? 'Arrivals and moves' : 'Received', count: topicCount('arrivals') },
     { key: 'deliveries', label: 'Deliveries', count: topicCount('deliveries') },
     { key: 'sales', label: 'Sales', count: topicCount('sales') },
     { key: 'other', label: 'Damage and transfers', count: topicCount('other') },
-    { key: 'orders', label: 'Order updates', count: topicCount('orders') },
+    { key: 'orders', label: isCellar ? 'Your orders' : 'Order updates', count: topicCount('orders') },
     { key: 'handling', label: 'Warehouse handling', count: topicCount('handling') },
   ];
   const entries =
-    topic === 'all' ? inScope : inScope.filter((entry) => topicOf(entry) === topic);
+    topic === 'all' ? inScope : inScope.filter((entry) => topicOf(entry, isCellar) === topic);
   const isFiltered = topic !== 'all' || needle !== '' || periodDays !== 0;
 
   // Day headings in the order the entries arrive, which is already newest-first.

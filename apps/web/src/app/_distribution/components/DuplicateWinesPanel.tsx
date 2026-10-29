@@ -61,7 +61,7 @@ const DuplicateWinesPanel = () => {
       key={row.id}
       className={`rounded-lg border p-2 ${
         role === 'survivor'
-          ? 'border-border-brand bg-fill-muted/20'
+          ? 'border-text-primary bg-fill-muted/20'
           : 'border-border-primary'
       }`}
     >

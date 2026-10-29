@@ -44,7 +44,7 @@ const notifyCellarTeamOfApplication = async ({
 
     const title = isInvited
       ? `${applicantName} has joined Private Cellar`
-      : `New Private Cellar application — ${applicantName}`;
+      : `New Private Cellar application: ${applicantName}`;
     const message = [
       applicantEmail,
       missing.length ? `Missing: ${missing.join(', ')}` : 'Profile complete',
@@ -67,9 +67,9 @@ const notifyCellarTeamOfApplication = async ({
         await sendOnboardingEmail('newApplicationAdmin', member.email, {
           applicantName,
           applicantEmail,
-          phone: phone ?? '—',
+          phone: phone ?? 'Not given',
           missing: missing.join(', ') || 'Nothing',
-          wineSources: wineSources.join(', ') || '—',
+          wineSources: wineSources.join(', ') || 'Not given',
           adminUrl,
         });
       }),

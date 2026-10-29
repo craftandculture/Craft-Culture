@@ -192,7 +192,7 @@ const LocationsPage = () => {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search locations..."
-                  className="w-full pl-10 pr-4 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  className="w-full pl-10 pr-4 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-text-primary"
                 />
                 {search && (
                   <button
@@ -206,7 +206,7 @@ const LocationsPage = () => {
               <select
                 value={filterAisle}
                 onChange={(e) => setFilterAisle(e.target.value)}
-                className="px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                className="px-3 py-2 text-sm bg-fill-secondary border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-text-primary"
               >
                 <option value="">All Aisles</option>
                 {aisles.map((aisle) => (

@@ -56,9 +56,9 @@ describe('Card', () => {
     it('should render brand color role', () => {
       render(<Card colorRole="brand">Brand Card</Card>);
       const card = screen.getByText('Brand Card');
-      expect(card).toHaveClass('bg-fill-brand');
-      expect(card).toHaveClass('border-border-brand');
-      expect(card).toHaveClass('text-text-brand-on-fill');
+      expect(card).toHaveClass('bg-text-primary');
+      expect(card).toHaveClass('border-text-primary');
+      expect(card).toHaveClass('text-surface-primary');
     });
   });
 
@@ -130,7 +130,7 @@ describe('Card', () => {
         </Card>
       );
       const div = screen.getByText('Styled Div');
-      expect(div).toHaveClass('bg-fill-brand');
+      expect(div).toHaveClass('bg-text-primary');
       expect(div).toHaveClass('rounded-xl');
     });
 
@@ -193,7 +193,7 @@ describe('Card', () => {
         </Card>
       );
       const card = screen.getByText('Multi-variant Card');
-      expect(card).toHaveClass('bg-fill-brand'); // colorRole
+      expect(card).toHaveClass('bg-text-primary'); // colorRole
       expect(card).toHaveClass('border'); // variant
       expect(card).toHaveClass('extra-class'); // custom className
       expect(card).toHaveClass('rounded-xl'); // base styles

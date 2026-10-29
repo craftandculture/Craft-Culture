@@ -50,9 +50,11 @@ const SaleProceedsPanel = () => {
     return null;
   }
 
+  // A figure that reads 0 is left out; the sentence below covers a quiet spell
   const tiles = [
     {
       label: 'Sold, awaiting payment',
+      amount: awaitingBuyer.amountUsd,
       value: money(awaitingBuyer.amountUsd),
       detail:
         awaitingBuyer.bottles > 0
@@ -61,6 +63,7 @@ const SaleProceedsPanel = () => {
     },
     {
       label: 'Your next payment',
+      amount: nextPayment.amountUsd,
       value: money(nextPayment.amountUsd),
       detail:
         nextPayment.bottles === 0
@@ -71,24 +74,30 @@ const SaleProceedsPanel = () => {
     },
     {
       label: 'Paid to you',
+      amount: totalPaidUsd,
       value: money(totalPaidUsd),
       detail:
         payments.length === 0
           ? 'no payments yet'
           : `${payments.length} ${payments.length === 1 ? 'payment' : 'payments'}`,
     },
-  ];
+  ].filter((tile) => tile.amount > 0);
 
   return (
     <section className="mb-6">
       <h2 className="text-text-muted mb-2.5 text-[11px] font-semibold uppercase tracking-wider">
         Sale proceeds
       </h2>
-      <dl className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+      {tiles.length > 0 && (
+      <dl
+        className={`grid grid-cols-1 gap-2 sm:gap-3 ${
+          tiles.length === 3 ? 'sm:grid-cols-3' : tiles.length === 2 ? 'sm:grid-cols-2' : ''
+        }`}
+      >
         {tiles.map((tile) => (
           <div
             key={tile.label}
-            className="rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-transparent px-3 py-2.5 shadow-sm sm:px-4 sm:py-3 dark:border-emerald-900 dark:from-emerald-500/10"
+            className="border-border-muted bg-surface-quiet rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3"
           >
             <dt className="text-text-muted text-[10px] font-semibold uppercase tracking-[0.08em]">
               {tile.label}
@@ -100,8 +109,10 @@ const SaleProceedsPanel = () => {
           </div>
         ))}
       </dl>
+      )}
 
       <p className="text-text-muted mt-2 max-w-[72ch] text-xs leading-5">
+        {tiles.length === 0 && 'Nothing is awaiting payment at present. '}
         We pay you once a month, for sales the buyer has already paid for.
         Amounts are your asking price for the bottles sold.
       </p>

@@ -241,7 +241,7 @@ const TermsViewer = ({ onScrollToBottom }: TermsViewerProps) => {
             </Typography>
             <Typography variant='bodySm'>
               For questions about these Terms, please contact us at{' '}
-              <a href='mailto:support@craftculture.xyz' className='text-text-brand'>
+              <a href='mailto:support@craftculture.xyz' className='text-text-primary'>
                 support@craftculture.xyz
               </a>
             </Typography>
@@ -254,7 +254,7 @@ const TermsViewer = ({ onScrollToBottom }: TermsViewerProps) => {
                 href='/platform/terms-of-use'
                 target='_blank'
                 rel='noopener noreferrer'
-                className='text-text-brand'
+                className='text-text-primary'
               >
                 view the full document
               </a>

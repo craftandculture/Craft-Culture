@@ -31,6 +31,9 @@ const adminSetShipmentFx = adminProcedure
     const result = await priceShipmentInUsd(input.shipmentId, {
       agreedRate: input.agreedRate,
       currency: input.currency,
+      // Naming the currency here is the explicit correction, so it may
+      // re-label the lines — on a single-currency shipment only.
+      relabel: true,
     });
 
     if (result.rateSource === 'unresolved') {

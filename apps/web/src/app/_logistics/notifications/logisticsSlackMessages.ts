@@ -6,6 +6,8 @@
  * the channel is internal.
  */
 
+import escapeSlackText from '@/lib/slack/escapeSlackText';
+
 export const LOGISTICS_BOARD_URL = 'https://wine.craftculture.xyz/platform/admin/logistics';
 
 const shipmentUrl = (id: string) => `${LOGISTICS_BOARD_URL}/shipments/${id}`;
@@ -15,7 +17,9 @@ const shortDate = (d: Date | string) =>
   new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Dubai' });
 
 const route = (s: { originCity: string | null; destinationCity: string | null }) =>
-  s.originCity || s.destinationCity ? `${s.originCity ?? 'Origin'} → ${s.destinationCity ?? 'Destination'}` : null;
+  s.originCity || s.destinationCity
+    ? `${escapeSlackText(s.originCity ?? 'Origin')} → ${escapeSlackText(s.destinationCity ?? 'Destination')}`
+    : null;
 
 const quantities = (s: { totalCases?: number | null; totalBottles?: number | null }) => {
   const parts = [];
@@ -53,7 +57,9 @@ export const inboundStatusMessage = (
   const what =
     status === 'in_transit' ? 'departed' : status === 'at_warehouse' ? 'arrived at the warehouse' : 'marked delivered';
   const eta = status === 'in_transit' && shipment.eta ? `ETA ${shortDate(shipment.eta)}` : null;
-  const detail = [shipment.name, route(shipment), quantities(shipment), eta].filter(Boolean).join(' · ');
+  const detail = [shipment.name && escapeSlackText(shipment.name), route(shipment), quantities(shipment), eta]
+    .filter(Boolean)
+    .join(' · ');
   return `<${shipmentUrl(shipment.id)}|*${shipment.shipmentNumber}*> ${what}${detail ? ` — ${detail}` : ''}`;
 };
 
@@ -81,10 +87,14 @@ export interface ExportJobForSlack {
  */
 export const exportStageMessage = (job: ExportJobForSlack, stage: 'shipped' | 'docs_sent') => {
   const what = stage === 'shipped' ? 'shipped' : 'documents sent';
-  const ref = job.awbNumber ? `AWB ${job.awbNumber}` : job.blNumber ? `BL ${job.blNumber}` : null;
-  const carrier = [job.carrierName, ref].filter(Boolean).join(', ');
+  const ref = job.awbNumber
+    ? `AWB ${escapeSlackText(job.awbNumber)}`
+    : job.blNumber
+      ? `BL ${escapeSlackText(job.blNumber)}`
+      : null;
+  const carrier = [job.carrierName && escapeSlackText(job.carrierName), ref].filter(Boolean).join(', ');
   const detail = [route(job), carrier || null].filter(Boolean).join(' · ');
-  return `<${exportUrl(job.shipmentId)}|*${job.jobNumber}*> ${what} for ${job.clientName}${detail ? ` — ${detail}` : ''}`;
+  return `<${exportUrl(job.shipmentId)}|*${job.jobNumber}*> ${what} for ${escapeSlackText(job.clientName)}${detail ? ` — ${detail}` : ''}`;
 };
 
 /** One line item in the digest: a reference that links to its record, and what it is */
@@ -108,7 +118,7 @@ export interface DigestSection {
 const LIST_LIMIT = 8;
 
 const item = (i: DigestItem) =>
-  `<${i.url}|${i.ref}>${i.name ? ` ${i.name}` : ''}${i.note ? ` (${i.note})` : ''}`;
+  `<${i.url}|${escapeSlackText(i.ref)}>${i.name ? ` ${escapeSlackText(i.name)}` : ''}${i.note ? ` (${escapeSlackText(i.note)})` : ''}`;
 
 const list = (items: DigestItem[]) => {
   const shown = items.slice(0, LIST_LIMIT).map(item).join(', ');
@@ -135,18 +145,30 @@ export { shortDate };
  *
  * @param sections - The sections, in the order to show them
  * @param mention - Slack mention text such as `<@U123>`, or empty
+ * @param health - How many shipments on their way had news in the last day
  * @returns Slack mrkdwn text, or null when there is nothing to say
  */
-export const logisticsDigestMessage = (sections: DigestSection[], mention = '') => {
+export const logisticsDigestMessage = (sections: DigestSection[], mention = '', health?: DigestHealth) => {
   const live = sections.filter((s) => s.items.length > 0);
   if (!live.length) return null;
 
   const toAct = live.filter((s) => s.action).reduce((n, s) => n + s.items.length, 0);
   const head = `*Logistics this morning*${mention && toAct ? ` · ${mention} ${toAct} to action` : ''}`;
   const lines = live.map((s) => `• *${s.title} (${s.items.length}):* ${list(s.items)}`);
+  // How well the board is being kept, so a quiet board is not mistaken for a quiet week
+  const kept = health?.active
+    ? [`Board health: *${health.updated} of ${health.active}* shipments on their way have news from the last 24 hours`]
+    : [];
 
-  return [head, ...lines, `<${LOGISTICS_BOARD_URL}|Open the logistics board>`].join('\n');
+  return [head, ...kept, ...lines, `<${LOGISTICS_BOARD_URL}|Open the logistics board>`].join('\n');
 };
+
+export interface DigestHealth {
+  /** Shipments not yet at the warehouse, pipeline drafts included */
+  active: number;
+  /** Of those, how many had news logged in the last 24 hours */
+  updated: number;
+}
 
 export interface WeeklySummary {
   from: Date;

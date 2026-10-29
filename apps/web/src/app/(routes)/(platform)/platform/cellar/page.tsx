@@ -4,8 +4,8 @@ import {
   IconBottle,
   IconChevronDown,
   IconCoin,
+  IconDots,
   IconDownload,
-  IconFileText,
   IconGlassFull,
   IconHistory,
   IconInfoCircle,
@@ -46,6 +46,10 @@ import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import WhatsNewBanner from '@/app/_productUpdates/components/WhatsNewBanner';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
+import DropdownMenu from '@/app/_ui/components/DropdownMenu/DropdownMenu';
+import DropdownMenuContent from '@/app/_ui/components/DropdownMenu/DropdownMenuContent';
+import DropdownMenuItem from '@/app/_ui/components/DropdownMenu/DropdownMenuItem';
+import DropdownMenuTrigger from '@/app/_ui/components/DropdownMenu/DropdownMenuTrigger';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Sheet from '@/app/_ui/components/Sheet/Sheet';
@@ -57,13 +61,12 @@ import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import type { MovementTypeBadgeProps } from '@/app/_wms/components/MovementTypeBadge';
-import CONDITION_REPORT_FEE_AED, {
-  CONDITION_REPORT_FEE_PER_BOTTLE_AED,
-  conditionReportFee,
-} from '@/app/_wms/constants/conditionReportFee';
+import { conditionReportFee } from '@/app/_wms/constants/conditionReportFee';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
 
+import CellarInstallCard from './CellarInstallCard';
+import CellarPasskeyCard from './CellarPasskeyCard';
 import CellarPhoneCollection from './CellarPhoneCollection';
 
 interface CellarParcel {
@@ -422,7 +425,7 @@ const CellarPage = () => {
         toast.success(
           `Condition report ${result.requestNumber} requested for ${result.cases} ${
             result.cases === 1 ? 'case' : 'cases'
-          }: AED ${result.feeAed.toLocaleString('en-US')}.`,
+          }. It will be added to your next invoice.`,
         );
       },
       onError: (error) => toast.error(error.message),
@@ -995,7 +998,7 @@ const CellarPage = () => {
         greeting by name. Where the wine is held follows on its own line.
       */}
       <CellarPageHeader
-        title="Your private cellar"
+        title="Your cellar"
         description={
           <>
             <span className="text-text-primary block" suppressHydrationWarning>
@@ -1031,31 +1034,27 @@ const CellarPage = () => {
                 options={fx.available}
                 onChange={fx.setCurrency}
               />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExport}
-                isDisabled={!wines.length}
-              >
-                <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
-              </Button>
-              {/* Monthly statements sit with the cellar they describe, not as a tab of their own */}
-              <Link
-                href="/platform/cellar/statement"
-                className="border-border-muted bg-surface-primary text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold md:hidden"
-              >
-                <IconFileText size={14} />
-                Statements
-              </Link>
-              {!isViewer && (
-                <Link
-                  href="/platform/cellar/invoices"
-                  className="border-border-muted bg-surface-primary text-text-primary hover:bg-fill-muted/40 inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold md:hidden"
-                >
-                  <IconReceipt size={14} />
-                  Invoices
-                </Link>
-              )}
+              {/* Export is occasional, so it waits behind a small menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="More options"
+                    className="text-text-muted hover:text-text-primary hover:bg-fill-muted/40 grid size-8 place-items-center rounded-lg transition-colors"
+                  >
+                    <IconDots size={16} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onSelect={handleExport}
+                    isDisabled={!wines.length}
+                  >
+                    <IconDownload size={14} />
+                    Export your cellar (CSV)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
         }
       />
@@ -1156,21 +1155,21 @@ const CellarPage = () => {
                 : 'all single bottles'
               : `${collection.cases.toLocaleString()} cases`,
             icon: IconBottle,
-            tone: 'blue' as const,
+            tone: 'plain' as const,
           },
           {
             value: collection.wines.toLocaleString(),
             label: 'Wines',
             detail: `${collection.producers} producers`,
             icon: IconGlassFull,
-            tone: 'indigo' as const,
+            tone: 'plain' as const,
           },
           {
             value: money(collection.indicative),
             label: 'Indicative value',
             detail: 'a guide, not a valuation',
             icon: IconCoin,
-            tone: 'emerald' as const,
+            tone: 'plain' as const,
             note: "Based on Craft & Culture's current list prices where we list the wine, otherwise the price you paid. A guide, not a valuation or an offer to buy.",
           },
           {
@@ -1178,7 +1177,7 @@ const CellarPage = () => {
             label: 'In transit',
             detail: `${inbound.length} ${inbound.length === 1 ? 'wine' : 'wines'} on the way`,
             icon: IconTruck,
-            tone: 'violet' as const,
+            tone: 'emerald' as const,
           },
         ]
           // In transit counts wine already on a shipment; a zero beside a transfer card contradicts it
@@ -1473,10 +1472,17 @@ const CellarPage = () => {
                                   value: request.clearanceCostUsd ?? 0,
                                   tip: 'Duty and VAT at the rates UAE customs sets, plus moving the wine out of the free zone and the licensed partner who delivers it.',
                                 },
+                                /*
+                                  Our arranging fee is part of getting the wine to
+                                  the door, so it is folded into delivery rather
+                                  than set out as a fee of its own.
+                                */
                                 {
                                   label: 'Delivery',
-                                  value: request.deliveryCostUsd ?? 0,
-                                  tip: 'The drive to your address.',
+                                  value:
+                                    (request.deliveryCostUsd ?? 0) +
+                                    (request.serviceFeeUsd ?? 0),
+                                  tip: 'Bringing the wine to your address, with the paperwork and customs filing that go with it.',
                                 },
                                 ...(request.repackCostUsd
                                   ? [
@@ -1498,12 +1504,10 @@ const CellarPage = () => {
                                       },
                                     ]
                                   : []),
-                                {
-                                  label: 'C&C platform fee',
-                                  value: request.serviceFeeUsd ?? 0,
-                                  tip: 'Our fee for arranging the delivery: paperwork, customs filing and the distributor.',
-                                },
-                              ].map((line) => (
+                              ]
+                                // A line that reads 0 says nothing, so only the charges with an amount show
+                                .filter((line) => line.value > 0)
+                                .map((line) => (
                                 <div
                                   key={line.label}
                                   className="flex items-baseline justify-between gap-3"
@@ -1592,7 +1596,7 @@ const CellarPage = () => {
                                       the shelf.
                                     */}
                                     <td className="text-text-muted hidden whitespace-nowrap px-3 py-1.5 font-mono text-[11px] sm:table-cell">
-                                      {item.lotNumber ?? '—'}
+                                      {item.lotNumber ?? ''}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-2 text-right">
                                       {isEditable ? (
@@ -2016,7 +2020,7 @@ const CellarPage = () => {
                       </span>
                     </td>
                     <td className={`${tdMuted} hidden md:table-cell`}>
-                      {wine.producer ?? '—'}
+                      {wine.producer ?? ''}
                     </td>
                     <td
                       className={`${tdMuted} hidden text-center tabular-nums sm:table-cell`}
@@ -2031,7 +2035,7 @@ const CellarPage = () => {
                     <td
                       className={`${td} text-text-primary hidden text-center sm:table-cell`}
                     >
-                      {wine.bottleSize ?? '—'}
+                      {wine.bottleSize ?? ''}
                     </td>
                     {bottleWording ? (
                       <td className={`${tdMuted} hidden whitespace-nowrap text-right sm:table-cell`}>
@@ -2040,7 +2044,7 @@ const CellarPage = () => {
                     ) : (
                       <>
                         <td className={`${tdMuted} hidden text-center tabular-nums md:table-cell`}>
-                          {wine.caseConfig ?? '—'}
+                          {wine.caseConfig ?? ''}
                         </td>
                         <td
                           className={`${tdMuted} hidden text-right tabular-nums sm:table-cell`}
@@ -2072,12 +2076,12 @@ const CellarPage = () => {
                             )}
                           </>
                         ) : (
-                          '—'
+                          'Not valued'
                         )
                       ) : wine.costPerBottle ? (
                         money(wine.costPerBottle, true)
                       ) : (
-                        '—'
+                        'Not valued'
                       )}
                     </td>
                     {/*
@@ -2135,7 +2139,7 @@ const CellarPage = () => {
                               onClick={() => setCases(heldCases)}
                               className="hover:bg-fill-muted hover:text-text-primary text-text-muted min-h-9 whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors sm:min-h-0"
                             >
-                              Move to UAE
+                              Move to the UAE
                             </button>
                           );
                         }
@@ -2344,10 +2348,10 @@ const CellarPage = () => {
                                     </>
                                   )}
                                   <td className="text-text-muted hidden whitespace-nowrap px-3 py-1.5 font-mono text-xs sm:table-cell">
-                                    {parcel.lotNumber ?? '—'}
+                                    {parcel.lotNumber ?? ''}
                                   </td>
                                   <td className="text-text-muted whitespace-nowrap px-3 py-1.5">
-                                    {originOf(parcel) ?? '—'}
+                                    {originOf(parcel) ?? ''}
                                   </td>
                                   <td className="text-text-muted whitespace-nowrap px-3 py-1.5">
                                     {parcel.receivedAt
@@ -2355,7 +2359,7 @@ const CellarPage = () => {
                                           new Date(parcel.receivedAt),
                                           'd MMM yyyy',
                                         )
-                                      : '—'}
+                                      : ''}
                                   </td>
                                   <td className="whitespace-nowrap px-3 py-1.5">
                                     {parcel.reservedCases > 0 ? (
@@ -2489,9 +2493,9 @@ const CellarPage = () => {
                                             </button>
                                           </ConfirmAction>
                                           {/*
-                                            A chargeable action should say what
-                                            it costs before it is clicked, not
-                                            on the invoice afterwards.
+                                            What the report covers. The cost is
+                                            stated once, in the confirmation,
+                                            rather than called out here as well.
                                           */}
                                           <Tooltip>
                                             <TooltipTrigger
@@ -2511,16 +2515,12 @@ const CellarPage = () => {
                                               className="max-w-[240px] text-left lg:max-w-[240px]"
                                             >
                                               <Typography variant="bodyXs">
-                                                <strong>
-                                                  {(wine.caseConfig ?? 1) === 1
-                                                    ? `AED ${CONDITION_REPORT_FEE_PER_BOTTLE_AED} per bottle`
-                                                    : `AED ${CONDITION_REPORT_FEE_AED} per case`}
-                                                </strong>
-                                                . We inspect every bottle for
+                                                We inspect every bottle for
                                                 fill level, label, capsule and
                                                 closure, and report with
                                                 photographs and written notes.
-                                                Charged on your next invoice.
+                                                It is added to your next
+                                                invoice.
                                               </Typography>
                                             </TooltipContent>
                                           </Tooltip>
@@ -2576,11 +2576,11 @@ const CellarPage = () => {
                                       </td>
                                       <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">{line.bottles}</td>
                                       <td className="text-text-muted whitespace-nowrap px-3 py-1.5" title={line.packaging ?? undefined}>
-                                        {packagingCode(line.packaging) ?? line.packaging ?? '—'}
+                                        {packagingCode(line.packaging) ?? line.packaging ?? ''}
                                       </td>
-                                      <td className="text-text-muted px-3 py-1.5">{line.supplierName ?? '—'}</td>
+                                      <td className="text-text-muted px-3 py-1.5">{line.supplierName ?? ''}</td>
                                       <td className="text-text-muted whitespace-nowrap px-3 py-1.5">
-                                        {line.receivedAt ? format(new Date(line.receivedAt), 'd MMM yyyy') : '—'}
+                                        {line.receivedAt ? format(new Date(line.receivedAt), 'd MMM yyyy') : ''}
                                       </td>
                                       <td className="px-3 py-1.5">
                                         {line.moveStatus ? (
@@ -2666,7 +2666,7 @@ const CellarPage = () => {
                                               new Date(movement.performedAt),
                                               'd MMM yyyy',
                                             )
-                                          : '—'}
+                                          : ''}
                                       </td>
                                       <td className="whitespace-nowrap px-3 py-1.5">
                                         <MovementTypeBadge
@@ -2677,10 +2677,10 @@ const CellarPage = () => {
                                         />
                                       </td>
                                       <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
-                                        {movement.quantityCases ?? '—'}
+                                        {movement.quantityCases ?? ''}
                                       </td>
                                       <td className="text-text-muted whitespace-nowrap px-3 py-1.5 font-mono text-xs">
-                                        {movement.movementNumber ?? '—'}
+                                        {movement.movementNumber ?? ''}
                                       </td>
                                     </tr>
                                   ))}
@@ -2710,6 +2710,13 @@ const CellarPage = () => {
           movesOnly
         />
       )}
+
+      {/*
+        Keeping the cellar on the home screen and Face ID are offered beneath
+        the wine, never before it, and once only. Both live on Your details too.
+      */}
+      <CellarInstallCard />
+      <CellarPasskeyCard />
 
       <DeliveriesPanel requests={releaseData?.requests ?? []} section="past" />
 

@@ -8,6 +8,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -3128,6 +3129,22 @@ export const logisticsShipments = pgTable(
     // Notes
     internalNotes: text('internal_notes'),
     partnerNotes: text('partner_notes'),
+
+    /**
+     * The one thing that moves this shipment on next, and who does it.
+     *
+     * Kept on the shipment so the board, an owner's own list and the morning
+     * #logistics post read the same line; it used to live in a Word tracker
+     * and in whoever was asked that day.
+     */
+    nextAction: text('next_action'),
+    nextActionOwnerId: uuid('next_action_owner_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    /** The carrier has confirmed the ETA; false while it is an estimate */
+    etaConfirmed: boolean('eta_confirmed').notNull().default(false),
+    /** When someone last logged news on it; the "no news" clock runs from here */
+    lastUpdateAt: timestamp('last_update_at', { mode: 'date' }),
 
     // Audit
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
@@ -8340,6 +8357,10 @@ export const winelabsWines = pgTable('winelabs_wines', {
   priceCount: integer('price_count'),
   priceFetchedAt: timestamp('price_fetched_at', { mode: 'date' }),
   matchedAt: timestamp('matched_at', { mode: 'date' }).notNull().defaultNow(),
+  /** A person's call on a disagreement: ours_right | change (our code should become wl_lwin7) */
+  review: text('review'),
+  reviewedBy: text('reviewed_by'),
+  reviewedAt: timestamp('reviewed_at', { mode: 'date' }),
   ...timestamps,
 });
 
@@ -8371,10 +8392,14 @@ export const winelabsCalls = pgTable(
  * spending credits. A London price is a check on ours, never a price we set:
  * our UAE in-bond price carries freight to Dubai that London's does not.
  */
-export const winelabsMarket = pgTable('winelabs_market', {
-  lwin11: text('lwin11').primaryKey(),
+export const winelabsMarket = pgTable(
+  'winelabs_market',
+  {
+  lwin11: text('lwin11').notNull(),
   lwin7: text('lwin7').notNull(),
   vintage: text('vintage').notNull(),
+  /** Bottle size in ml, as the exchanges write it: '750', '1500', '3000' */
+  format: text('format').notNull().default('750'),
   /** priced | unlisted | checking */
   status: text('status').notNull(),
   bidUsd: doublePrecision('bid_usd'),
@@ -8386,7 +8411,11 @@ export const winelabsMarket = pgTable('winelabs_market', {
   trades: integer('trades').notNull().default(0),
   venues: text('venues').array().notNull().default(sql`'{}'::text[]`),
   checkedAt: timestamp('checked_at', { mode: 'date' }).notNull().defaultNow(),
-});
+  /** When the trades were last asked for; they move slower than the order book */
+  tradesCheckedAt: timestamp('trades_checked_at', { mode: 'date' }),
+  },
+  (table) => [primaryKey({ columns: [table.lwin11, table.format] })],
+);
 
 export type WinelabsMarket = typeof winelabsMarket.$inferSelect;
 

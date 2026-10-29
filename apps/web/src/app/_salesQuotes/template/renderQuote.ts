@@ -115,23 +115,23 @@ const renderQuote = (quote: RenderableQuote) => {
   // (<b>, <strong>, entities), so they are sanitised to that markup, not escaped
   const leadNote = options.leadNote
     ? sanitizeQuoteHtml(options.leadNote)
-    : 'Prices are <strong style="color:var(--teal2)">In Bond, UAE</strong> &mdash; exclusive of duty, tax &amp; delivery, and match the C&amp;C price sheet. ' +
+    : 'Prices are <strong style="color:var(--teal2)">In Bond, UAE</strong>, exclusive of duty, tax &amp; delivery, and match the C&amp;C price sheet. ' +
       (perBottle
         ? '<strong style="color:var(--teal2)">Priced &amp; ordered per bottle.</strong> '
-        : '<strong style="color:var(--teal2)">Sold by the case</strong> &mdash; single bottles where noted. ') +
+        : '<strong style="color:var(--teal2)">Sold by the case</strong>; single bottles where noted. ') +
       (prefilled
-        ? 'Quantities are pre-filled to your request &mdash; adjust as needed, then export or send via WhatsApp.'
+        ? 'Quantities are pre-filled to your request; adjust as needed, then export or send via WhatsApp.'
         : 'Set quantities, then export or send via WhatsApp.');
 
   const extraTerms =
     (items.some((item) => item.pc)
-      ? `<li><b style="color:#b39dfb">${escapeHtml(labels.pcLabel)}</b> &mdash; these references are reserved private-client stock, offered subject to prior sale.</li>`
+      ? `<li><b style="color:#b39dfb">${escapeHtml(labels.pcLabel)}</b>: these references are reserved private-client stock, offered subject to prior sale.</li>`
       : '') +
     (items.some((item) => item.repack)
-      ? '<li><b style="color:#f2a2cd">Repack</b> &mdash; a part-case quantity, drawn from a sealed case and repacked into a new carton (original OWC broken).</li>'
+      ? '<li><b style="color:#f2a2cd">Repack</b>: a part-case quantity, drawn from a sealed case and repacked into a new carton (original OWC broken).</li>'
       : '') +
     (inbound
-      ? `<li><b>${escapeHtml(INBOUND)}</b> &mdash; purchased and in transit to our UAE bonded warehouse; reserve now against the incoming parcel.</li>`
+      ? `<li><b>${escapeHtml(INBOUND)}</b>: purchased and in transit to our UAE bonded warehouse; reserve now against the incoming parcel.</li>`
       : '') +
     (options.extraTerms ?? []).map((term) => `<li>${sanitizeQuoteHtml(term)}</li>`).join('');
 
@@ -145,7 +145,7 @@ const renderQuote = (quote: RenderableQuote) => {
   const subtitle = quote.subtitle || `Prepared for ${quote.client}`;
 
   const replacements: Record<string, string> = {
-    '{{TITLE}}': escapeQuoteText(options.title || `${quote.h1} — Craft & Culture`),
+    '{{TITLE}}': escapeQuoteText(options.title || `${quote.h1} · Craft & Culture`),
     '{{OG_DESC}}': escapeQuoteText(`${subtitle} · ${inStock} fine wines, prices ${priceBasis}.`),
     '{{PRICE_BASIS}}': escapeQuoteText(priceBasis),
     '{{PRICE_BASIS_JS}}': jsStringLiteral(priceBasis),
@@ -155,11 +155,11 @@ const renderQuote = (quote: RenderableQuote) => {
       : '<b>Payment terms:</b> 30 days from date of invoice.',
     // only claim a promo when a line actually carries one
     '{{PROMO_TERM}}': items.some((item) => item.promo)
-      ? '<li><b style="color:#f0b429">Discount Promo</b> &mdash; promotional pricing on the ' +
+      ? '<li><b style="color:#f0b429">Discount Promo</b>: promotional pricing on the ' +
         `highlighted items is valid until <b>${quote.promoUntil ? formatQuoteDate(quote.promoUntil) : validUntil}</b>.</li>`
       : '',
     '{{PRICE_TERMS}}':
-      'All prices are <b>In Bond, UAE</b> &mdash; exclusive of duty, tax &amp; delivery. ' +
+      'All prices are <b>In Bond, UAE</b>, exclusive of duty, tax &amp; delivery. ' +
       `Quotation valid until ${validUntil} and subject to availability.`,
     '{{SLUG}}': escapeHtml(quote.slug),
     '{{EYEBROW}}': escapeQuoteText(quote.eyebrow),
@@ -190,7 +190,7 @@ const renderQuote = (quote: RenderableQuote) => {
       ? '<th class="r sc" id="hS">Sell</th><th class="r sc" id="hG">Profit</th>'
       : '',
     '{{GP_TOGGLE}}': labels.gpScenarios?.length
-      ? '<div class="toggle" title="Sales scenario — your sell price and profit at a target GP">' +
+      ? '<div class="toggle" title="Sales scenario: your sell price and profit at a target GP">' +
         '<button class="gpb on" data-gp="0" onclick="setGp(0)">GP off</button>' +
         labels.gpScenarios
           .map(

@@ -510,7 +510,7 @@ const ZohoCleanupTab = ({ programmeId }: ZohoCleanupTabProps) => {
                 {
                   key: 'create',
                   value: summary.needsStandard,
-                  className: 'bg-fill-brand',
+                  className: 'bg-text-primary',
                 },
                 {
                   key: 'blocked',
@@ -544,7 +544,7 @@ const ZohoCleanupTab = ({ programmeId }: ZohoCleanupTabProps) => {
                 {
                   label: 'need an item',
                   value: summary.needsStandard,
-                  dot: 'bg-fill-brand',
+                  dot: 'bg-text-primary',
                 },
                 {
                   label: 'blocked',

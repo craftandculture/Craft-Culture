@@ -220,7 +220,7 @@ const ProductPicker = ({
     maximumFractionDigits: 2,
   }).format(lineTotal);
 
-  const modeLabel = mode === 'wms' ? 'Warehouse stock' : mode === 'search' ? 'Search catalog' : 'Manual entry';
+  const modeLabel = mode === 'wms' ? 'Warehouse stock' : mode === 'search' ? 'Catalogue search' : 'Manual entry';
 
   return (
     <div className="rounded-lg border border-border-muted bg-surface-secondary/30 p-3">
@@ -228,7 +228,7 @@ const ProductPicker = ({
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {index !== undefined && (
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-fill-brand/10 text-xs font-semibold text-text-brand">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-text-primary/10 text-xs font-semibold text-text-primary">
               {index + 1}
             </span>
           )}
@@ -241,26 +241,29 @@ const ProductPicker = ({
             <button
               type="button"
               onClick={() => { handleClearProduct(); setMode('wms'); }}
+              aria-label="Pick from warehouse stock"
               className="flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-primary"
             >
               <Icon icon={IconBox} size="xs" />
-              <span className="hidden sm:inline">WMS stock</span>
+              <span className="hidden sm:inline">Stock</span>
             </button>
           )}
           {mode !== 'search' && (
             <button
               type="button"
               onClick={() => { handleClearProduct(); setMode('search'); }}
+              aria-label="Search the catalogue"
               className="flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-primary"
             >
               <Icon icon={IconSearch} size="xs" />
-              <span className="hidden sm:inline">Catalog</span>
+              <span className="hidden sm:inline">Catalogue</span>
             </button>
           )}
           {mode !== 'manual' && (
             <button
               type="button"
               onClick={() => { handleClearProduct(); setMode('manual'); }}
+              aria-label="Enter the wine manually"
               className="flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-primary"
             >
               <Icon icon={IconPencil} size="xs" />
@@ -268,7 +271,13 @@ const ProductPicker = ({
             </button>
           )}
           {onRemove && (
-            <Button type="button" variant="ghost" size="xs" onClick={onRemove}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={onRemove}
+              aria-label={index !== undefined ? `Remove line ${index + 1}` : 'Remove line'}
+            >
               <Icon icon={IconX} size="sm" colorRole="danger" />
             </Button>
           )}
@@ -279,7 +288,7 @@ const ProductPicker = ({
       {mode === 'wms' ? (
         <div className="mb-3">
           {hasPrePopulatedWms && !selectedWmsItem ? (
-            <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+            <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-900/50 dark:bg-emerald-500/10">
               <div className="flex flex-col gap-0.5 min-w-0">
                 <Typography variant="bodySm" className="font-medium truncate">
                   {value.productName}
@@ -288,7 +297,7 @@ const ProductPicker = ({
                   {value.producer && <span>{value.producer}</span>}
                   {value.vintage && <span>{value.vintage}</span>}
                   {value.availableCases !== undefined && (
-                    <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                       {describeAvailableStock(
                         value.availableCases,
                         // The stock row's pack, held in the code, not the pack being sold
@@ -298,12 +307,12 @@ const ProductPicker = ({
                   )}
                 </div>
               </div>
-              <Button type="button" variant="ghost" size="xs" onClick={handleClearProduct}>
+              <Button type="button" variant="ghost" size="xs" onClick={handleClearProduct} aria-label="Clear wine">
                 <Icon icon={IconX} size="sm" colorRole="muted" />
               </Button>
             </div>
           ) : selectedWmsItem ? (
-            <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+            <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-900/50 dark:bg-emerald-500/10">
               <div className="flex flex-col gap-0.5 min-w-0">
                 <Typography variant="bodySm" className="font-medium truncate">
                   {selectedWmsItem.productName}
@@ -311,7 +320,7 @@ const ProductPicker = ({
                 </Typography>
                 <div className="flex items-center gap-2 text-xs text-text-muted">
                   {selectedWmsItem.producer && <span>{selectedWmsItem.producer}</span>}
-                  <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">
+                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                     {describeAvailableStock(
                       selectedWmsItem.availableCases,
                       selectedWmsItem.caseConfig,
@@ -320,7 +329,7 @@ const ProductPicker = ({
                   <span className="text-text-muted/60">{selectedWmsItem.lwin18}</span>
                 </div>
               </div>
-              <Button type="button" variant="ghost" size="xs" onClick={handleClearProduct}>
+              <Button type="button" variant="ghost" size="xs" onClick={handleClearProduct} aria-label="Clear wine">
                 <Icon icon={IconX} size="sm" colorRole="muted" />
               </Button>
             </div>
@@ -335,7 +344,7 @@ const ProductPicker = ({
       ) : mode === 'search' ? (
         <div className="mb-3">
           {hasPrePopulatedProduct && !selectedProduct ? (
-            <div className="flex items-center justify-between rounded-lg border border-border-brand bg-fill-brand-muted/50 px-3 py-2">
+            <div className="flex items-center justify-between rounded-lg border border-text-primary bg-text-primary-muted/50 px-3 py-2">
               <div className="flex flex-col gap-0.5 min-w-0">
                 <Typography variant="bodySm" className="font-medium truncate">
                   {value.productName}
@@ -345,11 +354,11 @@ const ProductPicker = ({
                   {value.vintage && <span>{value.vintage}</span>}
                   {value.region && <span>{value.region}</span>}
                   {value.source === 'cc_inventory' && (
-                    <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">Local Stock</span>
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">Local stock</span>
                   )}
                 </div>
               </div>
-              <Button type="button" variant="ghost" size="xs" onClick={handleClearProduct}>
+              <Button type="button" variant="ghost" size="xs" onClick={handleClearProduct} aria-label="Clear wine">
                 <Icon icon={IconX} size="sm" colorRole="muted" />
               </Button>
             </div>
@@ -367,7 +376,8 @@ const ProductPicker = ({
         <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-4">
           <div className="sm:col-span-2">
             <Input
-              placeholder="Product name *"
+              placeholder="Wine name *"
+              aria-label="Wine name"
               value={value.productName}
               onChange={(e) => onChange({ ...value, productName: e.target.value })}
               size="sm"
@@ -375,12 +385,14 @@ const ProductPicker = ({
           </div>
           <Input
             placeholder="Producer"
+            aria-label="Producer"
             value={value.producer}
             onChange={(e) => onChange({ ...value, producer: e.target.value })}
             size="sm"
           />
           <Input
             placeholder="Vintage"
+            aria-label="Vintage"
             value={value.vintage}
             onChange={(e) => onChange({ ...value, vintage: e.target.value })}
             size="sm"
@@ -396,7 +408,7 @@ const ProductPicker = ({
             value={value.bottleSize || '750ml'}
             onValueChange={(size) => onChange({ ...value, bottleSize: size })}
           >
-            <SelectTrigger className="h-8 w-full text-xs sm:w-[80px]">
+            <SelectTrigger className="h-8 w-full text-xs sm:w-[80px]" aria-label="Bottle size">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -410,13 +422,13 @@ const ProductPicker = ({
             value={value.caseConfig?.toString() || '12'}
             onValueChange={handleCaseConfigChange}
           >
-            <SelectTrigger className="h-8 w-full text-xs sm:w-[90px]">
+            <SelectTrigger className="h-8 w-full text-xs sm:w-[110px]" aria-label="Pack">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {CASE_CONFIGS.map((config) => (
                 <SelectItem key={config} value={config.toString()}>
-                  {config === 1 ? 'Single btl' : `Case of ${config}`}
+                  {config === 1 ? 'Single bottle' : `Case of ${config}`}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -433,7 +445,8 @@ const ProductPicker = ({
             min={1}
             value={value.quantity}
             onChange={(e) => onChange({ ...value, quantity: parseInt(e.target.value) || 1 })}
-            className="h-8 w-full text-center text-xs sm:w-16"
+            aria-label={pack === 1 ? 'Quantity in bottles' : 'Quantity in cases'}
+            className="h-8 w-full text-center text-xs tabular-nums sm:w-16"
           />
           {pack > 1 && (
             <Typography variant="bodyXs" colorRole="muted" className="whitespace-nowrap">
@@ -457,7 +470,8 @@ const ProductPicker = ({
             value={pricePerBottle || ''}
             onChange={handleBottlePriceChange}
             placeholder="per bottle"
-            className="h-8 w-full text-right text-xs sm:w-24"
+            aria-label="Cost per bottle in USD"
+            className="h-8 w-full text-right text-xs tabular-nums sm:w-24"
           />
         </div>
 
@@ -478,14 +492,15 @@ const ProductPicker = ({
             value={value.pricePerCaseUsd || ''}
             onChange={handlePriceChange}
             placeholder={pack > 1 ? `= $/btl × ${pack}` : 'C&C cost'}
-            className="h-8 w-full text-right text-xs sm:w-24"
+            aria-label="Cost per case in USD"
+            className="h-8 w-full text-right text-xs tabular-nums sm:w-24"
           />
         </div>
 
         {/* Cost subtotal (quantity × cost) — not the client's final price */}
         <div className="col-span-2 flex items-center justify-end gap-1.5 border-t border-border-muted pt-2 sm:ml-auto sm:border-t-0 sm:pt-0">
           <Typography variant="bodyXs" colorRole="muted">Cost subtotal:</Typography>
-          <Typography variant="bodySm" className="font-semibold text-text-brand">
+          <Typography variant="bodySm" className="font-semibold tabular-nums text-text-primary">
             {formattedTotal}
           </Typography>
         </div>

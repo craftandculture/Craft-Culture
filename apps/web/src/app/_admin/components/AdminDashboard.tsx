@@ -19,6 +19,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
@@ -132,17 +133,11 @@ const AdminDashboard = () => {
 
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
-      {/* Header with Currency Toggle */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Typography variant="headingLg" className="font-bold">
-            Private Client Orders
-          </Typography>
-          <Typography variant="bodySm" colorRole="muted">
-            Overview of all partner orders
-          </Typography>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <AdminPageHeader
+        title="Private Client Orders"
+        description="Overview of all partner orders"
+        actions={
+          <>
         <Link href="/platform/admin/private-orders/new">
           <Button size="sm" colorRole="brand" className="gap-1.5">
             <Icon icon={IconPlus} size="sm" />
@@ -178,8 +173,9 @@ const AdminDashboard = () => {
             AED
           </button>
         </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Stock Update Reminder Alert */}
       {ordersNeedingStockUpdate && ordersNeedingStockUpdate.length > 0 && (
@@ -575,7 +571,7 @@ const AdminDashboard = () => {
                       </div>
                       <div className="relative h-2 overflow-hidden rounded-full bg-surface-secondary">
                         <div
-                          className="absolute left-0 top-0 h-full rounded-full bg-fill-brand transition-all"
+                          className="absolute left-0 top-0 h-full rounded-full bg-text-primary transition-all"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>

@@ -238,7 +238,7 @@ const MemberSourcingPanel = ({ onActivationError }: MemberSourcingPanelProps) =>
                           onClick={() =>
                             registerInterest({ allocationId: allocation.id, cases: chosen })
                           }
-                          className="bg-text-primary text-surface-primary h-9 rounded-lg px-3.5 text-xs font-semibold disabled:opacity-50"
+                          className="h-9 px-1 text-xs font-semibold disabled:opacity-50 text-emerald-700 hover:underline dark:text-emerald-400"
                         >
                           {interest?.status === 'interested' ? 'Update my request' : 'Request an allocation'}
                         </button>

@@ -1,9 +1,13 @@
-import { and, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull, lte, ne, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
+import personName from '@/app/_teamTasks/utils/personName';
 import db from '@/database/client';
-import { logisticsJobs, logisticsQuotes, logisticsShipmentItems, logisticsShipments } from '@/database/schema';
+import { logisticsJobs, logisticsQuotes, logisticsShipmentItems, logisticsShipments, users } from '@/database/schema';
+
 
 import {
+  type DigestHealth,
   type DigestItem,
   type DigestSection,
   type WeeklySummary,
@@ -18,7 +22,10 @@ import postLogisticsSlack from './postLogisticsSlack';
 import expireLapsedQuotes from '../data/expireLapsedQuotes';
 import getAttentionGroups from '../data/getAttentionGroups';
 import getOpenQuoteRequestSteps from '../data/getOpenQuoteRequestSteps';
+import { lastNewsSql } from '../utils/noNews';
 import NOT_ARRIVED_STATUSES from '../utils/notArrivedStatuses';
+
+const actionOwner = alias(users, 'action_owner');
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -112,10 +119,9 @@ export const getWeeklySummary = async (now = new Date()): Promise<WeeklySummary>
  * @returns The sections, in the order they are shown
  */
 export const getDigestSections = async (now = new Date()): Promise<DigestSection[]> => {
-  const in3Days = new Date(now.getTime() + 3 * DAY);
   const in7Days = new Date(now.getTime() + 7 * DAY);
 
-  const [groups, arriving, quotes, awaitingDocs, requestSteps] = await Promise.all([
+  const [groups, arriving, quotes, awaitingDocs, requestSteps, waiting] = await Promise.all([
     getAttentionGroups(now),
     db
       .select({
@@ -123,6 +129,7 @@ export const getDigestSections = async (now = new Date()): Promise<DigestSection
         shipmentNumber: logisticsShipments.shipmentNumber,
         name: logisticsShipments.name,
         eta: logisticsShipments.eta,
+        etaConfirmed: logisticsShipments.etaConfirmed,
       })
       .from(logisticsShipments)
       .where(
@@ -130,7 +137,7 @@ export const getDigestSections = async (now = new Date()): Promise<DigestSection
           eq(logisticsShipments.type, 'inbound'),
           inArray(logisticsShipments.status, [...NOT_ARRIVED_STATUSES]),
           gte(logisticsShipments.eta, now),
-          lte(logisticsShipments.eta, in3Days),
+          lte(logisticsShipments.eta, in7Days),
         ),
       )
       .orderBy(logisticsShipments.eta),
@@ -161,6 +168,25 @@ export const getDigestSections = async (now = new Date()): Promise<DigestSection
       .orderBy(logisticsJobs.jobNumber),
     // A read that fails (a migration not yet run) leaves these sections empty, not the digest
     getOpenQuoteRequestSteps(now).catch(() => []),
+    // Every next action with an owner, on shipments still on their way
+    db
+      .select({
+        id: logisticsShipments.id,
+        shipmentNumber: logisticsShipments.shipmentNumber,
+        name: logisticsShipments.name,
+        nextAction: logisticsShipments.nextAction,
+        ownerName: actionOwner.name,
+      })
+      .from(logisticsShipments)
+      .innerJoin(actionOwner, eq(logisticsShipments.nextActionOwnerId, actionOwner.id))
+      .where(
+        and(
+          inArray(logisticsShipments.status, [...NOT_ARRIVED_STATUSES]),
+          isNotNull(logisticsShipments.nextAction),
+        ),
+      )
+      .orderBy(lastNewsSql)
+      .catch(() => []),
   ]);
   const route = (r: (typeof requestSteps)[number]) => `${r.originCountry} to ${r.destinationCountry}`;
 
@@ -173,15 +199,41 @@ export const getDigestSections = async (now = new Date()): Promise<DigestSection
       note: note ? note(s) : null,
     }));
 
+  // One section per person, so each reads their own name rather than a pile
+  const owners = [...new Set(waiting.map((w) => w.ownerName))];
+  const waitingOn: DigestSection[] = owners.map((owner) => ({
+    title: `Waiting on ${personName(owner).split(' ')[0]}`,
+    action: true,
+    items: waiting
+      .filter((w) => w.ownerName === owner)
+      .map((w) => ({ ref: w.shipmentNumber, url: digestUrl(w), name: w.name, note: w.nextAction })),
+  }));
+
+  const daysQuiet = (at: Date | string) =>
+    Math.max(2, Math.floor((now.getTime() - new Date(at).getTime()) / DAY));
+
   return [
+    ...waitingOn,
     {
-      title: 'Arriving in the next 3 days',
+      title: 'No news for 48 hours',
+      action: true,
+      items: fromBoard('no_news', (s) =>
+        [
+          'lastNewsAt' in s && s.lastNewsAt ? `${daysQuiet(s.lastNewsAt)} days` : null,
+          'actionOwnerName' in s && s.actionOwnerName ? personName(s.actionOwnerName).split(' ')[0] : null,
+        ]
+          .filter(Boolean)
+          .join(', ') || null,
+      ),
+    },
+    {
+      title: 'Arriving in the next 7 days',
       action: false,
       items: arriving.map((s) => ({
         ref: s.shipmentNumber,
         url: digestUrl(s),
         name: s.name,
-        note: s.eta ? shortDate(s.eta) : null,
+        note: s.eta ? `${shortDate(s.eta)}, ${s.etaConfirmed ? 'confirmed' : 'estimate'}` : null,
       })),
     },
     {
@@ -240,6 +292,30 @@ export const getDigestSections = async (now = new Date()): Promise<DigestSection
 };
 
 /**
+ * How many shipments on their way had news logged in the last day
+ *
+ * @param now - The moment to judge by
+ * @returns Shipments not yet arrived, and how many of them are current
+ */
+export const getDigestHealth = async (now = new Date()): Promise<DigestHealth> => {
+  const [row] = await db
+    .select({
+      active: sql<number>`count(*)::int`,
+      updated: sql<number>`count(*) FILTER (WHERE ${lastNewsSql} >= ${new Date(now.getTime() - DAY).toISOString()}::timestamp)::int`,
+    })
+    .from(logisticsShipments)
+    .where(
+      and(
+        inArray(logisticsShipments.status, [...NOT_ARRIVED_STATUSES]),
+        // The same 90 days the board's attention rules look at, so old abandoned drafts do not drag it down
+        sql`${logisticsShipments.createdAt} >= ${new Date(now.getTime() - 90 * DAY).toISOString()}::timestamp`,
+      ),
+    )
+    .catch(() => []);
+  return { active: row?.active ?? 0, updated: row?.updated ?? 0 };
+};
+
+/**
  * Post the weekday-morning logistics digest to #logistics
  *
  * Nothing is posted on a quiet morning. On Fridays the week's summary follows,
@@ -252,7 +328,7 @@ const sendLogisticsDigest = async (now = new Date()) => {
   // Lapsed quotes stop being offered before the digest lists what is left
   await expireLapsedQuotes(now).catch(() => 0);
   const sections = await getDigestSections(now);
-  const text = logisticsDigestMessage(sections, mentionText());
+  const text = logisticsDigestMessage(sections, mentionText(), await getDigestHealth(now));
   const digestFailure = text ? await postLogisticsSlack(text) : null;
 
   let weeklyFailure: string | null = null;

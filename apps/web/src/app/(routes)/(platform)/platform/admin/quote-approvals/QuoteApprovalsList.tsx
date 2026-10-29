@@ -53,14 +53,14 @@ const filterGroups: FilterGroup[] = [
   {
     label: 'Incoming',
     filters: [
-      { label: 'Pending', value: 'buy_request_submitted', icon: IconSend, color: 'text-text-brand' },
+      { label: 'Pending', value: 'buy_request_submitted', icon: IconSend, color: 'text-text-primary' },
     ],
   },
   {
     label: 'In Progress',
     filters: [
-      { label: 'Under Review', value: 'under_cc_review', icon: IconClock, color: 'text-text-brand' },
-      { label: 'Confirmed', value: 'cc_confirmed', icon: IconCheck, color: 'text-text-brand' },
+      { label: 'Under Review', value: 'under_cc_review', icon: IconClock, color: 'text-text-primary' },
+      { label: 'Confirmed', value: 'cc_confirmed', icon: IconCheck, color: 'text-text-primary' },
       { label: 'Awaiting Payment', value: 'awaiting_payment', icon: IconClock, color: 'text-text-warning' },
     ],
   },
@@ -74,8 +74,8 @@ const filterGroups: FilterGroup[] = [
   {
     label: 'B2B',
     filters: [
-      { label: 'PO Submitted', value: 'po_submitted', icon: IconFileText, color: 'text-text-brand' },
-      { label: 'PO Confirmed', value: 'po_confirmed', icon: IconCheck, color: 'text-text-brand' },
+      { label: 'PO Submitted', value: 'po_submitted', icon: IconFileText, color: 'text-text-primary' },
+      { label: 'PO Confirmed', value: 'po_confirmed', icon: IconCheck, color: 'text-text-primary' },
     ],
   },
 ];
@@ -346,15 +346,15 @@ const QuoteApprovalsList = () => {
                     onClick={() => setActiveFilter(filter.value)}
                     className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
                       isActive
-                        ? 'bg-fill-brand text-text-brand-contrast shadow-sm'
+                        ? 'bg-text-primary text-text-primary-contrast shadow-sm'
                         : 'bg-fill-muted/50 text-text-muted hover:bg-fill-muted hover:text-text-primary dark:bg-background-secondary dark:hover:bg-background-tertiary'
                     }`}
                   >
-                    <Icon icon={filter.icon} size="xs" className={isActive ? 'text-text-brand-contrast' : filter.color} />
+                    <Icon icon={filter.icon} size="xs" className={isActive ? 'text-text-primary-contrast' : filter.color} />
                     <span>{filter.label}</span>
                     <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${
                       isActive
-                        ? 'bg-white/20 text-text-brand-contrast'
+                        ? 'bg-white/20 text-text-primary-contrast'
                         : 'bg-fill-primary/50 text-text-muted'
                     }`}>
                       {count}
@@ -449,7 +449,7 @@ const QuoteApprovalsList = () => {
                       ? format(new Date(quote.buyRequestSubmittedAt), 'MMM d, yyyy')
                       : '-'}
                   </Typography>
-                  <div className="flex items-center gap-1 text-text-brand">
+                  <div className="flex items-center gap-1 text-text-primary">
                     <Icon icon={IconEye} size="xs" />
                     <Typography variant="bodyXs" className="font-medium">
                       Review

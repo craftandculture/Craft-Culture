@@ -301,7 +301,7 @@ const NewPickListPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search invoice, order, customer or subject..."
-            className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="w-full rounded-lg border border-border-primary bg-fill-primary py-2 pl-9 pr-3 text-sm focus:border-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary/20"
           />
         </div>
 
@@ -411,7 +411,7 @@ const NewPickListPage = () => {
             <div
               className={`flex h-5 w-5 items-center justify-center rounded ${
                 allSelected
-                  ? 'bg-brand-500 text-white'
+                  ? 'bg-surface-secondary0 text-white'
                   : 'border-2 border-text-muted/40'
               }`}
             >

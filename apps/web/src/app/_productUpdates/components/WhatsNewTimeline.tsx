@@ -41,6 +41,9 @@ const dayLabel = (date: Date) =>
 /**
  * The What's New timeline: search, filters with counts, and updates by day
  *
+ * The chosen filter is underlined rather than filled, and filters with no
+ * updates are hidden, so the page stays quiet.
+ *
  * Shared by the member page and the staff preview, so what staff check is
  * exactly what members see. Updates are dated by when they shipped; "New"
  * follows when they were published, so an update published today about last
@@ -91,7 +94,8 @@ const WhatsNewTimeline = ({ updates, seenAt, preview }: WhatsNewTimelineProps) =
           />
         </label>
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 [scrollbar-width:none] sm:mx-0 sm:px-0">
-          {FILTERS.map((f) => {
+          {/* A filter with nothing under it is only noise, so it is not offered */}
+          {FILTERS.filter((f) => f.key === 'all' || counts[f.key] > 0).map((f) => {
             const active = filter === f.key;
             return (
               <button
@@ -99,14 +103,14 @@ const WhatsNewTimeline = ({ updates, seenAt, preview }: WhatsNewTimelineProps) =
                 type="button"
                 aria-pressed={active}
                 onClick={() => setFilter(f.key)}
-                className={`flex min-h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-semibold whitespace-nowrap transition-colors ${
+                className={`flex min-h-10 shrink-0 items-center gap-2 px-2 text-sm whitespace-nowrap underline-offset-[6px] transition-colors ${
                   active
-                    ? 'border-neutral-950 bg-neutral-950 text-white dark:border-white dark:bg-white dark:text-neutral-950'
-                    : 'border-transparent bg-black/[0.05] text-text-primary hover:bg-black/[0.09] dark:bg-white/[0.07] dark:hover:bg-white/[0.12]'
+                    ? 'text-text-primary font-semibold underline decoration-2'
+                    : 'text-text-muted hover:text-text-primary font-medium'
                 }`}
               >
                 {f.label}
-                <span className={`text-xs tabular-nums ${active ? 'opacity-70' : 'text-text-muted'}`}>
+                <span className="text-text-muted text-xs tabular-nums">
                   {counts[f.key]}
                 </span>
               </button>

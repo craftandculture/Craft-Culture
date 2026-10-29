@@ -157,7 +157,10 @@ const ManualInvoicingCard = ({ orderId }: ManualInvoicingCardProps) => {
                   aria-label={`Select ${item.productName}`}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
+                  <p
+                    className="truncate text-sm font-medium"
+                    title={`${item.productName}${item.vintage ? ` ${item.vintage}` : ''}`}
+                  >
                     {item.productName}
                     {item.vintage ? ` ${item.vintage}` : ''}
                   </p>
@@ -180,8 +183,19 @@ const ManualInvoicingCard = ({ orderId }: ManualInvoicingCardProps) => {
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => reset.mutate({ itemId: item.id, to: invoiced ? 'pending' : 'none' })}
-                    className="text-xs text-text-muted underline-offset-2 hover:underline"
+                    onClick={() => {
+                      // Removing a recorded invoice puts the line back in the invoicing queue
+                      if (
+                        invoiced &&
+                        !window.confirm(
+                          `Remove invoice ${item.invoicing?.invoiceNumber ?? ''} from ${item.productName}? The line goes back to Invoice Pending.`,
+                        )
+                      ) {
+                        return;
+                      }
+                      reset.mutate({ itemId: item.id, to: invoiced ? 'pending' : 'none' });
+                    }}
+                    className="text-xs text-text-muted underline-offset-2 hover:underline disabled:opacity-40"
                   >
                     {invoiced ? 'Remove invoice' : 'Undo delivered'}
                   </button>
@@ -196,6 +210,7 @@ const ManualInvoicingCard = ({ orderId }: ManualInvoicingCardProps) => {
             <label className="flex flex-col gap-1 text-xs text-text-muted">
               Invoice number
               <Input
+                autoFocus
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
                 placeholder="e.g. INV-000412"
@@ -229,6 +244,11 @@ const ManualInvoicingCard = ({ orderId }: ManualInvoicingCardProps) => {
               size="sm"
               variant="outline"
               disabled={busy || invoiceable.every((i) => i.invoicing)}
+              title={
+                invoiceable.every((i) => i.invoicing)
+                  ? 'Every line is already marked delivered or invoiced'
+                  : undefined
+              }
               onClick={() => markDelivered.mutate(undefined)}
             >
               Whole order delivered – invoice pending
@@ -237,6 +257,7 @@ const ManualInvoicingCard = ({ orderId }: ManualInvoicingCardProps) => {
               size="sm"
               variant="outline"
               disabled={busy || selected.size === 0}
+              title={selected.size === 0 ? 'Tick the delivered lines first' : undefined}
               onClick={() => markDelivered.mutate([...selected])}
             >
               Selected delivered – invoice pending ({selected.size})
@@ -245,6 +266,7 @@ const ManualInvoicingCard = ({ orderId }: ManualInvoicingCardProps) => {
               size="sm"
               colorRole="brand"
               disabled={busy || selected.size === 0}
+              title={selected.size === 0 ? 'Tick the lines this invoice covers first' : undefined}
               onClick={() => setRecording(true)}
             >
               Record invoice for selected ({selected.size})

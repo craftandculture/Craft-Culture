@@ -15,12 +15,6 @@ export interface ReleaseLine {
 export interface ReleaseQuote extends ReleasePricing {
   /** False when no rates are configured and the figures are all zero */
   priced: boolean;
-  /*
-    What repacking would add, offered rather than charged. The figures above
-    carry no repack: staff add it when the work is actually being done, or it
-    kept coming back after being deleted.
-  */
-  repackOffer: { cases: number; repackUsd: number; vatUsd: number };
 }
 
 /**
@@ -77,14 +71,10 @@ const computeReleaseQuote = async (
   );
 
   /*
-    A line taking a part case breaks exactly one sealed case, however many
-    bottles it takes from it. Singles can never break anything.
+    No repack on a delivery. The packages built for a member's deliveries are
+    billed on their monthly warehouse invoice (getMonthlyRepacks), so a quote
+    carrying one as well would charge it twice.
   */
-  const repackCases = lines.reduce((sum, line) => {
-    const pack = Math.max(1, line.caseConfig ?? 1);
-
-    return sum + (pack > 1 && line.bottles % pack !== 0 ? 1 : 0);
-  }, 0);
 
   const goodsValueUsd = lines.reduce(
     (sum, line) => sum + line.bottles * (line.costPerBottle ?? 0),
@@ -107,32 +97,12 @@ const computeReleaseQuote = async (
       serviceFeeUsd: 0,
       totalUsd: 0,
       priced: false,
-      repackOffer: { cases: repackCases, repackUsd: 0, vatUsd: 0 },
     };
   }
 
-  const withoutRepack = priceFromRateCard(rate, {
-    bottles,
-    cases,
-    repackCases: 0,
-    goodsValueUsd,
-  });
-  const withRepack = priceFromRateCard(rate, {
-    bottles,
-    cases,
-    repackCases,
-    goodsValueUsd,
-  });
-
   return {
-    ...withoutRepack,
+    ...priceFromRateCard(rate, { bottles, cases, repackCases: 0, goodsValueUsd }),
     priced: true,
-    repackOffer: {
-      cases: repackCases,
-      repackUsd: withRepack.repackUsd,
-      vatUsd:
-        Math.round((withRepack.vatUsd - withoutRepack.vatUsd) * 100) / 100,
-    },
   };
 };
 

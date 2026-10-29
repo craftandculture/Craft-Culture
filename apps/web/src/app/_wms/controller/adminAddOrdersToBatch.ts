@@ -82,36 +82,45 @@ const adminAddOrdersToBatch = wmsOperatorProcedure
       });
     }
 
-    // Add orders to batch
-    await db.insert(wmsDispatchBatchOrders).values(
-      newOrders.map((order) => ({
-        batchId,
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        addedAt: new Date(),
-      })),
-    );
+    /*
+      One transaction, so the orders and the batch totals land together. The
+      totals read a column that does not exist, the insert had already run, and
+      the batch was left holding orders its counts did not include.
+    */
+    const { updated, addedCases } = await db.transaction(async (tx) => {
+      // Add orders to batch
+      await tx.insert(wmsDispatchBatchOrders).values(
+        newOrders.map((order) => ({
+          batchId,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          addedAt: new Date(),
+        })),
+      );
 
-    // Calculate total cases from order items
-    const orderCases = await db
-      .select({
-        totalCases: sql<number>`COALESCE(SUM(${privateClientOrderItems.quantityCases}), 0)::int`,
-      })
-      .from(privateClientOrderItems)
-      .where(inArray(privateClientOrderItems.orderId, newOrders.map((o) => o.id)));
+      // Calculate total cases from order items (a PCO line's quantity is in cases)
+      const orderCases = await tx
+        .select({
+          totalCases: sql<number>`COALESCE(SUM(${privateClientOrderItems.quantity}), 0)::int`,
+        })
+        .from(privateClientOrderItems)
+        .where(inArray(privateClientOrderItems.orderId, newOrders.map((o) => o.id)));
 
-    const addedCases = orderCases[0]?.totalCases ?? 0;
+      const addedCases = orderCases[0]?.totalCases ?? 0;
 
-    // Update batch totals
-    const [updated] = await db
-      .update(wmsDispatchBatches)
-      .set({
-        orderCount: sql`${wmsDispatchBatches.orderCount} + ${newOrders.length}`,
-        totalCases: sql`${wmsDispatchBatches.totalCases} + ${addedCases}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(wmsDispatchBatches.id, batchId))
-      .returning();
+      // Update batch totals
+      const [updated] = await tx
+        .update(wmsDispatchBatches)
+        .set({
+          orderCount: sql`${wmsDispatchBatches.orderCount} + ${newOrders.length}`,
+          totalCases: sql`${wmsDispatchBatches.totalCases} + ${addedCases}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(wmsDispatchBatches.id, batchId))
+        .returning();
+
+      return { updated, addedCases };
+    });
 
     return {
       success: true,

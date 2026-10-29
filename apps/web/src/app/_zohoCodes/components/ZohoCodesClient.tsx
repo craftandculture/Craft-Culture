@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { inferRouterOutputs } from '@trpc/server';
 import { useMemo, useState } from 'react';
 
+import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
 
@@ -192,15 +193,10 @@ const ZohoCodesClient = () => {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-text-primary">Zoho codes</h1>
-          <p className="max-w-2xl text-sm text-text-muted">
-            A clean start: every item without a dashed LWIN is retired, and every Stock Explorer line gets one active Zoho item under its code.
-            Past invoices are untouched. Nothing on an open sales order or draft is retired, each item is re-checked in Zoho before it is
-            written, and each batch can be undone.
-          </p>
-        </div>
+      <AdminPageHeader
+        title="Zoho codes"
+        description="A clean start: every item without a dashed LWIN is retired, and every Stock Explorer line gets one active Zoho item under its code. Past invoices are untouched. Nothing on an open sales order or draft is retired, each item is re-checked in Zoho before it is written, and each batch can be undone."
+        actions={
         <button
           type="button"
           onClick={() => {
@@ -212,7 +208,8 @@ const ZohoCodesClient = () => {
         >
           <IconRefresh size={15} className={plan.isFetching ? 'animate-spin' : ''} /> Read Zoho again
         </button>
-      </header>
+        }
+      />
 
       {plan.isLoading ? (
         <p className={`${card} px-4 py-6 text-sm text-text-muted`}>Reading every Zoho item and matching it to Stock Explorer…</p>
@@ -228,7 +225,7 @@ const ZohoCodesClient = () => {
                   key={t.kind}
                   type="button"
                   onClick={() => setTab(t.kind)}
-                  className={`px-3 py-2.5 text-left ${tab === t.kind ? 'bg-fill-brand/10' : 'bg-surface-primary hover:bg-fill-muted/50'}`}
+                  className={`px-3 py-2.5 text-left ${tab === t.kind ? 'bg-text-primary/10' : 'bg-surface-primary hover:bg-fill-muted/50'}`}
                 >
                   <p className="text-[11px] uppercase tracking-wide text-text-muted">{t.label}</p>
                   <p className="text-lg font-semibold tabular-nums text-text-primary">{c.all}</p>
@@ -335,7 +332,7 @@ const ZohoCodesClient = () => {
                   </button>
                   <button
                     type="button"
-                    className="rounded-lg bg-fill-brand px-3 py-1.5 text-sm font-medium text-text-brand-on-fill hover:bg-fill-brand-hover"
+                    className="rounded-lg bg-text-primary px-3 py-1.5 text-sm font-medium text-surface-primary hover:bg-text-primary/90"
                     onClick={() => void run(queue)}
                   >
                     Write {queue.length} to Zoho
@@ -355,7 +352,7 @@ const ZohoCodesClient = () => {
                   <button
                     type="button"
                     disabled={!!running || queue.length === 0}
-                    className="rounded-lg bg-fill-brand px-3 py-1.5 text-sm font-medium text-text-brand-on-fill hover:bg-fill-brand-hover disabled:opacity-50"
+                    className="rounded-lg bg-text-primary px-3 py-1.5 text-sm font-medium text-surface-primary hover:bg-text-primary/90 disabled:opacity-50"
                     onClick={() => setConfirming(true)}
                   >
                     Apply {queue.length}

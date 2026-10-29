@@ -277,7 +277,7 @@ const StorytellerBrief = () => {
                       {blast.body}
                     </Typography>
                   </div>
-                  <Typography variant="bodyXs" className="mt-2 font-medium text-text-brand">
+                  <Typography variant="bodyXs" className="mt-2 font-medium text-text-primary">
                     CTA: {blast.callToAction}
                   </Typography>
                   <Button
