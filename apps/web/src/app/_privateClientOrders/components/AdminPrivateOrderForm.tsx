@@ -71,6 +71,8 @@ const AdminPrivateOrderForm = () => {
 
   // Line items state
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  // True from the press until the order and every line are saved
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Every client, not just the selected partner's. C&C raise orders for all of
   // them, and a client introduced by one partner is still a person C&C may be
@@ -114,12 +116,6 @@ const AdminPrivateOrderForm = () => {
       partnerNotes?: string;
     }) => {
       return trpcClient.privateClientOrders.adminCreate.mutate(data);
-    },
-    onSuccess: (order) => {
-      toast.success('Order created successfully');
-      if (order) {
-        router.push(`/platform/admin/private-orders/${order.id}`);
-      }
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create order');
@@ -199,26 +195,36 @@ const AdminPrivateOrderForm = () => {
       return;
     }
 
-    // Create the order first
-    const order = await createOrder.mutateAsync({
-      partnerId,
-      clientId: clientId ?? undefined,
-      clientName,
-      clientEmail: clientEmail || undefined,
-      clientPhone: clientPhone || undefined,
-      clientAddress: clientAddress || undefined,
-      deliveryNotes: deliveryNotes || undefined,
-      partnerNotes: partnerNotes || undefined,
-    });
+    setIsSubmitting(true);
+
+    // Create the order first; a failure is reported by the mutation itself
+    const order = await createOrder
+      .mutateAsync({
+        partnerId,
+        clientId: clientId ?? undefined,
+        clientName,
+        clientEmail: clientEmail || undefined,
+        clientPhone: clientPhone || undefined,
+        clientAddress: clientAddress || undefined,
+        deliveryNotes: deliveryNotes || undefined,
+        partnerNotes: partnerNotes || undefined,
+      })
+      .catch(() => null);
 
     if (!order) {
-      toast.error('Failed to create order');
+      setIsSubmitting(false);
       return;
     }
 
-    // Then add all line items
+    /*
+      Then add every line, and only then open the order. Opening it as soon as
+      it existed showed an order with no lines while they were still being
+      added, and a line that failed went unreported.
+    */
+    const failed: string[] = [];
     for (const item of validItems) {
-      await addLineItem.mutateAsync({
+      await addLineItem
+        .mutateAsync({
         orderId: order.id,
         productId: item.productId || undefined,
         productOfferId: item.productOfferId || undefined,
@@ -232,8 +238,16 @@ const AdminPrivateOrderForm = () => {
         quantity: item.quantity,
         pricePerCaseUsd: item.pricePerCaseUsd,
         source: item.source,
-      });
+      })
+        .catch(() => failed.push(item.productName));
     }
+
+    if (failed.length > 0) {
+      toast.error(`Order created, but ${failed.length} line${failed.length === 1 ? '' : 's'} could not be added: ${failed.join('; ')}`);
+    } else {
+      toast.success('Order created');
+    }
+    router.push(`/platform/admin/private-orders/${order.id}`);
   };
 
   const formatCurrency = (amount: number) => {
@@ -251,7 +265,7 @@ const AdminPrivateOrderForm = () => {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <AdminPageHeader
-        title="New Private Order (Admin)"
+        title="New Private Client Order"
         crumbs={[{ label: 'Private Client Orders', href: '/platform/admin/private-orders' }]}
       />
 
@@ -265,7 +279,7 @@ const AdminPrivateOrderForm = () => {
               Select Partner *
             </Typography>
             <Select value={partnerId} onValueChange={setPartnerId}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Partner">
                 <SelectValue placeholder="Choose a partner..." />
               </SelectTrigger>
               <SelectContent>
@@ -300,6 +314,7 @@ const AdminPrivateOrderForm = () => {
               <div className="relative">
                 <Input
                   placeholder="Enter client name"
+                  aria-label="Client name"
                   value={clientName}
                   onChange={(e) => {
                     setClientName(e.target.value);
@@ -364,6 +379,7 @@ const AdminPrivateOrderForm = () => {
               </Typography>
               <Input
                 type="email"
+                aria-label="Email"
                 placeholder="client@example.com"
                 value={clientEmail}
                 onChange={(e) => setClientEmail(e.target.value)}
@@ -376,6 +392,7 @@ const AdminPrivateOrderForm = () => {
               </Typography>
               <Input
                 type="tel"
+                aria-label="Phone"
                 placeholder="+971 50 123 4567"
                 value={clientPhone}
                 onChange={(e) => setClientPhone(e.target.value)}
@@ -387,6 +404,7 @@ const AdminPrivateOrderForm = () => {
                 Delivery Address
               </Typography>
               <Input
+                aria-label="Delivery address"
                 placeholder="Dubai Marina, Tower 5, Apt 2301"
                 value={clientAddress}
                 onChange={(e) => setClientAddress(e.target.value)}
@@ -399,6 +417,7 @@ const AdminPrivateOrderForm = () => {
               Delivery Notes
             </Typography>
             <Input
+              aria-label="Delivery notes"
               placeholder="Special delivery instructions..."
               value={deliveryNotes}
               onChange={(e) => setDeliveryNotes(e.target.value)}
@@ -439,6 +458,8 @@ const AdminPrivateOrderForm = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveLineItem(item.id)}
+                      aria-label={`Remove item ${index + 1}`}
+                      title="Remove"
                     >
                       <Icon icon={IconTrash} size="sm" colorRole="danger" />
                     </Button>
@@ -474,7 +495,7 @@ const AdminPrivateOrderForm = () => {
 
             <div className="flex items-center justify-between">
               <Typography variant="bodySm" colorRole="muted">
-                Total Items
+                Lines
               </Typography>
               <Typography variant="bodySm" className="font-medium">
                 {lineItems.length}
@@ -487,7 +508,7 @@ const AdminPrivateOrderForm = () => {
               <Typography variant="bodySm" colorRole="muted">
                 Subtotal (USD)
               </Typography>
-              <Typography variant="bodyMd" className="font-semibold">
+              <Typography variant="bodyMd" className="font-semibold tabular-nums">
                 {formatCurrency(calculateSubtotal())}
               </Typography>
             </div>
@@ -499,13 +520,18 @@ const AdminPrivateOrderForm = () => {
 
           <div className="flex flex-col gap-1.5">
             <Typography variant="bodySm" className="font-medium">
-              Internal Notes
+              Partner Notes
             </Typography>
+            {/* Saved as the order's partner notes, which the partner sees on their order */}
             <Input
-              placeholder="Notes for internal use only..."
+              aria-label="Partner notes"
+              placeholder="Notes about this order"
               value={partnerNotes}
               onChange={(e) => setPartnerNotes(e.target.value)}
             />
+            <Typography variant="bodyXs" colorRole="muted">
+              The wine partner can see these on their order.
+            </Typography>
           </div>
         </CardContent>
       </Card>
@@ -519,10 +545,12 @@ const AdminPrivateOrderForm = () => {
           type="submit"
           variant="default"
           colorRole="brand"
-          isDisabled={createOrder.isPending || !clientName.trim() || !partnerId}
+          isDisabled={isSubmitting || !clientName.trim() || !partnerId}
+          disabled={isSubmitting}
+          title={!partnerId ? 'Choose a partner first' : !clientName.trim() ? 'Enter the client name first' : undefined}
         >
           <ButtonContent iconLeft={IconSend}>
-            {createOrder.isPending ? 'Creating...' : 'Create Order'}
+            {isSubmitting ? 'Creating...' : 'Create Order'}
           </ButtonContent>
         </Button>
       </div>

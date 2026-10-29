@@ -84,7 +84,7 @@ const DistributorDashboard = () => {
           {isError ? 'The dashboard could not be loaded.' : 'No data available'}
         </Typography>
         {isError && (
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
             Try again
           </Button>
         )}
@@ -146,24 +146,27 @@ const DistributorDashboard = () => {
           </Typography>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={ORDERS}>
-            <Button size="sm" variant="outline" className="gap-1.5">
-              All orders ({kpis.totalOrders})
-            </Button>
-          </Link>
-          <Link href="/docs/pco-flows">
-            <Button size="sm" variant="ghost" className="gap-1.5">
+          <Button size="sm" variant="outline" className="gap-1.5 tabular-nums" asChild>
+            <Link href={ORDERS}>All orders ({kpis.totalOrders})</Link>
+          </Button>
+          <Button size="sm" variant="ghost" className="gap-1.5" asChild>
+            <Link href="/docs/pco-flows">
               <Icon icon={IconBook} size="sm" />
               Process guide
-            </Button>
-          </Link>
-          <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
-            {(['USD', 'AED'] as const).map((c) => (
+            </Link>
+          </Button>
+          <div
+            className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5"
+            role="group"
+            aria-label="Currency"
+          >
+            {(['AED', 'USD'] as const).map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => setCurrency(c)}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                aria-pressed={currency === c}
+                className={`min-h-8 rounded-md px-3 py-1 text-xs font-medium transition-all ${
                   currency === c
                     ? 'bg-background-primary text-text-primary shadow-sm'
                     : 'text-text-muted hover:text-text-primary'
@@ -177,6 +180,9 @@ const DistributorDashboard = () => {
       </div>
 
       {/* What is waiting on you — each count opens the list behind it */}
+      <Typography variant="bodyXs" colorRole="muted" className="-mb-2 uppercase tracking-wider">
+        Needs your action
+      </Typography>
       <div
         className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${
           tiles.length > 5 ? 'xl:grid-cols-6' : 'xl:grid-cols-5'
@@ -206,7 +212,7 @@ const DistributorDashboard = () => {
               </div>
               <Typography
                 variant="headingMd"
-                className={needsAction ? 'text-text-primary' : 'text-text-muted'}
+                className={`tabular-nums ${needsAction ? 'text-text-primary' : 'text-text-muted'}`}
               >
                 {item.count}
               </Typography>
@@ -243,7 +249,7 @@ const DistributorDashboard = () => {
             <Typography variant="bodyXs" colorRole="muted">
               {stat.label}
             </Typography>
-            <Typography variant="bodySm" className="font-semibold">
+            <Typography variant="bodySm" className="font-semibold tabular-nums">
               {stat.value}
             </Typography>
           </div>
@@ -295,11 +301,11 @@ const DistributorDashboard = () => {
                       </Typography>
                     </div>
                     <div className="flex items-baseline gap-2">
-                      <Typography variant="headingMd" className="font-semibold">
+                      <Typography variant="headingMd" className="font-semibold tabular-nums">
                         {stage.count}
                       </Typography>
                       {stage.count > 0 && (
-                        <Typography variant="bodyXs" colorRole="muted">
+                        <Typography variant="bodyXs" colorRole="muted" className="tabular-nums">
                           {formatCurrency(stage.valueUsd, stage.valueAed)}
                         </Typography>
                       )}
@@ -346,18 +352,18 @@ const DistributorDashboard = () => {
               <Typography variant="headingSm" className="font-semibold">
                 Recently assigned
               </Typography>
-              <Link href={ORDERS}>
-                <Button variant="ghost" size="sm" className="gap-1">
+              <Button variant="ghost" size="sm" className="gap-1" asChild>
+                <Link href={ORDERS}>
                   View all <Icon icon={IconArrowRight} size="sm" />
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
 
             {recentOrders.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-8">
                 <Icon icon={IconPackage} size="lg" className="text-text-muted" />
                 <Typography variant="bodySm" colorRole="muted">
-                  No orders yet
+                  No orders assigned yet
                 </Typography>
               </div>
             ) : (
@@ -366,7 +372,7 @@ const DistributorDashboard = () => {
                   <Link
                     key={order.id}
                     href={`${ORDERS}/${order.id}`}
-                    className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-secondary/50"
+                    className="group -mx-2 flex min-h-12 items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-secondary/50"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -380,7 +386,7 @@ const DistributorDashboard = () => {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <Typography variant="bodySm" className="whitespace-nowrap font-medium">
+                      <Typography variant="bodySm" className="whitespace-nowrap font-medium tabular-nums">
                         {formatCurrency(order.totalUsd ?? 0, order.totalAed ?? 0)}
                       </Typography>
                       <Typography variant="bodyXs" colorRole="muted">

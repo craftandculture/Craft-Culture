@@ -330,6 +330,7 @@ const CloneOrderDialog = ({
                     />
                     <Input
                       placeholder="Search name, email or phone"
+                      aria-label="Search clients"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="pl-9"
@@ -341,7 +342,7 @@ const CloneOrderDialog = ({
                     onClick={selectAllVisible}
                     disabled={selectable.length === 0}
                   >
-                    Select all
+                    Select all shown
                   </Button>
                   {selected.size > 0 && (
                     <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
@@ -379,7 +380,7 @@ const CloneOrderDialog = ({
                           />
                           <span className="flex min-w-0 flex-1 flex-col">
                             <span className="flex items-center gap-1.5 text-sm text-text-primary">
-                              <span className="truncate">{client.name}</span>
+                              <span className="truncate" title={client.name}>{client.name}</span>
                               {!client.verifiedAt && (
                                 <span className="shrink-0 rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
                                   Unverified
@@ -419,6 +420,7 @@ const CloneOrderDialog = ({
                     </div>
                     <TextArea
                       rows={3}
+                      aria-label="New clients, one per line"
                       placeholder="Jane Smith, jane@example.com, +971 50 123 4567"
                       value={pasted}
                       onChange={(e) => setPasted(e.target.value)}

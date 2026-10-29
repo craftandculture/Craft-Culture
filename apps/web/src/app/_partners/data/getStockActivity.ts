@@ -133,6 +133,8 @@ const getStockActivity = async ({
           'dispatch',
           'ownership_transfer',
         ]),
+        // A transfer voided by pointing it back at its owner moved nothing
+        sql`NOT (${wmsStockMovements.movementType} = 'ownership_transfer' AND ${wmsStockMovements.fromOwnerId} IS NOT DISTINCT FROM ${wmsStockMovements.toOwnerId})`,
       ),
     )
     .orderBy(desc(wmsStockMovements.performedAt))

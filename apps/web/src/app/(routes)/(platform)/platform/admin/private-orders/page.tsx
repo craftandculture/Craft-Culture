@@ -15,7 +15,7 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
@@ -50,13 +50,20 @@ const statusOptions: { value: OrderStatus | 'all'; label: string }[] = [
   { value: 'under_cc_review', label: 'Under Review' },
   { value: 'revision_requested', label: 'Revision Requested' },
   { value: 'cc_approved', label: 'Approved' },
+  /*
+    The three verification statuses were missing: an order in one showed a
+    blank status picker on its row, and the list could not be filtered to them.
+  */
+  { value: 'awaiting_partner_verification', label: 'Awaiting Partner Verification' },
+  { value: 'awaiting_distributor_verification', label: 'Awaiting Distributor Verification' },
+  { value: 'verification_suspended', label: 'Verification Suspended' },
   { value: 'awaiting_client_payment', label: 'Awaiting Client Payment' },
   { value: 'client_paid', label: 'Client Paid' },
-  { value: 'awaiting_distributor_payment', label: 'Awaiting Distributor' },
+  { value: 'awaiting_distributor_payment', label: 'Awaiting Distributor Payment' },
   { value: 'distributor_paid', label: 'Distributor Paid' },
-  { value: 'awaiting_partner_payment', label: 'Awaiting Partner' },
+  { value: 'awaiting_partner_payment', label: 'Awaiting Partner Payment' },
   { value: 'partner_paid', label: 'Partner Paid' },
-  { value: 'stock_in_transit', label: 'In Transit' },
+  { value: 'stock_in_transit', label: 'Stock In Transit' },
   { value: 'with_distributor', label: 'With Distributor' },
   { value: 'out_for_delivery', label: 'Out for Delivery' },
   { value: 'delivered', label: 'Delivered' },
@@ -78,6 +85,28 @@ const STAGE_LABELS: Record<PcoStage, string> = {
   payment: 'Payment',
   fulfilment: 'Fulfilment',
   delivered: 'Delivered',
+};
+
+/**
+ * An order's size as people say it: "2 cases · 3 bottles", "5 bottles"
+ *
+ * Falls back to the stored count, which adds single bottles to cases, when the
+ * per-line split isn't available.
+ */
+const describeUnits = (order: {
+  caseCount?: number | null;
+  units?: { cases: number; bottles: number } | null;
+}) => {
+  if (!order.units) {
+    const n = order.caseCount ?? 0;
+    return `${n} ${n === 1 ? 'unit' : 'units'}`;
+  }
+  const { cases, bottles } = order.units;
+  const parts = [
+    cases > 0 ? `${cases} ${cases === 1 ? 'case' : 'cases'}` : null,
+    bottles > 0 ? `${bottles} ${bottles === 1 ? 'bottle' : 'bottles'}` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : '0 cases';
 };
 
 /** The order's manual-invoicing state, under its status */
@@ -249,6 +278,8 @@ const AdminPrivateOrdersPage = () => {
   const { data: awaitingPayment } = useQuery(countOf({ status: 'awaiting_client_payment' }));
   const { data: unassigned } = useQuery(countOf({ distributor: 'unassigned' }));
   const { data: drafts } = useQuery(countOf({ status: 'draft' }));
+  // Every order, whatever is filtered: the "All orders" chip showed the filtered count
+  const { data: everything } = useQuery(countOf({}));
   const awaitingPaymentCount = awaitingPayment?.meta.totalCount ?? 0;
   const unassignedCount = unassigned?.meta.totalCount ?? 0;
   const draftCount = drafts?.meta.totalCount ?? 0;
@@ -284,7 +315,11 @@ const AdminPrivateOrdersPage = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+    <div
+      className={`container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 ${
+        visibleSelected.length > 0 ? 'pb-40' : ''
+      }`}
+    >
       <div className="space-y-6">
         <AdminPageHeader
           title="Private Client Orders"
@@ -296,6 +331,8 @@ const AdminPrivateOrdersPage = () => {
               size="sm"
               onClick={handleRefresh}
               disabled={isFetching}
+              aria-label="Refresh orders"
+              title="Refresh orders"
             >
               <Icon
                 icon={IconRefresh}
@@ -318,7 +355,7 @@ const AdminPrivateOrdersPage = () => {
             {
               key: 'all',
               label: 'All orders',
-              count: totalCount,
+              count: everything?.meta.totalCount ?? totalCount,
               active:
                 statusFilter === 'all' &&
                 distributorFilter === 'all' &&
@@ -369,6 +406,7 @@ const AdminPrivateOrdersPage = () => {
             <button
               key={chip.key}
               type="button"
+              aria-pressed={chip.active}
               onClick={chip.apply}
               className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
                 chip.active
@@ -447,6 +485,7 @@ const AdminPrivateOrdersPage = () => {
                 />
                 <Input
                   placeholder="Search by order number, client name, or email..."
+                  aria-label="Search orders"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -457,7 +496,7 @@ const AdminPrivateOrdersPage = () => {
                   value={statusFilter}
                   onValueChange={(v) => setStatusFilter(v as OrderStatus | 'all')}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full" aria-label="Filter by status">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -471,7 +510,7 @@ const AdminPrivateOrdersPage = () => {
               </div>
               <div className="w-full sm:w-52">
                 <Select value={distributorFilter} onValueChange={setDistributorFilter}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full" aria-label="Filter by distributor">
                     <SelectValue placeholder="Distributor" />
                   </SelectTrigger>
                   <SelectContent>
@@ -488,7 +527,7 @@ const AdminPrivateOrdersPage = () => {
               {boxes.length > 0 && (
                 <div className="w-full sm:w-56">
                   <Select value={boxFilter} onValueChange={setBoxFilter}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full" aria-label="Filter by box">
                       <SelectValue placeholder="Filter by box" />
                     </SelectTrigger>
                     <SelectContent>
@@ -526,7 +565,7 @@ const AdminPrivateOrdersPage = () => {
                 No Orders Found
               </Typography>
               <Typography variant="bodyMd" colorRole="muted">
-                {searchQuery || statusFilter !== 'all' || boxFilter !== 'all' || distributorFilter !== 'all' || stageFilter || skuMissingFilter || idleFilter
+                {searchQuery || statusFilter !== 'all' || boxFilter !== 'all' || distributorFilter !== 'all' || stageFilter || skuMissingFilter || idleFilter || invoiceFilter
                   ? 'No orders match your filters. Try adjusting your search.'
                   : 'No private client orders have been created yet.'}
               </Typography>
@@ -572,7 +611,7 @@ const AdminPrivateOrdersPage = () => {
                         Status
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-text-secondary">
-                        
+                        <span className="sr-only">Open</span>
                       </th>
                     </tr>
                   </thead>
@@ -582,9 +621,8 @@ const AdminPrivateOrdersPage = () => {
                       const isThisUpdating = updatingId === order.id && isUpdating;
 
                       return (
-                        <>
+                        <Fragment key={order.id}>
                           <tr
-                            key={order.id}
                             className="cursor-pointer hover:bg-surface-muted"
                             onClick={() => toggleExpanded(order.id)}
                           >
@@ -613,10 +651,10 @@ const AdminPrivateOrdersPage = () => {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <Typography variant="bodySm" className="font-medium">
+                              <Typography variant="bodySm" className="max-w-[16rem] truncate font-medium" title={order.clientName || undefined}>
                                 {order.clientName || 'No name'}
                               </Typography>
-                              <Typography variant="bodyXs" colorRole="muted" className="truncate">
+                              <Typography variant="bodyXs" colorRole="muted" className="max-w-[16rem] truncate" title={order.clientEmail || undefined}>
                                 {order.clientEmail || '—'}
                               </Typography>
                               {(order.client?.cityDrinksVerifiedAt || formatSubscriptionBox(order)) && (
@@ -654,7 +692,7 @@ const AdminPrivateOrdersPage = () => {
                                   <Icon icon={IconBuilding} size="sm" className="shrink-0 text-text-muted" />
                                 )}
                                 <div className="min-w-0">
-                                  <Typography variant="bodySm" className="truncate">
+                                  <Typography variant="bodySm" className="max-w-[14rem] truncate" title={order.partner?.businessName}>
                                     {order.partner?.businessName ?? 'Unknown'}
                                   </Typography>
                                   {order.distributor ? (
@@ -678,15 +716,15 @@ const AdminPrivateOrdersPage = () => {
                               </div>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-right">
-                              <Typography variant="bodySm">
-                                {order.caseCount ?? 0} {(order.caseCount ?? 0) === 1 ? 'case' : 'cases'}
+                              <Typography variant="bodySm" className="tabular-nums">
+                                {describeUnits(order)}
                               </Typography>
                               <Typography variant="bodyXs" colorRole="muted">
                                 {order.itemCount ?? 0} {(order.itemCount ?? 0) === 1 ? 'line' : 'lines'}
                               </Typography>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-right">
-                              <Typography variant="bodySm" className="font-semibold">
+                              <Typography variant="bodySm" className="font-semibold tabular-nums">
                                 {formatPrice(Number(order.totalUsd) || 0, 'USD')}
                               </Typography>
                             </td>
@@ -708,7 +746,7 @@ const AdminPrivateOrdersPage = () => {
                             </td>
                           </tr>
                           {isExpanded && (
-                            <tr key={`${order.id}-details`} className="bg-surface-muted">
+                            <tr className="bg-surface-muted">
                               <td colSpan={8} className="px-6 py-4">
                                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                                   {/* Update Status */}
@@ -717,7 +755,7 @@ const AdminPrivateOrdersPage = () => {
                                       variant="bodySm"
                                       className="mb-3 font-semibold uppercase tracking-wide text-text-secondary"
                                     >
-                                      Update Status
+                                      Change status
                                     </Typography>
                                     <Select
                                       value={order.status}
@@ -726,7 +764,7 @@ const AdminPrivateOrdersPage = () => {
                                       }
                                       disabled={isThisUpdating}
                                     >
-                                      <SelectTrigger className="w-full">
+                                      <SelectTrigger className="w-full" aria-label={`Change status of ${order.orderNumber}`}>
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -739,6 +777,9 @@ const AdminPrivateOrdersPage = () => {
                                           ))}
                                       </SelectContent>
                                     </Select>
+                                    <Typography variant="bodyXs" colorRole="muted" className="mt-1.5">
+                                      Every change asks you to confirm first.
+                                    </Typography>
                                   </div>
 
                                   {/* Client Details */}
@@ -775,9 +816,10 @@ const AdminPrivateOrdersPage = () => {
                                     >
                                       Order Breakdown
                                     </Typography>
-                                    <div className="space-y-1 text-xs">
+                                    {/* In the order the order page builds the total: duty and transfer, then VAT */}
+                                    <div className="space-y-1 text-xs tabular-nums">
                                       <div className="flex justify-between">
-                                        <span className="text-text-muted">Subtotal:</span>
+                                        <span className="text-text-muted">Landed duty free:</span>
                                         <span>{formatPrice(Number(order.subtotalUsd) || 0, 'USD')}</span>
                                       </div>
                                       <div className="flex justify-between">
@@ -785,12 +827,12 @@ const AdminPrivateOrdersPage = () => {
                                         <span>{formatPrice(Number(order.dutyUsd) || 0, 'USD')}</span>
                                       </div>
                                       <div className="flex justify-between">
-                                        <span className="text-text-muted">VAT:</span>
-                                        <span>{formatPrice(Number(order.vatUsd) || 0, 'USD')}</span>
+                                        <span className="text-text-muted">Transfer:</span>
+                                        <span>{formatPrice(Number(order.logisticsUsd) || 0, 'USD')}</span>
                                       </div>
                                       <div className="flex justify-between">
-                                        <span className="text-text-muted">Logistics:</span>
-                                        <span>{formatPrice(Number(order.logisticsUsd) || 0, 'USD')}</span>
+                                        <span className="text-text-muted">VAT:</span>
+                                        <span>{formatPrice(Number(order.vatUsd) || 0, 'USD')}</span>
                                       </div>
                                       <div className="flex justify-between border-t border-border-muted pt-1 font-semibold">
                                         <span>Total:</span>
@@ -802,7 +844,7 @@ const AdminPrivateOrdersPage = () => {
                               </td>
                             </tr>
                           )}
-                        </>
+                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -823,7 +865,7 @@ const AdminPrivateOrdersPage = () => {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex min-w-0 items-center gap-3">
-                            <span onClick={(e) => e.stopPropagation()}>
+                            <span onClick={(e) => e.stopPropagation()} className="flex">
                               <Checkbox
                                 aria-label={`Select ${order.orderNumber}`}
                                 checked={selected.has(order.id)}
@@ -853,7 +895,7 @@ const AdminPrivateOrdersPage = () => {
                               <Typography variant="bodySm" className="whitespace-nowrap font-medium">
                                 {order.orderNumber}
                               </Typography>
-                              <Typography variant="bodyXs" colorRole="muted" className="truncate">
+                              <Typography variant="bodyXs" colorRole="muted" className="truncate" title={order.partner?.businessName}>
                                 {order.partner?.businessName ?? 'Unknown Partner'}
                               </Typography>
                             </div>
@@ -864,9 +906,9 @@ const AdminPrivateOrdersPage = () => {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="flex items-center gap-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               <Typography variant="bodyXs" className="font-medium">
                                 {order.clientName || 'No client name'}
                               </Typography>
@@ -874,6 +916,7 @@ const AdminPrivateOrdersPage = () => {
                                 <span
                                   className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                                   title="City Drinks Verified"
+                                  aria-label="City Drinks Verified"
                                 >
                                   <Icon icon={IconShieldCheck} size="xs" />
                                 </span>
@@ -885,7 +928,7 @@ const AdminPrivateOrdersPage = () => {
                               )}
                             </div>
                             <Typography variant="bodyXs" colorRole="muted">
-                              {order.itemCount ?? 0} items · {order.caseCount ?? 0} cases ·{' '}
+                              {order.itemCount ?? 0} {(order.itemCount ?? 0) === 1 ? 'line' : 'lines'} · {describeUnits(order)} ·{' '}
                               {order.distributor ? (
                                 `→ ${order.distributor.businessName}`
                               ) : (
@@ -893,7 +936,7 @@ const AdminPrivateOrdersPage = () => {
                               )}
                             </Typography>
                           </div>
-                          <Typography variant="bodySm" className="font-semibold">
+                          <Typography variant="bodySm" className="shrink-0 font-semibold tabular-nums">
                             {formatPrice(Number(order.totalUsd) || 0, 'USD')}
                           </Typography>
                         </div>
@@ -908,14 +951,14 @@ const AdminPrivateOrdersPage = () => {
                               variant="bodyXs"
                               className="mb-2 font-semibold uppercase tracking-wide text-text-secondary"
                             >
-                              Update Status
+                              Change status
                             </Typography>
                             <Select
                               value={order.status}
                               onValueChange={(v) => handleStatusChange(order, v as OrderStatus)}
                               disabled={isThisUpdating}
                             >
-                              <SelectTrigger className="w-full">
+                              <SelectTrigger className="w-full" aria-label={`Change status of ${order.orderNumber}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -980,7 +1023,7 @@ const AdminPrivateOrdersPage = () => {
 
             <div className="flex items-center gap-2">
               <Select value={bulkDistributorId} onValueChange={setBulkDistributorId}>
-                <SelectTrigger className="w-44">
+                <SelectTrigger className="w-44" aria-label="Distributor to assign">
                   <SelectValue placeholder="Assign distributor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -995,12 +1038,15 @@ const AdminPrivateOrdersPage = () => {
                 size="sm"
                 colorRole="brand"
                 disabled={!bulkDistributorId || bulkAssign.isPending}
-                onClick={() =>
+                onClick={() => {
+                  const name = distributors.find((d) => d.id === bulkDistributorId)?.businessName ?? 'this distributor';
+                  const n = visibleSelected.length;
+                  if (!window.confirm(`Assign ${name} to ${n} order${n === 1 ? '' : 's'}?`)) return;
                   bulkAssign.mutate({
                     orderIds: visibleSelected,
                     distributorId: bulkDistributorId,
-                  })
-                }
+                  });
+                }}
               >
                 {bulkAssign.isPending ? 'Assigning…' : 'Assign'}
               </Button>
@@ -1008,7 +1054,7 @@ const AdminPrivateOrdersPage = () => {
 
             <div className="flex items-center gap-2">
               <Select value={bulkStockStatus} onValueChange={setBulkStockStatus}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48" aria-label="Stock status to set">
                   <SelectValue placeholder="Set stock status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1031,7 +1077,9 @@ const AdminPrivateOrdersPage = () => {
                 size="sm"
                 colorRole="brand"
                 disabled={!bulkStockStatus || bulkStock.isPending}
-                onClick={() =>
+                onClick={() => {
+                  const n = visibleSelected.length;
+                  if (!window.confirm(`Set the stock status of every line on ${n} order${n === 1 ? '' : 's'}?`)) return;
                   bulkStock.mutate({
                     orderIds: visibleSelected,
                     stockStatus: bulkStockStatus as
@@ -1042,8 +1090,8 @@ const AdminPrivateOrdersPage = () => {
                       | 'in_transit_to_distributor'
                       | 'at_distributor'
                       | 'delivered',
-                  })
-                }
+                  });
+                }}
               >
                 {bulkStock.isPending ? 'Updating…' : 'Apply'}
               </Button>

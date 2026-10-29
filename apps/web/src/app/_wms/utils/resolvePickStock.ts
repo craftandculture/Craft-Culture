@@ -5,6 +5,7 @@ import { wmsStock } from '@/database/schema';
 import normalizeLwin18 from './normalizeLwin18';
 import getCollectorStockHolds from '../data/getCollectorStockHolds';
 
+
 interface ResolvePickStockParams {
   /*
     A parcel the line must come from, when the order names one.

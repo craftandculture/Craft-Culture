@@ -108,12 +108,21 @@ const DistributorSkuCard = ({
           <>
             <Input
               placeholder="CDR0824592587"
+              aria-label={`${distributorName} SKU for ${orderNumber}`}
               value={value}
               onChange={(e) => setValue(e.target.value)}
               className="w-44 font-mono"
               size="sm"
             />
-            <Button size="sm" colorRole="bold" onClick={save} isDisabled={isPending || !value.trim()}>
+            {/* isDisabled only styles the button; disabled stops an empty save clearing the SKU */}
+            <Button
+              type="button"
+              size="sm"
+              colorRole="bold"
+              onClick={save}
+              isDisabled={isPending || !value.trim()}
+              disabled={isPending || !value.trim()}
+            >
               {isPending ? 'Saving…' : 'Save'}
             </Button>
             {sku && (
@@ -193,18 +202,21 @@ const DistributorSkuCard = ({
             {audience === 'distributor' && (
               <Typography variant="bodyXs" colorRole="muted">
                 Create the bundle in your system named <span className="font-mono">{orderNumber}</span>{' '}
-                and enter its SKU here. Payment can&rsquo;t be confirmed until it&rsquo;s in.
+                and enter its SKU here. Client payment cannot be confirmed until it is recorded.
               </Typography>
             )}
             <div className="flex gap-2">
               <Input
                 placeholder="CDR0824592587"
+                aria-label={`${distributorName} SKU for ${orderNumber}`}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                className="font-mono"
-                autoFocus={audience === 'distributor'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && value.trim() && !isPending) save();
+                }}
+                className="min-w-0 flex-1 font-mono"
               />
-              <Button colorRole="brand" onClick={save} disabled={isPending || !value.trim()}>
+              <Button type="button" colorRole="brand" onClick={save} disabled={isPending || !value.trim()}>
                 {isPending ? 'Saving…' : 'Save'}
               </Button>
               {sku && (
@@ -229,7 +241,7 @@ const DistributorSkuCard = ({
             {source ? SOURCE_LABELS[source] ?? source : ''}
             {distributorRef ? ` · ${distributorName} ref ${distributorRef}` : ''}
             {locked && audience === 'distributor'
-              ? ' · locked after payment; ask Craft & Culture to correct it'
+              ? ' · locked once the client has paid; ask Craft & Culture to correct it'
               : ''}
           </Typography>
         )}

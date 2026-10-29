@@ -40,15 +40,30 @@ type OrderWithDistributor = PartnerOrder & {
   client: { id: string; cityDrinksVerifiedAt: Date | null } | null;
 };
 
-type StatusFilter = 'all' | 'draft' | 'pending' | 'active' | 'completed';
+type StatusFilter = 'all' | 'action' | 'draft' | 'pending' | 'active' | 'completed';
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: 'all', label: 'All Orders' },
+  { value: 'all', label: 'All orders' },
+  { value: 'action', label: 'Needs your action' },
   { value: 'draft', label: 'Drafts' },
-  { value: 'pending', label: 'Pending Approval' },
-  { value: 'active', label: 'In Progress' },
+  { value: 'pending', label: 'In review' },
+  { value: 'active', label: 'In progress' },
   { value: 'completed', label: 'Completed' },
 ];
+
+/** Statuses that wait on the partner: send a draft, accept changes, confirm or re-verify the client */
+const NEEDS_PARTNER_ACTION = [
+  'draft',
+  'revision_requested',
+  'awaiting_partner_verification',
+  'verification_suspended',
+];
+
+/*
+  The tabs sort the orders already loaded, so the page loads the most the
+  list endpoint allows. With 20 a page, a tab counted only the newest 20.
+*/
+const PAGE_SIZE = 100;
 
 /**
  * PrivateOrdersList displays a table of private client orders
@@ -67,16 +82,16 @@ const PrivateOrdersList = () => {
   */
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
     const stage = searchParams.get('status');
-    if (stage === 'draft' || stage === 'pending' || stage === 'completed') return stage;
+    if (stage === 'action' || stage === 'draft' || stage === 'pending' || stage === 'completed') return stage;
     if (stage === 'verification' || stage === 'payment' || stage === 'fulfillment') return 'active';
     return 'all';
   });
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['privateClientOrders.getMany', { limit: 20, cursor, search: search || undefined }],
+    queryKey: ['privateClientOrders.getMany', { limit: PAGE_SIZE, cursor, search: search || undefined }],
     queryFn: () =>
       trpcClient.privateClientOrders.getMany.query({
-        limit: 20,
+        limit: PAGE_SIZE,
         cursor,
         search: search || undefined,
       }),
@@ -89,8 +104,9 @@ const PrivateOrdersList = () => {
   // Filter orders by status category
   const filterByStatus = (orders: OrderWithDistributor[], filter: StatusFilter) => {
     if (filter === 'all') return orders;
+    if (filter === 'action') return orders.filter((order) => NEEDS_PARTNER_ACTION.includes(order.status));
 
-    const statusCategories: Record<Exclude<StatusFilter, 'all' | 'active'>, string[]> = {
+    const statusCategories: Record<Exclude<StatusFilter, 'all' | 'active' | 'action'>, string[]> = {
       draft: ['draft'],
       pending: ['submitted', 'under_cc_review', 'revision_requested'],
       completed: ['delivered', 'cancelled'],
@@ -117,14 +133,27 @@ const PrivateOrdersList = () => {
     }).format(amount);
   };
 
+  /*
+    The stored case count adds single bottles to cases, so it is shown as
+    units (a case or a bottle) rather than called "cases".
+  */
+  const describeUnits = (order: OrderWithDistributor) => {
+    const units = order.caseCount ?? 0;
+    const lines = order.itemCount ?? 0;
+    return `${lines} ${lines === 1 ? 'wine' : 'wines'} · ${units} ${units === 1 ? 'unit' : 'units'}`;
+  };
+
   const columns: ColumnDef<OrderWithDistributor>[] = [
     {
       accessorKey: 'orderNumber',
-      header: 'Order #',
+      header: 'Order',
       cell: ({ row }) => (
-        <Typography variant="bodySm" className="font-mono font-medium">
+        <Link
+          href={`/platform/private-orders/${row.original.id}`}
+          className="font-mono text-sm font-medium underline-offset-2 hover:underline"
+        >
           {row.original.orderNumber}
-        </Typography>
+        </Link>
       ),
     },
     {
@@ -139,7 +168,7 @@ const PrivateOrdersList = () => {
             {row.original.client?.cityDrinksVerifiedAt && (
               <span
                 className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                title="City Drinks Verified"
+                title="Client verified with the distributor"
               >
                 <Icon icon={IconShieldCheck} size="xs" />
                 <span className="text-xs font-medium">Verified</span>
@@ -161,18 +190,18 @@ const PrivateOrdersList = () => {
     },
     {
       accessorKey: 'itemCount',
-      header: 'Items',
+      header: 'Wines',
       cell: ({ row }) => (
-        <Typography variant="bodySm">
-          {row.original.itemCount} items ({row.original.caseCount} cases)
+        <Typography variant="bodySm" title="Units are cases or single bottles">
+          {describeUnits(row.original)}
         </Typography>
       ),
     },
     {
       accessorKey: 'total',
-      header: () => <span>Total ({currency})</span>,
+      header: () => <span>Client price ({currency})</span>,
       cell: ({ row }) => (
-        <Typography variant="bodySm" className="font-medium">
+        <Typography variant="bodySm" className="font-medium tabular-nums">
           {formatCurrencyValue(row.original)}
         </Typography>
       ),
@@ -187,7 +216,7 @@ const PrivateOrdersList = () => {
       header: 'Created',
       cell: ({ row }) => (
         <Typography variant="bodyXs" colorRole="muted">
-          {format(new Date(row.original.createdAt), 'MMM d, yyyy')}
+          {format(new Date(row.original.createdAt), 'd MMM yyyy')}
         </Typography>
       ),
     },
@@ -196,7 +225,7 @@ const PrivateOrdersList = () => {
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
+            <Button type="button" variant="ghost" size="sm" aria-label={`Actions for ${row.original.orderNumber}`}>
               <Icon icon={IconDots} size="sm" />
             </Button>
           </DropdownMenuTrigger>
@@ -204,7 +233,7 @@ const PrivateOrdersList = () => {
             <DropdownMenuItem asChild>
               <Link href={`/platform/private-orders/${row.original.id}`}>
                 <Icon icon={IconEye} size="sm" className="mr-2" />
-                View Details
+                View details
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -220,16 +249,21 @@ const PrivateOrdersList = () => {
         {statusFilters.map((filter) => {
           const count = filterByStatus(allOrders, filter.value).length;
           const isActive = statusFilter === filter.value;
+          // Waiting on the partner reads amber when there is something in it
+          const isUrgent = filter.value === 'action' && count > 0 && !isActive;
 
           return (
             <button
               key={filter.value}
               type="button"
               onClick={() => setStatusFilter(filter.value)}
+              aria-pressed={isActive}
               className={`flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-text-primary text-surface-primary'
-                  : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
+                  : isUrgent
+                    ? 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-900/50'
+                    : 'bg-surface-secondary/50 text-text-muted hover:bg-surface-secondary hover:text-text-primary'
               }`}
             >
               {filter.label}
@@ -254,7 +288,8 @@ const PrivateOrdersList = () => {
             className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
           />
           <Input
-            placeholder="Search orders..."
+            aria-label="Search orders"
+            placeholder="Search by order number, client or email"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -266,9 +301,14 @@ const PrivateOrdersList = () => {
 
         <div className="flex items-center gap-3">
           {/* Currency Toggle */}
-          <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+          <div
+            role="group"
+            aria-label="Display currency"
+            className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5"
+          >
             <button
               type="button"
+              aria-pressed={currency === 'USD'}
               onClick={() => setCurrency('USD')}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                 currency === 'USD'
@@ -280,6 +320,7 @@ const PrivateOrdersList = () => {
             </button>
             <button
               type="button"
+              aria-pressed={currency === 'AED'}
               onClick={() => setCurrency('AED')}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
                 currency === 'AED'
@@ -293,7 +334,7 @@ const PrivateOrdersList = () => {
 
           <Button variant="default" colorRole="brand" asChild>
             <Link href="/platform/private-orders/new">
-              <ButtonContent iconLeft={IconPlus}>New Order</ButtonContent>
+              <ButtonContent iconLeft={IconPlus}>New order</ButtonContent>
             </Link>
           </Button>
         </div>
@@ -316,22 +357,52 @@ const PrivateOrdersList = () => {
           </Button>
         </div>
       ) : orders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-border-muted bg-surface-secondary/30 py-12">
-          <Icon icon={IconFileText} size="lg" className="text-text-muted" />
-          <div className="text-center">
+        allOrders.length > 0 || search ? (
+          // Orders exist, but none in this tab or search: say so, and offer the way back
+          <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border-muted bg-surface-secondary/30 py-12 text-center">
             <Typography variant="bodySm" className="font-medium">
-              No orders yet
+              {statusFilter === 'action'
+                ? 'Nothing needs your action'
+                : search
+                  ? 'No orders match this search'
+                  : 'No orders in this view'}
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              Create your first private client order to get started
+              {statusFilter === 'action'
+                ? 'Orders waiting on you will appear here.'
+                : 'Try another tab or clear the search.'}
             </Typography>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setStatusFilter('all');
+                setSearch('');
+                setCursor(0);
+              }}
+            >
+              Show all orders
+            </Button>
           </div>
-          <Button variant="default" colorRole="brand" asChild>
-            <Link href="/platform/private-orders/new">
-              <ButtonContent iconLeft={IconPlus}>Create Order</ButtonContent>
-            </Link>
-          </Button>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-border-muted bg-surface-secondary/30 py-12">
+            <Icon icon={IconFileText} size="lg" className="text-text-muted" />
+            <div className="text-center">
+              <Typography variant="bodySm" className="font-medium">
+                No orders yet
+              </Typography>
+              <Typography variant="bodyXs" colorRole="muted">
+                Create your first private client order to get started
+              </Typography>
+            </div>
+            <Button variant="default" colorRole="brand" asChild>
+              <Link href="/platform/private-orders/new">
+                <ButtonContent iconLeft={IconPlus}>Create order</ButtonContent>
+              </Link>
+            </Button>
+          </div>
+        )
       ) : (
         <>
           {/* Desktop Table */}
@@ -347,7 +418,7 @@ const PrivateOrdersList = () => {
                 href={`/platform/private-orders/${order.id}`}
                 className="flex flex-col gap-2 p-4 transition-colors hover:bg-surface-secondary/50"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Typography variant="bodySm" className="font-mono font-medium">
                       {order.orderNumber}
@@ -360,7 +431,11 @@ const PrivateOrdersList = () => {
                     {order.clientName}
                   </Typography>
                   {order.client?.cityDrinksVerifiedAt && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <span
+                      className="inline-flex items-center gap-0.5 rounded-full bg-green-100 px-1 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      title="Client verified with the distributor"
+                      aria-label="Client verified"
+                    >
                       <Icon icon={IconShieldCheck} size="xs" />
                     </span>
                   )}
@@ -372,42 +447,50 @@ const PrivateOrdersList = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <Typography variant="bodyXs" colorRole="muted">
-                    {order.itemCount} items · {order.caseCount} cases
+                    {describeUnits(order)}
                   </Typography>
-                  <Typography variant="bodySm" className="font-semibold">
+                  <Typography variant="bodySm" className="font-semibold tabular-nums">
                     {formatCurrencyValue(order)}
                   </Typography>
                 </div>
                 <Typography variant="bodyXs" colorRole="muted">
-                  {format(new Date(order.createdAt), 'MMM d, yyyy')}
+                  {format(new Date(order.createdAt), 'd MMM yyyy')}
                 </Typography>
               </Link>
             ))}
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Typography variant="bodyXs" colorRole="muted">
-              Showing {cursor + 1}-{Math.min(cursor + orders.length, totalCount)} of {totalCount}
+              {statusFilter === 'all'
+                ? `Showing ${cursor + 1}–${cursor + allOrders.length} of ${totalCount}`
+                : `${orders.length} shown from orders ${cursor + 1}–${cursor + allOrders.length} of ${totalCount}`}
             </Typography>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => setCursor(Math.max(0, cursor - 20))}
-                disabled={cursor === 0}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => setCursor(cursor + 20)}
-                disabled={!hasMore}
-              >
-                Next
-              </Button>
-            </div>
+            {(cursor > 0 || hasMore) && (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={() => setCursor(Math.max(0, cursor - PAGE_SIZE))}
+                  disabled={cursor === 0}
+                  isDisabled={cursor === 0}
+                >
+                  Previous
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={() => setCursor(cursor + PAGE_SIZE)}
+                  disabled={!hasMore}
+                  isDisabled={!hasMore}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}

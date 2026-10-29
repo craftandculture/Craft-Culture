@@ -31,9 +31,9 @@ const stockStatusBadgeVariants = tv({
       pending: 'text-text-muted',
       confirmed: 'text-blue-600 dark:text-blue-400',
       in_transit_to_cc: 'text-amber-600 dark:text-amber-400',
-      at_cc_bonded: 'text-purple-600 dark:text-purple-400',
-      at_cc_ready_for_dispatch: 'text-indigo-600 dark:text-indigo-400',
-      in_transit_to_distributor: 'text-cyan-600 dark:text-cyan-400',
+      at_cc_bonded: 'text-text-primary',
+      at_cc_ready_for_dispatch: 'text-blue-700 dark:text-blue-300',
+      in_transit_to_distributor: 'text-amber-700 dark:text-amber-300',
       at_distributor: 'text-green-600 dark:text-green-400',
       delivered: 'text-green-600 dark:text-green-400',
     },
@@ -47,7 +47,7 @@ const stockSourceBadgeVariants = tv({
   base: 'inline-flex items-center gap-1.5 text-[11px] font-medium',
   variants: {
     source: {
-      cc_inventory: 'text-purple-600 dark:text-purple-400',
+      cc_inventory: 'text-text-muted',
       partner_airfreight: 'text-amber-600 dark:text-amber-400',
       partner_local: 'text-blue-600 dark:text-blue-400',
       manual: 'text-text-muted',

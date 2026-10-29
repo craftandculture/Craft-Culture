@@ -111,7 +111,7 @@ const OrderChain = ({ releaseId, pcoId, salesOrderId, extraSteps = [], footer }:
                     : 'border-border-muted border-dashed'
               }`}
             >
-              <span className="text-text-muted flex items-center gap-1 truncate text-[10px] font-semibold tracking-wide uppercase">
+              <span className="text-text-muted flex items-start gap-1 text-[10px] leading-tight font-semibold tracking-wide break-words uppercase">
                 {step.done && <Icon icon={IconCheck} size="xs" />}
                 {step.label}
               </span>
@@ -134,7 +134,7 @@ const OrderChain = ({ releaseId, pcoId, salesOrderId, extraSteps = [], footer }:
                 </span>
               )}
               {(step.status || step.at) && (
-                <span className="text-text-muted truncate text-[11px]">
+                <span className="text-text-muted text-[11px] leading-tight break-words">
                   {[
                     step.status?.replace(/_/g, ' '),
                     step.at ? format(new Date(step.at), 'd MMM') : null,
