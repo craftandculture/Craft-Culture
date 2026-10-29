@@ -1,3 +1,9 @@
+## [2.1.38](https://github.com/craftandculture/Craft-Culture/compare/v2.1.37...v2.1.38) (2026-10-29)
+
+### Bug Fixes
+
+* Import order in the warehouse router and pick stock lookup, so the main branch checks pass again ([0d880c9](https://github.com/craftandculture/Craft-Culture/commit/0d880c9af01c38b44dadf64d50155f2439568862))
+
 ## [2.1.37](https://github.com/craftandculture/Craft-Culture/compare/v2.1.36...v2.1.37) (2026-10-29)
 
 ### Features
