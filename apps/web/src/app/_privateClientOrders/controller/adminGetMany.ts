@@ -192,6 +192,23 @@ const adminGetMany = wmsOperatorProcedure
       counts.forEach((c) => invoicingBy.set(c.orderId, describeInvoicing(c)));
     }
 
+    /*
+      Cases and single bottles per order. The stored case_count adds the two
+      together, so the list counts them apart here (a case of 1 is a bottle).
+    */
+    const unitsBy = new Map<string, { cases: number; bottles: number }>();
+    if (ids.length > 0) {
+      const units = await client<{ orderId: string; cases: number; bottles: number }[]>`
+        SELECT order_id AS "orderId",
+               COALESCE(SUM(quantity) FILTER (WHERE COALESCE(case_config, 1) > 1), 0)::int AS cases,
+               COALESCE(SUM(quantity) FILTER (WHERE COALESCE(case_config, 1) <= 1), 0)::int AS bottles
+        FROM private_client_order_items
+        WHERE order_id = ANY(${ids}::uuid[])
+        GROUP BY order_id
+      `;
+      units.forEach((u) => unitsBy.set(u.orderId, { cases: u.cases, bottles: u.bottles }));
+    }
+
     // Flatten the response
     const ordersWithPartner = ordersList.map((row) => ({
       ...row.order,
@@ -199,6 +216,7 @@ const adminGetMany = wmsOperatorProcedure
       client: row.client,
       distributor: row.distributor?.id ? row.distributor : null,
       invoicing: invoicingBy.get(row.order.id) ?? null,
+      units: unitsBy.get(row.order.id) ?? null,
     }));
 
     const nextCursor = cursor + limit < totalCount ? cursor + limit : null;

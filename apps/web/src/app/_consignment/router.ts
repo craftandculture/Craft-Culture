@@ -9,6 +9,7 @@ import adminGetMandates from './controller/adminGetMandates';
 import adminGetPayoutRuns from './controller/adminGetPayoutRuns';
 import adminGetPurchases from './controller/adminGetPurchases';
 import adminRecordAgreedPrices from './controller/adminRecordAgreedPrices';
+import adminRecordBondPurchase from './controller/adminRecordBondPurchase';
 import adminRecostPartnerSettlements from './controller/adminRecostPartnerSettlements';
 import adminReversePurchase from './controller/adminReversePurchase';
 import memberBrowseCatalogue from './controller/memberBrowseCatalogue';
@@ -48,6 +49,7 @@ const adminRouter = createTRPCRouter({
   approvePayoutRun: adminApprovePayoutRun,
   // Prices agreed with an owner away from the portal, as their offers
   recordAgreedPrices: adminRecordAgreedPrices,
+  recordBondPurchase: adminRecordBondPurchase,
 });
 
 const consignmentRouter = createTRPCRouter({

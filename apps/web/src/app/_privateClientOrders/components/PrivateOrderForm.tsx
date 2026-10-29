@@ -33,6 +33,7 @@ import type { PrivateClientContact } from '@/database/schema';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 import ProductPicker from './ProductPicker';
+import describeAvailableStock from '../utils/describeAvailableStock';
 import summarisePcoQuantities from '../utils/summarisePcoQuantities';
 
 type StockSource = 'partner_local' | 'partner_airfreight' | 'cc_inventory' | 'manual';
@@ -146,6 +147,8 @@ const PrivateOrderForm = () => {
 
   // Submission state
   const [submitAfterCreate, setSubmitAfterCreate] = useState(false);
+  // Inline messages show once a save has been tried, not while the form is first filled
+  const [showErrors, setShowErrors] = useState(false);
 
   // Compose full address from client contact fields
   const composeAddress = (client: PrivateClientContact | null) => {
@@ -424,25 +427,60 @@ const PrivateOrderForm = () => {
     return lineItems.reduce((sum, item) => sum + item.quantity * item.pricePerCaseUsd, 0);
   };
 
+  const isSubmitting =
+    createOrder.isPending || addLineItem.isPending || submitOrder.isPending || uploadDocument.isPending;
+
   // Cases and single bottles counted apart — "2 bottles", not "2 cases"
   const calculateTotalCases = () => summarisePcoQuantities(lineItems);
+
+  /*
+    What is wrong with a line, if anything. A blank line used to be dropped
+    silently; it is now named next to the line. A draft may be saved without
+    prices, but an order sent to C&C needs a price on every line.
+  */
+  const lineErrorFor = (item: LineItem) => {
+    if (!item.productName.trim()) return 'Choose or enter a wine, or remove this line.';
+    if (!Number.isFinite(item.pricePerCaseUsd) || item.pricePerCaseUsd <= 0) {
+      return 'Enter your price to C&C for this wine.';
+    }
+    return null;
+  };
+  const lineErrors = lineItems.map(lineErrorFor);
+  const hasUnnamedLines = lineItems.some((item) => !item.productName.trim());
+  const hasLineErrors = lineErrors.some(Boolean);
+  const clientMissing = !effectiveClientName.trim();
+  const noLines = lineItems.length === 0;
 
   const handleSubmit = async (e: React.FormEvent, shouldSubmit: boolean = false) => {
     e.preventDefault();
 
-    if (!effectiveClientName.trim()) {
-      toast.error('Client name is required');
+    // Pressing Enter in a field submits the form even while a save is running
+    if (isSubmitting) return;
+
+    setShowErrors(true);
+
+    if (clientMissing) {
+      toast.error('Select or enter a client');
       return;
     }
 
-    // Validate line items
-    const validItems = lineItems.filter((item) => item.productName.trim());
-    if (validItems.length === 0) {
-      toast.error('Please add at least one product');
+    if (noLines) {
+      toast.error('Add at least one wine');
       return;
     }
+
+    // A draft may wait for prices; an order sent to C&C may not
+    if (shouldSubmit ? hasLineErrors : hasUnnamedLines) {
+      toast.error('Some lines need attention before the order can be saved');
+      return;
+    }
+
+    const validItems = lineItems;
 
     setSubmitAfterCreate(shouldSubmit);
+
+    // Once the draft exists, a later failure must not lead to a second draft on retry
+    let createdOrderId: string | null = null;
 
     try {
       // Create the order first
@@ -457,9 +495,11 @@ const PrivateOrderForm = () => {
       });
 
       if (!order) {
-        toast.error('Failed to create order');
+        toast.error('The order could not be created. Please try again.');
         return;
       }
+
+      createdOrderId = order.id;
 
       // Then add all line items
       for (const item of validItems) {
@@ -493,22 +533,32 @@ const PrivateOrderForm = () => {
         } catch (uploadError) {
           // Log but don't fail order creation if document upload fails
           console.error('Failed to upload invoice document:', uploadError);
-          toast.warning('Order created but invoice upload failed. You can upload it later.');
+          toast.warning('The order was created, but the invoice could not be attached.');
         }
       }
 
       // Submit if requested
       if (shouldSubmit) {
         await submitOrder.mutateAsync(order.id);
-        toast.success('Order created and submitted for approval');
+        toast.success('Order submitted to C&C for review');
       } else {
-        toast.success('Order saved as draft');
+        toast.success('Order saved as a draft');
       }
 
       router.push(`/platform/private-orders/${order.id}`);
     } catch (error) {
       console.error('Order creation failed:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create order');
+      if (createdOrderId) {
+        // The draft is saved; finish it there rather than creating it again
+        toast.error(
+          `The order was saved as a draft, but not every step completed${
+            error instanceof Error && error.message ? ` (${error.message})` : ''
+          }. Please review the draft.`,
+        );
+        router.push(`/platform/private-orders/${createdOrderId}`);
+        return;
+      }
+      toast.error(error instanceof Error ? error.message : 'The order could not be created');
     }
   };
 
@@ -524,26 +574,31 @@ const PrivateOrderForm = () => {
   // Get product IDs already in the order to exclude from search
   const usedProductIds = lineItems.filter((item) => item.productId).map((item) => item.productId!);
 
-  const isSubmitting =
-    createOrder.isPending || addLineItem.isPending || submitOrder.isPending || uploadDocument.isPending;
-
   return (
     <form onSubmit={(e) => handleSubmit(e, false)} className="flex flex-col gap-4">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-3">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/platform/private-orders">
+          <Link href="/platform/private-orders" aria-label="Back to Private Client Orders">
             <Icon icon={IconArrowLeft} size="sm" />
           </Link>
         </Button>
-        <Typography variant="headingLg">New Private Order</Typography>
+        <div className="min-w-0">
+          <Typography variant="headingLg">New private client order</Typography>
+          <Typography variant="bodySm" colorRole="muted">
+            Choose the client, add the wines at your price to C&amp;C, then save a draft or submit
+            the order to C&amp;C for review.
+          </Typography>
+        </div>
       </div>
 
       {/* Client Details Section */}
       <Card>
         <CardContent className="flex flex-col gap-3 p-4">
           <div className="flex items-center justify-between">
-            <Typography variant="headingSm">Client</Typography>
+            <Typography variant="headingSm">
+              1. Client <span className="text-text-muted">*</span>
+            </Typography>
             {!isManualClient ? (
               <Button type="button" variant="ghost" size="sm" onClick={handleManualClientEntry}>
                 Enter manually
@@ -570,9 +625,10 @@ const PrivateOrderForm = () => {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                  Client Name *
+                  Client name *
                 </Typography>
                 <Input
+                  aria-label="Client name"
                   placeholder="Enter client name"
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
@@ -585,6 +641,7 @@ const PrivateOrderForm = () => {
                   Email
                 </Typography>
                 <Input
+                  aria-label="Client email"
                   type="email"
                   placeholder="client@example.com"
                   value={clientEmail}
@@ -597,6 +654,7 @@ const PrivateOrderForm = () => {
                   Phone
                 </Typography>
                 <Input
+                  aria-label="Client phone"
                   type="tel"
                   placeholder="+971 50 123 4567"
                   value={clientPhone}
@@ -606,9 +664,10 @@ const PrivateOrderForm = () => {
               </div>
               <div>
                 <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                  Address
+                  Delivery address
                 </Typography>
                 <Input
+                  aria-label="Delivery address"
                   placeholder="Dubai Marina, Tower 5"
                   value={clientAddress}
                   onChange={(e) => setClientAddress(e.target.value)}
@@ -618,13 +677,26 @@ const PrivateOrderForm = () => {
             </div>
           )}
 
+          {showErrors && clientMissing && (
+            <Typography variant="bodyXs" colorRole="danger">
+              {isManualClient ? 'Enter the client name.' : 'Select a client, or enter one manually.'}
+            </Typography>
+          )}
+
+          {selectedClient && !isManualClient && effectiveClientAddress && (
+            <Typography variant="bodyXs" colorRole="muted">
+              Delivery address: {effectiveClientAddress}
+            </Typography>
+          )}
+
           {(selectedClient || isManualClient) && (
             <div>
               <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-                Delivery Notes
+                Delivery notes (optional)
               </Typography>
               <Input
-                placeholder="Special delivery instructions..."
+                aria-label="Delivery notes"
+                placeholder="Access, timing or other delivery instructions"
                 value={deliveryNotes}
                 onChange={(e) => setDeliveryNotes(e.target.value)}
                 size="sm"
@@ -639,11 +711,14 @@ const PrivateOrderForm = () => {
         <CardContent className="flex flex-col gap-3 p-4">
           <div className="flex items-center gap-2">
             <Icon icon={IconSparkles} size="sm" colorRole="brand" />
-            <Typography variant="headingSm">Import from Invoice</Typography>
+            <Typography variant="headingSm">Import from an invoice</Typography>
             <Badge colorRole="brand" size="sm">
-              AI
+              Optional
             </Badge>
           </div>
+          <Typography variant="bodyXs" colorRole="muted" className="-mt-2">
+            Upload your invoice to C&amp;C and the wines are read from it. Check every line before saving.
+          </Typography>
 
           {!extractedData && !isExtracting && (
             <div
@@ -658,7 +733,7 @@ const PrivateOrderForm = () => {
               <Icon icon={IconCloudUpload} size="md" colorRole={isDragActive ? 'brand' : 'muted'} />
               <div>
                 <Typography variant="bodySm">
-                  {isDragActive ? 'Drop here' : 'Drop invoice or click to upload'}
+                  {isDragActive ? 'Drop the file here' : 'Drop an invoice here, or select to upload'}
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted">
                   PDF, PNG, JPG
@@ -671,7 +746,7 @@ const PrivateOrderForm = () => {
             <div className="flex items-center justify-center gap-3 rounded-lg border border-border-muted bg-fill-muted p-4">
               <Icon icon={IconLoader2} size="md" colorRole="brand" className="animate-spin" />
               <Typography variant="bodySm">
-                {isExtracting ? `Extracting from ${uploadedFileName}...` : 'Matching to local stock...'}
+                {isExtracting ? `Reading ${uploadedFileName}...` : 'Matching to stock...'}
               </Typography>
             </div>
           )}
@@ -682,7 +757,7 @@ const PrivateOrderForm = () => {
                 {extractionError}
               </Typography>
               <Button type="button" variant="ghost" size="sm" onClick={handleClearExtraction}>
-                Try Again
+                Try again
               </Button>
             </div>
           )}
@@ -693,16 +768,16 @@ const PrivateOrderForm = () => {
                 <div className="flex items-center gap-2">
                   <Icon icon={IconCheck} size="sm" colorRole="success" />
                   <Typography variant="bodySm" className="font-medium">
-                    {extractedData.lineItems.length} items extracted
+                    {extractedData.lineItems.length} {extractedData.lineItems.length === 1 ? 'wine' : 'wines'} found
                   </Typography>
                   {matchSummary && matchSummary.matched > 0 && (
-                    <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                    <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                       <IconBox size={12} />
                       {matchSummary.matched} in local stock
                     </span>
                   )}
                 </div>
-                <Button type="button" variant="ghost" size="sm" onClick={handleClearExtraction}>
+                <Button type="button" variant="ghost" size="sm" onClick={handleClearExtraction} aria-label="Discard imported wines">
                   <Icon icon={IconX} size="sm" />
                 </Button>
               </div>
@@ -717,7 +792,7 @@ const PrivateOrderForm = () => {
                     <div
                       key={index}
                       className={`flex items-center justify-between rounded px-2 py-1.5 text-sm ${
-                        isMatched ? 'bg-green-50' : 'bg-white/50'
+                        isMatched ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-surface-primary/60'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -734,14 +809,14 @@ const PrivateOrderForm = () => {
                             <IconCheck size={12} />
                           </span>
                         ) : (
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-500">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-slate-500/30 dark:text-slate-300">
                             <IconQuestionMark size={12} />
                           </span>
                         )}
                         <div className="truncate">
                           <span className="font-medium">{item.productName}</span>
                           {isMatched && match?.wmsItem && (
-                            <span className="ml-2 text-xs text-green-600">
+                            <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-400">
                               → {match.wmsItem.productName}
                             </span>
                           )}
@@ -749,11 +824,11 @@ const PrivateOrderForm = () => {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {isMatched && match?.wmsItem && (
-                          <span className="text-xs text-green-600">
-                            {match.wmsItem.availableCases} cs avail
+                          <span className="text-xs text-emerald-700 dark:text-emerald-400">
+                            {describeAvailableStock(match.wmsItem.availableCases, match.wmsItem.caseConfig)}
                           </span>
                         )}
-                        <span className="text-text-muted">{item.quantity} cs</span>
+                        <span className="tabular-nums text-text-muted">Qty {item.quantity}</span>
                       </div>
                     </div>
                   );
@@ -762,7 +837,9 @@ const PrivateOrderForm = () => {
 
               <Button type="button" variant="default" colorRole="brand" size="sm" onClick={handleAddExtractedItems}>
                 <ButtonContent iconLeft={IconPlus}>
-                  Add {matchSummary?.matched ? `${matchSummary.matched} matched + ${matchSummary.unmatched} manual` : 'to Order'}
+                  {matchSummary?.matched
+                    ? `Add ${matchSummary.matched} matched and ${matchSummary.unmatched} unmatched wines`
+                    : 'Add to order'}
                 </ButtonContent>
               </Button>
             </div>
@@ -775,28 +852,36 @@ const PrivateOrderForm = () => {
         <CardContent className="flex flex-col gap-4 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <Typography variant="headingSm">Products</Typography>
+              <Typography variant="headingSm">
+                2. Wines <span className="text-text-muted">*</span>
+              </Typography>
               {lineItems.length > 0 && (
                 <Typography variant="bodyXs" colorRole="muted">
-                  {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'} · {calculateTotalCases()}
+                  {lineItems.length} {lineItems.length === 1 ? 'line' : 'lines'} · {calculateTotalCases()}
                 </Typography>
               )}
             </div>
             <Button type="button" variant="outline" size="sm" onClick={handleAddLineItem}>
-              <ButtonContent iconLeft={IconPlus}>Add Product</ButtonContent>
+              <ButtonContent iconLeft={IconPlus}>Add wine</ButtonContent>
             </Button>
           </div>
 
           {/* Cost-not-final-price guardrail — prevents entering the retail price */}
-          <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 dark:border-amber-800/60 dark:bg-amber-900/20">
+          <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 dark:border-amber-800/60 dark:bg-amber-900/20">
             <Icon icon={IconInfoCircle} size="sm" className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
             <Typography variant="bodyXs" className="text-amber-900 dark:text-amber-200">
-              Enter the <strong>C&amp;C cost</strong> — the price C&amp;C pays for each wine (your
-              invoice price to C&amp;C). The client&apos;s <strong>final price is calculated
-              automatically</strong> (C&amp;C margin, import duty, distributor margin, VAT), so do
-              <strong> not</strong> enter the retail / final client price here.
+              Enter <strong>your price to C&amp;C</strong> for each wine, as it appears on your invoice
+              to C&amp;C. The client price, including import duty and VAT, is{' '}
+              <strong>calculated by C&amp;C</strong>. Please do <strong>not</strong> enter the client
+              or retail price here.
             </Typography>
           </div>
+
+          {showErrors && noLines && (
+            <Typography variant="bodyXs" colorRole="danger">
+              Add at least one wine.
+            </Typography>
+          )}
 
           {lineItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border-muted bg-surface-secondary/30 py-8">
@@ -805,29 +890,35 @@ const PrivateOrderForm = () => {
               </div>
               <div className="text-center">
                 <Typography variant="bodySm" className="font-medium">
-                  Add products from the catalog
+                  No wines added yet
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                  Search our wine inventory or enter products manually
+                  Pick from your stock or the catalogue, or enter a wine manually
                 </Typography>
               </div>
               <Button type="button" variant="default" colorRole="brand" size="sm" onClick={handleAddLineItem}>
-                <ButtonContent iconLeft={IconPlus}>Add First Product</ButtonContent>
+                <ButtonContent iconLeft={IconPlus}>Add the first wine</ButtonContent>
               </Button>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
               {lineItems.map((item, index) => (
-                <ProductPicker
-                  key={item.id}
-                  index={index}
-                  value={item}
-                  onChange={(updates) => handleUpdateLineItem(item.id, updates)}
-                  onRemove={() => handleRemoveLineItem(item.id)}
-                  omitProductIds={usedProductIds.filter((id) => id !== item.productId)}
-                  source={stockSource}
-                  defaultMode={stockSource === 'local_inventory' ? 'wms' : 'search'}
-                />
+                <div key={item.id} className="flex flex-col gap-1">
+                  <ProductPicker
+                    index={index}
+                    value={item}
+                    onChange={(updates) => handleUpdateLineItem(item.id, updates)}
+                    onRemove={() => handleRemoveLineItem(item.id)}
+                    omitProductIds={usedProductIds.filter((id) => id !== item.productId)}
+                    source={stockSource}
+                    defaultMode={stockSource === 'local_inventory' ? 'wms' : 'search'}
+                  />
+                  {showErrors && lineErrors[index] && (
+                    <Typography variant="bodyXs" colorRole="danger" className="px-1">
+                      Line {index + 1}: {lineErrors[index]}
+                    </Typography>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -837,14 +928,14 @@ const PrivateOrderForm = () => {
       {/* Order Summary Section */}
       <Card>
         <CardContent className="flex flex-col gap-4 p-4">
-          <Typography variant="headingSm">Order Summary</Typography>
+          <Typography variant="headingSm">3. Review and submit</Typography>
 
-          <div className="grid grid-cols-3 gap-4 rounded-lg bg-fill-muted/30 p-3">
+          <div className="grid grid-cols-3 gap-2 rounded-lg bg-fill-muted/30 p-3 sm:gap-4">
             <div className="text-center">
               <Typography variant="bodyXs" colorRole="muted">
-                Items
+                Lines
               </Typography>
-              <Typography variant="headingSm" className="font-bold">
+              <Typography variant="headingSm" className="font-bold tabular-nums">
                 {lineItems.length}
               </Typography>
             </div>
@@ -853,25 +944,29 @@ const PrivateOrderForm = () => {
                 Quantity
               </Typography>
               <Typography variant="bodySm" className="font-bold">
-                {calculateTotalCases()}
+                {lineItems.length > 0 ? calculateTotalCases() : '–'}
               </Typography>
             </div>
             <div className="text-center">
               <Typography variant="bodyXs" colorRole="muted">
-                Subtotal
+                Your price to C&amp;C
               </Typography>
-              <Typography variant="headingSm" className="font-bold text-text-primary">
+              <Typography variant="headingSm" className="font-bold tabular-nums text-text-primary">
                 {formatCurrency(calculateSubtotal())}
               </Typography>
             </div>
           </div>
+          <Typography variant="bodyXs" colorRole="muted" className="-mt-2">
+            The client price is calculated by C&amp;C and shown on the order once it is saved.
+          </Typography>
 
           <div>
             <Typography variant="bodyXs" colorRole="muted" className="mb-1">
-              Internal Notes (optional)
+              Your notes (optional)
             </Typography>
             <Input
-              placeholder="Notes for internal use only..."
+              aria-label="Your notes"
+              placeholder="For your own reference, for example the client's request"
               value={partnerNotes}
               onChange={(e) => setPartnerNotes(e.target.value)}
               size="sm"
@@ -881,6 +976,22 @@ const PrivateOrderForm = () => {
       </Card>
 
       {/* Actions - responsive layout */}
+      <div className="flex flex-col gap-1 text-center sm:text-right">
+        {clientMissing || noLines ? (
+          <Typography variant="bodyXs" colorRole="muted">
+            {clientMissing && noLines
+              ? 'Choose a client and add at least one wine to continue.'
+              : clientMissing
+                ? 'Choose a client to continue.'
+                : 'Add at least one wine to continue.'}
+          </Typography>
+        ) : (
+          <Typography variant="bodyXs" colorRole="muted">
+            Save draft keeps the order with you to finish later. Submit for review sends it to C&amp;C,
+            who will confirm pricing and availability.
+          </Typography>
+        )}
+      </div>
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
         <Button variant="outline" asChild className="w-full sm:w-auto">
           <Link href="/platform/private-orders">Cancel</Link>
@@ -889,9 +1000,10 @@ const PrivateOrderForm = () => {
           type="submit"
           variant="outline"
           className="w-full sm:w-auto"
-          isDisabled={isSubmitting || !effectiveClientName.trim() || lineItems.length === 0}
+          isDisabled={isSubmitting || clientMissing || noLines}
+          disabled={isSubmitting || clientMissing || noLines}
         >
-          {isSubmitting && !submitAfterCreate ? 'Saving...' : 'Save Draft'}
+          {isSubmitting && !submitAfterCreate ? 'Saving...' : 'Save draft'}
         </Button>
         <Button
           type="button"
@@ -899,10 +1011,11 @@ const PrivateOrderForm = () => {
           colorRole="brand"
           className="w-full sm:w-auto"
           onClick={(e) => handleSubmit(e, true)}
-          isDisabled={isSubmitting || !effectiveClientName.trim() || lineItems.length === 0}
+          isDisabled={isSubmitting || clientMissing || noLines}
+          disabled={isSubmitting || clientMissing || noLines}
         >
           <ButtonContent iconLeft={IconSend}>
-            {isSubmitting && submitAfterCreate ? 'Submitting...' : 'Submit for Approval'}
+            {isSubmitting && submitAfterCreate ? 'Submitting...' : 'Submit for review'}
           </ButtonContent>
         </Button>
       </div>

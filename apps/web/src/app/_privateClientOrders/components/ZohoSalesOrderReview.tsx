@@ -116,7 +116,7 @@ const ZohoSalesOrderReview = ({
               </th>
               <th className="pb-1.5 pl-3 text-right">
                 <Typography variant="bodyXs" className="text-text-muted">
-                  Rate
+                  Rate / unit
                 </Typography>
               </th>
               <th className="pb-1.5 pl-3 text-right">
@@ -140,7 +140,7 @@ const ZohoSalesOrderReview = ({
                   className="border-b border-border-muted/50 align-top"
                 >
                   <td className="py-2 pr-2">
-                    <Typography variant="bodySm" className="font-medium">
+                    <Typography variant="bodySm" className="font-medium" title={line.wine}>
                       {line.packName}
                     </Typography>
                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
@@ -166,9 +166,11 @@ const ZohoSalesOrderReview = ({
                       variant="bodySm"
                       className="tabular-nums whitespace-nowrap"
                     >
-                      {line.cases} × {line.pack}
+                      {/* A pack of one is a single bottle: "5 btl", not "5 × 1" */}
+                      {line.pack === 1 ? `${line.cases} btl` : `${line.cases} × ${line.pack}`}
                       <span className="text-text-muted">
-                        ×{Math.round(line.bottleSizeMl / 10)}cl
+                        {line.pack === 1 ? ' · ' : '×'}
+                        {Math.round(line.bottleSizeMl / 10)}cl
                       </span>
                     </Typography>
                   </td>

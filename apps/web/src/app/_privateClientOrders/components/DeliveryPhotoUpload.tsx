@@ -11,7 +11,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import Button from '@/app/_ui/components/Button/Button';
@@ -120,6 +120,16 @@ const DeliveryPhotoUpload = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showFullImage, setShowFullImage] = useState(false);
 
+  // Escape closes the full-size view
+  useEffect(() => {
+    if (!showFullImage) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowFullImage(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showFullImage]);
+
   const { mutate: uploadPhoto, isPending: isUploading } = useMutation({
     mutationFn: async (data: { file: string; filename: string; fileType: string }) => {
       return trpcClient.privateClientOrders.distributorUploadDeliveryPhoto.mutate({
@@ -130,13 +140,13 @@ const DeliveryPhotoUpload = ({
       });
     },
     onSuccess: () => {
-      toast.success('Delivery photo uploaded successfully');
+      toast.success('Proof of delivery uploaded');
       setPreviewUrl(null);
       void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
       onUploaded?.();
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to upload delivery photo');
+      toast.error(error.message || 'The proof of delivery could not be uploaded');
     },
   });
 
@@ -148,7 +158,7 @@ const DeliveryPhotoUpload = ({
       // Validate file type
       const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
       if (!allowedTypes.includes(file.type)) {
-        toast.error('Please select an image (PNG, JPG) or PDF file');
+        toast.error('Choose a photo (PNG or JPG) or a PDF');
         return;
       }
 
@@ -171,7 +181,7 @@ const DeliveryPhotoUpload = ({
           });
         } else if (file.size > MAX_FILE_SIZE) {
           // Compress images if larger than max size
-          toast.info('Compressing image...');
+          toast.info('Making the photo smaller before upload…');
           base64 = await compressImage(file);
         } else {
           // Read image directly if small enough
@@ -198,7 +208,7 @@ const DeliveryPhotoUpload = ({
         });
       } catch (err) {
         console.error('Error processing file:', err);
-        toast.error('Failed to process file');
+        toast.error('The file could not be read. Try another photo or PDF.');
       }
 
       // Reset input
@@ -228,10 +238,16 @@ const DeliveryPhotoUpload = ({
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
           onClick={() => setShowFullImage(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Proof of delivery, full size"
         >
           <button
+            type="button"
             className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
             onClick={() => setShowFullImage(false)}
+            aria-label="Close"
+            autoFocus
           >
             <IconX size={24} />
           </button>
@@ -295,8 +311,8 @@ const DeliveryPhotoUpload = ({
               </Typography>
               <Typography variant="bodySm" colorRole="muted">
                 {hasPhoto
-                  ? 'Proof of delivery is on file. You can upload a new file to replace it.'
-                  : 'Upload a photo or PDF showing proof of delivery (e.g., signed delivery order, photo on doorstep with ID visible).'}
+                  ? 'Proof of delivery is on file. Upload a new file to replace it.'
+                  : 'Take a photo or upload a PDF that shows the delivery, for example the signed delivery note. Photos of any size, or a PDF up to 3 MB.'}
               </Typography>
 
               {/* File Preview */}
@@ -312,7 +328,7 @@ const DeliveryPhotoUpload = ({
                       <IconFileTypePdf className="h-8 w-8 text-red-500" />
                       <div className="text-xs text-text-muted">
                         <p className="font-medium text-text-primary">PDF uploaded</p>
-                        <p>Click to view</p>
+                        <p>Open</p>
                       </div>
                     </a>
                   ) : (
@@ -320,6 +336,7 @@ const DeliveryPhotoUpload = ({
                       <button
                         type="button"
                         onClick={() => setShowFullImage(true)}
+                        aria-label="View proof of delivery full size"
                         className="group relative overflow-hidden rounded-lg border border-border-muted"
                       >
                         <Image
@@ -340,7 +357,7 @@ const DeliveryPhotoUpload = ({
                         )}
                       </button>
                       <div className="text-xs text-text-muted">
-                        <p>Click to view full size</p>
+                        <p>Open full size</p>
                       </div>
                     </>
                   )}
@@ -349,8 +366,9 @@ const DeliveryPhotoUpload = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2 sm:flex-col">
+            <div className="flex flex-col gap-2">
               <Button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
                 variant={hasPhoto ? 'outline' : 'default'}
@@ -360,7 +378,7 @@ const DeliveryPhotoUpload = ({
                   iconLeft={isUploading ? IconLoader2 : IconCloudUpload}
                   isLoading={isUploading}
                 >
-                  {hasPhoto ? 'Replace File' : 'Upload File'}
+                  {isUploading ? 'Uploading…' : hasPhoto ? 'Replace File' : 'Upload Photo or PDF'}
                 </ButtonContent>
               </Button>
             </div>

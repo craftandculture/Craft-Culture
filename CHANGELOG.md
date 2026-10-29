@@ -1,3 +1,65 @@
+## [2.1.38](https://github.com/craftandculture/Craft-Culture/compare/v2.1.37...v2.1.38) (2026-10-29)
+
+### Bug Fixes
+
+* Import order in the warehouse router and pick stock lookup, so the main branch checks pass again ([0d880c9](https://github.com/craftandculture/Craft-Culture/commit/0d880c9af01c38b44dadf64d50155f2439568862))
+
+## [2.1.37](https://github.com/craftandculture/Craft-Culture/compare/v2.1.36...v2.1.37) (2026-10-29)
+
+### Features
+
+* Staff can record wine C&C bought from a member in bond, so it reaches their statement and payout ([841a356](https://github.com/craftandculture/Craft-Culture/commit/841a356e21e7e615f9f9533fedcfbb8476f20374))
+
+## [2.1.36](https://github.com/craftandculture/Craft-Culture/compare/v2.1.35...v2.1.36) (2026-10-29)
+
+### Bug Fixes
+
+* Cellar statements label the month's sales and the total due to the member plainly ([19f898c](https://github.com/craftandculture/Craft-Culture/commit/19f898c7cc079a466f5a690212833946157bf447))
+
+## [2.1.35](https://github.com/craftandculture/Craft-Culture/compare/v2.1.34...v2.1.35) (2026-10-29)
+
+### Bug Fixes
+
+* A voided ownership transfer no longer shows as wine added to a member's cellar ([3b57176](https://github.com/craftandculture/Craft-Culture/commit/3b57176615b5b478598c8fb1ef1f7e2b9d1ca0cd))
+
+## [2.1.34](https://github.com/craftandculture/Craft-Culture/compare/v2.1.33...v2.1.34) (2026-10-29)
+
+### Bug Fixes
+
+* Cellar statements show the balance at the top and say what Owed to you includes ([a065b4d](https://github.com/craftandculture/Craft-Culture/commit/a065b4d70905ba3742fe8fb73dc49692d3508c6d))
+
+## [2.1.33](https://github.com/craftandculture/Craft-Culture/compare/v2.1.32...v2.1.33) (2026-10-29)
+
+### Bug Fixes
+
+* Recording agreed prices no longer fails on save with "rate is not defined" ([9a9e10f](https://github.com/craftandculture/Craft-Culture/commit/9a9e10f63ac6d5f1f7d568136b07b392068b6966))
+
+## [2.1.32](https://github.com/craftandculture/Craft-Culture/compare/v2.1.31...v2.1.32) (2026-10-29)
+
+### Features
+
+* admin order pages lead with what needs attention and count bottles correctly ([c21da1f](https://github.com/craftandculture/Craft-Culture/commit/c21da1f85168fdf2f94cd582d119eee770c0f56d))
+* distributor orders lead with the next step, with confirmations on each action ([5b6d350](https://github.com/craftandculture/Craft-Culture/commit/5b6d35092c563e9ad74ec18651f13dc991350410))
+* partner order screens say what happens next and make order entry harder to get wrong ([836cc8d](https://github.com/craftandculture/Craft-Culture/commit/836cc8dae0afbff1ea65c3891502a02ff992af2e))
+
+### Bug Fixes
+
+* partners no longer receive the distributor's name or internal order notes ([efa3efb](https://github.com/craftandculture/Craft-Culture/commit/efa3efb00f7b6080d48bcbca1bdf730c40db6130))
+* Private Cellar statements show the balance brought forward and price at the shipment's exchange rate ([741d707](https://github.com/craftandculture/Craft-Culture/commit/741d707508c614d49d382c9b1cea3a8b6b31fb2b))
+* Samples C&C takes from a member's cellar are valued at the wine's cost before freight when no price was agreed ([80830ce](https://github.com/craftandculture/Craft-Culture/commit/80830ce3ad9d1d733848b8da31403c1055c8102a))
+
+## [2.1.31](https://github.com/craftandculture/Craft-Culture/compare/v2.1.30...v2.1.31) (2026-10-29)
+
+### Bug Fixes
+
+* revenue line tooltip no longer cut off; average line shows ([54f1c5d](https://github.com/craftandculture/Craft-Culture/commit/54f1c5d80e212a081a3a330da6ad1ec12016b1f9))
+
+## [2.1.30](https://github.com/craftandculture/Craft-Culture/compare/v2.1.29...v2.1.30) (2026-10-29)
+
+### Features
+
+* home revenue graph is a slim line instead of tall bars ([398ed58](https://github.com/craftandculture/Craft-Culture/commit/398ed58c22c174046434a107a48931bff3438db0))
+
 ## [2.1.29](https://github.com/craftandculture/Craft-Culture/compare/v2.1.28...v2.1.29) (2026-10-28)
 
 ### Bug Fixes

@@ -5,14 +5,11 @@ import {
   IconBuilding,
   IconBuildingWarehouse,
   IconCheck,
-  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
-  IconCurrencyDollar,
   IconEdit,
   IconHistory,
   IconLoader2,
-  IconPhoto,
   IconPlus,
   IconPrinter,
   IconRefresh,
@@ -32,6 +29,8 @@ import LwinLookup from '@/app/_lwin/components/LwinLookup';
 import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
 import OrderClientCard from '@/app/_privateClientContacts/components/OrderClientCard';
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
+import OrderAttentionPanel from '@/app/_privateClientOrders/components/admin/OrderAttentionPanel';
+import OrderCompletionCard from '@/app/_privateClientOrders/components/admin/OrderCompletionCard';
 import CloneOrderDialog from '@/app/_privateClientOrders/components/CloneOrderDialog';
 import DistributorSkuCard from '@/app/_privateClientOrders/components/DistributorSkuCard';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
@@ -43,8 +42,10 @@ import StockIdentificationSection from '@/app/_privateClientOrders/components/St
 import StockManagementSection from '@/app/_privateClientOrders/components/StockManagementSection';
 import SubscriptionBoxPicker from '@/app/_privateClientOrders/components/SubscriptionBoxPicker';
 import ZohoSalesOrderButton from '@/app/_privateClientOrders/components/ZohoSalesOrderButton';
+import describePcoLine from '@/app/_privateClientOrders/utils/describePcoLine';
 import { pcoListNeighbours } from '@/app/_privateClientOrders/utils/pcoListOrder';
 import isRoutinePcoTransition from '@/app/_privateClientOrders/utils/pcoStatusTransitions';
+import summarisePcoQuantities from '@/app/_privateClientOrders/utils/summarisePcoQuantities';
 import MakeJobButton from '@/app/_teamTasks/components/MakeJobButton';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -193,7 +194,6 @@ const AdminPrivateOrderDetailPage = () => {
   const [activityFilter, setActivityFilter] = useState<'all' | 'partner' | 'distributor' | 'admin'>('all');
   const [partnerPaymentRef, setPartnerPaymentRef] = useState('');
   const [distributorPaymentRef, setDistributorPaymentRef] = useState('');
-  const [isCompletionExpanded, setIsCompletionExpanded] = useState(true);
   // The orders either side of this one on the list it was opened from
   const [neighbours, setNeighbours] = useState<ReturnType<typeof pcoListNeighbours>>(null);
 
@@ -575,6 +575,23 @@ const AdminPrivateOrderDetailPage = () => {
     router.push(`/platform/admin/private-orders/${target.id}`);
   };
 
+  /**
+   * Scroll to a section of this page, from the attention panel at the top
+   */
+  const jumpTo = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Close the full-size delivery photo with Escape, as any other overlay
+  useEffect(() => {
+    if (!showDeliveryPhoto) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowDeliveryPhoto(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showDeliveryPhoto]);
+
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
@@ -616,6 +633,19 @@ const AdminPrivateOrderDetailPage = () => {
     const amount = Number(usdAmount) || 0;
     return currency === 'USD' ? amount : amount * usdToAedRate;
   };
+
+  /*
+    A line's price is per unit it is sold in: per case, or per bottle for a
+    single. The column says which when every line agrees; a mixed order says
+    "Unit" and each price carries its own.
+  */
+  const lineUnits = new Set((order.items ?? []).map((item) => describePcoLine(item).unit));
+  const isMixedUnits = lineUnits.size > 1;
+  const priceUnitLabel = isMixedUnits ? 'Unit' : lineUnits.has('btl') ? 'Bottle' : 'Case';
+
+  // Stock suggestions under the add row, once three characters are typed
+  const showStockMatches =
+    isAddingItem && stockQuery.trim().length >= 3 && !newItem.lwin && (stockMatches?.data.length ?? 0) > 0;
 
 
   return (
@@ -698,7 +728,8 @@ const AdminPrivateOrderDetailPage = () => {
               onValueChange={(v) => handleStatusChange(v as OrderStatus)}
               disabled={isUpdating}
             >
-              <SelectTrigger className="w-full sm:w-[200px]">
+              {/* Wide enough for the longest status, "Awaiting Distributor Verification" */}
+              <SelectTrigger className="w-full sm:w-auto sm:min-w-[17rem]" aria-label="Order status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -753,21 +784,25 @@ const AdminPrivateOrderDetailPage = () => {
           }
         />
 
+        {/* What blocks the next step, first: no distributor, no SKU, uncoded lines, or who it waits on */}
+        <OrderAttentionPanel order={order} onJump={jumpTo} />
+
         {/*
           One tracker: the paperwork chain, with the two milestones only the
           order knows (client verified, client paid) slotted in. The status
           stepper above it described the same journey a second time. The
           distributor SKU is a line under it rather than a card of its own.
+          Their labels are one short word; the tracker cuts long ones off.
         */}
-        <Card>
+        <Card id="pco-tracker" className="scroll-mt-20">
           <CardContent className="p-4">
             <OrderChain
               pcoId={order.id}
               extraSteps={[
                 ...(order.distributor?.requiresClientVerification
-                  ? [{ after: 'invoice' as const, key: 'verified', label: 'Client verified', at: order.clientVerifiedAt ?? null, done: !!order.clientVerifiedAt }]
+                  ? [{ after: 'invoice' as const, key: 'verified', label: 'Verified', at: order.clientVerifiedAt ?? null, done: !!order.clientVerifiedAt }]
                   : []),
-                { after: 'invoice' as const, key: 'paid', label: isMemberDelivery ? 'Delivery paid' : 'Client paid', at: order.clientPaidAt ?? null, done: !!order.clientPaidAt },
+                { after: 'invoice' as const, key: 'paid', label: 'Paid', at: order.clientPaidAt ?? null, done: !!order.clientPaidAt },
               ]}
               footer={
                 /* Shown on unassigned orders too, so the SKU can be recorded whenever it
@@ -805,170 +840,22 @@ const AdminPrivateOrderDetailPage = () => {
         />
         )}
 
-        {/* Order Completion - Shown prominently for delivered/distributor_paid orders */}
+        {/* Order completion: delivered orders show it open, near the top */}
         {['delivered', 'distributor_paid'].includes(order.status) && (
-          <Card className="border-2 border-fill-success/50 bg-fill-success/5">
-            <CardContent className="p-4">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
-                  <Icon icon={IconCheck} size="md" className="text-fill-success" />
-                </div>
-                <div>
-                  <Typography variant="headingSm" className="mb-0.5">
-                    Order Completion Actions
-                  </Typography>
-                  <Typography variant="bodyXs" colorRole="muted">
-                    Complete pending actions below to finalize this order
-                  </Typography>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {/* Distributor Payment to C&C */}
-                <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                      order.distributorPaidAt ? 'bg-fill-success/20' : 'bg-fill-warning/20'
-                    }`}>
-                      <Icon
-                        icon={order.distributorPaidAt ? IconCheck : IconCurrencyDollar}
-                        size="sm"
-                        className={order.distributorPaidAt ? 'text-fill-success' : 'text-fill-warning'}
-                      />
-                    </div>
-                    <div>
-                      <Typography variant="labelMd" className="mb-0.5">
-                        Distributor Payment to C&C
-                      </Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {order.distributorPaidAt
-                          ? `Received on ${formatDate(order.distributorPaidAt)}${order.distributorPaymentReference ? ` • Ref: ${order.distributorPaymentReference}` : ''}`
-                          : 'Confirm when distributor has paid C&C for the order'}
-                      </Typography>
-                    </div>
-                  </div>
-
-                  {!order.distributorPaidAt && (
-                    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                      <Input
-                        placeholder="Reference (optional)"
-                        value={distributorPaymentRef}
-                        onChange={(e) => setDistributorPaymentRef(e.target.value)}
-                        className="w-full text-xs sm:w-[160px]"
-                      />
-                      <Button
-                        onClick={() => confirmDistributorPayment({ reference: distributorPaymentRef || undefined })}
-                        disabled={isConfirmingDistributorPayment}
-                        colorRole="brand"
-                        size="sm"
-                      >
-                        <Icon
-                          icon={isConfirmingDistributorPayment ? IconLoader2 : IconCurrencyDollar}
-                          size="xs"
-                          className={isConfirmingDistributorPayment ? 'animate-spin' : ''}
-                        />
-                        <span className="ml-1.5">{isConfirmingDistributorPayment ? 'Confirming...' : 'Confirm Received'}</span>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* C&C Payment to Partner */}
-                <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                      order.partnerPaidAt ? 'bg-fill-success/20' : 'bg-fill-warning/20'
-                    }`}>
-                      <Icon
-                        icon={order.partnerPaidAt ? IconCheck : IconCurrencyDollar}
-                        size="sm"
-                        className={order.partnerPaidAt ? 'text-fill-success' : 'text-fill-warning'}
-                      />
-                    </div>
-                    <div>
-                      <Typography variant="labelMd" className="mb-0.5">
-                        C&C Payment to Partner
-                      </Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {order.partnerPaidAt
-                          ? `Paid on ${formatDate(order.partnerPaidAt)}${order.partnerPaymentReference ? ` • Ref: ${order.partnerPaymentReference}` : ''}`
-                          : 'Record when C&C has paid the wine partner for stock'}
-                      </Typography>
-                    </div>
-                  </div>
-
-                  {!order.partnerPaidAt && (
-                    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                      <Input
-                        placeholder="Reference (optional)"
-                        value={partnerPaymentRef}
-                        onChange={(e) => setPartnerPaymentRef(e.target.value)}
-                        className="w-full text-xs sm:w-[160px]"
-                      />
-                      <Button
-                        onClick={() => markPartnerPaid({ reference: partnerPaymentRef || undefined })}
-                        disabled={isMarkingPartnerPaid}
-                        colorRole="brand"
-                        size="sm"
-                      >
-                        <Icon
-                          icon={isMarkingPartnerPaid ? IconLoader2 : IconCurrencyDollar}
-                          size="xs"
-                          className={isMarkingPartnerPaid ? 'animate-spin' : ''}
-                        />
-                        <span className="ml-1.5">{isMarkingPartnerPaid ? 'Recording...' : 'Mark Paid'}</span>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Proof of Delivery */}
-                <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                      order.deliveryPhoto ? 'bg-fill-success/20' : 'bg-fill-warning/20'
-                    }`}>
-                      <Icon
-                        icon={order.deliveryPhoto ? IconCheck : IconPhoto}
-                        size="sm"
-                        className={order.deliveryPhoto ? 'text-fill-success' : 'text-fill-warning'}
-                      />
-                    </div>
-                    <div>
-                      <Typography variant="labelMd" className="mb-0.5">
-                        Proof of Delivery
-                      </Typography>
-                      <Typography variant="bodyXs" colorRole="muted">
-                        {order.deliveryPhoto
-                          ? 'Photo uploaded by distributor'
-                          : 'Awaiting delivery confirmation from distributor'}
-                      </Typography>
-                    </div>
-                  </div>
-
-                  {order.deliveryPhoto && (
-                    <button
-                      type="button"
-                      onClick={() => setShowDeliveryPhoto(true)}
-                      className="group relative overflow-hidden rounded-lg border border-border-muted"
-                    >
-                      <Image
-                        src={fileHref(order.deliveryPhoto)}
-                        alt="Proof of delivery"
-                        width={120}
-                        height={80}
-                        className="h-[80px] w-[120px] object-cover transition-transform group-hover:scale-105"
-                        unoptimized
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-                        <IconPhoto className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-                      </div>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <OrderCompletionCard
+            prominent
+            order={order}
+            distributorPaymentRef={distributorPaymentRef}
+            onDistributorPaymentRefChange={setDistributorPaymentRef}
+            onConfirmDistributorPayment={() => confirmDistributorPayment({ reference: distributorPaymentRef || undefined })}
+            isConfirmingDistributorPayment={isConfirmingDistributorPayment}
+            partnerPaymentRef={partnerPaymentRef}
+            onPartnerPaymentRefChange={setPartnerPaymentRef}
+            onMarkPartnerPaid={() => markPartnerPaid({ reference: partnerPaymentRef || undefined })}
+            isMarkingPartnerPaid={isMarkingPartnerPaid}
+            onViewDeliveryPhoto={() => setShowDeliveryPhoto(true)}
+            formatDate={formatDate}
+          />
         )}
 
         {/* Stock Identification for Approval */}
@@ -989,11 +876,11 @@ const AdminPrivateOrderDetailPage = () => {
                 </div>
                 <div className="flex-1">
                   <Typography variant="headingSm" className="mb-1">
-                    Order Suspended - Admin Override Available
+                    Verification suspended
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    This order is suspended due to verification issues. As C&C admin, you can reset the order
-                    to any point in the verification flow.
+                    This order is suspended because verification did not go through. Choose where it should
+                    resume, then reset it.
                   </Typography>
                 </div>
                 <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
@@ -1001,7 +888,7 @@ const AdminPrivateOrderDetailPage = () => {
                     value={resetTarget}
                     onValueChange={(v) => setResetTarget(v as ResetTargetStatus)}
                   >
-                    <SelectTrigger className="w-full sm:w-[220px]">
+                    <SelectTrigger className="w-full sm:w-[220px]" aria-label="Resume from">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1016,7 +903,12 @@ const AdminPrivateOrderDetailPage = () => {
                     </SelectContent>
                   </Select>
                   <Button
-                    onClick={() => resetVerification({ targetStatus: resetTarget })}
+                    onClick={() => {
+                      const target = resetTargetOptions.find((opt) => opt.value === resetTarget)?.label ?? resetTarget;
+                      if (window.confirm(`Reset ${order.orderNumber} to "${target}"?`)) {
+                        resetVerification({ targetStatus: resetTarget });
+                      }
+                    }}
                     disabled={isResetting}
                     colorRole="brand"
                   >
@@ -1030,7 +922,7 @@ const AdminPrivateOrderDetailPage = () => {
         )}
 
         {/* Line Items - Full Width, Primary Focus */}
-        <Card>
+        <Card id="pco-line-items" className="scroll-mt-20">
           <CardContent className="p-4">
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -1075,8 +967,9 @@ const AdminPrivateOrderDetailPage = () => {
                 )}
               </div>
               <div className="flex items-center gap-4 text-sm text-text-muted">
-                <span>{order.caseCount ?? 0} cases</span>
-                <span className="font-semibold text-text-primary">
+                {/* Cases and single bottles counted apart: six singles are "6 bottles", not "6 cases" */}
+                <span>{summarisePcoQuantities(order.items ?? [])}</span>
+                <span className="font-semibold tabular-nums text-text-primary">
                   {formatCurrencyValue(getAmount(order.totalUsd), currency)}
                 </span>
               </div>
@@ -1085,7 +978,11 @@ const AdminPrivateOrderDetailPage = () => {
             {order.items && order.items.length > 0 ? (
               <>
               {/* Phones read the lines as cards; the table returns while a line is being added or edited */}
-              <div className={`overflow-x-auto ${isAddingItem || editingItem || codingItemId ? '' : 'hidden md:block'}`}>
+              <div
+                className={`overflow-x-auto ${isAddingItem || editingItem || codingItemId ? '' : 'hidden md:block'} ${
+                  showStockMatches ? 'pb-72' : ''
+                }`}
+              >
                 <table className="w-full text-xs">
                   <thead className="border-b border-border-muted bg-surface-secondary/50">
                     <tr>
@@ -1094,20 +991,23 @@ const AdminPrivateOrderDetailPage = () => {
                       <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Yr</th>
                       <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Pack</th>
                       <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">Qty</th>
-                      <th className="px-2 py-1.5 text-right text-xs font-medium uppercase tracking-wide text-text-muted">{currency}/Case</th>
+                      <th className="px-2 py-1.5 text-right text-xs font-medium uppercase tracking-wide text-text-muted">{currency}/{priceUnitLabel}</th>
                       <th className="px-2 py-1.5 text-right text-xs font-medium uppercase tracking-wide text-text-muted">Total ({currency})</th>
                       {canEditItems && (
-                        <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted"></th>
+                        <th className="px-2 py-1.5 text-center text-xs font-medium uppercase tracking-wide text-text-muted">
+                          <span className="sr-only">Actions</span>
+                        </th>
                       )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-muted/50">
                     {/* Add new item row */}
                     {isAddingItem && (
-                      <tr className="bg-surface-brand/10">
+                      <tr className="bg-surface-secondary/60">
                         <td className="relative px-2 py-1">
                           <Input
                             placeholder="Search stock, or type a name"
+                            aria-label="Product name"
                             value={newItem.productName}
                             onChange={(e) => {
                               setNewItem({ ...newItem, productName: e.target.value, lwin: '' });
@@ -1120,7 +1020,7 @@ const AdminPrivateOrderDetailPage = () => {
                               {newItem.lwin}
                             </span>
                           ) : null}
-                          {stockQuery.trim().length >= 3 && !newItem.lwin && (stockMatches?.data.length ?? 0) > 0 ? (
+                          {showStockMatches ? (
                             <div className="absolute left-2 right-2 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-border-primary bg-fill-primary shadow-lg">
                               {(stockMatches?.data ?? []).map((m) => (
                                 <button
@@ -1143,7 +1043,9 @@ const AdminPrivateOrderDetailPage = () => {
                                   <span className="text-xs font-medium">{m.productName}</span>
                                   <span className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] text-text-muted">
                                     {m.lwin18}
-                                    <span>{m.availableCases} cs</span>
+                                    <span>
+                                      {m.availableCases} {m.caseConfig === 1 ? 'btl' : 'cs'}
+                                    </span>
                                     {m.isInTransit ? (
                                       <span className="rounded bg-amber-100 px-1 py-0.5 font-sans font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                                         in transit
@@ -1158,6 +1060,7 @@ const AdminPrivateOrderDetailPage = () => {
                         <td className="px-2 py-1">
                           <Input
                             placeholder="Producer"
+                            aria-label="Producer"
                             value={newItem.producer}
                             onChange={(e) => setNewItem({ ...newItem, producer: e.target.value })}
                             className="h-8 text-sm"
@@ -1166,6 +1069,7 @@ const AdminPrivateOrderDetailPage = () => {
                         <td className="px-2 py-1">
                           <Input
                             placeholder="Year"
+                            aria-label="Vintage"
                             value={newItem.vintage}
                             onChange={(e) => setNewItem({ ...newItem, vintage: e.target.value })}
                             className="h-8 w-16 text-center text-sm"
@@ -1176,6 +1080,8 @@ const AdminPrivateOrderDetailPage = () => {
                             placeholder="12"
                             type="number"
                             min={1}
+                            aria-label="Bottles per case (1 for a single bottle)"
+                            title="Bottles per case (1 for a single bottle)"
                             value={newItem.caseConfig}
                             onChange={(e) => setNewItem({ ...newItem, caseConfig: parseInt(e.target.value) || 12 })}
                             className="h-8 w-14 text-center text-sm"
@@ -1185,6 +1091,7 @@ const AdminPrivateOrderDetailPage = () => {
                           <Input
                             type="number"
                             min={1}
+                            aria-label="Quantity"
                             value={newItem.quantity}
                             onChange={(e) => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 1 })}
                             className="h-8 w-14 text-center text-sm"
@@ -1196,13 +1103,15 @@ const AdminPrivateOrderDetailPage = () => {
                             min={0}
                             step={0.01}
                             placeholder="0.00"
+                            aria-label="Price in USD"
+                            title="Price in USD"
                             value={newItem.pricePerCaseUsd || ''}
                             onChange={(e) => setNewItem({ ...newItem, pricePerCaseUsd: parseFloat(e.target.value) || 0 })}
                             className="h-8 w-24 text-right text-sm"
                           />
                         </td>
-                        <td className="px-2 py-1 text-right text-xs font-medium">
-                          {formatCurrencyValue(newItem.quantity * newItem.pricePerCaseUsd, 'USD')}
+                        <td className="px-2 py-1 text-right text-xs font-medium tabular-nums">
+                          {formatCurrencyValue(getAmount(newItem.quantity * newItem.pricePerCaseUsd), currency)}
                         </td>
                         <td className="px-2 py-1">
                           <div className="flex items-center justify-center gap-0.5">
@@ -1212,6 +1121,8 @@ const AdminPrivateOrderDetailPage = () => {
                               onClick={handleAddItem}
                               disabled={isAddingItemPending}
                               className="h-7 w-7 p-0"
+                              aria-label="Add this line"
+                              title="Add this line"
                             >
                               <Icon icon={isAddingItemPending ? IconLoader2 : IconCheck} size="xs" colorRole="brand" className={isAddingItemPending ? 'animate-spin' : ''} />
                             </Button>
@@ -1220,6 +1131,8 @@ const AdminPrivateOrderDetailPage = () => {
                               size="xs"
                               onClick={() => setIsAddingItem(false)}
                               className="h-7 w-7 p-0"
+                              aria-label="Cancel adding a line"
+                              title="Cancel"
                             >
                               <Icon icon={IconX} size="xs" colorRole="muted" />
                             </Button>
@@ -1235,6 +1148,7 @@ const AdminPrivateOrderDetailPage = () => {
                           <tr key={item.id} className="bg-surface-muted/30">
                             <td className="px-2 py-1">
                               <Input
+                                aria-label="Product name"
                                 value={editingItem.productName}
                                 onChange={(e) =>
                                   setEditingItem({ ...editingItem, productName: e.target.value })
@@ -1244,6 +1158,7 @@ const AdminPrivateOrderDetailPage = () => {
                             </td>
                             <td className="px-2 py-1">
                               <Input
+                                aria-label="Producer"
                                 value={editingItem.producer}
                                 onChange={(e) =>
                                   setEditingItem({ ...editingItem, producer: e.target.value })
@@ -1253,6 +1168,7 @@ const AdminPrivateOrderDetailPage = () => {
                             </td>
                             <td className="px-2 py-1">
                               <Input
+                                aria-label="Vintage"
                                 value={editingItem.vintage}
                                 onChange={(e) =>
                                   setEditingItem({ ...editingItem, vintage: e.target.value })
@@ -1260,13 +1176,14 @@ const AdminPrivateOrderDetailPage = () => {
                                 className="h-8 w-16 text-center text-sm"
                               />
                             </td>
-                            <td className="px-2 py-1 text-center text-xs text-text-muted">
-                              {item.caseConfig}×{item.bottleSize}
+                            <td className="whitespace-nowrap px-2 py-1 text-center text-xs text-text-muted">
+                              {describePcoLine(item).pack}
                             </td>
                             <td className="px-2 py-1">
                               <Input
                                 type="number"
                                 min={1}
+                                aria-label="Quantity"
                                 value={editingItem.quantity}
                                 onChange={(e) =>
                                   setEditingItem({
@@ -1282,6 +1199,8 @@ const AdminPrivateOrderDetailPage = () => {
                                 type="number"
                                 min={0}
                                 step={0.01}
+                                aria-label="Price in USD"
+                                title="Price in USD"
                                 value={editingItem.pricePerCaseUsd}
                                 onChange={(e) =>
                                   setEditingItem({
@@ -1292,8 +1211,8 @@ const AdminPrivateOrderDetailPage = () => {
                                 className="h-8 w-24 text-right text-sm"
                               />
                             </td>
-                            <td className="px-2 py-1 text-right text-xs font-medium">
-                              {formatCurrencyValue(editingItem.quantity * editingItem.pricePerCaseUsd, 'USD')}
+                            <td className="px-2 py-1 text-right text-xs font-medium tabular-nums">
+                              {formatCurrencyValue(getAmount(editingItem.quantity * editingItem.pricePerCaseUsd), currency)}
                             </td>
                             <td className="px-2 py-1">
                               <div className="flex items-center justify-center gap-0.5">
@@ -1303,6 +1222,8 @@ const AdminPrivateOrderDetailPage = () => {
                                   onClick={handleSaveItem}
                                   disabled={isUpdatingItem}
                                   className="h-7 w-7 p-0"
+                                  aria-label="Save line"
+                                  title="Save"
                                 >
                                   <Icon icon={IconCheck} size="xs" colorRole="success" />
                                 </Button>
@@ -1311,6 +1232,8 @@ const AdminPrivateOrderDetailPage = () => {
                                   size="xs"
                                   onClick={() => setEditingItem(null)}
                                   className="h-7 w-7 p-0"
+                                  aria-label="Cancel editing"
+                                  title="Cancel"
                                 >
                                   <Icon icon={IconX} size="xs" colorRole="muted" />
                                 </Button>
@@ -1321,11 +1244,12 @@ const AdminPrivateOrderDetailPage = () => {
                       }
 
                       const hasLwin = isUsableLwin18(item.lwin);
+                      const line = describePcoLine(item);
 
                       return (
                         <Fragment key={item.id}>
                         <tr className="hover:bg-surface-muted/20">
-                          <td className="px-2 py-1.5">
+                          <td className="max-w-[18rem] px-2 py-1.5">
                             <span className="text-xs font-medium">{item.productName}</span>
                             {hasLwin ? (
                               <span className="ml-1 text-xs text-text-muted">
@@ -1338,8 +1262,14 @@ const AdminPrivateOrderDetailPage = () => {
                                   setCodingItemId(codingItemId === item.id ? null : item.id)
                                 }
                                 disabled={!canEditItems}
-                                className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300"
-                                title={item.lwin ? `Placeholder code: ${item.lwin}` : 'No LWIN'}
+                                className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-900/40 dark:text-amber-300"
+                                title={
+                                  !canEditItems
+                                    ? 'Lines cannot be changed on a delivered or cancelled order'
+                                    : item.lwin
+                                      ? `Placeholder code: ${item.lwin}`
+                                      : 'No LWIN'
+                                }
                               >
                                 Set LWIN
                               </button>
@@ -1347,12 +1277,15 @@ const AdminPrivateOrderDetailPage = () => {
                           </td>
                           <td className="px-2 py-1.5 text-xs">{item.producer || '-'}</td>
                           <td className="px-2 py-1.5 text-center text-xs">{item.vintage || '-'}</td>
-                          <td className="px-2 py-1.5 text-center text-xs text-text-muted">{item.caseConfig}×{item.bottleSize}</td>
-                          <td className="px-2 py-1.5 text-center text-xs font-medium">{item.quantity}</td>
-                          <td className="px-2 py-1.5 text-right text-xs">
-                            {formatCurrencyValue(getAmount(item.pricePerCaseUsd), currency)}
+                          <td className="whitespace-nowrap px-2 py-1.5 text-center text-xs text-text-muted">{line.pack}</td>
+                          <td className="whitespace-nowrap px-2 py-1.5 text-center text-xs font-medium tabular-nums" title={line.qty}>
+                            {line.count}
                           </td>
-                          <td className="px-2 py-1.5 text-right text-xs font-semibold">
+                          <td className="whitespace-nowrap px-2 py-1.5 text-right text-xs tabular-nums">
+                            {formatCurrencyValue(getAmount(item.pricePerCaseUsd), currency)}
+                            {isMixedUnits && <span className="text-text-muted">/{line.unit}</span>}
+                          </td>
+                          <td className="whitespace-nowrap px-2 py-1.5 text-right text-xs font-semibold tabular-nums">
                             {formatCurrencyValue(getAmount(item.totalUsd), currency)}
                           </td>
                           {canEditItems && (
@@ -1363,6 +1296,8 @@ const AdminPrivateOrderDetailPage = () => {
                                   size="xs"
                                   onClick={() => handleEditItem(item)}
                                   className="h-7 w-7 p-0"
+                                  aria-label={`Edit ${item.productName}`}
+                                  title="Edit line"
                                 >
                                   <Icon icon={IconEdit} size="xs" colorRole="muted" />
                                 </Button>
@@ -1372,6 +1307,8 @@ const AdminPrivateOrderDetailPage = () => {
                                   onClick={() => handleRemoveItem(item.id)}
                                   disabled={isRemovingItem}
                                   className="h-7 w-7 p-0"
+                                  aria-label={`Remove ${item.productName}`}
+                                  title="Remove line"
                                 >
                                   <Icon icon={IconTrash} size="xs" colorRole="danger" />
                                 </Button>
@@ -1427,10 +1364,13 @@ const AdminPrivateOrderDetailPage = () => {
                           {formatCurrencyValue(getAmount(item.totalUsd), currency)}
                         </span>
                       }
-                      meta={[item.producer, item.vintage, `${item.caseConfig}×${item.bottleSize}`].filter(Boolean).join(' · ')}
+                      meta={[item.producer, item.vintage, describePcoLine(item).pack].filter(Boolean).join(' · ')}
                       fields={[
-                        { label: 'Quantity', value: `${item.quantity} ${item.caseConfig === 1 ? 'bottle' : 'case'}${item.quantity === 1 ? '' : 's'}` },
-                        { label: `${currency} per case`, value: formatCurrencyValue(getAmount(item.pricePerCaseUsd), currency) },
+                        { label: 'Quantity', value: describePcoLine(item).qty },
+                        {
+                          label: `${currency} per ${describePcoLine(item).isSingle ? 'bottle' : 'case'}`,
+                          value: formatCurrencyValue(getAmount(item.pricePerCaseUsd), currency),
+                        },
                       ]}
                     >
                       {(canEditItems || !isUsableLwin18(item.lwin)) && (
@@ -1440,7 +1380,7 @@ const AdminPrivateOrderDetailPage = () => {
                               type="button"
                               onClick={() => setCodingItemId(item.id)}
                               disabled={!canEditItems}
-                              className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                              className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-900/40 dark:text-amber-300"
                             >
                               Set LWIN
                             </button>
@@ -1465,7 +1405,7 @@ const AdminPrivateOrderDetailPage = () => {
             ) : (
               <div className="text-center py-4">
                 <Typography variant="bodySm" colorRole="muted">
-                  No line items
+                  No lines on this order yet
                 </Typography>
                 {canEditItems && (
                   <Button
@@ -1475,7 +1415,7 @@ const AdminPrivateOrderDetailPage = () => {
                     className="mt-2"
                   >
                     <Icon icon={IconPlus} size="xs" />
-                    <span className="ml-1">Add First Item</span>
+                    <span className="ml-1">Add first line</span>
                   </Button>
                 )}
               </div>
@@ -1496,6 +1436,8 @@ const AdminPrivateOrderDetailPage = () => {
                 productName: item.productName,
                 vintage: item.vintage,
                 quantity: item.quantity,
+                caseConfig: item.caseConfig,
+                bottleSize: item.bottleSize,
                 source: item.source,
                 stockStatus: item.stockStatus,
                 stockExpectedAt: item.stockExpectedAt,
@@ -1512,8 +1454,12 @@ const AdminPrivateOrderDetailPage = () => {
           <ManualInvoicingCard orderId={orderId} />
         )}
 
-        {/* Secondary Info - Horizontal Grid Below */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/*
+          Secondary info. Cards keep their own height: stretched to the tall
+          pricing card, the distributor and partner cards were mostly empty,
+          so those two share one column.
+        */}
+        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Order Summary - Full Breakdown for Admin */}
           <Card>
             <CardContent className="p-4">
@@ -1666,7 +1612,7 @@ const AdminPrivateOrderDetailPage = () => {
                 const fmtPct = (v: number) => Number.isInteger(v) ? v.toString() : v.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
 
                 return (
-                  <div className="space-y-1 text-xs">
+                  <div className="space-y-1 text-xs tabular-nums">
                     {/* Line Items */}
                     <div className="flex justify-between">
                       <span className="text-text-muted">Line Items Total</span>
@@ -1737,8 +1683,9 @@ const AdminPrivateOrderDetailPage = () => {
             }}
           />
 
+          <div className="flex min-w-0 flex-col gap-4">
           {/* Distributor - With logo */}
-          <Card>
+          <Card id="pco-distributor" className="scroll-mt-20">
             <CardContent className="p-4">
               <div className="mb-3 flex items-center gap-1.5">
                 <Icon icon={IconTruck} size="xs" colorRole="muted" />
@@ -1752,7 +1699,7 @@ const AdminPrivateOrderDetailPage = () => {
                   onValueChange={handleDistributorAssign}
                   disabled={isAssigningDistributor}
                 >
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="h-8 text-xs" aria-label="Distributor">
                     <SelectValue placeholder="Select distributor..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -1766,6 +1713,8 @@ const AdminPrivateOrderDetailPage = () => {
                               width={20}
                               height={20}
                               className="rounded object-contain"
+                              // Logos are pasted from anywhere; the optimiser only serves allow-listed hosts
+                              unoptimized
                             />
                           ) : (
                             <div className="flex h-5 w-5 items-center justify-center rounded bg-fill-muted">
@@ -1787,13 +1736,14 @@ const AdminPrivateOrderDetailPage = () => {
                       width={48}
                       height={48}
                       className="rounded-lg border border-border-muted object-contain p-1"
+                      unoptimized
                     />
                   ) : (
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-border-muted bg-fill-muted">
                       <Icon icon={IconTruck} size="md" colorRole="muted" />
                     </div>
                   )}
-                  <Typography variant="bodySm" className="font-medium">
+                  <Typography variant="bodySm" className="min-w-0 truncate font-medium" title={order.distributor.businessName}>
                     {order.distributor.businessName}
                   </Typography>
                 </div>
@@ -1803,7 +1753,9 @@ const AdminPrivateOrderDetailPage = () => {
                     <Icon icon={IconTruck} size="md" colorRole="muted" />
                   </div>
                   <Typography variant="bodyXs" colorRole="muted">
-                    Assign after approval
+                    {['draft', 'submitted', 'under_cc_review', 'revision_requested'].includes(order.status)
+                      ? 'Assign after approval'
+                      : 'No distributor assigned'}
                   </Typography>
                 </div>
               )}
@@ -1827,6 +1779,7 @@ const AdminPrivateOrderDetailPage = () => {
                     width={48}
                     height={48}
                     className="rounded-lg border border-border-muted object-contain p-1"
+                    unoptimized
                   />
                 ) : (
                   <div
@@ -1840,8 +1793,8 @@ const AdminPrivateOrderDetailPage = () => {
                     <Icon icon={IconBuilding} size="md" colorRole="muted" />
                   </div>
                 )}
-                <div>
-                  <Typography variant="bodySm" className="font-medium">
+                <div className="min-w-0">
+                  <Typography variant="bodySm" className="truncate font-medium" title={order.partner?.businessName}>
                     {order.partner?.businessName ?? 'Unknown'}
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted">
@@ -1851,6 +1804,7 @@ const AdminPrivateOrderDetailPage = () => {
               </div>
             </CardContent>
           </Card>
+          </div>
         </div>
 
         {/* Payment & Documents - Full Width */}
@@ -1874,10 +1828,15 @@ const AdminPrivateOrderDetailPage = () => {
         {/* Full Image Modal for Proof of Delivery */}
         {showDeliveryPhoto && order.deliveryPhoto && (
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Proof of delivery"
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
             onClick={() => setShowDeliveryPhoto(false)}
           >
             <button
+              type="button"
+              aria-label="Close photo"
               className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
               onClick={() => setShowDeliveryPhoto(false)}
             >
@@ -1894,204 +1853,22 @@ const AdminPrivateOrderDetailPage = () => {
           </div>
         )}
 
-        {/* Order Completion - Unified C&C Payment & Proof of Delivery (for non-delivered orders) */}
+        {/* Order completion, not yet due: collapsed until delivery */}
         {!['delivered', 'distributor_paid'].includes(order.status) && (
-        <Card className="border-2 border-fill-success/50 bg-fill-success/5">
-          <CardContent className="p-0">
-            {/* Collapsible Header */}
-            <button
-              type="button"
-              onClick={() => setIsCompletionExpanded(!isCompletionExpanded)}
-              className="flex w-full items-center justify-between p-4 text-left hover:bg-fill-success/5"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-fill-success/20">
-                  <Icon icon={IconCheck} size="md" className="text-fill-success" />
-                </div>
-                <div>
-                  <Typography variant="headingSm" className="mb-0.5">
-                    Order Completion
-                  </Typography>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-                    {order.distributorPaidAt && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-fill-success">
-                        <IconCheck size={12} /> Distributor Paid
-                      </span>
-                    )}
-                    {order.partnerPaidAt && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-fill-success">
-                        <IconCheck size={12} /> C&C Paid
-                      </span>
-                    )}
-                    {order.deliveryPhoto && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-fill-success/20 px-2 py-0.5 text-fill-success">
-                        <IconCheck size={12} /> Proof of Delivery
-                      </span>
-                    )}
-                    {!order.partnerPaidAt && !order.deliveryPhoto && (
-                      <span className="text-text-muted">Pending actions</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <Icon
-                icon={IconChevronDown}
-                size="md"
-                className={`text-text-muted transition-transform ${isCompletionExpanded ? 'rotate-180' : ''}`}
-              />
-            </button>
-
-            {/* Collapsible Content */}
-            {isCompletionExpanded && (
-              <div className="border-t border-fill-success/20 p-4 pt-4">
-                <div className="space-y-4">
-                  {/* Distributor Payment to C&C */}
-                  <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                        order.distributorPaidAt ? 'bg-fill-success/20' : 'bg-fill-muted'
-                      }`}>
-                        <Icon
-                          icon={order.distributorPaidAt ? IconCheck : IconCurrencyDollar}
-                          size="sm"
-                          className={order.distributorPaidAt ? 'text-fill-success' : 'text-text-muted'}
-                        />
-                      </div>
-                      <div>
-                        <Typography variant="labelMd" className="mb-0.5">
-                          Distributor Payment to C&C
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {order.distributorPaidAt
-                            ? `Received on ${formatDate(order.distributorPaidAt)}${order.distributorPaymentReference ? ` • Ref: ${order.distributorPaymentReference}` : ''}`
-                            : 'Confirm when distributor has paid C&C for the order'}
-                        </Typography>
-                      </div>
-                    </div>
-
-                    {!order.distributorPaidAt && (
-                      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                        <Input
-                          placeholder="Reference (optional)"
-                          value={distributorPaymentRef}
-                          onChange={(e) => setDistributorPaymentRef(e.target.value)}
-                          className="w-full text-xs sm:w-[160px]"
-                        />
-                        <Button
-                          onClick={() => confirmDistributorPayment({ reference: distributorPaymentRef || undefined })}
-                          disabled={isConfirmingDistributorPayment}
-                          colorRole="brand"
-                          size="sm"
-                        >
-                          <Icon
-                            icon={isConfirmingDistributorPayment ? IconLoader2 : IconCurrencyDollar}
-                            size="xs"
-                            className={isConfirmingDistributorPayment ? 'animate-spin' : ''}
-                          />
-                          <span className="ml-1.5">{isConfirmingDistributorPayment ? 'Confirming...' : 'Confirm Received'}</span>
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* C&C Payment to Partner */}
-                  <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                        order.partnerPaidAt ? 'bg-fill-success/20' : 'bg-fill-muted'
-                      }`}>
-                        <Icon
-                          icon={order.partnerPaidAt ? IconCheck : IconCurrencyDollar}
-                          size="sm"
-                          className={order.partnerPaidAt ? 'text-fill-success' : 'text-text-muted'}
-                        />
-                      </div>
-                      <div>
-                        <Typography variant="labelMd" className="mb-0.5">
-                          C&C Payment to Partner
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {order.partnerPaidAt
-                            ? `Paid on ${formatDate(order.partnerPaidAt)}${order.partnerPaymentReference ? ` • Ref: ${order.partnerPaymentReference}` : ''}`
-                            : 'Record when C&C has paid the wine partner for stock'}
-                        </Typography>
-                      </div>
-                    </div>
-
-                    {!order.partnerPaidAt && (
-                      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                        <Input
-                          placeholder="Reference (optional)"
-                          value={partnerPaymentRef}
-                          onChange={(e) => setPartnerPaymentRef(e.target.value)}
-                          className="w-full text-xs sm:w-[160px]"
-                        />
-                        <Button
-                          onClick={() => markPartnerPaid({ reference: partnerPaymentRef || undefined })}
-                          disabled={isMarkingPartnerPaid}
-                          colorRole="brand"
-                          size="sm"
-                        >
-                          <Icon
-                            icon={isMarkingPartnerPaid ? IconLoader2 : IconCurrencyDollar}
-                            size="xs"
-                            className={isMarkingPartnerPaid ? 'animate-spin' : ''}
-                          />
-                          <span className="ml-1.5">{isMarkingPartnerPaid ? 'Recording...' : 'Mark Paid'}</span>
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Proof of Delivery */}
-                  <div className="flex flex-col gap-3 rounded-lg bg-background-primary/50 p-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                        order.deliveryPhoto ? 'bg-fill-success/20' : 'bg-fill-muted'
-                      }`}>
-                        <Icon
-                          icon={order.deliveryPhoto ? IconCheck : IconPhoto}
-                          size="sm"
-                          className={order.deliveryPhoto ? 'text-fill-success' : 'text-text-muted'}
-                        />
-                      </div>
-                      <div>
-                        <Typography variant="labelMd" className="mb-0.5">
-                          Proof of Delivery
-                        </Typography>
-                        <Typography variant="bodyXs" colorRole="muted">
-                          {order.deliveryPhoto
-                            ? 'Photo uploaded by distributor'
-                            : 'Awaiting delivery confirmation from distributor'}
-                        </Typography>
-                      </div>
-                    </div>
-
-                    {order.deliveryPhoto && (
-                      <button
-                        type="button"
-                        onClick={() => setShowDeliveryPhoto(true)}
-                        className="group relative overflow-hidden rounded-lg border border-border-muted"
-                      >
-                        <Image
-                          src={fileHref(order.deliveryPhoto)}
-                          alt="Proof of delivery"
-                          width={120}
-                          height={80}
-                          className="h-[80px] w-[120px] object-cover transition-transform group-hover:scale-105"
-                          unoptimized
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-                          <IconPhoto className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-                        </div>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          <OrderCompletionCard
+            prominent={false}
+            order={order}
+            distributorPaymentRef={distributorPaymentRef}
+            onDistributorPaymentRefChange={setDistributorPaymentRef}
+            onConfirmDistributorPayment={() => confirmDistributorPayment({ reference: distributorPaymentRef || undefined })}
+            isConfirmingDistributorPayment={isConfirmingDistributorPayment}
+            partnerPaymentRef={partnerPaymentRef}
+            onPartnerPaymentRefChange={setPartnerPaymentRef}
+            onMarkPartnerPaid={() => markPartnerPaid({ reference: partnerPaymentRef || undefined })}
+            isMarkingPartnerPaid={isMarkingPartnerPaid}
+            onViewDeliveryPhoto={() => setShowDeliveryPhoto(true)}
+            formatDate={formatDate}
+          />
         )}
 
         {/*
@@ -2144,6 +1921,7 @@ const AdminPrivateOrderDetailPage = () => {
                   {editingNote?.key === key ? (
                     <div className="flex flex-col gap-2">
                       <textarea
+                        aria-label={label}
                         value={editingNote.text}
                         onChange={(event) => setEditingNote({ key, text: event.target.value })}
                         rows={5}
@@ -2184,31 +1962,32 @@ const AdminPrivateOrderDetailPage = () => {
           <CardContent className="p-4">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
-                <Icon icon={IconHistory} size="md" colorRole="brand" />
+                <Icon icon={IconHistory} size="md" colorRole="muted" />
                 <Typography variant="headingSm">Activity Log</Typography>
                 <span className="rounded-full bg-fill-muted px-2 py-0.5 text-xs text-text-muted">
                   {order.activityLogs?.length || 0}
                 </span>
               </div>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1" role="group" aria-label="Filter activity">
                 {(['all', 'partner', 'distributor', 'admin'] as const).map((filter) => (
                   <button
                     key={filter}
                     type="button"
+                    aria-pressed={activityFilter === filter}
                     onClick={() => setActivityFilter(filter)}
                     className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                       activityFilter === filter
-                        ? 'bg-text-primary text-white'
+                        ? 'bg-text-primary text-surface-primary'
                         : 'bg-surface-secondary text-text-muted hover:bg-surface-muted'
                     }`}
                   >
-                    {filter === 'all' ? 'All' : filter.charAt(0).toUpperCase() + filter.slice(1)}
+                    {filter === 'all' ? 'All' : filter === 'admin' ? 'C&C' : filter.charAt(0).toUpperCase() + filter.slice(1)}
                   </button>
                 ))}
               </div>
             </div>
             <Typography variant="bodyXs" colorRole="muted" className="mb-4">
-              Complete order history showing all actions by partners, distributors, and admins
+              Every action on this order by the partner, the distributor and C&C
             </Typography>
             <OrderNoteComposer
               audience="admin"
