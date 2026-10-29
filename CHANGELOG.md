@@ -1,3 +1,9 @@
+## [2.1.39](https://github.com/craftandculture/Craft-Culture/compare/v2.1.38...v2.1.39) (2026-10-29)
+
+### Bug Fixes
+
+* distributors see whose client each order is again (Cru, Craft & Culture, ...) ([0624fbb](https://github.com/craftandculture/Craft-Culture/commit/0624fbbf8427a27e73ad8ef51930816ffe268cc3))
+
 ## [2.1.38](https://github.com/craftandculture/Craft-Culture/compare/v2.1.37...v2.1.38) (2026-10-29)
 
 ### Bug Fixes
