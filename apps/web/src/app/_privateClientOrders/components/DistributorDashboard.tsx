@@ -14,6 +14,7 @@ import {
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -384,7 +385,19 @@ const DistributorDashboard = () => {
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-text-muted">
                         <Typography variant="bodyXs">{order.clientName}</Typography>
                         {order.partner && (
-                          <Typography variant="bodyXs">· {order.partner.businessName}</Typography>
+                          <div className="flex items-center gap-1">
+                            <span>·</span>
+                            {order.partner.logoUrl && (
+                              <Image
+                                src={order.partner.logoUrl}
+                                alt={order.partner.businessName}
+                                width={16}
+                                height={16}
+                                className="h-4 w-4 rounded object-contain"
+                              />
+                            )}
+                            <Typography variant="bodyXs">{order.partner.businessName}</Typography>
+                          </div>
                         )}
                       </div>
                     </div>

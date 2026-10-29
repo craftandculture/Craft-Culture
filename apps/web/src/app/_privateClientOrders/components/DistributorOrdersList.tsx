@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconBuilding,
   IconCheck,
   IconDots,
   IconDownload,
@@ -13,6 +14,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -436,7 +438,22 @@ const DistributorOrdersList = () => {
       accessorKey: 'partner.businessName',
       header: 'Partner',
       cell: ({ row }) => (
-        <Typography variant="bodySm">{row.original.partner?.businessName ?? '-'}</Typography>
+        <div className="flex items-center gap-2">
+          {row.original.partner?.logoUrl ? (
+            <Image
+              src={row.original.partner.logoUrl}
+              alt={row.original.partner.businessName}
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-lg object-contain"
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-secondary">
+              <Icon icon={IconBuilding} size="sm" colorRole="muted" />
+            </div>
+          )}
+          <Typography variant="bodySm">{row.original.partner?.businessName ?? '-'}</Typography>
+        </div>
       ),
     },
     {
@@ -845,9 +862,20 @@ const DistributorOrdersList = () => {
                           {order.orderNumber}
                         </Typography>
                         {order.partner && (
-                          <Typography variant="bodyXs" colorRole="muted">
-                            {order.partner.businessName}
-                          </Typography>
+                          <div className="flex items-center gap-1.5">
+                            {order.partner.logoUrl && (
+                              <Image
+                                src={order.partner.logoUrl}
+                                alt={order.partner.businessName}
+                                width={16}
+                                height={16}
+                                className="h-4 w-4 rounded object-contain"
+                              />
+                            )}
+                            <Typography variant="bodyXs" colorRole="muted">
+                              {order.partner.businessName}
+                            </Typography>
+                          </div>
                         )}
                         {needsSku(order) && (
                           <span className="mt-0.5 inline-block rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
