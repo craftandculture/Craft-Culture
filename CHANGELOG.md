@@ -1,3 +1,9 @@
+## [2.1.36](https://github.com/craftandculture/Craft-Culture/compare/v2.1.35...v2.1.36) (2026-10-29)
+
+### Bug Fixes
+
+* Cellar statements label the month's sales and the total due to the member plainly ([19f898c](https://github.com/craftandculture/Craft-Culture/commit/19f898c7cc079a466f5a690212833946157bf447))
+
 ## [2.1.35](https://github.com/craftandculture/Craft-Culture/compare/v2.1.34...v2.1.35) (2026-10-29)
 
 ### Bug Fixes
