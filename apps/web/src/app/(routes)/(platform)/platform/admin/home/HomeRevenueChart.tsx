@@ -22,7 +22,7 @@ interface HomeRevenueChartProps {
   redacted: boolean;
 }
 
-/** Short money for axis and labels: "1.2M", "209k", "850" */
+/** Short money for labels: "1.2M", "209k", "850" */
 const short = (val: number) => {
   const size = Math.abs(val);
   if (size >= 1_000_000)
@@ -35,15 +35,6 @@ const short = (val: number) => {
 const full = (val: number, currency: Currency) =>
   `${currency} ${val.toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 
-/** Round the axis top up to 1, 2 or 5 × a power of ten, split into 4 steps */
-const niceTop = (max: number) => {
-  if (max <= 0) return 1;
-  const rough = max / 4;
-  const power = 10 ** Math.floor(Math.log10(rough));
-  const step = [1, 2, 2.5, 5, 10].find((m) => m * power >= rough)! * power;
-  return step * 4;
-};
-
 const monthLabel = (key: string, withYear = false) => {
   const [y, m] = key.split('-').map(Number);
   const d = new Date(Date.UTC(y!, m! - 1, 1));
@@ -55,8 +46,9 @@ const monthLabel = (key: string, withYear = false) => {
 };
 
 /**
- * Invoiced revenue per month for the last 13 months, this month so far drawn
- * lighter. Hover a month for its total and the same month a year ago.
+ * Invoiced revenue per month for the last 13 months as a slim line, the stretch
+ * into this month dashed because the month isn't over. Hover a month for its
+ * total and the same month a year ago.
  */
 const HomeRevenueChart = ({
   months,
@@ -69,8 +61,18 @@ const HomeRevenueChart = ({
   const yearAgo = (m: RevenueMonth) =>
     currency === 'USD' ? m.yearAgoUsd : m.yearAgoAed;
 
-  const top = niceTop(Math.max(...months.map(value)));
-  const ticks = [4, 3, 2, 1, 0].map((i) => (top / 4) * i);
+  const last = months.length - 1;
+  const top = Math.max(...months.map(value), 1) * 1.1;
+  const x = (i: number) => (i / last) * 100;
+  const y = (v: number) => 100 - (v / top) * 100;
+  const points = months.map((m, i) => `${x(i)},${y(value(m))}`);
+
+  // Solid through the last complete month, dashed into the current one
+  const completeEnd = months[last]?.isCurrent ? last - 1 : last;
+  const solid = `M${points.slice(0, completeEnd + 1).join(' L')}`;
+  const dashed =
+    completeEnd < last ? `M${points[completeEnd]} L${points[last]}` : null;
+  const area = `M0,100 L${points.join(' L')} L100,100 Z`;
 
   const complete = months.filter((m) => !m.isCurrent);
   const best = complete.reduce<RevenueMonth | null>(
@@ -80,33 +82,32 @@ const HomeRevenueChart = ({
   const last12 = complete.reduce((sum, m) => sum + value(m), 0);
   const average = complete.length > 0 ? last12 / complete.length : 0;
 
+  const marker = hover ?? last;
+
   return (
     <Card>
-      <CardContent className="p-0">
-        <div className="flex flex-col gap-3 px-6 pt-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[15px] font-bold">Revenue by month</p>
-            <p className="text-text-muted mt-0.5 text-[12px]">
-              Invoiced in Zoho, excluding drafts and voids. This month so far
-              shown lighter.
-            </p>
-          </div>
+      <CardContent className="flex flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:gap-8">
+        <div className="shrink-0 lg:w-60">
+          <p className="text-[13px] font-semibold">Revenue by month</p>
+          <p className="text-text-muted text-[11px]">
+            Invoiced in Zoho, last 13 months
+          </p>
           {!redacted && (
-            <dl className="flex gap-6 text-[12px]">
-              <div>
+            <dl className="mt-3 grid grid-cols-3 gap-3 text-[11px] lg:grid-cols-1 lg:gap-1.5">
+              <div className="lg:flex lg:justify-between">
                 <dt className="text-text-muted">Last 12 months</dt>
                 <dd className="font-semibold tabular-nums">
                   {full(last12, currency)}
                 </dd>
               </div>
-              <div>
+              <div className="lg:flex lg:justify-between">
                 <dt className="text-text-muted">Monthly average</dt>
                 <dd className="font-semibold tabular-nums">
                   {full(average, currency)}
                 </dd>
               </div>
               {best && (
-                <div className="hidden sm:block">
+                <div className="lg:flex lg:justify-between">
                   <dt className="text-text-muted">Best month</dt>
                   <dd className="font-semibold tabular-nums">
                     {monthLabel(best.month, true)} · {short(value(best))}
@@ -117,112 +118,139 @@ const HomeRevenueChart = ({
           )}
         </div>
 
-        <div className="flex px-6 pb-4 pt-5">
-          {/* Y axis */}
-          <div className="text-text-muted relative mr-2 h-48 w-9 shrink-0 text-right text-[10px] tabular-nums">
-            {ticks.map((t) => (
-              <span
-                key={t}
-                className="absolute right-0 -translate-y-1/2"
-                style={{ top: `${(1 - t / top) * 100}%` }}
-              >
-                {redacted ? '' : short(t)}
-              </span>
-            ))}
+        <div className="min-w-0 flex-1">
+          <div className="relative h-24">
+            <svg
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              className="text-text-primary absolute inset-0 h-full w-full overflow-visible"
+              aria-hidden
+            >
+              <line
+                x1="0"
+                x2="100"
+                y1="100"
+                y2="100"
+                className="stroke-border-muted"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+              />
+              {!redacted && (
+                <line
+                  x1="0"
+                  x2="100"
+                  y1={y(average)}
+                  y2={y(average)}
+                  className="stroke-border-primary"
+                  strokeWidth="1"
+                  strokeDasharray="2 3"
+                  vectorEffect="non-scaling-stroke"
+                />
+              )}
+              <path d={area} fill="currentColor" opacity="0.05" />
+              <path
+                d={solid}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                opacity="0.75"
+                vectorEffect="non-scaling-stroke"
+              />
+              {dashed && (
+                <path
+                  d={dashed}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeDasharray="3 3"
+                  opacity="0.4"
+                  vectorEffect="non-scaling-stroke"
+                />
+              )}
+            </svg>
+
+            {/* Marker on the hovered month, otherwise this month */}
+            <span
+              className="border-surface-primary bg-text-primary pointer-events-none absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
+              style={{
+                left: `${x(marker)}%`,
+                top: `${y(value(months[marker]!))}%`,
+              }}
+            />
+
+            {/* Hover targets, one per month, centred on its point */}
+            {months.map((m, i) => {
+              const v = value(m);
+              const prior = yearAgo(m);
+              const pct =
+                prior > 0 ? Math.round(((v - prior) / prior) * 100) : null;
+              return (
+                <div
+                  key={m.month}
+                  className="absolute inset-y-0 -translate-x-1/2"
+                  style={{ left: `${x(i)}%`, width: `${100 / last}%` }}
+                  onMouseEnter={() => setHover(i)}
+                  onMouseLeave={() => setHover(null)}
+                >
+                  {hover === i && (
+                    <>
+                      <div className="border-border-muted pointer-events-none absolute inset-y-0 left-1/2 border-l" />
+                      <div
+                        className={`border-border-muted bg-surface-primary pointer-events-none absolute bottom-full z-10 mb-1 w-max rounded-lg border px-2.5 py-1.5 text-[11px] shadow-md ${
+                          i < 2
+                            ? 'left-0'
+                            : i > last - 2
+                              ? 'right-0'
+                              : 'left-1/2 -translate-x-1/2'
+                        }`}
+                      >
+                        <p className="font-semibold">
+                          {monthLabel(m.month, true)}
+                          {m.isCurrent ? ' so far' : ''}
+                        </p>
+                        <p className="tabular-nums">
+                          {redacted ? '•••' : full(v, currency)}
+                        </p>
+                        {!redacted && (
+                          <p className="text-text-muted tabular-nums">
+                            {monthLabel(m.month)} last year:{' '}
+                            {prior > 0 ? short(prior) : 'none'}
+                            {pct != null && !m.isCurrent && (
+                              <span
+                                className={
+                                  pct >= 0 ? 'text-emerald-600' : 'text-red-600'
+                                }
+                              >
+                                {' '}
+                                ({pct >= 0 ? '+' : ''}
+                                {pct}%)
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          <div className="min-w-0 flex-1">
-            {/* Plot */}
-            <div className="relative h-48">
-              {ticks.map((t) => (
-                <div
-                  key={t}
-                  className={`absolute inset-x-0 border-t ${t === 0 ? 'border-border-primary' : 'border-border-muted border-dashed'}`}
-                  style={{ top: `${(1 - t / top) * 100}%` }}
-                />
-              ))}
-
-              <div className="absolute inset-0 flex items-end gap-0.5 sm:gap-1.5">
-                {months.map((m, i) => {
-                  const v = value(m);
-                  const prior = yearAgo(m);
-                  const pct =
-                    prior > 0 ? Math.round(((v - prior) / prior) * 100) : null;
-                  const isHover = hover === i;
-                  return (
-                    <div
-                      key={m.month}
-                      className="relative flex h-full flex-1 cursor-default items-end justify-center"
-                      onMouseEnter={() => setHover(i)}
-                      onMouseLeave={() => setHover(null)}
-                    >
-                      <div
-                        className={`bg-text-primary w-full max-w-9 rounded-t transition-opacity ${
-                          m.isCurrent
-                            ? 'opacity-35'
-                            : hover != null && !isHover
-                              ? 'opacity-60'
-                              : 'opacity-90'
-                        }`}
-                        style={{
-                          height: v > 0 ? `max(2px, ${(v / top) * 100}%)` : 0,
-                        }}
-                      />
-                      {isHover && (
-                        <div
-                          className={`border-border-muted bg-surface-primary pointer-events-none absolute bottom-full z-10 mb-2 w-max rounded-lg border px-3 py-2 text-[12px] shadow-md ${
-                            i < 3
-                              ? 'left-0'
-                              : i > months.length - 4
-                                ? 'right-0'
-                                : 'left-1/2 -translate-x-1/2'
-                          }`}
-                        >
-                          <p className="font-semibold">
-                            {monthLabel(m.month, true)}
-                            {m.isCurrent ? ' so far' : ''}
-                          </p>
-                          <p className="tabular-nums">
-                            {redacted ? '•••' : full(v, currency)}
-                          </p>
-                          {!redacted && (
-                            <p className="text-text-muted tabular-nums">
-                              {monthLabel(m.month)} last year:{' '}
-                              {prior > 0 ? short(prior) : 'none'}
-                              {pct != null && !m.isCurrent && (
-                                <span
-                                  className={
-                                    pct >= 0
-                                      ? 'text-emerald-600'
-                                      : 'text-red-600'
-                                  }
-                                >
-                                  {' '}
-                                  ({pct >= 0 ? '+' : ''}
-                                  {pct}%)
-                                </span>
-                              )}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* X axis */}
-            <div className="text-text-muted mt-1.5 flex gap-0.5 text-center text-[10px] sm:gap-1.5">
-              {months.map((m, i) => (
+          {/* Month labels, every third so they stay quiet */}
+          <div className="text-text-muted relative mt-1.5 h-3 text-[10px]">
+            {months.map((m, i) =>
+              (last - i) % 3 === 0 ? (
                 <span
                   key={m.month}
-                  className={`flex-1 truncate ${i % 2 === 1 ? 'invisible sm:visible' : ''} ${m.isCurrent ? 'text-text-primary font-semibold' : ''}`}
+                  className={`absolute ${i === 0 ? '' : i === last ? '-translate-x-full' : '-translate-x-1/2'}`}
+                  style={{ left: `${x(i)}%` }}
                 >
                   {monthLabel(m.month)}
                 </span>
-              ))}
-            </div>
+              ) : null,
+            )}
           </div>
         </div>
       </CardContent>
