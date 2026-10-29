@@ -24,6 +24,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import AddItemModal from '@/app/_source/components/AddItemModal';
@@ -33,7 +34,6 @@ import QuoteExcelUpload from '@/app/_source/components/QuoteExcelUpload';
 import RfqStatusBadge from '@/app/_source/components/RfqStatusBadge';
 import SendToPartnersDialog from '@/app/_source/components/SendToPartnersDialog';
 import exportRfqToExcel from '@/app/_source/utils/exportRfqToExcel';
-import exportRfqToPDF from '@/app/_source/utils/exportRfqToPDF';
 import formatLwin18 from '@/app/_source/utils/formatLwin18';
 import type { ParsedQuote } from '@/app/_source/utils/parseQuoteExcel';
 import Button from '@/app/_ui/components/Button/Button';
@@ -97,9 +97,18 @@ const RfqDetailPage = () => {
   const { mutate: generateFinalQuote, isPending: isGenerating } = useMutation(
     api.source.admin.generateFinalQuote.mutationOptions({
       onSuccess: async (data) => {
-        // Export to PDF
-        await exportRfqToPDF(data.rfq, data.lineItems, data.summary, data.unquotedItems);
-        void refetch();
+        // Export to PDF; the quote is already saved, so refresh either way
+        try {
+          const { default: exportRfqToPDF } = await import(
+            '@/app/_source/utils/exportRfqToPDF'
+          );
+          await exportRfqToPDF(data.rfq, data.lineItems, data.summary, data.unquotedItems);
+        } catch (error) {
+          console.error('Error exporting final quote PDF', { error });
+          toast.error('The quote was saved, but the PDF could not be created. Please try again.');
+        } finally {
+          void refetch();
+        }
       },
     }),
   );
