@@ -155,6 +155,27 @@ const StatementPage = () => {
   const monthLabel =
     options.find((option) => option.value === month)?.label ?? month;
 
+  // The month before, by name, for the balance brought forward
+  const previousMonthLabel = format(subMonths(new Date(`${month}-01T12:00:00`), 1), 'MMMM');
+
+  /*
+    How "Owed to you" is reached: what was owed at the start of the month, plus
+    this month's sales and anything reimbursed, less what was paid. Left out
+    when nothing was brought forward or paid, since the sold figure then is
+    the balance.
+  */
+  const balance = data
+    ? (() => {
+        const sold = data.soldUsd + data.soldLeftUsd;
+        const other = Math.round((data.owedUsd - data.broughtForwardUsd - sold + data.paidUsd) * 100) / 100;
+        return {
+          sold,
+          other,
+          shown: Math.abs(data.broughtForwardUsd) >= 0.01 || data.paidUsd > 0,
+        };
+      })()
+    : null;
+
   const totals = data
     ? {
         added: data.added.reduce((sum, row) => sum + row.bottles, 0),
@@ -210,7 +231,9 @@ const StatementPage = () => {
         row.bottles,
         row.amountUsd.toFixed(2),
       ]),
+      ['Brought forward', '', '', '', data.broughtForwardUsd.toFixed(2)],
       ['Paid to you', '', '', '', data.paidUsd.toFixed(2)],
+      ['Owed to you', '', '', '', Math.max(0, data.owedUsd).toFixed(2)],
       ...data.holdings.map((row) => [
         'Held in the UAE',
         format(new Date(data.generatedAt), 'yyyy-MM-dd'),
@@ -458,6 +481,35 @@ const StatementPage = () => {
                 : undefined
             }
           />
+
+          {balance?.shown && (
+            <section className="mb-7">
+              <h2 className="text-text-muted mb-2 px-1 text-[11px] font-medium uppercase tracking-wider">
+                Your balance
+              </h2>
+              <dl className="border-border-muted bg-surface-quiet divide-border-muted divide-y rounded-xl border text-sm">
+                {[
+                  { label: `Brought forward from ${previousMonthLabel}`, value: money(data.broughtForwardUsd) },
+                  { label: `Sold in ${monthLabel}`, value: money(balance.sold) },
+                  ...(Math.abs(balance.other) >= 0.01
+                    ? [{ label: 'Reimbursed to you', value: money(balance.other) }]
+                    : []),
+                  { label: 'Paid to you', value: data.paidUsd > 0 ? `− ${money(data.paidUsd)}` : '—' },
+                ].map((line) => (
+                  <div key={line.label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+                    <dt className="text-text-muted">{line.label}</dt>
+                    <dd className="text-text-primary tabular-nums">{line.value}</dd>
+                  </div>
+                ))}
+                <div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+                  <dt className="text-text-primary font-semibold">Owed to you</dt>
+                  <dd className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                    {money(Math.max(0, data.owedUsd))}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          )}
 
           {data.left.some((row) => !['delivery', 'sale'].includes(row.outcome)) && (
             <StatementGroups

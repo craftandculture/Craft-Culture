@@ -26,7 +26,11 @@ import generateMandateNumber from '../utils/generateMandateNumber';
  * When C&C agrees with a member, by phone or on a sheet, which wines it may
  * sell and at what price, those prices belong where the member's own asking
  * prices live: their Selling offers. One offer per wine at the agreed price,
- * converted to USD at the stated rate. Bottles already sold on orders are
+ * converted to USD at the rate of the shipment the wine arrived on, as
+ * Logistics recorded it: the member paid for that wine at that rate, and a
+ * statement valued at today's rate disagreed with their purchase (Ihab Toma,
+ * Oct 2026: 1.1203 used against the shipment's 1.168). A stated rate
+ * overrides it; a wine with no EUR shipment falls back to today's rate. Bottles already sold on orders are
  * counted, so a wine sold out reads as sold, one part sold as partly sold,
  * and the rest stays offered for C&C to sell (not on any price list).
  *
@@ -43,7 +47,7 @@ const adminRecordAgreedPrices = staffAdminProcedure
   .input(
     z.object({
       ownerId: z.string().uuid(),
-      /** Omit for today's rate, looked up the way shipment imports do */
+      /** Omit for each wine's shipment rate, or today's where it has none */
       eurToUsd: z.number().min(0.5).max(2).optional(),
       dryRun: z.boolean().default(true),
       note: z.string().trim().max(300).optional(),
@@ -66,6 +70,7 @@ const adminRecordAgreedPrices = staffAdminProcedure
     if (!fx.rate || fx.source === 'unresolved') {
       throw new TRPCError({ code: 'BAD_GATEWAY', message: 'Could not look up today\'s EUR rate. Give a rate instead.' });
     }
+    // Today's rate, or the stated one: used only where a wine has no EUR shipment rate
     const eurToUsd = fx.rate;
 
     const [owner] = await db
@@ -114,6 +119,35 @@ const adminRecordAgreedPrices = staffAdminProcedure
       const key = lwinPakKeyOf(lwin18);
       return (keyCounts.get(key) ?? 0) > 1 ? lwin18 : key;
     };
+
+    /*
+      The rate each wine was bought at: the EUR shipment it was received from
+      for this owner, the earliest where there were several.
+    */
+    const shipmentRates = input.eurToUsd
+      ? []
+      : await db.execute<{ lwin18: string; rate: number; shipment: string }>(sql`
+          SELECT m.lwin18, s.fx_rate_to_usd AS rate, s.shipment_number AS shipment
+          FROM wms_stock_movements m
+          JOIN logistics_shipments s ON s.id = m.shipment_id
+          WHERE m.movement_type = 'receive'
+            AND UPPER(s.source_currency) = 'EUR'
+            AND s.fx_rate_to_usd > 0
+            AND (${sql.join(keys.map((key) => sql`m.lwin18 LIKE ${keyPattern(key)}`), sql` OR `)})
+            AND (
+              m.to_owner_id = ${owner.id}
+              OR EXISTS (
+                SELECT 1 FROM logistics_shipment_items i
+                WHERE i.shipment_id = s.id AND COALESCE(i.override_owner_id, s.partner_id) = ${owner.id}
+              )
+            )
+          ORDER BY m.performed_at
+        `);
+    const rateByKey = new Map<string, { rate: number; source: string }>();
+    for (const row of Array.isArray(shipmentRates) ? shipmentRates : (shipmentRates as { rows: typeof shipmentRates }).rows) {
+      const key = matchKey(row.lwin18);
+      if (!rateByKey.has(key)) rateByKey.set(key, { rate: Number(row.rate), source: `shipment ${row.shipment}` });
+    }
 
     const soldByKey = new Map<string, number>();
     for (const pick of picks) {
@@ -176,6 +210,7 @@ const adminRecordAgreedPrices = staffAdminProcedure
         0,
       );
       const status = remaining === 0 ? 'sold' : sold > 0 ? 'partially_sold' : 'offered';
+      const lineFx = rateByKey.get(match) ?? fx;
       return {
         lwin18: line.lwin18,
         key,
@@ -188,7 +223,9 @@ const adminRecordAgreedPrices = staffAdminProcedure
         remainingBottles: remaining,
         heldBottles,
         eurPerBottle: line.eurPerBottle,
-        askPerBottleUsd: Math.round(line.eurPerBottle * eurToUsd * 100) / 100,
+        eurToUsd: lineFx.rate,
+        rateSource: lineFx.source,
+        askPerBottleUsd: Math.round(line.eurPerBottle * lineFx.rate * 100) / 100,
         status: status as 'sold' | 'partially_sold' | 'offered',
         existingOffer: existingFor(line.lwin18)?.number ?? null,
         problem: !rows[0] && !names.some((name) => matchKey(name.lwin18) === match)
@@ -213,15 +250,26 @@ const adminRecordAgreedPrices = staffAdminProcedure
 
     const note =
       input.note ??
-      `Agreed with C&C at €${'{eur}'} per bottle, converted at €1 = $${eurToUsd} (${fx.source}) on ${new Date().toISOString().slice(0, 10)}`;
+      `Agreed with C&C at €${'{eur}'} per bottle, converted at €1 = $${'{rate}'} (${'{source}'}) on ${new Date().toISOString().slice(0, 10)}`;
 
     for (const line of plan) {
-      const ownerNotes = note.replace('{eur}', String(line.eurPerBottle));
+      const ownerNotes = note
+        .replace('{eur}', String(line.eurPerBottle))
+        .replace('{rate}', String(line.eurToUsd))
+        .replace('{source}', line.rateSource);
+      // Kept with the offer, so the price the member agreed reads in euros
+      const asked = {
+        askPerBottleUsd: line.askPerBottleUsd,
+        askCurrency: 'EUR',
+        askPerBottleLocal: line.eurPerBottle,
+        askFxRate: line.eurToUsd,
+        askFxAt: new Date(),
+      };
       const current = existingFor(line.lwin18);
       if (current) {
         await db
           .update(saleMandates)
-          .set({ askPerBottleUsd: line.askPerBottleUsd, ownerNotes, updatedAt: new Date() })
+          .set({ ...asked, ownerNotes, updatedAt: new Date() })
           .where(eq(saleMandates.id, current.id));
         continue;
       }
@@ -246,7 +294,7 @@ const adminRecordAgreedPrices = staffAdminProcedure
                 caseConfig: first?.caseConfig ?? null,
                 bottlesOffered: line.agreedBottles,
                 bottlesRemaining: line.remainingBottles,
-                askPerBottleUsd: line.askPerBottleUsd,
+                ...asked,
                 status: line.status,
                 offeredAt: new Date(),
                 ownerNotes,

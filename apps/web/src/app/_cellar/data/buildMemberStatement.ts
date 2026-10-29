@@ -316,7 +316,10 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
         ),
       getOwnerWineCosts(partnerId),
       db
-        .select({ total: sql<number>`COALESCE(SUM(${consignmentSettlements.owedToOwner}), 0)::float` })
+        .select({
+          total: sql<number>`COALESCE(SUM(${consignmentSettlements.owedToOwner}), 0)::float`,
+          before: sql<number>`COALESCE(SUM(${consignmentSettlements.owedToOwner}) FILTER (WHERE ${consignmentSettlements.settledAt} < ${from.toISOString()}::timestamp), 0)::float`,
+        })
         .from(consignmentSettlements)
         .where(
           and(
@@ -330,22 +333,31 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
         stands behind (a partner settlement when a member buys the wine).
         Without the second, those were subtracted when paid but never earned.
       */
-      db.execute<{ total: number }>(sql`
+      // To the end of the month, and to its start for what was brought forward
+      db.execute<{ total: number; before: number }>(sql`
         SELECT (
           COALESCE((SELECT SUM(owed_to_owner_usd) FROM pool_sales
             WHERE owner_id = ${partnerId} AND sold_at < ${to.toISOString()}::timestamp), 0)
           + COALESCE((SELECT SUM(s.owed_to_owner) FROM consignment_settlements s
             WHERE s.owner_id = ${partnerId} AND s.created_at < ${to.toISOString()}::timestamp
               AND NOT EXISTS (SELECT 1 FROM pool_sales p WHERE p.settlement_id = s.id)), 0)
-        )::float AS total
+        )::float AS total, (
+          COALESCE((SELECT SUM(owed_to_owner_usd) FROM pool_sales
+            WHERE owner_id = ${partnerId} AND sold_at < ${from.toISOString()}::timestamp), 0)
+          + COALESCE((SELECT SUM(s.owed_to_owner) FROM consignment_settlements s
+            WHERE s.owner_id = ${partnerId} AND s.created_at < ${from.toISOString()}::timestamp
+              AND NOT EXISTS (SELECT 1 FROM pool_sales p WHERE p.settlement_id = s.id)), 0)
+        )::float AS before
       `),
     ]);
 
     /*
       What each bottle that left is worth to the owner. A sale is valued at
       the owner's own price for that wine (their Selling offer, or the price
-      agreed with C&C and recorded there). Samples and damage are at what the
-      bottle cost them to land. Deliveries, collections and count corrections
+      agreed with C&C and recorded there). Bottles C&C takes for samples and
+      tastings are bought at that same price where the member has one, and at
+      what the bottle cost them to land only where they have none (Laraine's
+      check of Ihab Toma's October statement). Damage is at landed cost. Deliveries, collections and count corrections
       carry no money. No price yet means null: shown as "price being agreed",
       never as $0.
     */
@@ -368,6 +380,10 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
       if (row.reasonCode?.startsWith('stock_out:')) {
         const rule = STOCK_OUT_REASONS[row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS];
         if (rule?.settlement === 'price') return row.unitPriceUsd != null ? bottles * row.unitPriceUsd : null;
+        if (rule?.settlement === 'cc_landed') {
+          const ask = askFor(row.lwin18);
+          if (ask != null) return bottles * ask;
+        }
         if (rule?.settlement === 'cc_landed' || rule?.settlement === 'owner_reimbursed') {
           const landed = costs.get(lwinPakKeyOf(row.lwin18))?.landedPerBottle;
           return landed != null ? bottles * landed : null;
@@ -706,6 +722,17 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
           (paidToDate?.total ?? 0),
       ),
       paidUsd: round(paid.reduce((sum, row) => sum + row.amountUsd, 0)),
+      /*
+        What was owed at the start of the month, so "Owed to you" adds up on
+        the page: brought forward, plus this month's sales, less this month's
+        payments. Without it a member saw October's sales and a larger owed
+        figure, and asked where the difference came from.
+      */
+      broughtForwardUsd: round(
+        leftToDate.filter((row) => row.at < from).reduce((sum, row) => sum + (amountOf(row) ?? 0), 0) +
+          Number(poolToDate?.before ?? 0) -
+          Number(paidToDate?.before ?? 0),
+      ),
 
       holdings: holdings.map((row) => {
         const bottles = row.cases * (row.caseConfig ?? 1);
@@ -744,7 +771,9 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
             : rule
               ? rule.settlement === 'price'
                 ? 'Price on the take-out'
-                : rule.settlement === 'cc_landed' || rule.settlement === 'owner_reimbursed'
+                : rule.settlement === 'cc_landed' && askFor(row.lwin18) != null
+                  ? 'Member price'
+                  : rule.settlement === 'cc_landed' || rule.settlement === 'owner_reimbursed'
                   ? 'Landed cost'
                   : 'No value'
               : row.movementType === 'count'
