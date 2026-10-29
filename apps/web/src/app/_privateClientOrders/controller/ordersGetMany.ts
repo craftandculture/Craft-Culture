@@ -57,7 +57,8 @@ const ordersGetMany = winePartnerProcedure
         order: privateClientOrders,
         distributor: {
           id: partners.id,
-          businessName: partners.businessName,
+          // Partners never see the distributor's name, only its role
+          businessName: sql<string>`'Appointed UAE distributor'`,
         },
         client: {
           id: privateClientContacts.id,

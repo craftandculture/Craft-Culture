@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, notInArray } from 'drizzle-orm';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import counterpartySafeActivity from '@/app/_privateClientOrders/utils/counterpartySafeActivity';
@@ -32,8 +32,8 @@ const ordersGetOne = winePartnerProcedure
         order: privateClientOrders,
         distributor: {
           id: partners.id,
-          // Named only so the partner can tell their client where to register
-          businessName: partners.businessName,
+          // Partners never see the distributor's name, only its role
+          businessName: sql<string>`'Appointed UAE distributor'`,
           requiresClientVerification: partners.requiresClientVerification,
         },
         client: {
