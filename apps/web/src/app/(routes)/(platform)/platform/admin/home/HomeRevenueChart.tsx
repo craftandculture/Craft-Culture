@@ -131,7 +131,8 @@ const HomeRevenueChart = ({
                 x2="100"
                 y1="100"
                 y2="100"
-                className="stroke-border-muted"
+                stroke="currentColor"
+                opacity="0.15"
                 strokeWidth="1"
                 vectorEffect="non-scaling-stroke"
               />
@@ -141,7 +142,8 @@ const HomeRevenueChart = ({
                   x2="100"
                   y1={y(average)}
                   y2={y(average)}
-                  className="stroke-border-primary"
+                  stroke="currentColor"
+                  opacity="0.35"
                   strokeWidth="1"
                   strokeDasharray="2 3"
                   vectorEffect="non-scaling-stroke"
@@ -173,7 +175,7 @@ const HomeRevenueChart = ({
 
             {/* Marker on the hovered month, otherwise this month */}
             <span
-              className="border-surface-primary bg-text-primary pointer-events-none absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
+              className="border-surface-primary bg-text-primary pointer-events-none absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
               style={{
                 left: `${x(marker)}%`,
                 top: `${y(value(months[marker]!))}%`,
@@ -198,12 +200,8 @@ const HomeRevenueChart = ({
                     <>
                       <div className="border-border-muted pointer-events-none absolute inset-y-0 left-1/2 border-l" />
                       <div
-                        className={`border-border-muted bg-surface-primary pointer-events-none absolute bottom-full z-10 mb-1 w-max rounded-lg border px-2.5 py-1.5 text-[11px] shadow-md ${
-                          i < 2
-                            ? 'left-0'
-                            : i > last - 2
-                              ? 'right-0'
-                              : 'left-1/2 -translate-x-1/2'
+                        className={`border-border-muted bg-surface-primary pointer-events-none absolute top-0 z-10 w-max rounded-lg border px-2.5 py-1.5 text-[11px] shadow-md ${
+                          i < last / 2 ? 'left-1/2 ml-3' : 'right-1/2 mr-3'
                         }`}
                       >
                         <p className="font-semibold">
