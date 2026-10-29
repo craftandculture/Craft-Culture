@@ -2,9 +2,9 @@ import { and, eq, gt, ilike, isNull, like, or, sql } from 'drizzle-orm';
 
 import { wmsStock } from '@/database/schema';
 
+import normalizeLwin18 from './normalizeLwin18';
 import getCollectorStockHolds from '../data/getCollectorStockHolds';
 
-import normalizeLwin18 from './normalizeLwin18';
 
 interface ResolvePickStockParams {
   /*
