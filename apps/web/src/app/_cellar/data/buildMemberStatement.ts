@@ -163,6 +163,8 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
             and(
               eq(wmsStockMovements.movementType, 'ownership_transfer'),
               eq(wmsStockMovements.toOwnerId, partnerId),
+              // A transfer voided by pointing it back at its owner moved nothing
+              sql`${wmsStockMovements.fromOwnerId} IS DISTINCT FROM ${partnerId}`,
               inMonth(wmsStockMovements.performedAt),
             ),
           )
