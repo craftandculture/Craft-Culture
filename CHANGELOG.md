@@ -1,3 +1,9 @@
+## [2.1.40](https://github.com/craftandculture/Craft-Culture/compare/v2.1.39...v2.1.40) (2026-10-29)
+
+### Bug Fixes
+
+* distributor order list and dashboard show each wine partner's logo again ([dc408fd](https://github.com/craftandculture/Craft-Culture/commit/dc408fde44a0cc2536e68d2f8cf1cacc49e07b03))
+
 ## [2.1.39](https://github.com/craftandculture/Craft-Culture/compare/v2.1.38...v2.1.39) (2026-10-29)
 
 ### Bug Fixes
