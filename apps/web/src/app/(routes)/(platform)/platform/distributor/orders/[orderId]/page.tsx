@@ -6,6 +6,7 @@ import {
   IconCalendar,
   IconCheck,
   IconCloudUpload,
+  IconCopy,
   IconDownload,
   IconFile,
   IconFileInvoice,
@@ -38,6 +39,14 @@ import StockStatusSection from '@/app/_privateClientOrders/components/StockStatu
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
 import describePcoLine from '@/app/_privateClientOrders/utils/describePcoLine';
 import summarisePcoQuantities from '@/app/_privateClientOrders/utils/summarisePcoQuantities';
+import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
+import AlertDialogAction from '@/app/_ui/components/AlertDialog/AlertDialogAction';
+import AlertDialogCancel from '@/app/_ui/components/AlertDialog/AlertDialogCancel';
+import AlertDialogContent from '@/app/_ui/components/AlertDialog/AlertDialogContent';
+import AlertDialogDescription from '@/app/_ui/components/AlertDialog/AlertDialogDescription';
+import AlertDialogFooter from '@/app/_ui/components/AlertDialog/AlertDialogFooter';
+import AlertDialogHeader from '@/app/_ui/components/AlertDialog/AlertDialogHeader';
+import AlertDialogTitle from '@/app/_ui/components/AlertDialog/AlertDialogTitle';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
@@ -65,6 +74,39 @@ const formatPrice = (amount: number, currency: Currency) => {
 };
 
 /**
+ * A small button that copies one value, for client details read out or pasted
+ * into a delivery app
+ */
+const CopyButton = ({ value, label }: { value: string; label: string }) => (
+  <button
+    type="button"
+    onClick={() => {
+      if (!navigator.clipboard) {
+        toast.error('Copying is not available in this browser');
+        return;
+      }
+      navigator.clipboard.writeText(value).then(
+        () => toast.success(`${label} copied`),
+        () => toast.error('Could not copy'),
+      );
+    }}
+    aria-label={`Copy ${label.toLowerCase()}`}
+    title={`Copy ${label.toLowerCase()}`}
+    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-fill-muted hover:text-text-primary"
+  >
+    <Icon icon={IconCopy} size="sm" />
+  </button>
+);
+
+/** An irreversible step, held until the distributor confirms it */
+interface PendingConfirm {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  run: () => void;
+}
+
+/**
  * Distributor order detail page
  *
  * Shows full order details with action buttons for status updates.
@@ -77,8 +119,9 @@ const DistributorOrderDetailPage = () => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useState<Currency>('AED');
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
-  const { data: order, isLoading, refetch } = useQuery({
+  const { data: order, isLoading, error, refetch } = useQuery({
     ...api.privateClientOrders.distributorGetOne.queryOptions({ id: orderId }),
     enabled: !!orderId,
     refetchInterval: 30000, // Auto-refresh every 30 seconds
@@ -356,11 +399,43 @@ const DistributorOrderDetailPage = () => {
       // Note: awaiting_partner_verification and awaiting_distributor_verification
       // are handled by dedicated verification UI components, not action buttons
       case 'awaiting_client_payment':
-        return { label: 'Confirm Client Payment', status: 'client_paid', icon: IconCheck };
-      // After client_paid, delivery workflow is handled by dedicated UI below
-      // client_paid, scheduling_delivery, delivery_scheduled, out_for_delivery - all handled by delivery UI
+        return {
+          label: 'Confirm Client Payment',
+          status: 'client_paid',
+          icon: IconCheck,
+          hint: 'When the client has paid you in full, confirm it here.',
+          confirm:
+            'Confirm that the client has paid you in full. This cannot be undone from the portal.',
+        };
+      // The same payment steps the order list offers, so the Pay C&C task can be done here.
+      // Delivery scheduling for these statuses stays in the delivery card below.
+      case 'client_paid':
+        return {
+          label: 'Mark Awaiting Distributor Payment',
+          status: 'awaiting_distributor_payment',
+          icon: IconCheck,
+          hint: 'The client has paid. Record that your payment to Craft & Culture is being raised.',
+          confirm: 'Record that your payment to Craft & Culture is being raised.',
+        };
+      case 'awaiting_distributor_payment':
+        return {
+          label: 'Confirm Payment to C&C',
+          status: 'distributor_paid',
+          icon: IconCheck,
+          hint: 'Once your payment to Craft & Culture has been sent, confirm it here.',
+          confirm:
+            'Confirm that your payment to Craft & Culture has been sent. Craft & Culture then releases the stock to you.',
+        };
+      // scheduling_delivery, delivery_scheduled, out_for_delivery - all handled by delivery UI
       case 'stock_in_transit':
-        return { label: 'Stock Received', status: 'with_distributor', icon: IconPackage };
+        return {
+          label: 'Stock Received',
+          status: 'with_distributor',
+          icon: IconPackage,
+          hint: 'Craft & Culture has sent the stock. Confirm when it reaches your warehouse.',
+          confirm:
+            'Confirm that the stock for this order has arrived at your warehouse. Check the case labels against the order first.',
+        };
       default:
         return null;
     }
@@ -377,19 +452,31 @@ const DistributorOrderDetailPage = () => {
   }
 
   if (!order) {
+    // Not found and not assigned read the same; a failed load says so instead
+    const notFound =
+      !error || (error as { data?: { code?: string } | null }).data?.code === 'NOT_FOUND';
     return (
       <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         <Card>
           <CardContent className="p-12 text-center">
             <Typography variant="headingSm" className="mb-2">
-              Order Not Found
+              {notFound ? 'Order Not Found' : 'The order could not be loaded'}
             </Typography>
             <Typography variant="bodyMd" colorRole="muted" className="mb-4">
-              The order you&apos;re looking for doesn&apos;t exist or is not assigned to you.
+              {notFound
+                ? 'This order does not exist or is not assigned to you.'
+                : 'Check your connection and try again.'}
             </Typography>
-            <Button variant="outline" asChild>
-              <Link href="/platform/distributor/orders">Back to Orders</Link>
-            </Button>
+            <div className="flex flex-wrap justify-center gap-2">
+              {!notFound && (
+                <Button type="button" onClick={() => void refetch()}>
+                  Try again
+                </Button>
+              )}
+              <Button variant="outline" asChild>
+                <Link href="/platform/distributor/orders">Back to Assigned Orders</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -397,6 +484,36 @@ const DistributorOrderDetailPage = () => {
   }
 
   const nextAction = getNextAction();
+
+  // The one status change waiting on the distributor, shown first on the page
+  const nextStep =
+    order.status === 'awaiting_payment_verification'
+      ? {
+          label: 'Verify Client Payment',
+          icon: IconCheck,
+          hint: 'The partner reports that the client has paid. Check that the payment has reached you, then verify it.',
+          confirm: "Confirm that the client's payment has reached you.",
+          run: () => verifyClientPayment(),
+          isPending: isVerifyingPayment,
+        }
+      : nextAction
+        ? {
+            label: nextAction.label,
+            icon: nextAction.icon,
+            hint: nextAction.hint,
+            confirm: nextAction.confirm,
+            run: () => updateStatus.mutate(nextAction.status),
+            isPending: updateStatus.isPending,
+          }
+        : null;
+  // The server refuses client payment without the distributor's invoice
+  const invoiceMissing =
+    order.status === 'awaiting_client_payment' && documents !== undefined && !hasDistributorInvoice;
+  // Not a block: the server looks the SKU up in the distributor's feed on confirming
+  const skuMissing =
+    order.status === 'awaiting_client_payment' &&
+    !!order.distributor?.requiresOrderSku &&
+    !order.distributorSku;
 
   // Calculate exchange rate for AED conversion (use actual rate if available, otherwise default)
   // At the fixed peg; the stored ratio carried 3.67 on orders totalled before 28 Oct 2026
@@ -417,45 +534,46 @@ const DistributorOrderDetailPage = () => {
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/platform/distributor/orders">
+              <Link href="/platform/distributor/orders" aria-label="Back to Assigned Orders">
                 <Icon icon={IconArrowLeft} size="sm" />
               </Link>
             </Button>
-            <Typography variant="headingLg">{order.orderNumber}</Typography>
+            <Typography variant="headingLg" className="font-mono">
+              {order.orderNumber}
+            </Typography>
             <PrivateOrderStatusBadge status={order.status} />
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Currency Toggle */}
-            <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
-              <button
-                type="button"
-                onClick={() => setCurrency('USD')}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
-                  currency === 'USD'
-                    ? 'bg-background-primary text-text-primary shadow-sm'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                USD
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrency('AED')}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
-                  currency === 'AED'
-                    ? 'bg-background-primary text-text-primary shadow-sm'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                AED
-              </button>
+            <div
+              className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5"
+              role="group"
+              aria-label="Currency"
+            >
+              {(['AED', 'USD'] as const).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCurrency(c)}
+                  aria-pressed={currency === c}
+                  className={`min-h-9 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                    currency === c
+                      ? 'bg-background-primary text-text-primary shadow-sm'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
             </div>
 
             {/* Download PDF Button */}
             <Button
+              type="button"
               variant="outline"
               onClick={() => window.open(`/api/distributor/pco/proforma?orderId=${orderId}`, '_blank')}
+              aria-label="Download proforma PDF"
             >
               <ButtonContent iconLeft={IconDownload}>
                 <span className="hidden sm:inline">Download</span> PDF
@@ -464,43 +582,70 @@ const DistributorOrderDetailPage = () => {
 
             {/* Send to Finance Button */}
             <Button
+              type="button"
               variant="outline"
               onClick={() => sendToFinance()}
               disabled={isSendingToFinance}
+              aria-label="Email the proforma to your finance team"
+              title={order.distributor?.financeEmail ? `Sends to ${order.distributor.financeEmail}` : undefined}
             >
               <ButtonContent iconLeft={IconMail} isLoading={isSendingToFinance}>
                 <span className="hidden sm:inline">Send to</span> Finance
               </ButtonContent>
             </Button>
 
-            {order.status === 'awaiting_payment_verification' && (
-              <Button
-                colorRole="brand"
-                onClick={() => verifyClientPayment()}
-                disabled={isVerifyingPayment}
-              >
-                <ButtonContent iconLeft={IconCheck} isLoading={isVerifyingPayment}>
-                  Verify Client Payment
-                </ButtonContent>
-              </Button>
-            )}
-
-            {/* Next Action Button */}
-            {nextAction && (
-              <Button
-                colorRole="brand"
-                onClick={() => updateStatus.mutate(nextAction.status)}
-                disabled={updateStatus.isPending}
-              >
-                <ButtonContent iconLeft={nextAction.icon} isLoading={updateStatus.isPending}>
-                  {nextAction.label}
-                </ButtonContent>
-              </Button>
-            )}
           </div>
         </div>
 
-        {/* Workflow Stepper */}
+        {/* Next step: the one status change waiting on the distributor, first on the page */}
+        {nextStep && (
+          <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+              <div className="min-w-0">
+                <Typography variant="labelSm" colorRole="muted" className="uppercase tracking-wider">
+                  Next step
+                </Typography>
+                <Typography variant="headingSm" className="mt-0.5">
+                  {nextStep.label}
+                </Typography>
+                <Typography variant="bodySm" colorRole="muted" className="mt-1">
+                  {nextStep.hint}
+                </Typography>
+                {invoiceMissing && (
+                  <Typography variant="bodyXs" className="mt-1 font-medium text-text-warning">
+                    Upload your invoice first. It is needed before client payment can be confirmed.
+                  </Typography>
+                )}
+                {skuMissing && (
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                    No bundle SKU is recorded yet. It is looked up in your stock feed when you
+                    confirm; if it is not found there, enter it in the SKU card below.
+                  </Typography>
+                )}
+              </div>
+              <Button
+                type="button"
+                colorRole="brand"
+                size="lg"
+                className="w-full shrink-0 sm:w-auto"
+                disabled={nextStep.isPending || invoiceMissing}
+                onClick={() =>
+                  setPendingConfirm({
+                    title: nextStep.label,
+                    body: nextStep.confirm,
+                    confirmLabel: nextStep.label,
+                    run: nextStep.run,
+                  })
+                }
+              >
+                <ButtonContent iconLeft={nextStep.icon} isLoading={nextStep.isPending}>
+                  {nextStep.label}
+                </ButtonContent>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* First thing on a received order: the bundle SKU in their system */}
         {order.distributor?.requiresOrderSku && (
           <DistributorSkuCard
@@ -516,8 +661,6 @@ const DistributorOrderDetailPage = () => {
           />
         )}
 
-        <WorkflowStepper order={order} />
-
         {/* Distributor Verification Prompt - shown when awaiting distributor verification */}
         {order.status === 'awaiting_distributor_verification' && (
           <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
@@ -531,25 +674,43 @@ const DistributorOrderDetailPage = () => {
                     Client Verification Required
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    Please verify that <strong>{order.clientName}</strong> is registered in your system.
+                    Check that <strong>{order.clientName}</strong> is registered in your system.
                     The partner has confirmed the client should be verified with you.
                   </Typography>
                   {order.clientPhone && (
                     <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                      Client phone: {order.clientPhone}
+                      Client phone:{' '}
+                      <a href={`tel:${order.clientPhone}`} className="font-medium text-text-primary underline-offset-2 hover:underline">
+                        {order.clientPhone}
+                      </a>
                     </Typography>
                   )}
                 </div>
                 <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
                   <Button
+                    type="button"
                     onClick={() => distributorVerification({ response: 'verified' })}
                     disabled={isVerifying}
-                    variant="default"
+                    colorRole="brand"
                   >
-                    <ButtonContent iconLeft={IconCheck}>Client Verified</ButtonContent>
+                    <ButtonContent iconLeft={IconCheck} isLoading={isVerifying}>
+                      Client Verified
+                    </ButtonContent>
                   </Button>
                   <Button
-                    onClick={() => distributorVerification({ response: 'not_verified', notes: 'Client not found in system' })}
+                    type="button"
+                    onClick={() =>
+                      setPendingConfirm({
+                        title: 'Client not verified',
+                        body: `The order is suspended and Craft & Culture and the partner are told that ${order.clientName} was not found in your system. You can unlock it later if the client registers.`,
+                        confirmLabel: 'Not Verified',
+                        run: () =>
+                          distributorVerification({
+                            response: 'not_verified',
+                            notes: 'Client not found in system',
+                          }),
+                      })
+                    }
                     disabled={isVerifying}
                     variant="outline"
                   >
@@ -585,6 +746,7 @@ const DistributorOrderDetailPage = () => {
                 </div>
                 <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
                   <Button
+                    type="button"
                     onClick={() => unlockSuspended('Client now registered and verified')}
                     disabled={isUnlocking}
                     colorRole="brand"
@@ -621,16 +783,18 @@ const DistributorOrderDetailPage = () => {
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
                     Needed before you can confirm the client&rsquo;s payment. It is also shared with
-                    the partner for their records.
+                    the partner for their records. PDF, PNG or JPG, up to 10 MB.
                   </Typography>
                 </div>
                 <Button
+                  type="button"
                   onClick={() => invoiceInputRef.current?.click()}
                   disabled={isUploadingInvoice}
-                  variant="default"
+                  colorRole="brand"
+                  className="w-full sm:w-auto"
                 >
                   <ButtonContent iconLeft={isUploadingInvoice ? IconLoader2 : IconCloudUpload} isLoading={isUploadingInvoice}>
-                    {isUploadingInvoice ? 'Uploading...' : 'Upload Invoice'}
+                    {isUploadingInvoice ? 'Uploading…' : 'Upload Invoice'}
                   </ButtonContent>
                 </Button>
               </div>
@@ -642,21 +806,26 @@ const DistributorOrderDetailPage = () => {
         {order.paymentReference && order.status === 'awaiting_client_payment' && (
           <Card className="border-2 border-text-primary/50 bg-text-primary/5">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-text-primary/20">
                   <Icon icon={IconCheck} size="md" className="text-text-primary" />
                 </div>
-                <div>
-                  <Typography variant="labelSm" colorRole="muted">
-                    Payment Reference
-                  </Typography>
-                  <Typography variant="headingSm">{order.paymentReference}</Typography>
+                <div className="flex min-w-0 items-center gap-1">
+                  <div className="min-w-0">
+                    <Typography variant="labelSm" colorRole="muted">
+                      Payment Reference
+                    </Typography>
+                    <Typography variant="headingSm" className="break-all font-mono">
+                      {order.paymentReference}
+                    </Typography>
+                  </div>
+                  <CopyButton value={order.paymentReference} label="Payment reference" />
                 </div>
                 <div className="ml-auto text-right">
                   <Typography variant="labelSm" colorRole="muted">
                     Amount Due
                   </Typography>
-                  <Typography variant="headingSm">
+                  <Typography variant="headingSm" className="tabular-nums">
                     {formatPrice(getAmount(order.totalUsd), currency)}
                   </Typography>
                 </div>
@@ -686,8 +855,20 @@ const DistributorOrderDetailPage = () => {
                     </Typography>
                     <Typography variant="bodySm" colorRole="muted">
                       Contact {order.clientName} to arrange delivery.
-                      {order.clientPhone && <> Phone: <strong>{order.clientPhone}</strong></>}
+                      {order.clientPhone && (
+                        <>
+                          {' '}Phone:{' '}
+                          <a href={`tel:${order.clientPhone}`} className="font-semibold text-text-primary underline-offset-2 hover:underline">
+                            {order.clientPhone}
+                          </a>
+                        </>
+                      )}
                     </Typography>
+                    {order.clientAddress && (
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                        Address: {order.clientAddress}
+                      </Typography>
+                    )}
                     {/* Show contact attempts */}
                     {order.deliveryContactAttempts && (order.deliveryContactAttempts as Array<{ attemptedAt: string; notes: string }>).length > 0 && (
                       <div className="mt-2 space-y-1">
@@ -695,7 +876,15 @@ const DistributorOrderDetailPage = () => {
                         {(order.deliveryContactAttempts as Array<{ attemptedAt: string; notes: string }>).map((attempt, idx) => (
                           <div key={idx} className="flex items-center gap-2 text-xs text-text-muted">
                             <IconPhoneOff className="h-3 w-3" />
-                            <span>{new Date(attempt.attemptedAt).toLocaleString()}: {attempt.notes}</span>
+                            <span>
+                              {new Date(attempt.attemptedAt).toLocaleString('en-GB', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                              : {attempt.notes}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -707,26 +896,38 @@ const DistributorOrderDetailPage = () => {
                 {showScheduleDelivery ? (
                   <div className="space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4 sm:ml-16">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-text-muted">Delivery Date</label>
+                      <label htmlFor="pco-delivery-date" className="mb-1 block text-xs font-medium text-text-muted">
+                        Delivery date and time
+                      </label>
                       <input
+                        id="pco-delivery-date"
                         type="datetime-local"
                         value={scheduledDate}
                         onChange={(e) => setScheduledDate(e.target.value)}
-                        className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
+                        className="min-h-10 w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-text-muted">Notes (optional)</label>
+                      <label htmlFor="pco-delivery-notes" className="mb-1 block text-xs font-medium text-text-muted">
+                        Notes (optional)
+                      </label>
                       <textarea
+                        id="pco-delivery-notes"
                         value={deliveryNotes}
                         onChange={(e) => setDeliveryNotes(e.target.value)}
-                        placeholder="Any special instructions..."
+                        placeholder="Any special instructions"
                         className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
                         rows={2}
                       />
                     </div>
-                    <div className="flex gap-2">
+                    {!scheduledDate && (
+                      <Typography variant="bodyXs" colorRole="muted">
+                        Choose a date and time to confirm the schedule.
+                      </Typography>
+                    )}
+                    <div className="flex flex-wrap gap-2">
                       <Button
+                        type="button"
                         onClick={() => scheduleDelivery({ date: new Date(scheduledDate).toISOString(), notes: deliveryNotes })}
                         disabled={!scheduledDate || isScheduling}
                         colorRole="brand"
@@ -735,7 +936,7 @@ const DistributorOrderDetailPage = () => {
                           Confirm Schedule
                         </ButtonContent>
                       </Button>
-                      <Button variant="ghost" onClick={() => setShowScheduleDelivery(false)}>
+                      <Button type="button" variant="ghost" onClick={() => setShowScheduleDelivery(false)}>
                         Cancel
                       </Button>
                     </div>
@@ -743,40 +944,44 @@ const DistributorOrderDetailPage = () => {
                 ) : showContactAttempt ? (
                   <div className="space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4 sm:ml-16">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-text-muted">What happened?</label>
+                      <label htmlFor="pco-contact-notes" className="mb-1 block text-xs font-medium text-text-muted">
+                        What happened?
+                      </label>
                       <textarea
+                        id="pco-contact-notes"
                         value={contactNotes}
                         onChange={(e) => setContactNotes(e.target.value)}
-                        placeholder="e.g., No answer, voicemail left, wrong number..."
+                        placeholder="For example: no answer, voicemail left, wrong number"
                         className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
                         rows={2}
                       />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
+                        type="button"
                         onClick={() => logContactAttempt(contactNotes)}
-                        disabled={!contactNotes || isLoggingContact}
+                        disabled={!contactNotes.trim() || isLoggingContact}
                         variant="outline"
                       >
                         <ButtonContent iconLeft={IconPhoneOff} isLoading={isLoggingContact}>
                           Log Attempt
                         </ButtonContent>
                       </Button>
-                      <Button variant="ghost" onClick={() => setShowContactAttempt(false)}>
+                      <Button type="button" variant="ghost" onClick={() => setShowContactAttempt(false)}>
                         Cancel
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2 sm:ml-16">
-                    <Button onClick={() => setShowScheduleDelivery(true)} colorRole="brand">
+                    <Button type="button" onClick={() => setShowScheduleDelivery(true)} colorRole="brand">
                       <ButtonContent iconLeft={IconCalendar}>
                         Schedule Delivery
                       </ButtonContent>
                     </Button>
-                    <Button onClick={() => setShowContactAttempt(true)} variant="outline">
+                    <Button type="button" onClick={() => setShowContactAttempt(true)} variant="outline">
                       <ButtonContent iconLeft={IconPhoneOff}>
-                        Couldn&apos;t Reach Client
+                        Could Not Reach Client
                       </ButtonContent>
                     </Button>
                   </div>
@@ -820,12 +1025,14 @@ const DistributorOrderDetailPage = () => {
                   )}
                 </div>
                 <Button
+                  type="button"
                   onClick={() => markInTransit(undefined)}
                   disabled={isMarkingInTransit}
                   colorRole="brand"
+                  className="w-full sm:w-auto"
                 >
                   <ButtonContent iconLeft={IconTruck} isLoading={isMarkingInTransit}>
-                    Mark In Transit
+                    Mark Out for Delivery
                   </ButtonContent>
                 </Button>
               </div>
@@ -846,14 +1053,27 @@ const DistributorOrderDetailPage = () => {
                     Out for Delivery
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    Order is being delivered to {order.clientName}.
+                    Being delivered to {order.clientName}.
                     {order.clientAddress && <> Address: {order.clientAddress}</>}
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                    Mark it delivered once the client has the wine, and upload the proof of delivery
+                    below.
                   </Typography>
                 </div>
                 <Button
-                  onClick={() => markDelivered(undefined)}
+                  type="button"
+                  onClick={() =>
+                    setPendingConfirm({
+                      title: 'Mark delivered',
+                      body: `Confirm that ${order.clientName} has received the order. This completes the order and cannot be undone from the portal. You can still upload the proof of delivery afterwards.`,
+                      confirmLabel: 'Mark Delivered',
+                      run: () => markDelivered(undefined),
+                    })
+                  }
                   disabled={isMarkingDelivered}
                   colorRole="brand"
+                  className="w-full sm:w-auto"
                 >
                   <ButtonContent iconLeft={IconCheck} isLoading={isMarkingDelivered}>
                     Mark Delivered
@@ -903,16 +1123,18 @@ const DistributorOrderDetailPage = () => {
           />
         )}
 
+        <WorkflowStepper order={order} />
+
         {/* Line Items - Full Width, Primary Focus */}
         <Card>
           <CardContent className="p-4">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
               <Typography variant="headingSm">
                 Line Items ({order.items?.length ?? 0})
               </Typography>
               <div className="flex items-center gap-4 text-sm text-text-muted">
                 <span>{summarisePcoQuantities(order.items ?? [])}</span>
-                <span className="font-semibold text-text-primary">
+                <span className="font-semibold tabular-nums text-text-primary">
                   {formatPrice(getAmount(order.totalUsd), currency)}
                 </span>
               </div>
@@ -945,17 +1167,17 @@ const DistributorOrderDetailPage = () => {
                                   {item.producer || '-'} {item.vintage ? `· ${item.vintage}` : ''}
                                 </Typography>
                               </div>
-                              <Typography variant="bodySm" className="flex-shrink-0 font-semibold">
+                              <Typography variant="bodySm" className="flex-shrink-0 font-semibold tabular-nums">
                                 {item.inBox ? 'In box' : formatPrice(getAmount(clientTotal), currency)}
                               </Typography>
                             </div>
-                            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
+                            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-text-muted">
                               <span className="font-medium text-text-primary">{line.qty}</span>
                               <span>{line.pack}</span>
                               {!item.inBox && (
                                 <>
                                   <span>Client: {formatPrice(getAmount(clientPricePerCase), currency)}/{line.unit}</span>
-                                  <span>Dist: {formatPrice(getAmount(distributorCostPerCase), currency)}/{line.unit}</span>
+                                  <span>Your cost: {formatPrice(getAmount(distributorCostPerCase), currency)}/{line.unit}</span>
                                 </>
                               )}
                             </div>
@@ -971,7 +1193,7 @@ const DistributorOrderDetailPage = () => {
                           <tr>
                             <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted text-left">Wine</th>
                             <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted text-left">Quantity</th>
-                            <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted whitespace-nowrap text-right">Dist. cost</th>
+                            <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted whitespace-nowrap text-right">Your cost</th>
                             <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted whitespace-nowrap text-right">Client price</th>
                             <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-text-muted whitespace-nowrap text-right">Total</th>
                           </tr>
@@ -1008,19 +1230,19 @@ const DistributorOrderDetailPage = () => {
                                   </td>
                                 ) : (
                                   <>
-                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums">
                                       <Typography variant="bodySm" colorRole="muted">
                                         {formatPrice(getAmount(distributorCostPerCase), currency)}
                                         <span className="text-xs"> /{line.unit}</span>
                                       </Typography>
                                     </td>
-                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums">
                                       <Typography variant="bodySm">
                                         {formatPrice(getAmount(clientPricePerCase), currency)}
                                         <span className="text-xs text-text-muted"> /{line.unit}</span>
                                       </Typography>
                                     </td>
-                                    <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                                    <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums">
                                       <Typography variant="bodySm" className="font-semibold">
                                         {formatPrice(getAmount(clientTotal), currency)}
                                       </Typography>
@@ -1043,7 +1265,7 @@ const DistributorOrderDetailPage = () => {
                                 {summarisePcoQuantities(order.items)}
                               </Typography>
                             </td>
-                            <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                            <td className="whitespace-nowrap px-4 py-3.5 text-right tabular-nums">
                               <Typography variant="bodySm" className="font-semibold">
                                 {formatPrice(getAmount(orderTotal), currency)}
                               </Typography>
@@ -1077,6 +1299,8 @@ const DistributorOrderDetailPage = () => {
               vintage: item.vintage,
               quantity: item.quantity,
               stockStatus: item.stockStatus,
+              caseConfig: item.caseConfig,
+              bottleSize: item.bottleSize,
             }))}
             onConfirmed={() => void refetch()}
           />
@@ -1090,6 +1314,8 @@ const DistributorOrderDetailPage = () => {
               productName: item.productName,
               vintage: item.vintage,
               quantity: item.quantity,
+              caseConfig: item.caseConfig,
+              bottleSize: item.bottleSize,
               source: item.source,
               stockStatus: item.stockStatus,
               stockExpectedAt: item.stockExpectedAt ? new Date(item.stockExpectedAt) : null,
@@ -1106,9 +1332,9 @@ const DistributorOrderDetailPage = () => {
               <Typography variant="labelSm" colorRole="muted" className="mb-2">
                 Summary ({currency})
               </Typography>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Landed Duty Free (inc. Transfer)</span>
+              <div className="space-y-1 text-sm tabular-nums">
+                <div className="flex justify-between gap-2">
+                  <span className="text-text-muted">Your cost: landed duty free (incl. transfer)</span>
                   <span>{formatPrice(getAmount((Number(order.subtotalUsd) || 0) + (Number(order.logisticsUsd) || 0)), currency)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1143,14 +1369,34 @@ const DistributorOrderDetailPage = () => {
                 )}
               </div>
               <div className="space-y-1 text-sm">
-                <Typography variant="bodySm" className="font-medium">
-                  {order.clientName || '-'}
-                </Typography>
-                <Typography variant="bodyXs" colorRole="muted">
-                  {order.clientPhone || '-'}
-                </Typography>
+                <div className="flex items-center justify-between gap-1">
+                  <Typography variant="bodySm" className="font-medium">
+                    {order.clientName || '-'}
+                  </Typography>
+                  {(order.clientPhone || order.clientAddress) && (
+                    <CopyButton
+                      value={[order.clientName, order.clientPhone, order.clientAddress]
+                        .filter(Boolean)
+                        .join('\n')}
+                      label="Delivery details"
+                    />
+                  )}
+                </div>
+                {order.clientPhone ? (
+                  <a
+                    href={`tel:${order.clientPhone}`}
+                    className="inline-flex min-h-8 items-center gap-1.5 text-xs font-medium text-text-primary underline-offset-2 hover:underline"
+                  >
+                    <Icon icon={IconPhone} size="xs" />
+                    {order.clientPhone}
+                  </a>
+                ) : (
+                  <Typography variant="bodyXs" colorRole="muted">
+                    No phone number
+                  </Typography>
+                )}
                 {order.clientAddress && (
-                  <Typography variant="bodyXs" colorRole="muted" className="line-clamp-2">
+                  <Typography variant="bodyXs" colorRole="muted" className="whitespace-pre-line">
                     {order.clientAddress}
                   </Typography>
                 )}
@@ -1253,7 +1499,7 @@ const DistributorOrderDetailPage = () => {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardContent className="p-4">
-              <PaymentTracker order={order} canVerifyPayments={true} />
+              <PaymentTracker order={order} canVerifyPayments={true} audience="distributor" />
             </CardContent>
           </Card>
 
@@ -1266,11 +1512,10 @@ const DistributorOrderDetailPage = () => {
                 <div className="flex flex-col gap-2">
                   {documents.map((doc) => {
                     const docTypeLabels: Record<string, string> = {
-                      partner_invoice: 'Partner Invoice',
-                      partner_sales_order: 'Partner SO',
                       cc_invoice: 'C&C Invoice',
-                      distributor_invoice: 'Distributor Invoice',
+                      distributor_invoice: 'Your Invoice',
                       payment_proof: 'Payment Proof',
+                      proof_of_delivery: 'Proof of Delivery',
                     };
                     const FileIcon = doc.mimeType?.startsWith('image/') ? IconPhoto : IconFileText;
                     const formatFileSize = (bytes: number | null) => {
@@ -1299,7 +1544,13 @@ const DistributorOrderDetailPage = () => {
                           </Typography>
                         </div>
                         <Button variant="ghost" size="sm" asChild>
-                          <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                          <a
+                            href={doc.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Open ${doc.fileName}`}
+                            title="Open"
+                          >
                             <Icon icon={IconFile} size="sm" />
                           </a>
                         </Button>
@@ -1358,6 +1609,42 @@ const DistributorOrderDetailPage = () => {
           </Card>
         )}
       </div>
+
+      {/* Irreversible steps are confirmed before they are sent */}
+      <AlertDialog
+        open={!!pendingConfirm}
+        onOpenChange={(open) => {
+          if (!open) setPendingConfirm(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingConfirm?.title} · {order.orderNumber}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{pendingConfirm?.body}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                type="button"
+                colorRole="brand"
+                onClick={() => {
+                  pendingConfirm?.run();
+                  setPendingConfirm(null);
+                }}
+              >
+                {pendingConfirm?.confirmLabel}
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

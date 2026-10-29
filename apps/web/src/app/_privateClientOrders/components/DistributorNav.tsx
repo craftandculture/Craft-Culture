@@ -57,7 +57,8 @@ const DistributorNav = () => {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex items-center gap-2 border-b-2 px-3 py-3 sm:px-4 text-sm font-medium transition-colors ${
                   isActive
                     ? 'border-text-primary text-text-primary'
                     : 'border-transparent text-text-muted hover:border-border-muted hover:text-text-primary'
@@ -80,6 +81,9 @@ const DistributorNav = () => {
             type="button"
             onClick={() => setIsHelpOpen(!isHelpOpen)}
             onBlur={() => setTimeout(() => setIsHelpOpen(false), 150)}
+            aria-label="Help"
+            aria-haspopup="menu"
+            aria-expanded={isHelpOpen}
             className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-fill-muted hover:text-text-primary"
           >
             <Icon icon={IconHelp} size="sm" />
@@ -95,17 +99,17 @@ const DistributorNav = () => {
               >
                 <Icon icon={IconBook} size="sm" className="text-text-primary" />
                 <div>
-                  <div className="font-medium">Process Flow Guide</div>
-                  <div className="text-xs text-text-muted">End-to-end PCO workflow</div>
+                  <div className="font-medium">Process guide</div>
+                  <div className="text-xs text-text-muted">How an order moves, step by step</div>
                 </div>
               </Link>
               <Link
                 href="/platform/distributor/support"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary transition-colors hover:bg-fill-muted"
               >
-                <Icon icon={IconHelp} size="sm" className="text-amber-500" />
+                <Icon icon={IconHelp} size="sm" className="text-text-primary" />
                 <div>
-                  <div className="font-medium">Help Center</div>
+                  <div className="font-medium">Help centre</div>
                   <div className="text-xs text-text-muted">FAQs and guides</div>
                 </div>
               </Link>
@@ -116,7 +120,7 @@ const DistributorNav = () => {
               >
                 <Icon icon={IconMail} size="sm" className="text-text-muted" />
                 <div>
-                  <div className="font-medium">Contact Support</div>
+                  <div className="font-medium">Contact support</div>
                   <div className="text-xs text-text-muted">support@craftculture.xyz</div>
                 </div>
               </Link>

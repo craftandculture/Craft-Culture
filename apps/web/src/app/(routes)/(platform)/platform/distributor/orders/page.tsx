@@ -27,7 +27,7 @@ const DistributorOrdersPage = async () => {
               <div className="flex flex-col gap-2">
                 <CardTitle>Assigned Orders</CardTitle>
                 <CardDescription>
-                  Manage orders assigned to you for fulfillment and delivery
+                  Orders assigned to you. Start with what needs your action.
                 </CardDescription>
               </div>
               <DistributorOrdersList />

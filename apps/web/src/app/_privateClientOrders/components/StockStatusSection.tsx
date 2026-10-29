@@ -20,12 +20,16 @@ import MobileCardList from '@/app/_ui/components/MobileCard/MobileCardList';
 import Typography from '@/app/_ui/components/Typography/Typography';
 
 import StockStatusBadge, { StockSourceBadge } from './StockStatusBadge';
+import describePcoLine from '../utils/describePcoLine';
 
 interface LineItem {
   id: string;
   productName: string;
   vintage: number | string | null;
   quantity: number;
+  /** Bottles per case; 1 is a single bottle */
+  caseConfig?: number | null;
+  bottleSize?: string | null;
   source: 'cc_inventory' | 'partner_airfreight' | 'partner_local' | 'manual' | null;
   stockStatus: string | null;
   stockExpectedAt: Date | null;
@@ -338,7 +342,7 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
                 <th className="min-w-[240px] px-4 py-2.5 text-xs font-medium text-text-muted">
                   Product
                 </th>
-                <th className="w-14 px-3 py-2.5 text-center text-xs font-medium text-text-muted">
+                <th className="w-24 px-3 py-2.5 text-center text-xs font-medium text-text-muted">
                   Qty
                 </th>
                 <th className="w-32 px-3 py-2.5 text-xs font-medium text-text-muted">Source</th>
@@ -367,8 +371,8 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 text-center text-sm text-text-primary">
-                      {item.quantity}
+                    <td className="whitespace-nowrap px-3 py-2.5 text-center text-sm tabular-nums text-text-primary">
+                      {describePcoLine(item).count}
                     </td>
                     <td className="px-3 py-2.5">
                       {item.source ? (
@@ -407,7 +411,7 @@ const StockStatusSection = ({ items, className }: StockStatusSectionProps) => {
                 key={item.id}
                 title={item.productName}
                 aside={<StockStatusBadge status={status} showIcon />}
-                meta={[item.vintage, `Qty ${item.quantity}`, showETA ? `Arrives ${item.stockExpectedAt!.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : null].filter(Boolean).join(' · ')}
+                meta={[item.vintage, describePcoLine(item).count, showETA ? `Arrives ${item.stockExpectedAt!.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : null].filter(Boolean).join(' · ')}
               >
                 {item.source ? <StockSourceBadge source={item.source} showIcon compact /> : null}
               </MobileCard>
