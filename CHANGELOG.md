@@ -1,3 +1,9 @@
+## [2.1.35](https://github.com/craftandculture/Craft-Culture/compare/v2.1.34...v2.1.35) (2026-10-29)
+
+### Bug Fixes
+
+* A voided ownership transfer no longer shows as wine added to a member's cellar ([3b57176](https://github.com/craftandculture/Craft-Culture/commit/3b57176615b5b478598c8fb1ef1f7e2b9d1ca0cd))
+
 ## [2.1.34](https://github.com/craftandculture/Craft-Culture/compare/v2.1.33...v2.1.34) (2026-10-29)
 
 ### Bug Fixes
