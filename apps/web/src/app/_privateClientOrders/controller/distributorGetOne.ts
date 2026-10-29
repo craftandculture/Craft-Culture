@@ -115,8 +115,8 @@ const distributorGetOne = distributorProcedure
 
     return {
       ...distributorOrderView(orderResult.order),
-      // The wine partner behind the order is never named to the distributor
-      partner: distributorPartnerView(orderResult.order.partnerId, craftCulturePartnerId),
+      // Whose client this is
+      partner: (await distributorPartnerView([orderResult.order.partnerId])).get(orderResult.order.partnerId ?? '') ?? null,
       /*
         The City Drinks account details on a client are City Drinks' own
         record, so only a distributor that verifies clients is sent them.

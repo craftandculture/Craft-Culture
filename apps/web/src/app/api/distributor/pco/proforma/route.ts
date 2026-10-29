@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import distributorItemView from '@/app/_privateClientOrders/utils/distributorItemView';
-import getCraftCulturePartnerId from '@/app/_privateClientOrders/utils/getCraftCulturePartnerId';
+import distributorPartnerView from '@/app/_privateClientOrders/utils/distributorPartnerView';
 import renderProformaInvoicePDF from '@/app/_privateClientOrders/utils/renderProformaInvoicePDF';
 import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
@@ -65,14 +65,9 @@ export async function GET(request: NextRequest) {
       .from(privateClientOrderItems)
       .where(eq(privateClientOrderItems.orderId, order.id));
 
-    /*
-      The wine partner is never named to the distributor, on the order page or
-      here. C&C's own orders (Private Cellar deliveries) may say they are C&C's.
-    */
+    // Whose client this is, as on the distributor's order page
     const partner: { businessName: string } | null =
-      order.partnerId && order.partnerId === (await getCraftCulturePartnerId())
-        ? { businessName: 'Craft & Culture' }
-        : null;
+      (await distributorPartnerView([order.partnerId])).get(order.partnerId ?? '') ?? null;
 
     // Fetch distributor details
     let distributor: { businessName: string } = { businessName: 'Distributor' };

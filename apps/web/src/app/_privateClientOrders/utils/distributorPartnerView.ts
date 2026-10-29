@@ -1,30 +1,32 @@
+import { inArray } from 'drizzle-orm';
+
+import db from '@/database/client';
+import { partners } from '@/database/schema';
+
 /**
- * The wine partner on an order, as its distributor may see it
+ * The wine partners behind a distributor's orders, by partner id
  *
- * A distributor deals with C&C and the end client, so the trade partner
- * behind an order is never named to it: no business name and no logo. C&C's
- * own orders (Private Cellar deliveries) may say they are C&C's.
+ * The distributor needs to know whose client each order is (Cru, C&C, ...)
+ * to handle it, so the partner's name and logo are shown. Their prices,
+ * contacts and staff are not (see distributorOrderView and
+ * counterpartySafeActivity). Kevin, 29 Oct 2026, reversing 7b7134a7.
  *
  * @example
- *   distributorPartnerView(row.order.partnerId, craftCultureId);
- *   // { id: '', businessName: 'Trade partner', logoUrl: null }
+ *   const views = await distributorPartnerView(rows.map((r) => r.order.partnerId));
+ *   views.get(order.partnerId); // { id, businessName: 'Cru Wine', logoUrl }
  *
- * @param partnerId - The order's partner
- * @param craftCulturePartnerId - C&C's own partner id (getCraftCulturePartnerId)
- * @returns A label in place of the partner, or null when there is none
+ * @param partnerIds - The orders' partners
+ * @returns Name and logo for each partner found
  */
-const distributorPartnerView = (
-  partnerId: string | null,
-  craftCulturePartnerId: string | null,
-) => {
-  if (!partnerId) return null;
-
-  return {
-    id: '',
-    businessName:
-      partnerId === craftCulturePartnerId ? 'Craft & Culture' : 'Trade partner',
-    logoUrl: null as string | null,
-  };
+const distributorPartnerView = async (partnerIds: (string | null)[]) => {
+  const ids = [...new Set(partnerIds.filter((id): id is string => !!id))];
+  const rows = ids.length
+    ? await db
+        .select({ id: partners.id, businessName: partners.businessName, logoUrl: partners.logoUrl })
+        .from(partners)
+        .where(inArray(partners.id, ids))
+    : [];
+  return new Map(rows.map((row) => [row.id, row]));
 };
 
 export default distributorPartnerView;

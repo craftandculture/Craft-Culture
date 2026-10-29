@@ -17,7 +17,6 @@ import {
 } from '../constants';
 import distributorOrderView from '../utils/distributorOrderView';
 import distributorPartnerView from '../utils/distributorPartnerView';
-import getCraftCulturePartnerId from '../utils/getCraftCulturePartnerId';
 
 /**
  * The distributor's dashboard: what is waiting on them, where their orders
@@ -42,7 +41,7 @@ const distributorDashboard = distributorProcedure.query(
 
     const bottlesSql = sql<number>`coalesce(sum(${privateClientOrderItems.quantity} * coalesce(${privateClientOrderItems.caseConfig}, 1)), 0)`;
 
-    const [statusCounts, [totals], [monthlyTotals], [monthlyBottles], recentOrders, craftCulturePartnerId, [skuMissing]] =
+    const [statusCounts, [totals], [monthlyTotals], [monthlyBottles], recentOrders, [skuMissing]] =
       await Promise.all([
         db
           .select({
@@ -92,9 +91,6 @@ const distributorDashboard = distributorProcedure.query(
           .orderBy(desc(privateClientOrders.distributorAssignedAt))
           .limit(6),
 
-        // The wine partner is never named to the distributor
-        getCraftCulturePartnerId(),
-
         // Only asked of distributors who record a bundle SKU on each order
         partner.requiresOrderSku
           ? db
@@ -140,6 +136,9 @@ const distributorDashboard = distributorProcedure.query(
 
     const delivered = countOf(DISTRIBUTOR_STAGES.delivered);
 
+    // Whose client each order is
+    const partnerViews = await distributorPartnerView(recentOrders.map((row) => row.order.partnerId));
+
     return {
       kpis: {
         activeOrders: Number(totals?.totalOrders ?? 0) - delivered,
@@ -169,7 +168,7 @@ const distributorDashboard = distributorProcedure.query(
       },
       recentOrders: recentOrders.map((row) => ({
         ...distributorOrderView(row.order),
-        partner: distributorPartnerView(row.order.partnerId, craftCulturePartnerId),
+        partner: partnerViews.get(row.order.partnerId ?? '') ?? null,
       })),
     };
   },

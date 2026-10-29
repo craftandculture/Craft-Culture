@@ -344,7 +344,7 @@ const DistributorDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Recent orders. The wine partner behind each is never shown to a distributor */}
+      {/* Recent orders */}
       <div className="grid gap-4">
         <Card>
           <CardContent className="p-4 sm:p-5">
@@ -383,6 +383,9 @@ const DistributorDashboard = () => {
                       </div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-text-muted">
                         <Typography variant="bodyXs">{order.clientName}</Typography>
+                        {order.partner && (
+                          <Typography variant="bodyXs">· {order.partner.businessName}</Typography>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">

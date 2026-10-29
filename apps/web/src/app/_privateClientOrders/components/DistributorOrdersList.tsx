@@ -433,6 +433,13 @@ const DistributorOrdersList = () => {
       ),
     },
     {
+      accessorKey: 'partner.businessName',
+      header: 'Partner',
+      cell: ({ row }) => (
+        <Typography variant="bodySm">{row.original.partner?.businessName ?? '-'}</Typography>
+      ),
+    },
+    {
       accessorKey: 'clientName',
       header: 'Client',
       cell: ({ row }) => (
@@ -837,6 +844,11 @@ const DistributorOrdersList = () => {
                         <Typography variant="bodySm" className="font-mono font-medium">
                           {order.orderNumber}
                         </Typography>
+                        {order.partner && (
+                          <Typography variant="bodyXs" colorRole="muted">
+                            {order.partner.businessName}
+                          </Typography>
+                        )}
                         {needsSku(order) && (
                           <span className="mt-0.5 inline-block rounded-full bg-fill-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-text-warning">
                             SKU needed

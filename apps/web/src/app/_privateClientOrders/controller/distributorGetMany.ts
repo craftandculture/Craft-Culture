@@ -15,7 +15,6 @@ import {
 import getOrdersSchema from '../schemas/getOrdersSchema';
 import distributorOrderView from '../utils/distributorOrderView';
 import distributorPartnerView from '../utils/distributorPartnerView';
-import getCraftCulturePartnerId from '../utils/getCraftCulturePartnerId';
 
 const distributorGetOrdersSchema = getOrdersSchema.extend({
   /** A pipeline stage: a group of statuses (see DISTRIBUTOR_STAGES) */
@@ -115,14 +114,14 @@ const distributorGetMany = distributorProcedure
       .limit(limit)
       .offset(cursor);
 
-    // The wine partner is never named to the distributor
-    const craftCulturePartnerId = await getCraftCulturePartnerId();
+    // Whose client each order is
+    const partnerViews = await distributorPartnerView(ordersList.map((row) => row.order.partnerId));
 
     // Flatten the response
     const ordersWithPartner = ordersList.map((row) => ({
       ...distributorOrderView(row.order),
       bottleCount: Number(row.bottleCount ?? 0),
-      partner: distributorPartnerView(row.order.partnerId, craftCulturePartnerId),
+      partner: partnerViews.get(row.order.partnerId ?? '') ?? null,
       client: row.client,
     }));
 
