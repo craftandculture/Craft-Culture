@@ -1,3 +1,9 @@
+## [2.1.37](https://github.com/craftandculture/Craft-Culture/compare/v2.1.36...v2.1.37) (2026-10-29)
+
+### Features
+
+* Staff can record wine C&C bought from a member in bond, so it reaches their statement and payout ([841a356](https://github.com/craftandculture/Craft-Culture/commit/841a356e21e7e615f9f9533fedcfbb8476f20374))
+
 ## [2.1.36](https://github.com/craftandculture/Craft-Culture/compare/v2.1.35...v2.1.36) (2026-10-29)
 
 ### Bug Fixes
