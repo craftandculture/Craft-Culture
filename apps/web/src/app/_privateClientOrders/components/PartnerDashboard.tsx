@@ -1,9 +1,12 @@
 'use client';
 
 import {
+  IconAlertCircle,
   IconArrowRight,
   IconBook,
+  IconCalendar,
   IconChevronRight,
+  IconCurrencyDollar,
   IconPackage,
   IconPlus,
   IconShieldCheck,
@@ -26,7 +29,37 @@ import PrivateOrderStatusBadge from './PrivateOrderStatusBadge';
 
 type Currency = 'USD' | 'AED';
 
-/** Default UAE exchange rate for AED/USD conversion */
+/** Statuses that wait on the partner: send a draft, accept changes, confirm or re-verify the client */
+const NEEDS_PARTNER_ACTION = [
+  'draft',
+  'revision_requested',
+  'awaiting_partner_verification',
+  'verification_suspended',
+];
+
+/** Tile tints, from the Stock Explorer / Team Tasks house style */
+const TONES = {
+  slate: {
+    tile: 'border-slate-200 from-slate-50/60 dark:border-slate-700 dark:from-slate-500/10',
+    icon: 'bg-slate-100 text-slate-500 dark:bg-slate-500/20',
+    value: 'text-text-primary',
+  },
+  emerald: {
+    tile: 'border-emerald-100 from-emerald-50/50 dark:border-emerald-900/50 dark:from-emerald-500/10',
+    icon: 'bg-emerald-100/70 text-emerald-600 dark:bg-emerald-500/20',
+    value: 'text-text-primary',
+  },
+  blue: {
+    tile: 'border-blue-100 from-blue-50/50 dark:border-blue-900/50 dark:from-blue-500/10',
+    icon: 'bg-blue-100/70 text-blue-600 dark:bg-blue-500/20',
+    value: 'text-text-primary',
+  },
+  amber: {
+    tile: 'border-amber-100 from-amber-50/50 dark:border-amber-900/50 dark:from-amber-500/10',
+    icon: 'bg-amber-100/70 text-amber-600 dark:bg-amber-500/20',
+    value: 'text-amber-600',
+  },
+} as const;
 
 /**
  * PartnerDashboard displays an overview of orders for wine partners
@@ -88,7 +121,7 @@ const PartnerDashboard = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-pulse text-text-muted">Loading dashboard...</div>
+        <div className="animate-pulse text-text-muted">Loading your orders...</div>
       </div>
     );
   }
@@ -112,7 +145,12 @@ const PartnerDashboard = () => {
     );
   }
 
-  const { kpis, statusBreakdown, recentOrders, topClients } = data;
+  const { kpis, statusBreakdown, statusCounts, recentOrders, topClients } = data;
+
+  // Orders waiting on the partner, whichever pipeline stage they sit in
+  const needsAction = statusCounts
+    .filter((s) => NEEDS_PARTNER_ACTION.includes(s.status))
+    .reduce((sum, s) => sum + s.count, 0);
 
   const ORDERS = '/platform/private-orders/orders';
 
@@ -145,14 +183,14 @@ const PartnerDashboard = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/platform/private-orders/new">
-            <Button size="sm" className="gap-1.5">
+            <Button size="sm" colorRole="brand" className="gap-1.5">
               <Icon icon={IconPlus} size="sm" />
               New order
             </Button>
           </Link>
           <Link href={ORDERS}>
             <Button size="sm" variant="outline" className="gap-1.5">
-              Active orders ({kpis.totalOrders})
+              All orders
             </Button>
           </Link>
           <Link href="/docs/pco-flows">
@@ -161,11 +199,16 @@ const PartnerDashboard = () => {
               Process guide
             </Button>
           </Link>
-          <div className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5">
+          <div
+            role="group"
+            aria-label="Display currency"
+            className="inline-flex items-center rounded-lg border border-border-muted bg-surface-secondary/50 p-0.5"
+          >
             {(['USD', 'AED'] as const).map((c) => (
               <button
                 key={c}
                 type="button"
+                aria-pressed={currency === c}
                 onClick={() => setCurrency(c)}
                 className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
                   currency === c
@@ -180,24 +223,78 @@ const PartnerDashboard = () => {
         </div>
       </div>
 
-      {/* The book at a glance */}
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border border-border-muted bg-fill-primary px-5 py-3">
+      {/*
+        The book at a glance, waiting-on-you first. The stored case count adds
+        single bottles to cases, so it is shown as units, not "cases".
+      */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
         {[
-          { label: 'Active orders', value: String(kpis.totalOrders) },
-          { label: 'Last 30 days', value: `${kpis.monthlyOrders} orders · ${kpis.monthlyCases} cases` },
-          { label: 'Value, last 30 days', value: formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed) },
-          { label: 'Value in progress', value: formatCurrency(kpis.totalValueUsd, kpis.totalValueAed) },
-          { label: 'Clients', value: `${kpis.totalClients} · ${kpis.verifiedClients} verified` },
-        ].map((stat) => (
-          <div key={stat.label} className="flex items-baseline gap-2">
-            <Typography variant="bodyXs" colorRole="muted">
-              {stat.label}
-            </Typography>
-            <Typography variant="bodySm" className="font-semibold">
-              {stat.value}
-            </Typography>
-          </div>
-        ))}
+          {
+            label: 'Needs your action',
+            value: String(needsAction),
+            sub: needsAction > 0 ? 'Open the list' : 'Nothing waiting on you',
+            tone: needsAction > 0 ? TONES.amber : TONES.slate,
+            icon: IconAlertCircle,
+            href: needsAction > 0 ? `${ORDERS}?status=action` : undefined,
+          },
+          {
+            label: 'Active orders',
+            value: String(kpis.totalOrders),
+            sub: `${inFlight} in progress`,
+            tone: TONES.slate,
+            icon: IconPackage,
+            href: ORDERS,
+          },
+          {
+            label: 'Value in progress',
+            value: formatCurrency(kpis.totalValueUsd, kpis.totalValueAed),
+            sub: 'Client price, active orders',
+            tone: TONES.blue,
+            icon: IconCurrencyDollar,
+          },
+          {
+            label: 'Last 30 days',
+            value: formatCurrency(kpis.monthlyValueUsd, kpis.monthlyValueAed),
+            sub: `${kpis.monthlyOrders} ${kpis.monthlyOrders === 1 ? 'order' : 'orders'} · ${kpis.monthlyCases} ${kpis.monthlyCases === 1 ? 'unit' : 'units'}`,
+            tone: TONES.emerald,
+            icon: IconCalendar,
+          },
+          {
+            label: 'Clients',
+            value: String(kpis.totalClients),
+            sub: `${kpis.verifiedClients} verified`,
+            tone: TONES.slate,
+            icon: IconUsers,
+            href: '/platform/clients',
+          },
+        ].map((tile) => {
+          const body = (
+            <>
+              <span className={`mx-auto mb-1.5 flex size-7 items-center justify-center rounded-md ${tile.tone.icon}`}>
+                <Icon icon={tile.icon} size="sm" />
+              </span>
+              <span className="block text-[11px] font-medium uppercase tracking-wide text-text-muted">
+                {tile.label}
+              </span>
+              <span
+                className={`mt-1 block truncate text-[22px] font-bold leading-tight tracking-tight tabular-nums sm:text-[26px] ${tile.tone.value}`}
+              >
+                {tile.value}
+              </span>
+              <span className="mt-1.5 block truncate text-[11px] font-semibold text-text-muted/80">{tile.sub}</span>
+            </>
+          );
+          const className = `block min-w-0 rounded-xl border bg-gradient-to-b to-transparent px-3 py-3.5 text-center shadow-sm transition ${tile.tone.tile}`;
+          return tile.href ? (
+            <Link key={tile.label} href={tile.href} className={`${className} hover:-translate-y-px hover:shadow-md`}>
+              {body}
+            </Link>
+          ) : (
+            <div key={tile.label} className={className}>
+              {body}
+            </div>
+          );
+        })}
       </div>
 
       {/* Pipeline: where live orders are, and which are waiting on you */}
@@ -209,7 +306,7 @@ const PartnerDashboard = () => {
                 Pipeline
               </Typography>
               <Typography variant="bodyXs" colorRole="muted">
-                {inFlight} in flight
+                {inFlight} in progress
               </Typography>
             </div>
             <Link
@@ -249,7 +346,7 @@ const PartnerDashboard = () => {
                     </div>
                     <Typography
                       variant="headingMd"
-                      className={`font-semibold ${stage.count === 0 ? 'text-text-muted' : ''}`}
+                      className={`font-semibold tabular-nums ${stage.count === 0 ? 'text-text-muted' : ''}`}
                     >
                       {stage.count}
                     </Typography>
@@ -320,18 +417,22 @@ const PartnerDashboard = () => {
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-text-muted">
                         <Typography variant="bodyXs">{order.clientName}</Typography>
                         {order.client?.cityDrinksVerifiedAt && (
-                          <span title="Verified with the distributor" className="inline-flex text-emerald-600 dark:text-emerald-400">
+                          <span
+                            title="Client verified with the distributor"
+                            aria-label="Client verified"
+                            className="inline-flex text-emerald-600 dark:text-emerald-400"
+                          >
                             <Icon icon={IconShieldCheck} size="xs" />
                           </span>
                         )}
                         <span className="hidden sm:inline">·</span>
                         <Typography variant="bodyXs" className="hidden sm:inline">
-                          {order.caseCount} {order.caseCount === 1 ? 'case' : 'cases'}
+                          {order.caseCount} {order.caseCount === 1 ? 'unit' : 'units'}
                         </Typography>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <Typography variant="bodySm" className="whitespace-nowrap font-medium">
+                      <Typography variant="bodySm" className="whitespace-nowrap font-medium tabular-nums">
                         {formatOrderCurrency(order)}
                       </Typography>
                       <Typography variant="bodyXs" colorRole="muted">
@@ -358,7 +459,7 @@ const PartnerDashboard = () => {
                   Top clients
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                  Share of value, all time
+                  Share of client value, excluding drafts and cancelled orders
                 </Typography>
               </div>
               <Link href="/platform/clients">
@@ -386,22 +487,23 @@ const PartnerDashboard = () => {
                   return (
                     <div key={client.clientId ?? client.clientName} className="py-2.5">
                       <div className="mb-1.5 flex items-center justify-between gap-2">
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <Typography variant="bodySm" className="truncate font-medium">
                               {client.clientName}
                             </Typography>
                             {client.isVerified && (
-                              <span title="Verified with the distributor" className="inline-flex text-emerald-600 dark:text-emerald-400">
+                              <span title="Client verified with the distributor" aria-label="Client verified" className="inline-flex text-emerald-600 dark:text-emerald-400">
                                 <Icon icon={IconShieldCheck} size="xs" />
                               </span>
                             )}
                           </div>
                           <Typography variant="bodyXs" colorRole="muted">
-                            {client.orderCount} orders · {client.totalCases} cases
+                            {client.orderCount} {client.orderCount === 1 ? 'order' : 'orders'} · {client.totalCases}{' '}
+                            {client.totalCases === 1 ? 'unit' : 'units'}
                           </Typography>
                         </div>
-                        <Typography variant="bodySm" className="whitespace-nowrap font-medium">
+                        <Typography variant="bodySm" className="whitespace-nowrap font-medium tabular-nums">
                           {formatCurrency(client.totalValueUsd, client.totalValueAed)}
                         </Typography>
                       </div>
