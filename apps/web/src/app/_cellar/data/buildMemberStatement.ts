@@ -355,9 +355,10 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
       What each bottle that left is worth to the owner. A sale is valued at
       the owner's own price for that wine (their Selling offer, or the price
       agreed with C&C and recorded there). Bottles C&C takes for samples and
-      tastings are bought at that same price where the member has one, and at
-      what the bottle cost them to land only where they have none (Laraine's
-      check of Ihab Toma's October statement). Damage is at landed cost. Deliveries, collections and count corrections
+      tastings are bought at that same price where the member has one, and
+      otherwise at what the wine cost them before freight (Laraine's check of
+      Ihab Toma's October statement: Theo Dancer Aligoté at its $27.54 invoice
+      cost, not $37.94 landed). Damage is reimbursed at landed cost. Deliveries, collections and count corrections
       carry no money. No price yet means null: shown as "price being agreed",
       never as $0.
     */
@@ -381,8 +382,8 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
         const rule = STOCK_OUT_REASONS[row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS];
         if (rule?.settlement === 'price') return row.unitPriceUsd != null ? bottles * row.unitPriceUsd : null;
         if (rule?.settlement === 'cc_landed') {
-          const ask = askFor(row.lwin18);
-          if (ask != null) return bottles * ask;
+          const price = askFor(row.lwin18) ?? costs.get(lwinPakKeyOf(row.lwin18))?.importPerBottle;
+          if (price != null) return bottles * price;
         }
         if (rule?.settlement === 'cc_landed' || rule?.settlement === 'owner_reimbursed') {
           const landed = costs.get(lwinPakKeyOf(row.lwin18))?.landedPerBottle;
@@ -773,6 +774,8 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
                 ? 'Price on the take-out'
                 : rule.settlement === 'cc_landed' && askFor(row.lwin18) != null
                   ? 'Member price'
+                  : rule.settlement === 'cc_landed' && costs.get(lwinPakKeyOf(row.lwin18))?.importPerBottle != null
+                  ? 'Cost before freight'
                   : rule.settlement === 'cc_landed' || rule.settlement === 'owner_reimbursed'
                   ? 'Landed cost'
                   : 'No value'
