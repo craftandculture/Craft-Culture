@@ -248,15 +248,14 @@ const adminRecordAgreedPrices = staffAdminProcedure
       });
     }
 
-    const note =
+    // A function, not a template with placeholders: the build folded "$" + "{rate}" into a live ${rate}
+    const today = new Date().toISOString().slice(0, 10);
+    const noteFor = (line: (typeof plan)[number]) =>
       input.note ??
-      `Agreed with C&C at €${'{eur}'} per bottle, converted at €1 = $${'{rate}'} (${'{source}'}) on ${new Date().toISOString().slice(0, 10)}`;
+      `Agreed with C&C at €${line.eurPerBottle} per bottle, converted at €1 = $${line.eurToUsd} (${line.rateSource}) on ${today}`;
 
     for (const line of plan) {
-      const ownerNotes = note
-        .replace('{eur}', String(line.eurPerBottle))
-        .replace('{rate}', String(line.eurToUsd))
-        .replace('{source}', line.rateSource);
+      const ownerNotes = noteFor(line);
       // Kept with the offer, so the price the member agreed reads in euros
       const asked = {
         askPerBottleUsd: line.askPerBottleUsd,
