@@ -114,13 +114,15 @@ const OrderEmailsAdmin = () => {
             <div key={audience} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-text-primary text-sm">
                 <span className="font-semibold">{label}: </span>
-                {mode === 'live'
-                  ? 'Live. The new emails reach them, and replace the older ones.'
-                  : mode === 'shadow'
-                    ? `Shadow. Each new email goes to ${data?.shadowInbox}; they still receive the older emails.`
-                    : 'Off. They receive the older emails only.'}
+                {!data
+                  ? 'Loading…'
+                  : mode === 'live'
+                    ? 'Live. The new emails reach them, and replace the older ones.'
+                    : mode === 'shadow'
+                      ? `Shadow. Each new email goes to ${data?.shadowInbox}; they still receive the older emails.`
+                      : 'Off. They receive the older emails only.'}
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-2" role="group" aria-label={`Order emails to ${label}`}>
                 {MODES.map((option) => (
                   <button
                     key={option.mode}
@@ -153,7 +155,11 @@ const OrderEmailsAdmin = () => {
         ))}
       </div>
 
-      {rows.length === 0 ? (
+      {!data ? (
+        <p className="text-text-muted border-border-muted rounded-xl border border-dashed px-4 py-10 text-center text-sm">
+          Loading order emails…
+        </p>
+      ) : rows.length === 0 ? (
         <p className="text-text-muted border-border-muted rounded-xl border border-dashed px-4 py-10 text-center text-sm">
           No order emails yet. They appear here as orders are approved, paid, dispatched and delivered.
         </p>
@@ -164,11 +170,14 @@ const OrderEmailsAdmin = () => {
             return (
               <li key={row.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-text-primary truncate text-sm font-semibold">
+                  <p className="text-text-primary truncate text-sm font-semibold" title={row.subject ?? row.event}>
                     {row.isAction ? 'Action · ' : ''}
                     {row.subject ?? row.event}
                   </p>
-                  <p className="text-text-muted truncate text-xs">
+                  <p
+                    className="text-text-muted truncate text-xs"
+                    title={`${row.recipientName || row.recipientEmail} (${row.recipientEmail})${row.error ? ` · ${row.error}` : ''}`}
+                  >
                     For {row.recipientName || row.recipientEmail} ({row.recipientEmail})
                     {` · ${row.audience === 'partner' ? 'Wine partner' : 'Distributor'}`}
                     {row.error ? ` · ${row.error}` : ''}

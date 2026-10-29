@@ -27,6 +27,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 import { StockSourceBadge } from './StockStatusBadge';
+import describePcoLine from '../utils/describePcoLine';
 
 type StockStatus =
   | 'pending'
@@ -43,6 +44,9 @@ interface LineItem {
   productName: string;
   vintage: string | number | null;
   quantity: number;
+  /** Bottles per case and bottle size, so a single bottle reads as one */
+  caseConfig?: number | null;
+  bottleSize?: string | null;
   source: 'cc_inventory' | 'partner_airfreight' | 'partner_local' | 'manual' | null;
   stockStatus: StockStatus | null;
   stockExpectedAt: Date | string | null;
@@ -133,7 +137,7 @@ const StockManagementSection = ({
   const bulkUpdateMutation = useMutation(
     api.privateClientOrders.itemsBulkUpdateStockStatus.mutationOptions({
       onSuccess: (data) => {
-        toast.success(`Updated ${data.updatedCount} items`);
+        toast.success(`Updated ${data.updatedCount} line${data.updatedCount === 1 ? '' : 's'}`);
         void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
         onUpdated?.();
       },
@@ -164,7 +168,13 @@ const StockManagementSection = ({
       .map((item) => item.id);
 
     if (itemIds.length === 0) {
-      toast.info('All items already have this status');
+      toast.info('All lines already have this status');
+      return;
+    }
+
+    // Moves every line at once, so it is asked first
+    const label = bulkStatusOptions.find((opt) => opt.value === status)?.label ?? status;
+    if (!window.confirm(`Set ${itemIds.length} line${itemIds.length === 1 ? '' : 's'} to "${label}"?`)) {
       return;
     }
 
@@ -217,36 +227,39 @@ const StockManagementSection = ({
         {/* Header */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <Typography variant="headingSm">Stock Management</Typography>
+            <Typography variant="headingSm">Stock</Typography>
             <Typography variant="bodyXs" colorRole="muted">
-              Update stock status for line items
+              Where each line&apos;s stock is, from sourcing to the distributor
             </Typography>
           </div>
 
           {/* Summary badges */}
-          <div className="flex items-center gap-3 text-xs">
-            <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-700">
-              {readyCount} Ready
+          {/* Line counts by stage; dark-mode tints as elsewhere in the app */}
+          <div className="flex flex-wrap items-center gap-2 text-xs tabular-nums">
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+              {readyCount} ready
             </span>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">
-              {inTransitCount} In Transit
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+              {inTransitCount} in transit
             </span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
-              {pendingCount} Pending
+            <span className="rounded-full bg-fill-muted px-2 py-0.5 font-medium text-text-muted">
+              {pendingCount} pending
             </span>
           </div>
         </div>
 
-        {/* Bulk Actions */}
-        <div className="mb-4 flex flex-wrap gap-2 rounded-lg border border-border-secondary bg-fill-secondary/50 p-3">
-          <Typography variant="labelSm" colorRole="muted" className="mr-2 self-center">
-            Bulk Actions:
+        {/* Set every line at once: a quiet toolbar, not a boxed form */}
+        <div className="mb-4 flex flex-wrap items-center gap-1.5 border-b border-border-muted pb-3">
+          <Typography variant="bodyXs" colorRole="muted" className="mr-1">
+            Set all lines to
           </Typography>
           {filteredBulkOptions.map((opt) => (
             <Button
               key={opt.value}
-              variant="outline"
-              size="sm"
+              type="button"
+              variant="ghost"
+              size="xs"
+              shape="pill"
               onClick={() => handleBulkUpdate(opt.value)}
               disabled={isBulkUpdating}
               title={opt.description}
@@ -292,18 +305,18 @@ const StockManagementSection = ({
                 return (
                   <React.Fragment key={item.id}>
                     <tr className="hidden hover:bg-surface-muted/20 md:table-row">
-                      <td className="px-2 py-2">
-                        <div className="font-medium">{item.productName}</div>
+                      <td className="max-w-[18rem] px-2 py-2">
+                        <div className="truncate font-medium" title={item.productName}>{item.productName}</div>
                         {item.vintage && (
                           <span className="text-text-muted">{item.vintage}</span>
                         )}
                       </td>
-                      <td className="px-2 py-2 text-center font-medium">
-                        {item.quantity}
+                      <td className="whitespace-nowrap px-2 py-2 text-center font-medium tabular-nums">
+                        {describePcoLine(item).count}
                       </td>
                       <td className="px-2 py-2">
                         {item.source ? (
-                          <StockSourceBadge source={item.source} />
+                          <StockSourceBadge source={item.source} className="text-text-muted dark:text-text-muted" />
                         ) : (
                           <span className="text-text-muted">-</span>
                         )}
@@ -316,7 +329,7 @@ const StockManagementSection = ({
                           }
                           disabled={isUpdating}
                         >
-                          <SelectTrigger className="h-7 w-[140px] text-xs">
+                          <SelectTrigger className="h-7 w-[140px] text-xs" aria-label={`Stock status of ${item.productName}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -344,8 +357,10 @@ const StockManagementSection = ({
                       </td>
                       <td className="px-2 py-2 text-center">
                         <Button
+                          type="button"
                           variant="ghost"
                           size="xs"
+                          aria-expanded={isExpanded}
                           onClick={() =>
                             setExpandedItem(isExpanded ? null : item.id)
                           }
@@ -363,7 +378,7 @@ const StockManagementSection = ({
                             <div className="mt-0.5 text-xs text-text-muted">
                               {[
                                 item.vintage,
-                                `Qty ${item.quantity}`,
+                                describePcoLine(item).count,
                                 item.stockExpectedAt && ['pending', 'confirmed', 'in_transit_to_cc'].includes(currentStatus)
                                   ? `ETA ${formatDate(item.stockExpectedAt)}`
                                   : null,
@@ -372,7 +387,9 @@ const StockManagementSection = ({
                                 .join(' · ')}
                             </div>
                           </div>
-                          {item.source ? <StockSourceBadge source={item.source} /> : null}
+                          {item.source ? (
+                            <StockSourceBadge source={item.source} className="shrink-0 text-text-muted dark:text-text-muted" />
+                          ) : null}
                         </div>
                         <div className="mt-2 flex items-center gap-2">
                           <Select
@@ -380,7 +397,7 @@ const StockManagementSection = ({
                             onValueChange={(v) => handleStatusChange(item.id, v as StockStatus)}
                             disabled={isUpdating}
                           >
-                            <SelectTrigger className="h-10 flex-1 text-sm">
+                            <SelectTrigger className="h-10 flex-1 text-sm" aria-label={`Stock status of ${item.productName}`}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -410,10 +427,11 @@ const StockManagementSection = ({
                                 colorRole="muted"
                                 className="mb-1"
                               >
-                                Expected Arrival Date
+                                Expected arrival
                               </Typography>
                               <Input
                                 type="date"
+                                aria-label="Expected arrival"
                                 value={
                                   editingETA[item.id] ??
                                   formatDateForInput(item.stockExpectedAt)
@@ -446,6 +464,7 @@ const StockManagementSection = ({
                                   })
                                 }
                                 placeholder="Add stock notes..."
+                                aria-label="Stock notes"
                                 className="h-8 text-xs"
                               />
                             </div>
@@ -483,7 +502,7 @@ const StockManagementSection = ({
                               ) : (
                                 <Icon icon={IconCheck} size="xs" />
                               )}
-                              Save Changes
+                              Save
                             </Button>
                           </div>
                           {item.stockConfirmedAt && (

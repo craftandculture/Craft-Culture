@@ -181,7 +181,7 @@ const ZohoSalesOrderButton = ({
         <Typography variant="bodySm" className="text-text-muted">
           Zoho SO
         </Typography>
-        <Typography variant="bodySm" className="font-medium">
+        <Typography variant="bodySm" className="font-medium tabular-nums">
           {zohoSalesOrderNumber ?? 'raised'}
         </Typography>
         {/*
@@ -194,7 +194,17 @@ const ZohoSalesOrderButton = ({
           variant="ghost"
           size="sm"
           title="Unlink this sales order so another can be raised. Nothing is deleted in Zoho."
-          onClick={() => unlink({ orderId })}
+          aria-label="Unlink Zoho sales order"
+          onClick={() => {
+            // Easy to press by mistake, and the next press of Create raises a second order
+            if (
+              window.confirm(
+                `Unlink ${zohoSalesOrderNumber ?? 'this sales order'} from this order? It stays in Zoho; delete or void it there if you are replacing it.`,
+              )
+            ) {
+              unlink({ orderId });
+            }
+          }}
           disabled={isUnlinking}
         >
           <Icon icon={IconUnlink} size="sm" />
@@ -309,6 +319,7 @@ const ZohoSalesOrderButton = ({
               Cancel
             </Button>
             <Button
+              colorRole="brand"
               onClick={() => create({ orderId, confirmed: true })}
               disabled={isCreating}
             >
