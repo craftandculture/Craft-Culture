@@ -1,3 +1,9 @@
+## [2.1.34](https://github.com/craftandculture/Craft-Culture/compare/v2.1.33...v2.1.34) (2026-10-29)
+
+### Bug Fixes
+
+* Cellar statements show the balance at the top and say what Owed to you includes ([a065b4d](https://github.com/craftandculture/Craft-Culture/commit/a065b4d70905ba3742fe8fb73dc49692d3508c6d))
+
 ## [2.1.33](https://github.com/craftandculture/Craft-Culture/compare/v2.1.32...v2.1.33) (2026-10-29)
 
 ### Bug Fixes
