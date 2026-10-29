@@ -1,3 +1,9 @@
+## [2.1.31](https://github.com/craftandculture/Craft-Culture/compare/v2.1.30...v2.1.31) (2026-10-29)
+
+### Bug Fixes
+
+* revenue line tooltip no longer cut off; average line shows ([54f1c5d](https://github.com/craftandculture/Craft-Culture/commit/54f1c5d80e212a081a3a330da6ad1ec12016b1f9))
+
 ## [2.1.30](https://github.com/craftandculture/Craft-Culture/compare/v2.1.29...v2.1.30) (2026-10-29)
 
 ### Features
