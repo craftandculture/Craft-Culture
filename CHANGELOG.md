@@ -1,3 +1,17 @@
+## [2.1.32](https://github.com/craftandculture/Craft-Culture/compare/v2.1.31...v2.1.32) (2026-10-29)
+
+### Features
+
+* admin order pages lead with what needs attention and count bottles correctly ([c21da1f](https://github.com/craftandculture/Craft-Culture/commit/c21da1f85168fdf2f94cd582d119eee770c0f56d))
+* distributor orders lead with the next step, with confirmations on each action ([5b6d350](https://github.com/craftandculture/Craft-Culture/commit/5b6d35092c563e9ad74ec18651f13dc991350410))
+* partner order screens say what happens next and make order entry harder to get wrong ([836cc8d](https://github.com/craftandculture/Craft-Culture/commit/836cc8dae0afbff1ea65c3891502a02ff992af2e))
+
+### Bug Fixes
+
+* partners no longer receive the distributor's name or internal order notes ([efa3efb](https://github.com/craftandculture/Craft-Culture/commit/efa3efb00f7b6080d48bcbca1bdf730c40db6130))
+* Private Cellar statements show the balance brought forward and price at the shipment's exchange rate ([741d707](https://github.com/craftandculture/Craft-Culture/commit/741d707508c614d49d382c9b1cea3a8b6b31fb2b))
+* Samples C&C takes from a member's cellar are valued at the wine's cost before freight when no price was agreed ([80830ce](https://github.com/craftandculture/Craft-Culture/commit/80830ce3ad9d1d733848b8da31403c1055c8102a))
+
 ## [2.1.31](https://github.com/craftandculture/Craft-Culture/compare/v2.1.30...v2.1.31) (2026-10-29)
 
 ### Bug Fixes
