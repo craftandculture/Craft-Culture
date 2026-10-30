@@ -1,3 +1,9 @@
+## [2.1.41](https://github.com/craftandculture/Craft-Culture/compare/v2.1.40...v2.1.41) (2026-10-30)
+
+### Features
+
+* logistics shipments show each route from origin to warehouse, with late and due-this-week tiles ([3b34a6f](https://github.com/craftandculture/Craft-Culture/commit/3b34a6f53f3a3a20878f63cd37d8107ee6f7feea))
+
 ## [2.1.40](https://github.com/craftandculture/Craft-Culture/compare/v2.1.39...v2.1.40) (2026-10-29)
 
 ### Bug Fixes
