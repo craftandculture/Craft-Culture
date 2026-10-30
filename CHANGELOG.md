@@ -1,3 +1,9 @@
+## [2.1.49](https://github.com/craftandculture/Craft-Culture/compare/v2.1.48...v2.1.49) (2026-10-30)
+
+### Features
+
+* distributors see the client's email on a PCO as a fallback contact ([0adff20](https://github.com/craftandculture/Craft-Culture/commit/0adff20492dafcd51aab69a5f3a9c864908d2f72))
+
 ## [2.1.48](https://github.com/craftandculture/Craft-Culture/compare/v2.1.47...v2.1.48) (2026-10-30)
 
 ### Features
