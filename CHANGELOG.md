@@ -1,3 +1,9 @@
+## [2.1.46](https://github.com/craftandculture/Craft-Culture/compare/v2.1.45...v2.1.46) (2026-10-30)
+
+### Bug Fixes
+
+* London benchmark uses the last trade, not the lowest ask ([d22af62](https://github.com/craftandculture/Craft-Culture/commit/d22af62f58caa7152794d5520672776324ef5e4c))
+
 ## [2.1.45](https://github.com/craftandculture/Craft-Culture/compare/v2.1.44...v2.1.45) (2026-10-30)
 
 ### Features
