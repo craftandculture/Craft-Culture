@@ -34,7 +34,7 @@ const RunInboundTestForm = ({ disabled }: { disabled: boolean }) => {
             type="number"
             name="size"
             min={1}
-            max={60}
+            max={40}
             defaultValue={40}
             className="w-24 rounded-md border border-border-muted bg-background-primary px-2 py-1.5 text-sm text-text-primary"
           />

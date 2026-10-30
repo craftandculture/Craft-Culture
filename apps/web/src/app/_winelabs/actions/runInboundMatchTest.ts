@@ -53,7 +53,7 @@ const REAL_LWIN18 = /^[1-8]\d{6}-\d{4}-\d{2}-\d{5}$/;
  * credits a line.
  *
  * @param _previous - The last result, unused (useActionState)
- * @param formData - `size`: lines to test, 1 to 60; `skip`: lines to pass over, to continue a run
+ * @param formData - `size`: lines to test, 1 to 40 (more runs past the time limit); `skip`: lines to pass over, to continue a run
  * @returns Counts for each matcher, and every line where an answer differed from the confirmed LWIN
  */
 const runInboundMatchTest = async (
@@ -72,7 +72,7 @@ const runInboundMatchTest = async (
   const user = await getCurrentUser();
   if (!isStaff(user)) return { ...empty, error: 'C&C staff only.' };
 
-  const size = Math.min(60, Math.max(1, Math.round(Number(formData.get('size')) || 1)));
+  const size = Math.min(40, Math.max(1, Math.round(Number(formData.get('size')) || 1)));
   const skip = Math.max(0, Math.round(Number(formData.get('skip')) || 0));
 
   const items = await db
@@ -142,7 +142,8 @@ const runInboundMatchTest = async (
     }
     const lineText = `${withProducer} ${line.productName}`;
     const winelabsAnswer = winelabs?.name
-      ? { lwin7: winelabs.lwin7, fit: winelabs.fit, producer: winelabs.record?.producerName ?? null }
+      ? { lwin7: winelabs.lwin7, fit: winelabs.fit, // The register leaves some producers blank; its name then starts with one
+            producer: winelabs.record?.producerName || winelabs.name.split(',')[0]?.trim() || null }
       : null;
     const winelabsAuto = Boolean(winelabs && decideLwinMatch(lineText, winelabsAnswer, null));
     const decision = decideLwinMatch(lineText, winelabsAnswer, registerAnswer);

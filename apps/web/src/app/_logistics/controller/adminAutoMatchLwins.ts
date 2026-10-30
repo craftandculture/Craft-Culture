@@ -224,7 +224,8 @@ const adminAutoMatchLwins = adminProcedure
         ? {
             lwin7: winelabs.lwin7,
             fit: winelabs.fit,
-            producer: winelabs.record?.producerName ?? null,
+            // The register leaves some producers blank; its name then starts with one
+            producer: winelabs.record?.producerName || winelabs.name.split(',')[0]?.trim() || null,
           }
         : null;
 
