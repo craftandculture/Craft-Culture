@@ -685,6 +685,14 @@ const DistributorOrderDetailPage = () => {
                       </a>
                     </Typography>
                   )}
+                  {order.clientEmail && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      Client email:{' '}
+                      <a href={`mailto:${order.clientEmail}`} className="font-medium text-text-primary underline-offset-2 hover:underline">
+                        {order.clientEmail}
+                      </a>
+                    </Typography>
+                  )}
                 </div>
                 <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
                   <Button
@@ -741,6 +749,11 @@ const DistributorOrderDetailPage = () => {
                   {order.clientPhone && (
                     <Typography variant="bodyXs" colorRole="muted" className="mt-1">
                       Client phone: {order.clientPhone}
+                    </Typography>
+                  )}
+                  {order.clientEmail && (
+                    <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                      Client email: {order.clientEmail}
                     </Typography>
                   )}
                 </div>
@@ -864,6 +877,14 @@ const DistributorOrderDetailPage = () => {
                         </>
                       )}
                     </Typography>
+                    {order.clientEmail && (
+                      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                        If the client cannot be reached by phone or WhatsApp, email:{' '}
+                        <a href={`mailto:${order.clientEmail}`} className="font-medium text-text-primary underline-offset-2 hover:underline">
+                          {order.clientEmail}
+                        </a>
+                      </Typography>
+                    )}
                     {order.clientAddress && (
                       <Typography variant="bodyXs" colorRole="muted" className="mt-1">
                         Address: {order.clientAddress}
@@ -1373,9 +1394,9 @@ const DistributorOrderDetailPage = () => {
                   <Typography variant="bodySm" className="font-medium">
                     {order.clientName || '-'}
                   </Typography>
-                  {(order.clientPhone || order.clientAddress) && (
+                  {(order.clientPhone || order.clientEmail || order.clientAddress) && (
                     <CopyButton
-                      value={[order.clientName, order.clientPhone, order.clientAddress]
+                      value={[order.clientName, order.clientPhone, order.clientEmail, order.clientAddress]
                         .filter(Boolean)
                         .join('\n')}
                       label="Delivery details"
@@ -1393,6 +1414,19 @@ const DistributorOrderDetailPage = () => {
                 ) : (
                   <Typography variant="bodyXs" colorRole="muted">
                     No phone number
+                  </Typography>
+                )}
+                {order.clientEmail ? (
+                  <a
+                    href={`mailto:${order.clientEmail}`}
+                    className="inline-flex min-h-8 items-center gap-1.5 break-all text-xs font-medium text-text-primary underline-offset-2 hover:underline"
+                  >
+                    <Icon icon={IconMail} size="xs" />
+                    {order.clientEmail}
+                  </a>
+                ) : (
+                  <Typography variant="bodyXs" colorRole="muted">
+                    No email address
                   </Typography>
                 )}
                 {order.clientAddress && (

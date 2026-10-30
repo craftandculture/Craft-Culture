@@ -80,6 +80,7 @@ const distributorGetMany = distributorProcedure
           ilike(privateClientOrders.orderNumber, `%${search}%`),
           ilike(privateClientOrders.clientName, `%${search}%`),
           ilike(privateClientOrders.clientPhone, `%${search}%`),
+          ilike(privateClientOrders.clientEmail, `%${search}%`),
         )!,
       );
     }
