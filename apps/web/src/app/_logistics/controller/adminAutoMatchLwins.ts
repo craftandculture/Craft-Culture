@@ -6,9 +6,10 @@ import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
-import { MIN_MARGIN, MIN_SCORE, WINELABS_FIT } from '../constants/lwinMatching';
+import { MIN_MARGIN, MIN_SCORE } from '../constants/lwinMatching';
 import askWinelabsForLine from '../data/askWinelabsForLine';
 import searchRegister from '../data/searchRegister';
+import decideLwinMatch from '../utils/decideLwinMatch';
 import parseWineName from '../utils/parseWineName';
 
 export interface AutoMatchCandidate {
@@ -218,7 +219,17 @@ const adminAutoMatchLwins = adminProcedure
         }
       }
 
-      if (winelabs && winelabs.name && winelabs.fit >= WINELABS_FIT) {
+      const lineText = `${withProducer} ${item.productName}`;
+      const winelabsAnswer = winelabs?.name
+        ? {
+            lwin7: winelabs.lwin7,
+            fit: winelabs.fit,
+            producer: winelabs.record?.producerName ?? null,
+          }
+        : null;
+
+      // Wine Labs alone is enough when its answer reads as the line and names its producer
+      if (winelabs && decideLwinMatch(lineText, winelabsAnswer, null)) {
         const lwin18 = compose(winelabs.lwin7);
         rows.push({
           itemId: item.id,
@@ -321,6 +332,21 @@ const adminAutoMatchLwins = adminProcedure
             best.displayName.toLowerCase()
               ? `${candidates.length} records share the name "${best.displayName}"`
               : `Too close to "${runnerUp?.displayName ?? 'another wine'}" to choose${winelabsNote}`,
+          source: null,
+          candidates: options,
+        });
+        continue;
+      }
+
+      // A clear winner in the register is still not filed when Wine Labs named another wine
+      if (!decideLwinMatch(lineText, winelabsAnswer, best.lwin)) {
+        rows.push({
+          itemId: item.id,
+          productName: item.productName,
+          lwin: null,
+          matchedName: best.displayName,
+          score,
+          verdict: `Wine Labs ("${winelabs?.name}") and our register ("${best.displayName}") name different wines`,
           source: null,
           candidates: options,
         });

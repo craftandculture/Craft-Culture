@@ -4,9 +4,10 @@ import { desc, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
 import isStaff from '@/app/_distribution/utils/isStaff';
-import { MIN_MARGIN, MIN_SCORE, WINELABS_FIT } from '@/app/_logistics/constants/lwinMatching';
+import { MIN_MARGIN, MIN_SCORE } from '@/app/_logistics/constants/lwinMatching';
 import askWinelabsForLine from '@/app/_logistics/data/askWinelabsForLine';
 import searchRegister from '@/app/_logistics/data/searchRegister';
+import decideLwinMatch from '@/app/_logistics/utils/decideLwinMatch';
 import parseWineName from '@/app/_logistics/utils/parseWineName';
 import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 import db from '@/database/client';
@@ -139,8 +140,13 @@ const runInboundMatchTest = async (
       result.error = error instanceof Error ? error.message : 'Wine Labs did not answer';
       break;
     }
-    const winelabsAuto = Boolean(winelabs?.name && winelabs.fit >= WINELABS_FIT);
-    const pipeline = winelabsAuto ? winelabs!.lwin7 : registerAnswer;
+    const lineText = `${withProducer} ${line.productName}`;
+    const winelabsAnswer = winelabs?.name
+      ? { lwin7: winelabs.lwin7, fit: winelabs.fit, producer: winelabs.record?.producerName ?? null }
+      : null;
+    const winelabsAuto = Boolean(winelabs && decideLwinMatch(lineText, winelabsAnswer, null));
+    const decision = decideLwinMatch(lineText, winelabsAnswer, registerAnswer);
+    const pipeline = decision?.lwin7 ?? null;
 
     result.tested += 1;
     if (registerAnswer) {
@@ -159,7 +165,7 @@ const runInboundMatchTest = async (
       result.pipeline.auto += 1;
       if (pipeline === line.lwin7) result.pipeline.right += 1;
       else result.pipeline.wrong += 1;
-      if (winelabsAuto) result.pipeline.byWinelabs += 1;
+      if (decision?.source === 'winelabs') result.pipeline.byWinelabs += 1;
     }
 
     // Only the lines worth a look: an answer that differs from what staff confirmed
@@ -174,7 +180,7 @@ const runInboundMatchTest = async (
         winelabsName: winelabs?.name || null,
         winelabsFit: winelabs ? Math.round(winelabs.fit * 100) / 100 : null,
         pipeline,
-        pipelineSource: winelabsAuto ? 'winelabs' : registerAnswer ? 'register' : null,
+        pipelineSource: decision?.source ?? null,
       });
     }
   }
