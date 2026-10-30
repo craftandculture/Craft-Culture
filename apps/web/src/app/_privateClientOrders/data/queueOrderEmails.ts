@@ -7,6 +7,7 @@ import logger from '@/utils/logger';
 
 import getOrderEmailRecipients from './getOrderEmailRecipients';
 import getOrderEmailSnapshot from './getOrderEmailSnapshot';
+import getCraftCulturePartnerId from '../utils/getCraftCulturePartnerId';
 import orderEmailCopy from '../utils/orderEmailCopy';
 import type { OrderEmailAudience, OrderEmailEvent, OrderStatus } from '../utils/orderEmailTypes';
 
@@ -89,6 +90,8 @@ const queueOrderEmails = async () => {
 
   const snapshots = new Map<string, Awaited<ReturnType<typeof getOrderEmailSnapshot>>>();
   const recipientsOf = new Map<string, Awaited<ReturnType<typeof getOrderEmailRecipients>>>();
+  // C&C's own orders: the team follows them in the Index, so it is not emailed as their partner
+  const craftCulturePartnerId = await getCraftCulturePartnerId();
   let queued = 0;
 
   for (const log of logs) {
@@ -115,6 +118,7 @@ const queueOrderEmails = async () => {
       for (const [audience, partyId] of parties) {
         // Nobody hears about what their own side just did
         if (!partyId || partyId === log.partnerId) continue;
+        if (audience === 'partner' && partyId === craftCulturePartnerId) continue;
 
         const copy = orderEmailCopy(event, audience, found.snapshot);
         if (!copy) continue;
