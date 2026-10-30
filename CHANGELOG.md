@@ -1,3 +1,9 @@
+## [2.1.50](https://github.com/craftandculture/Craft-Culture/compare/v2.1.49...v2.1.50) (2026-10-30)
+
+### Bug Fixes
+
+* distributor PCO page keeps the payment step, progress and delivery photo ([3d67cfc](https://github.com/craftandculture/Craft-Culture/commit/3d67cfcd6d64d128ab44b5c24f38765b91464b6d))
+
 ## [2.1.49](https://github.com/craftandculture/Craft-Culture/compare/v2.1.48...v2.1.49) (2026-10-30)
 
 ### Features
