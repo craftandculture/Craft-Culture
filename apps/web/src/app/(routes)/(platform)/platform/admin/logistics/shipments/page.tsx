@@ -289,7 +289,7 @@ const ShipmentsList = () => {
                 : search || stage || type || noNews || due ? 'No shipments match. Clear a filter or change the search.' : 'No shipments yet.'}
             </p>
           ) : (
-            <ul className={`divide-y divide-border-muted transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+            <ul className={`divide-y divide-border-primary transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
               {shipments.map((shipment) => {
                 const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
                 const origin = shipment.originCity ?? shipment.originCountry ?? 'Origin';
@@ -346,7 +346,7 @@ const ShipmentsList = () => {
                         <button
                           type="button"
                           onClick={() => setUpdating(shipment)}
-                          className="h-9 shrink-0 rounded-lg border border-border-muted px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-secondary"
+                          className="h-9 shrink-0 rounded-lg bg-text-primary px-4 text-xs font-semibold text-surface-primary shadow-sm transition-opacity hover:opacity-85"
                         >
                           Update
                         </button>

@@ -33,13 +33,13 @@ const ShipmentRoute = ({ shipment, compact }: ShipmentRouteProps) => {
                     ? 'border-2 border-red-600 bg-surface-primary'
                     : stop.done
                       ? 'bg-text-primary'
-                      : 'border-2 border-border-muted bg-surface-primary'
+                      : 'border-2 border-text-muted/50 bg-surface-primary'
                 }`}
               />
               {i < stops.length - 1 && (
                 <span
                   className={`h-0 flex-1 border-t-2 ${
-                    nextDone ? 'border-solid border-text-primary' : 'border-dashed border-border-muted'
+                    nextDone ? 'border-solid border-text-primary' : 'border-dashed border-text-muted/40'
                   }`}
                 />
               )}
