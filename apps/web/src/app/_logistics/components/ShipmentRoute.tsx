@@ -17,12 +17,12 @@ export interface ShipmentRouteProps {
 const ShipmentRoute = ({ shipment, compact }: ShipmentRouteProps) => {
   const stops = shipmentRouteStops(shipment);
   return (
-    <ol className="grid grid-cols-2 gap-y-3 sm:grid-cols-4" aria-label="Route">
+    <ol className={`grid grid-cols-2 sm:grid-cols-4 ${compact ? 'gap-y-2' : 'gap-y-3'}`} aria-label="Route">
       {stops.map((stop, i) => {
         const nextDone = stops[i + 1]?.done ?? false;
         const flag = countryFlag(stop.country);
         return (
-          <li key={stop.step} className="flex min-w-0 flex-col gap-1.5 pr-2.5">
+          <li key={stop.step} className={`flex min-w-0 flex-col pr-2.5 ${compact ? 'gap-1' : 'gap-1.5'}`}>
             {!compact && (
               <span className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">{stop.step}</span>
             )}
@@ -50,13 +50,15 @@ const ShipmentRoute = ({ shipment, compact }: ShipmentRouteProps) => {
                 {stop.place}
               </span>
             </span>
-            <span
-              className={`text-xs ${
-                stop.late ? 'font-semibold text-red-700 dark:text-red-400' : stop.done ? 'text-text-primary' : 'text-text-muted'
-              }`}
-            >
-              {stop.date}
-            </span>
+            {stop.date && (
+              <span
+                className={`text-xs ${
+                  stop.late ? 'font-semibold text-red-700 dark:text-red-400' : stop.done ? 'text-text-primary' : 'text-text-muted'
+                }`}
+              >
+                {stop.date}
+              </span>
+            )}
           </li>
         );
       })}

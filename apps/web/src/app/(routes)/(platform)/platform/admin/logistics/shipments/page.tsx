@@ -27,6 +27,7 @@ import ShipmentRoute from '@/app/_logistics/components/ShipmentRoute';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentTypeBadge, { type ShipmentType, shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
 import type { ShipmentStageGroup } from '@/app/_logistics/schemas/getShipmentsSchema';
+import displayCase from '@/app/_logistics/utils/displayCase';
 import { SHIPMENT_DUE_KEYS, type ShipmentDue } from '@/app/_logistics/utils/shipmentDueKeys';
 import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -302,7 +303,7 @@ const ShipmentsList = () => {
                   : null;
                 return (
                   <li key={shipment.id} className={shipment.status !== 'cancelled' && isLate(shipment) ? 'bg-red-50/40 dark:bg-red-500/5' : undefined}>
-                    <div className="grid gap-4 px-4 py-4 lg:grid-cols-[15rem_minmax(0,1fr)_8.5rem] lg:items-center lg:gap-6 sm:px-5">
+                    <div className="grid gap-3 px-4 py-3.5 lg:grid-cols-[15rem_minmax(0,1fr)_8.5rem] lg:items-center lg:gap-6 sm:px-5">
                       <Link href={href} className="flex min-w-0 flex-col gap-1.5 hover:opacity-80">
                         <span className="flex items-center gap-2">
                           <ShipmentPartyMark type={shipment.type} logoUrl={shipment.partyLogoUrl} name={shipment.partyName} icon={ModeIcon} />
@@ -311,11 +312,11 @@ const ShipmentsList = () => {
                           </span>
                         </span>
                         <span className="truncate text-sm font-semibold text-text-primary">
-                          {shipment.name ?? shipment.partyName ?? `${origin} → ${destination}`}
+                          {displayCase(shipment.name ?? shipment.partyName) ?? `${origin} → ${destination}`}
                         </span>
                         <span className="truncate text-xs text-text-muted">
                           {[
-                            shipment.name ? shipment.partyName : null,
+                            shipment.name ? displayCase(shipment.partyName) : null,
                             shipment.hillebrandReference ?? shipment.awbNumber ?? shipment.containerNumber,
                           ]
                             .filter(Boolean)
@@ -331,10 +332,16 @@ const ShipmentsList = () => {
                       </Link>
                       <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-end">
                         <span className="text-right">
-                          <span className="block text-sm font-semibold tabular-nums text-text-primary">
-                            {shipment.totalCases} {shipment.totalCases === 1 ? 'case' : 'cases'}
-                          </span>
-                          <span className="block text-xs tabular-nums text-text-muted">{shipment.totalBottles} bottles</span>
+                          {shipment.totalCases > 0 ? (
+                            <>
+                              <span className="block text-sm font-semibold tabular-nums text-text-primary">
+                                {shipment.totalCases} {shipment.totalCases === 1 ? 'case' : 'cases'}
+                              </span>
+                              <span className="block text-xs tabular-nums text-text-muted">{shipment.totalBottles} bottles</span>
+                            </>
+                          ) : (
+                            <span className="block text-xs text-text-muted">No cases yet</span>
+                          )}
                         </span>
                         <button
                           type="button"

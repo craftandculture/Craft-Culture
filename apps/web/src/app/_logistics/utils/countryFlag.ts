@@ -19,7 +19,9 @@ const ISO_BY_NAME: Record<string, string> = {
 const countryFlag = (country: string | null | undefined) => {
   if (!country) return null;
   const trimmed = country.trim();
-  const iso = /^[A-Za-z]{2}$/.test(trimmed) ? trimmed.toUpperCase() : ISO_BY_NAME[trimmed.toLowerCase()];
+  // UK is not an ISO code (GB is), so names are looked up first
+  const iso =
+    ISO_BY_NAME[trimmed.toLowerCase()] ?? (/^[A-Za-z]{2}$/.test(trimmed) ? trimmed.toUpperCase() : undefined);
   if (!iso) return null;
   return String.fromCodePoint(...[...iso].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
 };

@@ -30,6 +30,7 @@ import ShipmentRoute from '@/app/_logistics/components/ShipmentRoute';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentTypeBadge, { type ShipmentType, shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
 import TeamBoardStrip from '@/app/_logistics/components/TeamBoardStrip';
+import displayCase from '@/app/_logistics/utils/displayCase';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -291,7 +292,7 @@ const LogisticsDashboardPage = () => {
                       <li key={shipment.id} className={late ? 'bg-red-50/40 dark:bg-red-500/5' : undefined}>
                         <Link
                           href={`/platform/admin/logistics/shipments/${shipment.id}`}
-                          className="flex flex-col gap-3 px-4 py-3.5 transition-colors hover:bg-surface-secondary"
+                          className="flex flex-col gap-2.5 px-4 py-3 transition-colors hover:bg-surface-secondary"
                         >
                           {/* Two lines, so the route keeps the column's full width beside the side column */}
                           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -300,12 +301,14 @@ const LogisticsDashboardPage = () => {
                               {shipment.jobNumber ?? shipment.shipmentNumber}
                             </span>
                             <span className="min-w-0 truncate text-sm font-semibold text-text-primary">
-                              {shipment.name ?? shipment.partyName ?? ''}
+                              {displayCase(shipment.name ?? shipment.partyName) ?? ''}
                             </span>
                             <ShipmentStatusBadge status={shipment.status} />
                             {shipment.type !== 'inbound' && <ShipmentTypeBadge type={shipment.type} />}
                             <span className="ml-auto whitespace-nowrap text-xs tabular-nums text-text-muted">
-                              {shipment.totalCases} {shipment.totalCases === 1 ? 'case' : 'cases'}
+                              {shipment.totalCases > 0
+                                ? `${shipment.totalCases} ${shipment.totalCases === 1 ? 'case' : 'cases'}`
+                                : 'No cases yet'}
                             </span>
                           </span>
                           {stageTab === 'shipments' && <ShipmentRoute shipment={shipment} compact />}

@@ -1,3 +1,5 @@
+import displayCase from './displayCase';
+
 /** The few fields a shipment's route is drawn from */
 export interface ShipmentRouteInput {
   status: string;
@@ -45,9 +47,9 @@ const PROGRESS: Record<string, number> = {
 };
 
 const MODE_LABEL: Record<string, string> = {
-  air: 'Air freight',
-  sea_fcl: 'Sea, full container',
-  sea_lcl: 'Sea, shared container',
+  air: 'Air',
+  sea_fcl: 'Sea FCL',
+  sea_lcl: 'Sea LCL',
   road: 'Road',
 };
 
@@ -75,7 +77,7 @@ const shipmentRouteStops = (s: ShipmentRouteInput, now = new Date()): ShipmentRo
   return [
     {
       step: 'Origin',
-      place: s.originWarehouse ?? s.originCity ?? s.originCountry ?? 'Origin not set',
+      place: displayCase(s.originWarehouse ?? s.originCity ?? s.originCountry) ?? 'Origin not set',
       country: s.originCountry,
       date: `Opened ${day(s.createdAt)}`,
       done: progress >= 1,
@@ -83,21 +85,22 @@ const shipmentRouteStops = (s: ShipmentRouteInput, now = new Date()): ShipmentRo
     },
     {
       step: 'Departure',
-      place: s.carrierName ?? MODE_LABEL[s.transportMode] ?? 'Departure',
-      country: s.originCountry,
+      // How it travels and with whom; the origin's flag is on the stop before
+      place: [MODE_LABEL[s.transportMode], displayCase(s.carrierName)].filter(Boolean).join(' · ') || 'Departure',
+      country: null,
       date: s.atd
         ? `Departed ${day(s.atd)}`
         : s.etd
           ? `Est. departure ${day(s.etd)}`
           : departed
             ? 'Departed'
-            : 'Departure not set',
+            : 'No ETD yet',
       done: departed,
       late: false,
     },
     {
       step: 'Arrival',
-      place: s.destinationCity ?? s.destinationCountry ?? 'Destination',
+      place: displayCase(s.destinationCity ?? s.destinationCountry) ?? 'Destination',
       country: s.destinationCountry,
       date: s.ata
         ? `Arrived ${day(s.ata)}`
@@ -105,13 +108,13 @@ const shipmentRouteStops = (s: ShipmentRouteInput, now = new Date()): ShipmentRo
           ? `${arrivalLate ? 'Was due' : s.etaConfirmed ? 'Arrives' : 'Est. arrival'} ${day(s.eta)}`
           : arrived
             ? 'Arrived'
-            : 'ETA not set',
+            : 'No ETA yet',
       done: arrived,
       late: arrivalLate,
     },
     {
       step: inbound ? 'Warehouse' : 'Delivery',
-      place: s.destinationWarehouse ?? (inbound ? 'C&C bond, RAK' : 'Client'),
+      place: displayCase(s.destinationWarehouse) ?? (inbound ? 'C&C bond, RAK' : 'Client'),
       country: s.destinationCountry,
       date: finished
         ? s.deliveredAt
@@ -119,9 +122,7 @@ const shipmentRouteStops = (s: ShipmentRouteInput, now = new Date()): ShipmentRo
           : inbound
             ? 'Received'
             : 'Delivered'
-        : inbound
-          ? 'Not received'
-          : 'Not delivered',
+        : '',
       done: finished,
       late: false,
     },
