@@ -161,6 +161,7 @@ const adminNav: AdminNavSection[] = [
       // Triangulation stays until Crurated's figures agree in both
       { label: 'Triangulation', href: '/platform/admin/triangulation' },
       { label: 'Wine Labs', href: '/platform/admin/wine-labs', staffOnly: true },
+      { label: 'LWIN from a sheet', href: '/platform/admin/wine-labs/lwin-sheet', staffOnly: true },
       { label: 'Pricing Settings', href: '/platform/admin/pricing' },
       { label: 'Calculator', href: '/platform/admin/pricing-calculator' },
     ],
