@@ -1,23 +1,8 @@
-import lwinNameFit, { CLASSIFICATION } from './lwinNameFit';
-import nameOverlap, { wordsOf } from './nameOverlap';
+import isSameWine from './isSameWine';
+import lwinNameFit from './lwinNameFit';
 
 /** Share of the register's name our name must carry to be the same wine */
 const SAME_WINE = 0.75;
-
-/**
- * Whether two register names are one wine: every word of one is in the other,
- * and the longer adds only words such as the producer's name or the region,
- * never a classification (a premier cru is not its village wine)
- */
-const isSameWine = (a: string, b: string) => {
-  const [shorter, longer] =
-    wordsOf(a).length <= wordsOf(b).length ? [a, b] : [b, a];
-  if (nameOverlap(longer, shorter) < 1) return false;
-  const inShorter = new Set(wordsOf(shorter));
-  return !wordsOf(longer).some(
-    (word) => !inShorter.has(word) && CLASSIFICATION.has(word),
-  );
-};
 
 /**
  * Which LWIN is more likely right, ours or the one Wine Labs' name search found

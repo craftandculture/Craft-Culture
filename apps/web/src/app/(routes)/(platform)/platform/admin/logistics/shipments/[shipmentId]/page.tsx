@@ -24,7 +24,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import ActivityLog from '@/app/_logistics/components/ActivityLog';
@@ -538,19 +538,29 @@ const ShipmentDetailPage = () => {
     (row) => row.shipmentId === shipmentId,
   );
 
+  // Which round of a large invoice's matching is running; 0 when none is
+  const matchRound = useRef(0);
   const { mutate: autoMatchLwins, isPending: isMatchingLwins } = useMutation(
     api.logistics.admin.autoMatchLwins.mutationOptions({
       onSuccess: (result) => {
-        setMatchRows(
-          Object.fromEntries(
-            result.rows
-              .filter((row) => !row.lwin)
-              .map((row) => [
-                row.itemId,
-                { verdict: row.verdict, candidates: row.candidates },
-              ]),
-          ),
+        const unmatched = Object.fromEntries(
+          result.rows
+            .filter((row) => !row.lwin)
+            .map((row) => [
+              row.itemId,
+              { verdict: row.verdict, candidates: row.candidates },
+            ]),
         );
+        // A large invoice comes back in rounds: keep the earlier rounds' questions
+        setMatchRows((current) => (matchRound.current > 0 ? { ...current, ...unmatched } : unmatched));
+        if (result.remaining > 0 && matchRound.current < 6) {
+          matchRound.current += 1;
+          toast.info(`${result.applied} matched so far · matching the remaining ${result.remaining} lines…`);
+          autoMatchLwins({ shipmentId, dryRun: false });
+          void refetch();
+          return;
+        }
+        matchRound.current = 0;
         // The ones it declined to guess are the actual work, so they lead.
         const byWinelabs = result.byWinelabs > 0 ? ` (${result.byWinelabs} by Wine Labs)` : '';
         toast.success(
@@ -1999,7 +2009,10 @@ const ShipmentDetailPage = () => {
                           )}
                           {mappedCount < totalItems && (
                             <button
-                              onClick={() => autoMatchLwins({ shipmentId, dryRun: false })}
+                              onClick={() => {
+                                matchRound.current = 0;
+                                autoMatchLwins({ shipmentId, dryRun: false });
+                              }}
                               disabled={isMatchingLwins}
                               className="flex items-center gap-1 text-xs text-text-primary hover:underline disabled:opacity-50"
                             >
@@ -3299,6 +3312,11 @@ const ShipmentDetailPage = () => {
                 shipmentId={shipmentId}
                 documents={shipment.documents ?? []}
                 onUploadComplete={() => void refetch()}
+                // New invoice lines are matched to LWINs straight away: Wine Labs first, our register behind it
+                onItemsImported={() => {
+                  matchRound.current = 0;
+                  autoMatchLwins({ shipmentId, dryRun: false });
+                }}
               />
               {/*
                 The note a supplier asks for once their pallet has landed. Built

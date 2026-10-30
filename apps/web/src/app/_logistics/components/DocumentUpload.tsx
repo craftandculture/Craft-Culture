@@ -123,6 +123,8 @@ interface DocumentUploadProps {
   shipmentId: string;
   documents?: LogisticsDocument[];
   onUploadComplete?: () => void;
+  /** Called once invoice lines are imported, so they can be matched to LWINs straight away */
+  onItemsImported?: () => void;
 }
 
 /** Everything the dropzone accepts, including the supplier's own workbook */
@@ -173,6 +175,7 @@ const LogisticsDocumentUpload = ({
   shipmentId,
   documents = [],
   onUploadComplete,
+  onItemsImported,
 }: DocumentUploadProps) => {
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
@@ -484,6 +487,7 @@ const LogisticsDocumentUpload = ({
       setImportCurrency(null);
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getOne']] });
       onUploadComplete?.();
+      onItemsImported?.();
     } catch (err) {
       console.error('Import error:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to import items');
@@ -499,6 +503,7 @@ const LogisticsDocumentUpload = ({
     trpcClient,
     queryClient,
     onUploadComplete,
+    onItemsImported,
   ]);
 
   const processFile = useCallback(

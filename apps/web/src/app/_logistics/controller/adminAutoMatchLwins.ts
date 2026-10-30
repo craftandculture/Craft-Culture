@@ -2,12 +2,14 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 
+import isSameWine from '@/app/_winelabs/utils/isSameWine';
 import db from '@/database/client';
 import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { MIN_MARGIN, MIN_SCORE } from '../constants/lwinMatching';
 import askWinelabsForLine from '../data/askWinelabsForLine';
+import getHeldWineNames from '../data/getHeldWineNames';
 import searchRegister from '../data/searchRegister';
 import decideLwinMatch from '../utils/decideLwinMatch';
 import parseWineName from '../utils/parseWineName';
@@ -125,8 +127,36 @@ const adminAutoMatchLwins = adminProcedure
     let applied = 0;
     // Set once Wine Labs fails, so a run out of credits stops asking
     let winelabsError: string | null = null;
+    // A line repeated on the invoice is asked about once
+    const winelabsAsked = new Map<string, Awaited<ReturnType<typeof askWinelabsForLine>>>();
 
-    for (const item of items) {
+    /*
+      The register lists some wines twice ("Marchesi Antinori, Tignanello" and
+      "Tignanello, Toscana"). A line matched to one is filed under whichever our
+      stock already uses, so one wine never splits into two codes with two stock
+      counts and two prices.
+    */
+    const held = items.length ? await getHeldWineNames() : [];
+    const heldCodes = new Set(held.map((wine) => wine.lwin7));
+    const preferHeld = (lwin7: string, name: string) => {
+      if (heldCodes.has(lwin7) || !name) return { lwin7, swapped: false };
+      const same = held.find((wine) => isSameWine(name, wine.name));
+      return same ? { lwin7: same.lwin7, swapped: true } : { lwin7, swapped: false };
+    };
+
+    /*
+      A large invoice is matched in rounds. Each line can take a second with
+      Wine Labs, and a request has five minutes; lines left when the time is
+      nearly up are counted, and the page asks again for the rest.
+    */
+    const deadline = Date.now() + 200_000;
+    let remaining = 0;
+
+    for (const [index, item] of items.entries()) {
+      if (Date.now() > deadline) {
+        remaining = items.length - index;
+        break;
+      }
       const parsed = parseWineName(item.productName);
 
       /*
@@ -213,7 +243,11 @@ const adminAutoMatchLwins = adminProcedure
       let winelabs: Awaited<ReturnType<typeof askWinelabsForLine>> = null;
       if (!winelabsError) {
         try {
-          winelabs = await askWinelabsForLine(withProducer, item.productName, vintage);
+          const key = `${withProducer}|${vintage ?? ''}`;
+          winelabs = winelabsAsked.has(key)
+            ? (winelabsAsked.get(key) ?? null)
+            : await askWinelabsForLine(withProducer, item.productName, vintage);
+          winelabsAsked.set(key, winelabs);
         } catch (error) {
           winelabsError = error instanceof Error ? error.message : 'Wine Labs did not answer';
         }
@@ -231,14 +265,17 @@ const adminAutoMatchLwins = adminProcedure
 
       // Wine Labs alone is enough when its answer reads as the line and names its producer
       if (winelabs && decideLwinMatch(lineText, winelabsAnswer, null)) {
-        const lwin18 = compose(winelabs.lwin7);
+        const filed = preferHeld(winelabs.lwin7, winelabs.name);
+        const lwin18 = compose(filed.lwin7);
         rows.push({
           itemId: item.id,
           productName: item.productName,
           lwin: lwin18,
           matchedName: winelabs.name,
           score: winelabs.fit,
-          verdict: vintage ? 'Matched by Wine Labs' : 'Matched by Wine Labs, but no vintage in the name',
+          verdict: `${vintage ? 'Matched by Wine Labs' : 'Matched by Wine Labs, but no vintage in the name'}${
+            filed.swapped ? ', under the code our stock already uses' : ''
+          }`,
           source: 'winelabs',
           candidates: [],
         });
@@ -354,7 +391,8 @@ const adminAutoMatchLwins = adminProcedure
         continue;
       }
 
-      const lwin18 = compose(best.lwin);
+      const filed = preferHeld(best.lwin, best.displayName);
+      const lwin18 = compose(filed.lwin7);
       const agrees = winelabs?.lwin7 === best.lwin;
 
       rows.push({
@@ -363,11 +401,13 @@ const adminAutoMatchLwins = adminProcedure
         lwin: lwin18,
         matchedName: best.displayName,
         score,
-        verdict: agrees
-          ? 'Matched: Wine Labs and our register agree'
-          : vintage
-            ? 'Matched by our register'
-            : 'Matched by our register, but no vintage in the name',
+        verdict: `${
+          agrees
+            ? 'Matched: Wine Labs and our register agree'
+            : vintage
+              ? 'Matched by our register'
+              : 'Matched by our register, but no vintage in the name'
+        }${filed.swapped ? ', under the code our stock already uses' : ''}`,
         source: agrees ? 'winelabs' : 'register',
         candidates: options,
       });
@@ -380,6 +420,7 @@ const adminAutoMatchLwins = adminProcedure
       considered: items.length,
       applied,
       needsReview: rows.filter((row) => !row.lwin).length,
+      remaining,
       byWinelabs: rows.filter((row) => row.lwin && row.source === 'winelabs').length,
       winelabsError,
       rows,
