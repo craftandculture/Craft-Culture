@@ -13,6 +13,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import getOpenQuoteRequestSteps from '../data/getOpenQuoteRequestSteps';
 import { SHIPMENT_STAGE_GROUPS } from '../schemas/getShipmentsSchema';
+import { shipmentDueCountsSelect } from '../utils/shipmentDue';
 import { partyLogoSql, partyNameSql } from '../utils/shipmentPartySql';
 
 /**
@@ -47,6 +48,7 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
     pendingQuoteRequests,
     inProgressQuoteRequests,
     requestSteps,
+    [dueCounts],
   ] = await Promise.all([
     // Shipment counts by status
     db
@@ -72,7 +74,13 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
         destinationCountry: logisticsShipments.destinationCountry,
         destinationWarehouse: logisticsShipments.destinationWarehouse,
         carrierName: logisticsShipments.carrierName,
+        originWarehouse: logisticsShipments.originWarehouse,
+        etd: logisticsShipments.etd,
+        atd: logisticsShipments.atd,
         eta: logisticsShipments.eta,
+        ata: logisticsShipments.ata,
+        etaConfirmed: logisticsShipments.etaConfirmed,
+        deliveredAt: logisticsShipments.deliveredAt,
         // Derive case/bottle totals from line items (authoritative); the
         // denormalized header counters have drifted (and are NULL for
         // Hillebrand-imported shipments), so only fall back to them when a
@@ -199,6 +207,10 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
 
     // Open requests by the step they wait on; empty if the read fails rather than failing the dashboard
     getOpenQuoteRequestSteps(now).catch(() => []),
+
+    // The timing tiles: late, shipping or arriving within the week, gone quiet
+    // Zeros if the count fails rather than failing the dashboard
+    db.select(shipmentDueCountsSelect(now)).from(logisticsShipments).catch(() => []),
   ]);
 
   // Process shipment status counts
@@ -242,6 +254,7 @@ const adminGetDashboardMetrics = adminProcedure.query(async () => {
       recentActivityCount: recentActivity[0]?.count || 0,
     },
     recentShipments,
+    dueCounts: dueCounts ?? { late: 0, ships_7d: 0, arrives_7d: 0, no_news: 0 },
     documents: {
       complianceRate,
       expiringCount: expiringDocs[0]?.count || 0,

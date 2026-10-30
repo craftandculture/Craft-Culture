@@ -21,11 +21,13 @@ import { Suspense, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import LogUpdateSheet, { type LogUpdateSheetShipment } from '@/app/_logistics/components/LogUpdateSheet';
-import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
+import ShipmentDueTiles, { type ShipmentDueTileKey } from '@/app/_logistics/components/ShipmentDueTiles';
 import ShipmentPartyMark from '@/app/_logistics/components/ShipmentPartyMark';
+import ShipmentRoute from '@/app/_logistics/components/ShipmentRoute';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentTypeBadge, { type ShipmentType, shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
 import type { ShipmentStageGroup } from '@/app/_logistics/schemas/getShipmentsSchema';
+import { SHIPMENT_DUE_KEYS, type ShipmentDue } from '@/app/_logistics/utils/shipmentDueKeys';
 import Button from '@/app/_ui/components/Button/Button';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import type { logisticsTransportMode } from '@/database/schema';
@@ -42,20 +44,19 @@ const transportModeIcons: Record<TransportMode, typeof IconShip> = {
   road: IconTruck,
 };
 
-/** The tiles across the top; each is a filter and shows how many it would list */
-const STAGE_TILES: { key: ShipmentStageGroup; label: string; tone: string }[] = [
-  { key: 'active', label: 'Active', tone: 'bg-surface-secondary text-text-primary' },
-  { key: 'on_the_way', label: 'On the way', tone: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' },
-  { key: 'port_customs', label: 'Port or customs', tone: 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300' },
-  { key: 'warehouse', label: 'At warehouse', tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
-  { key: 'done', label: 'Delivered', tone: 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-300' },
+/** Where shipments are, as the Status menu offers it */
+const STAGES: { key: ShipmentStageGroup; label: string }[] = [
+  { key: 'active', label: 'Active' },
+  { key: 'on_the_way', label: 'On the way' },
+  { key: 'port_customs', label: 'Port or customs' },
+  { key: 'warehouse', label: 'At warehouse' },
+  { key: 'done', label: 'Delivered' },
+  { key: 'draft', label: 'Drafts' },
+  { key: 'cancelled', label: 'Cancelled' },
 ];
 
 // Re-export is no longer offered: mainland transfers took its place. Old ones still show under All types.
 const TYPES: ShipmentType[] = ['inbound', 'outbound', 'mainland_transfer'];
-
-const formatDate = (date: Date | null | undefined) =>
-  date ? new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
 
 const HOUR = 60 * 60 * 1000;
 
@@ -69,6 +70,10 @@ const freshness = (at: Date | string) => {
 
 /** Statuses where news is still expected; once at the warehouse, receiving takes over */
 const AWAITING = new Set(['draft', 'booked', 'picked_up', 'in_transit', 'arrived_port', 'customs_clearance', 'cleared']);
+
+/** Its ETA has passed with no arrival logged, as the Late tile counts it */
+const isLate = (s: { status: string; eta: Date | null; ata: Date | null }) =>
+  AWAITING.has(s.status) && !s.ata && !!s.eta && new Date(s.eta) < new Date();
 
 /**
  * Shipments list
@@ -92,6 +97,8 @@ const ShipmentsList = () => {
   const owner = params.get('owner') ?? undefined;
   const mine = owner === 'me';
   const noNews = params.get('news') === 'none';
+  const dueParam = params.get('due');
+  const due = SHIPMENT_DUE_KEYS.includes(dueParam as ShipmentDue) ? (dueParam as ShipmentDue) : undefined;
 
   const [typed, setTyped] = useState(search);
   const [updating, setUpdating] = useState<LogUpdateSheetShipment | null>(null);
@@ -126,6 +133,7 @@ const ShipmentsList = () => {
       cursor: page * PAGE_SIZE,
       search: search || undefined,
       stage,
+      due,
       type,
       sort,
       owner,
@@ -146,6 +154,14 @@ const ShipmentsList = () => {
   const shipments = data?.data ?? [];
   const totalCount = data?.meta.totalCount ?? 0;
   const counts = data?.meta.stageCounts;
+  const activeTile: ShipmentDueTileKey | null = noNews ? 'no_news' : (due ?? null);
+  // One timing tile at a time; pressing the lit one clears it
+  const pickTile = (key: ShipmentDueTileKey) =>
+    activeTile === key
+      ? setParam({ due: null, news: null })
+      : key === 'no_news'
+        ? setParam({ due: null, news: 'none' })
+        : setParam({ due: key, news: null, sort: key === 'arrives_7d' ? 'eta' : params.get('sort') });
   const pages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
@@ -185,66 +201,8 @@ const ShipmentsList = () => {
           </div>
         </div>
 
-        {/* Stage tiles: counted across all shipments matching the search and type */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {STAGE_TILES.map((t) => {
-            const active = stage === t.key;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setParam({ stage: active ? null : t.key })}
-                className={`rounded-xl px-4 py-3 text-left transition ${t.tone} ${
-                  active ? 'ring-2 ring-text-primary ring-offset-2 ring-offset-surface-primary' : 'hover:opacity-80'
-                }`}
-              >
-                <p className="text-2xl font-semibold tabular-nums">{counts ? counts[t.key] : '–'}</p>
-                <p className="mt-0.5 text-xs font-medium opacity-80">{t.label}</p>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="-mt-2 flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
-          {/* An owner's own list, and what has gone quiet: the board the team keeps each day */}
-          <button
-            type="button"
-            onClick={() => setParam({ owner: owner ? null : 'me' })}
-            className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
-              owner ? 'bg-text-primary text-surface-primary' : 'bg-surface-secondary hover:text-text-primary'
-            }`}
-          >
-            {owner && !mine ? 'One person’s actions ×' : 'My actions'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setParam({ news: noNews ? null : 'none' })}
-            className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
-              noNews ? 'bg-text-primary text-surface-primary' : 'bg-surface-secondary hover:text-text-primary'
-            }`}
-          >
-            No news 48h
-          </button>
-          <span className="mx-1 h-3 w-px bg-border-muted" aria-hidden />
-          <span>Also:</span>
-          {(
-            [
-              ['draft', 'Drafts'],
-              ['cancelled', 'Cancelled'],
-            ] as const
-          ).map(([key, text]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setParam({ stage: stage === key ? null : key })}
-              className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
-                stage === key ? 'bg-text-primary text-surface-primary' : 'bg-surface-secondary hover:text-text-primary'
-              }`}
-            >
-              {text} <span className="tabular-nums opacity-70">{counts ? counts[key] : '–'}</span>
-            </button>
-          ))}
-        </div>
+        {/* Timing tiles: counted across all shipments matching the search and type */}
+        <ShipmentDueTiles counts={data?.meta.dueCounts} active={activeTile} onPick={pickTile} />
 
         {/* Search, type and sort */}
         <div className="space-y-3">
@@ -259,6 +217,17 @@ const ShipmentsList = () => {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-1.5 overflow-x-auto">
+              {/* An owner's own list: the board the team keeps each day */}
+              <button
+                type="button"
+                onClick={() => setParam({ owner: owner ? null : 'me' })}
+                className={`inline-flex shrink-0 items-center rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  owner ? 'bg-text-primary text-surface-primary' : 'bg-surface-secondary text-text-muted hover:text-text-primary'
+                }`}
+              >
+                {owner && !mine ? 'One person’s actions ×' : 'My actions'}
+              </button>
+              <span className="mx-0.5 h-5 w-px shrink-0 self-center bg-border-muted" aria-hidden />
               {([undefined, ...TYPES] as (ShipmentType | undefined)[]).map((t) => {
                 const active = type === t;
                 return (
@@ -278,6 +247,20 @@ const ShipmentsList = () => {
             <div className="flex items-center gap-2 text-xs text-text-muted">
               <span>{isLoading ? 'Loading…' : `${totalCount} shipment${totalCount === 1 ? '' : 's'}`}</span>
               <span>·</span>
+              <label htmlFor="stage">Status</label>
+              <select
+                id="stage"
+                value={stage ?? ''}
+                onChange={(e) => setParam({ stage: e.target.value || null })}
+                className="h-8 rounded-lg border border-border-muted bg-surface-primary px-2 text-xs text-text-primary"
+              >
+                <option value="">All</option>
+                {STAGES.map((st) => (
+                  <option key={st.key} value={st.key}>
+                    {st.label} ({counts ? counts[st.key] : '–'})
+                  </option>
+                ))}
+              </select>
               <label htmlFor="sort">Sort</label>
               <select
                 id="sort"
@@ -302,7 +285,7 @@ const ShipmentsList = () => {
             <p className="px-4 py-12 text-center text-sm text-text-muted">
               {owner
                 ? `Nothing is waiting on ${mine ? 'you' : 'them'}.`
-                : search || stage || type || noNews ? 'No shipments match. Clear a filter or change the search.' : 'No shipments yet.'}
+                : search || stage || type || noNews || due ? 'No shipments match. Clear a filter or change the search.' : 'No shipments yet.'}
             </p>
           ) : (
             <ul className={`divide-y divide-border-muted transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
@@ -317,76 +300,70 @@ const ShipmentsList = () => {
                 const news = AWAITING.has(shipment.status)
                   ? freshness(shipment.lastUpdateAt ?? shipment.createdAt)
                   : null;
-                // An ETA matters only while it is still awaited; once in, it is history
-                const eta = AWAITING.has(shipment.status) ? formatDate(shipment.eta) : null;
                 return (
-                  <li key={shipment.id} className="flex items-center">
-                    <Link href={href} className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 transition-colors hover:bg-surface-secondary">
-                      <ShipmentPartyMark type={shipment.type} logoUrl={shipment.partyLogoUrl} name={shipment.partyName} icon={ModeIcon} />
-                      <span className="min-w-0 flex-1">
+                  <li key={shipment.id} className={shipment.status !== 'cancelled' && isLate(shipment) ? 'bg-red-50/40 dark:bg-red-500/5' : undefined}>
+                    <div className="grid gap-4 px-4 py-4 lg:grid-cols-[15rem_minmax(0,1fr)_8.5rem] lg:items-center lg:gap-6 sm:px-5">
+                      <Link href={href} className="flex min-w-0 flex-col gap-1.5 hover:opacity-80">
+                        <span className="flex items-center gap-2">
+                          <ShipmentPartyMark type={shipment.type} logoUrl={shipment.partyLogoUrl} name={shipment.partyName} icon={ModeIcon} />
+                          <span className="font-mono text-sm font-medium text-text-primary">
+                            {shipment.jobNumber ?? shipment.shipmentNumber}
+                          </span>
+                        </span>
+                        <span className="truncate text-sm font-semibold text-text-primary">
+                          {shipment.name ?? shipment.partyName ?? `${origin} → ${destination}`}
+                        </span>
+                        <span className="truncate text-xs text-text-muted">
+                          {[
+                            shipment.name ? shipment.partyName : null,
+                            shipment.hillebrandReference ?? shipment.awbNumber ?? shipment.containerNumber,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ') || shipmentTypeConfig[shipment.type as ShipmentType]?.label}
+                        </span>
                         <span className="flex flex-wrap items-center gap-1.5">
-                          <span className="truncate text-sm font-medium text-text-primary">
-                            {shipment.name ?? shipment.partyName ?? `${origin} → ${destination}`}
-                          </span>
-                          <ShipmentTypeBadge type={shipment.type} />
                           <ShipmentStatusBadge status={shipment.status} />
+                          {shipment.type !== 'inbound' && <ShipmentTypeBadge type={shipment.type} />}
                         </span>
-                        <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-text-muted">
-                          <span className="font-mono">{shipment.jobNumber ?? shipment.shipmentNumber}</span>
-                          <span>·</span>
-                          <span className="truncate">
-                            {origin} → {destination}
+                      </Link>
+                      <Link href={href} className="min-w-0">
+                        <ShipmentRoute shipment={shipment} />
+                      </Link>
+                      <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-end">
+                        <span className="text-right">
+                          <span className="block text-sm font-semibold tabular-nums text-text-primary">
+                            {shipment.totalCases} cases
                           </span>
-                          {shipment.name && shipment.partyName ? (
-                            <>
-                              <span>·</span>
-                              <span className="truncate">{shipment.partyName}</span>
-                            </>
-                          ) : null}
-                          {shipment.carrierName ? (
-                            <>
-                              <span>·</span>
-                              <span>
-                                {shipment.carrierName}
-                                {shipment.containerNumber ? ` ${shipment.containerNumber}` : ''}
-                              </span>
-                            </>
-                          ) : null}
+                          <span className="block text-xs tabular-nums text-text-muted">{shipment.totalBottles} bottles</span>
                         </span>
-                        {(shipment.nextAction || news) && (
-                          <span className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs">
-                            {news && (
-                              <span className={`inline-flex items-center gap-1 ${news.stale ? 'font-semibold text-red-700 dark:text-red-400' : 'text-text-muted'}`}>
-                                <span className={`size-1.5 rounded-full ${news.tone}`} aria-hidden />
-                                {news.stale ? `No news ${news.label.replace(' ago', '')}` : news.label}
-                              </span>
-                            )}
-                            {shipment.nextAction && (
-                              <>
-                                {news && <span className="text-text-muted">·</span>}
-                                <span className="min-w-0 truncate text-text-primary">Next: {shipment.nextAction}</span>
-                                {shipment.actionOwnerName && (
-                                  <span className="text-text-muted">({shipment.actionOwnerName.split(' ')[0]})</span>
-                                )}
-                              </>
-                            )}
+                        <button
+                          type="button"
+                          onClick={() => setUpdating(shipment)}
+                          className="h-9 shrink-0 rounded-lg border border-border-muted px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-secondary"
+                        >
+                          Update
+                        </button>
+                      </div>
+                    </div>
+                    {(shipment.nextAction || news) && (
+                      <p className="-mt-1 flex flex-wrap items-center gap-x-1.5 px-4 pb-3 text-xs sm:px-5">
+                        {news && (
+                          <span className={`inline-flex items-center gap-1 ${news.stale ? 'font-semibold text-red-700 dark:text-red-400' : 'text-text-muted'}`}>
+                            <span className={`size-1.5 rounded-full ${news.tone}`} aria-hidden />
+                            {news.stale ? `No news ${news.label.replace(' ago', '')}` : `News ${news.label}`}
                           </span>
                         )}
-                      </span>
-                      <ShipmentMetrics
-                        cases={shipment.totalCases}
-                        bottles={shipment.totalBottles}
-                        etaLabel={eta ? `${eta}${shipment.etaConfirmed ? '' : ' est.'}` : null}
-                      />
-                      <IconChevronRight className="size-4 shrink-0 text-text-muted" />
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => setUpdating(shipment)}
-                      className="mr-3 h-9 shrink-0 rounded-lg border border-border-muted px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-secondary"
-                    >
-                      Update
-                    </button>
+                        {shipment.nextAction && (
+                          <>
+                            {news && <span className="text-text-muted">·</span>}
+                            <span className="min-w-0 truncate text-text-primary">Next: {shipment.nextAction}</span>
+                            {shipment.actionOwnerName && (
+                              <span className="text-text-muted">({shipment.actionOwnerName.split(' ')[0]})</span>
+                            )}
+                          </>
+                        )}
+                      </p>
+                    )}
                   </li>
                 );
               })}

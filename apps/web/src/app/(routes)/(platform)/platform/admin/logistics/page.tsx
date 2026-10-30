@@ -6,7 +6,6 @@ import {
   IconArrowRight,
   IconBook,
   IconChartBar,
-  IconChevronRight,
   IconClipboardList,
   IconCloudDownload,
   IconFileInvoice,
@@ -25,8 +24,9 @@ import { toast } from 'sonner';
 
 import BondsOutstandingCard from '@/app/_logistics/components/exports/BondsOutstandingCard';
 import NeedsAttentionCard from '@/app/_logistics/components/NeedsAttentionCard';
-import ShipmentMetrics from '@/app/_logistics/components/ShipmentMetrics';
+import ShipmentDueTiles from '@/app/_logistics/components/ShipmentDueTiles';
 import ShipmentPartyMark from '@/app/_logistics/components/ShipmentPartyMark';
+import ShipmentRoute from '@/app/_logistics/components/ShipmentRoute';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentTypeBadge, { type ShipmentType, shipmentTypeConfig } from '@/app/_logistics/components/ShipmentTypeBadge';
 import TeamBoardStrip from '@/app/_logistics/components/TeamBoardStrip';
@@ -80,21 +80,13 @@ const LogisticsDashboardPage = () => {
     },
   });
 
-  const formatDate = (date: Date | null | undefined) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-    });
-  };
-
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="space-y-5">
           <Skeleton className="h-8 w-48" />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {[...Array(5)].map((_, i) => (
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
               <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
@@ -108,25 +100,11 @@ const LogisticsDashboardPage = () => {
   }
 
   const metrics = data;
-  const shipments = metrics?.shipments;
   const allRecent = metrics?.recentShipments ?? [];
   const quoteJobs = allRecent.filter((s) => s.isQuote);
   const shipmentJobs = allRecent.filter((s) => !s.isQuote);
   const recent = stageTab === 'quotes' ? quoteJobs : shipmentJobs;
   const visible = recent.filter((s) => typeFilter === 'all' || s.type === typeFilter);
-
-  // Where shipments are on the way in, read left to right
-  const tiles = [
-    { label: 'Active', value: shipments?.active ?? 0, tone: 'bg-surface-secondary text-text-primary' },
-    { label: 'On the way', value: shipments?.onTheWay ?? 0, tone: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' },
-    {
-      label: 'At port or customs',
-      value: shipments?.portCustoms ?? 0,
-      tone: 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300',
-    },
-    { label: 'At warehouse', value: shipments?.warehouse ?? 0, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
-    { label: 'Opened, last 30 days', value: shipments?.recentActivityCount ?? 0, tone: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300' },
-  ];
 
   const docsFlag = (metrics?.documents.expiredCount ?? 0) + (metrics?.documents.expiringCount ?? 0);
   const sideRows = [
@@ -211,19 +189,8 @@ const LogisticsDashboardPage = () => {
         {/* The team's board at a glance: kept current, gone quiet, landing soon, who holds what */}
         <TeamBoardStrip />
 
-        {/* Status strip */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {tiles.map((t) => (
-            <Link
-              key={t.label}
-              href="/platform/admin/logistics/shipments"
-              className={`rounded-xl px-4 py-3 transition-opacity hover:opacity-80 ${t.tone}`}
-            >
-              <p className="text-2xl font-semibold tabular-nums">{t.value}</p>
-              <p className="mt-0.5 text-xs font-medium opacity-80">{t.label}</p>
-            </Link>
-          ))}
-        </div>
+        {/* What is late, due this week or gone quiet; each opens the list filtered */}
+        <ShipmentDueTiles counts={metrics?.dueCounts} />
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
           {/* Main column: what needs acting on, then live work */}
@@ -268,7 +235,7 @@ const LogisticsDashboardPage = () => {
                   }
                   className="inline-flex items-center gap-1 text-sm text-text-muted transition-colors hover:text-text-primary"
                 >
-                  View all <IconArrowRight size={14} />
+                  {stageTab === 'quotes' ? 'All quotes' : 'All shipments'} <IconArrowRight size={14} />
                 </Link>
               </div>
               <p className="px-4 pt-3 text-xs text-text-muted">
@@ -311,47 +278,33 @@ const LogisticsDashboardPage = () => {
                 <ul className="divide-y divide-border-muted border-t border-border-muted">
                   {visible.map((shipment) => {
                     const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
-                    const origin = shipment.originCity ?? shipment.originCountry ?? 'Origin';
-                    const destination = shipment.destinationCity ?? shipment.destinationWarehouse ?? 'Destination';
+                    const late =
+                      !shipment.ata &&
+                      !!shipment.eta &&
+                      new Date(shipment.eta) < new Date() &&
+                      !['at_warehouse', 'partially_received', 'dispatched', 'delivered', 'cancelled'].includes(shipment.status);
                     return (
-                      <li key={shipment.id}>
+                      <li key={shipment.id} className={late ? 'bg-red-50/40 dark:bg-red-500/5' : undefined}>
                         <Link
                           href={`/platform/admin/logistics/shipments/${shipment.id}`}
-                          className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-secondary"
+                          className="flex flex-col gap-3 px-4 py-3.5 transition-colors hover:bg-surface-secondary"
                         >
-                          <ShipmentPartyMark type={shipment.type} logoUrl={shipment.partyLogoUrl} name={shipment.partyName} icon={ModeIcon} />
-                          <span className="min-w-0 flex-1">
-                            <span className="flex flex-wrap items-center gap-1.5">
-                              <span className="truncate text-sm font-medium text-text-primary">
-                                {shipment.name ?? shipment.partyName ?? `${origin} → ${destination}`}
-                              </span>
-                              <ShipmentTypeBadge type={shipment.type} />
-                              <ShipmentStatusBadge status={shipment.status} />
+                          {/* Two lines, so the route keeps the column's full width beside the side column */}
+                          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                            <ShipmentPartyMark type={shipment.type} logoUrl={shipment.partyLogoUrl} name={shipment.partyName} icon={ModeIcon} />
+                            <span className="font-mono text-sm font-medium text-text-primary">
+                              {shipment.jobNumber ?? shipment.shipmentNumber}
                             </span>
-                            <span className="mt-0.5 flex items-center gap-1.5 text-xs text-text-muted">
-                              <span className="font-mono">{shipment.shipmentNumber}</span>
-                              {shipment.name || shipment.partyName ? (
-                                <>
-                                  <span>·</span>
-                                  <span className="truncate">
-                                    {origin} → {destination}
-                                  </span>
-                                </>
-                              ) : null}
-                              {shipment.name && shipment.partyName ? (
-                                <>
-                                  <span>·</span>
-                                  <span className="truncate">{shipment.partyName}</span>
-                                </>
-                              ) : null}
+                            <span className="min-w-0 truncate text-sm font-semibold text-text-primary">
+                              {shipment.name ?? shipment.partyName ?? ''}
+                            </span>
+                            <ShipmentStatusBadge status={shipment.status} />
+                            {shipment.type !== 'inbound' && <ShipmentTypeBadge type={shipment.type} />}
+                            <span className="ml-auto whitespace-nowrap text-xs tabular-nums text-text-muted">
+                              {shipment.totalCases} cases
                             </span>
                           </span>
-                          <ShipmentMetrics
-                            cases={shipment.totalCases}
-                            bottles={shipment.totalBottles}
-                            etaLabel={shipment.eta ? formatDate(shipment.eta) : null}
-                          />
-                          <IconChevronRight className="size-4 shrink-0 text-text-muted" />
+                          {stageTab === 'shipments' && <ShipmentRoute shipment={shipment} compact />}
                         </Link>
                       </li>
                     );

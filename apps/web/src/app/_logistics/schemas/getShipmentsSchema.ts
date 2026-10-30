@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { SHIPMENT_DUE_KEYS } from '../utils/shipmentDueKeys';
 import { SHIPMENT_STATUS_KEYS } from '../utils/shipmentStatuses';
 
 /** Groups of statuses the shipments list filters and counts by */
@@ -30,6 +31,8 @@ const getShipmentsSchema = z.object({
   partnerId: z.string().uuid().optional(),
   /** me = shipments whose next action is the viewer's; a user id = that person's */
   owner: z.union([z.literal('me'), z.string().uuid()]).optional(),
+  /** Late, shipping or arriving within seven days, as the timing tiles show them */
+  due: z.enum(SHIPMENT_DUE_KEYS).optional(),
   /** Only shipments on their way with no news for 48 hours */
   noNews: z.boolean().optional(),
   /** newest = most recently opened first; eta = soonest arrival first, undated last */

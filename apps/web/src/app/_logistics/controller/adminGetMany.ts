@@ -14,6 +14,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import getShipmentsSchema, { SHIPMENT_STAGE_GROUPS, type ShipmentStageGroup } from '../schemas/getShipmentsSchema';
 import { lastNewsSql, noNewsWhere } from '../utils/noNews';
 import NOT_ARRIVED_STATUSES from '../utils/notArrivedStatuses';
+import { shipmentDueCountsSelect, shipmentDueWhere } from '../utils/shipmentDue';
 import { partyLogoSql, partyNameSql } from '../utils/shipmentPartySql';
 
 /** The person who owns the next action, apart from the shipment's creator */
@@ -34,7 +35,7 @@ const notArrived = inArray(logisticsShipments.status, [...NOT_ARRIVED_STATUSES])
  *   });
  */
 const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ input, ctx }) => {
-  const { limit, cursor, search, status, stage, type, transportMode, partnerId, sort, owner, noNews } = input;
+  const { limit, cursor, search, status, stage, due, type, transportMode, partnerId, sort, owner, noNews } = input;
 
   // Every filter but the status ones; the tile counts are taken over these, so
   // each tile says how many it would show when pressed
@@ -93,6 +94,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     ...conditions,
     ...(status ? [eq(logisticsShipments.status, status)] : []),
     ...(stage ? [inArray(logisticsShipments.status, [...SHIPMENT_STAGE_GROUPS[stage]])] : []),
+    ...(due ? [shipmentDueWhere(due)!] : []),
   ];
   const whereClause = statusConditions.length > 0 ? and(...statusConditions) : undefined;
 
@@ -103,6 +105,16 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
     .leftJoin(logisticsJobs, eq(logisticsJobs.shipmentId, logisticsShipments.id))
     .where(baseWhere)
     .groupBy(logisticsShipments.status);
+
+  // The timing tiles, counted like the stage ones
+  const [dueCounts] = await db
+    .select(shipmentDueCountsSelect())
+    .from(logisticsShipments)
+    .leftJoin(partners, eq(logisticsShipments.partnerId, partners.id))
+    .leftJoin(logisticsJobs, eq(logisticsJobs.shipmentId, logisticsShipments.id))
+    .where(baseWhere)
+    // Zeros if the count fails rather than failing the list
+    .catch(() => []);
 
   const stageCounts = Object.fromEntries(
     (Object.keys(SHIPMENT_STAGE_GROUPS) as ShipmentStageGroup[]).map((key) => [
@@ -208,6 +220,7 @@ const adminGetMany = adminProcedure.input(getShipmentsSchema).query(async ({ inp
       nextCursor,
       hasMore: nextCursor !== null,
       stageCounts,
+      dueCounts: dueCounts ?? { late: 0, ships_7d: 0, arrives_7d: 0, no_news: 0 },
     },
   };
 });
