@@ -6,6 +6,7 @@ import isStaff from '@/app/_distribution/utils/isStaff';
 import LwinReviewList from '@/app/_winelabs/components/LwinReviewList';
 import RunBatchForm from '@/app/_winelabs/components/RunBatchForm';
 import RunInBondForm from '@/app/_winelabs/components/RunInBondForm';
+import RunInboundTestForm from '@/app/_winelabs/components/RunInboundTestForm';
 import getCoverageSummary from '@/app/_winelabs/data/getCoverageSummary';
 import type { CoverageSummary } from '@/app/_winelabs/data/getCoverageSummary';
 import getInBondSummary from '@/app/_winelabs/data/getInBondSummary';
@@ -269,6 +270,17 @@ const WineLabsPage = async () => {
           </div>
         </section>
       )}
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">Inbound matching test</h2>
+        <p className="max-w-3xl text-xs text-text-muted">
+          How well inbound LWIN matching does on shipment lines staff have already confirmed: our register alone, as
+          it was, against Wine Labs first with the register behind it, as it is now. Only lines that kept the
+          supplier&apos;s own wording are tested. Lines where an answer differs from the confirmed LWIN are listed;
+          the confirmed code is not always the right one, so check those before drawing a conclusion.
+        </p>
+        <RunInboundTestForm disabled={!summary.configured || capReached} />
+      </section>
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">

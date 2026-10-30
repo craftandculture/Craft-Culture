@@ -1,17 +1,14 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, eq, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 
-import lwinNameFit from '@/app/_winelabs/utils/lwinNameFit';
 import db from '@/database/client';
-import {
-  logisticsShipmentItems,
-  logisticsShipments,
-  lwinWines,
-} from '@/database/schema';
+import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
-import matchToLwin from '@/lib/winelabs/matchToLwin';
 
+import { MIN_MARGIN, MIN_SCORE, WINELABS_FIT } from '../constants/lwinMatching';
+import askWinelabsForLine from '../data/askWinelabsForLine';
+import searchRegister from '../data/searchRegister';
 import parseWineName from '../utils/parseWineName';
 
 export interface AutoMatchCandidate {
@@ -52,38 +49,6 @@ export interface AutoMatchRow {
   candidates: AutoMatchCandidate[];
 }
 
-/** Below this the runner-up is close enough that picking one is a guess. */
-const MIN_MARGIN = 0.12;
-
-/** Below this nothing in 208k records resembled the line. */
-const MIN_SCORE = 0.45;
-
-/**
- * Share of the register's name for Wine Labs' answer that the invoice line
- * must carry before that answer is written on its own. Wine Labs' name search
- * is the better reader of a messy supplier line, but in the October 2026 audit
- * it also returned a sibling cuvee (Penfolds Bin 23A for Bin 18A, a village
- * Gevrey for a premier cru), so its answer must read as the line first.
- */
-const WINELABS_FIT = 0.75;
-
-/** What the register holds for a wine, to name the line once it is matched */
-const registerFields = {
-  lwin: lwinWines.lwin,
-  displayName: lwinWines.displayName,
-  producerTitle: lwinWines.producerTitle,
-  producerName: lwinWines.producerName,
-  wine: lwinWines.wine,
-  region: lwinWines.region,
-  subRegion: lwinWines.subRegion,
-  country: lwinWines.country,
-  classification: lwinWines.classification,
-};
-
-type RegisterRecord = Pick<
-  typeof lwinWines.$inferSelect,
-  'lwin' | 'displayName' | 'producerTitle' | 'producerName' | 'wine' | 'region' | 'subRegion' | 'country' | 'classification'
->;
 
 /**
  * Match every unmapped line against the LWIN database in one pass
@@ -244,24 +209,10 @@ const adminAutoMatchLwins = adminProcedure
       };
 
       // Wine Labs first: it reads a messy supplier line better than a trigram search
-      let winelabs: { lwin7: string; name: string; fit: number; record: RegisterRecord | null } | null = null;
+      let winelabs: Awaited<ReturnType<typeof askWinelabsForLine>> = null;
       if (!winelabsError) {
         try {
-          const match = await matchToLwin([withProducer, vintage].filter(Boolean).join(' '));
-          if (match?.lwin7) {
-            const [record] = await db
-              .select(registerFields)
-              .from(lwinWines)
-              .where(eq(lwinWines.lwin, match.lwin7))
-              .limit(1);
-            const name = record?.displayName ?? match.displayName ?? '';
-            winelabs = {
-              lwin7: match.lwin7,
-              name,
-              fit: lwinNameFit(`${withProducer} ${item.productName}`, name || null),
-              record: record ?? null,
-            };
-          }
+          winelabs = await askWinelabsForLine(withProducer, item.productName, vintage);
         } catch (error) {
           winelabsError = error instanceof Error ? error.message : 'Wine Labs did not answer';
         }
@@ -285,48 +236,7 @@ const adminAutoMatchLwins = adminProcedure
 
       // Ranked in the database rather than in memory: 208k records per line,
       // 163 lines, and only the top few ever matter.
-      const candidates = await db
-        .select({
-          lwin: lwinWines.lwin,
-          displayName: lwinWines.displayName,
-          producerTitle: lwinWines.producerTitle,
-          producerName: lwinWines.producerName,
-          wine: lwinWines.wine,
-          region: lwinWines.region,
-          subRegion: lwinWines.subRegion,
-          country: lwinWines.country,
-          classification: lwinWines.classification,
-          score: sql<number>`GREATEST(
-            similarity(${lwinWines.displayName}, ${withProducer}),
-            similarity(
-              (COALESCE(${lwinWines.producerTitle}, '') || ' ' || COALESCE(${lwinWines.producerName}, '') || ' ' || COALESCE(${lwinWines.wine}, '')),
-              ${withProducer}
-            ),
-            similarity(${lwinWines.displayName}, ${parsed.searchName}) * ${producer ? 0.85 : 1}
-          )`.as('score'),
-        })
-        .from(lwinWines)
-        .where(
-          and(
-            eq(lwinWines.status, 'live'),
-            /*
-              Narrowed by the trigram index on display_name alone.
-
-              The second half of this used to be `producer || ' ' || wine %
-              $1`, which is two bugs in one line. Postgres binds `%` tighter
-              than `||`, so it read as `producer || ' ' || (wine % $1)` — a
-              text value handed to OR, which is the error it raised. And the
-              expression has no index, so every line would have scanned all
-              208k records to find out.
-
-              Producer and wine are still scored, above; they just no longer
-              decide which rows are looked at.
-            */
-            sql`(${lwinWines.displayName} % ${withProducer} OR ${lwinWines.displayName} % ${parsed.searchName})`,
-          ),
-        )
-        .orderBy(sql`score DESC`)
-        .limit(5);
+      const candidates = await searchRegister(parsed.searchName, withProducer, Boolean(producer));
 
       const best = candidates[0];
       const runnerUp = candidates[1];
