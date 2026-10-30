@@ -10,6 +10,7 @@ import {
   IconCloudDownload,
   IconFileInvoice,
   IconFileText,
+  IconListSearch,
   IconPlane,
   IconPlus,
   IconRefresh,
@@ -146,6 +147,7 @@ const LogisticsDashboardPage = () => {
     { label: 'Export Invoices', href: '/platform/admin/logistics/export-invoices', icon: IconClipboardList },
     { label: 'Reports', href: '/platform/admin/logistics/reports', icon: IconChartBar },
     { label: 'PDF tool', href: '/platform/admin/logistics/tools/pdf-extract', icon: IconFileText },
+    { label: 'LWIN checker', href: '/platform/admin/wine-labs/lwin-sheet', icon: IconListSearch },
   ];
 
   return (
