@@ -1,3 +1,9 @@
+## [2.1.51](https://github.com/craftandculture/Craft-Culture/compare/v2.1.50...v2.1.51) (2026-10-30)
+
+### Bug Fixes
+
+* C&C is not emailed as the partner on its own orders ([65ace3e](https://github.com/craftandculture/Craft-Culture/commit/65ace3ed84bb15be81b4216b7f5bf50670382d85))
+
 ## [2.1.50](https://github.com/craftandculture/Craft-Culture/compare/v2.1.49...v2.1.50) (2026-10-30)
 
 ### Bug Fixes
