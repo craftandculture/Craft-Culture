@@ -1,3 +1,9 @@
+## [2.1.44](https://github.com/craftandculture/Craft-Culture/compare/v2.1.43...v2.1.44) (2026-10-30)
+
+### Features
+
+* **winelabs:** test inbound LWIN matching against shipment lines staff have confirmed ([81e5c1d](https://github.com/craftandculture/Craft-Culture/commit/81e5c1def4f4ec4c914b627e08553288c3fefc7f))
+
 ## [2.1.43](https://github.com/craftandculture/Craft-Culture/compare/v2.1.42...v2.1.43) (2026-10-30)
 
 ### Features
