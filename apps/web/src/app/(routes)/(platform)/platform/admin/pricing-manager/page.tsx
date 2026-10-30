@@ -1613,6 +1613,48 @@ const PricingManagerPage = () => {
     onError: (error) => toast.error(error.message),
   });
 
+  /*
+    Every wine on screen, or the ticked ones, priced in London in one go.
+
+    Each wine costs 15 to 30 Wine Labs credits (nothing if asked in the last
+    10 minutes), so the button asks once with the count before it spends.
+    Three at a time, so a page of wines comes back in a minute or two without
+    tripping Wine Labs' rate limit. Internal codes (9xxxxxx) are skipped: the
+    London exchanges do not know them.
+  */
+  const londonTargets = (
+    selected.size > 0 ? londonLwins.filter((lwin) => selected.has(lwin)) : londonLwins
+  ).filter((lwin) => !/^9\d{6}-/.test(lwin));
+  const [confirmLondon, setConfirmLondon] = useState(false);
+  const [londonRun, setLondonRun] = useState<{ done: number; total: number } | null>(null);
+  const pullLondon = async (lwins: string[]) => {
+    setConfirmLondon(false);
+    setLondonRun({ done: 0, total: lwins.length });
+    let next = 0;
+    let priced = 0;
+    let unlisted = 0;
+    let failed = 0;
+    const worker = async () => {
+      while (next < lwins.length) {
+        const lwin18 = lwins[next++]!;
+        try {
+          const { status } = await trpcClient.wms.admin.stock.pricing.refreshLondonInBond.mutate({ lwin18 });
+          if (status === 'priced') priced++;
+          else unlisted++;
+        } catch {
+          failed++;
+        }
+        setLondonRun((run) => run && { ...run, done: run.done + 1 });
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    setLondonRun(null);
+    void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getLondonInBond.queryKey() });
+    toast.success(
+      `London prices: ${priced} priced, ${unlisted} not listed${failed ? `, ${failed} could not be read` : ''}`,
+    );
+  };
+
   // Active filters for chips
   const activeFilters: Array<{ key: string; label: string; onRemove: () => void }> = [];
   if (category) {
@@ -2411,6 +2453,46 @@ const PricingManagerPage = () => {
           )}
         </span>
         <span className="flex items-center gap-3">
+          {londonRun ? (
+            <span className="font-medium text-text-secondary">
+              Pulling London prices… {londonRun.done} of {londonRun.total}
+            </span>
+          ) : confirmLondon ? (
+            <span className="flex items-center gap-2">
+              <span className="text-text-secondary">
+                {londonTargets.length} {londonTargets.length === 1 ? 'wine' : 'wines'}, up to{' '}
+                {(londonTargets.length * 30).toLocaleString()} Wine Labs credits
+              </span>
+              <button
+                type="button"
+                disabled={londonTargets.length === 0}
+                onClick={() => void pullLondon(londonTargets)}
+                className="rounded-md bg-text-primary px-2.5 py-0.5 font-medium text-surface-primary disabled:opacity-40"
+              >
+                Pull
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmLondon(false)}
+                className="rounded-md px-2 py-0.5 font-medium hover:bg-surface-muted hover:text-text-primary"
+              >
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmLondon(true)}
+              title={
+                selected.size > 0
+                  ? 'Ask Wine Labs for the London price of every ticked wine'
+                  : 'Ask Wine Labs for the London price of every wine on this page'
+              }
+              className="rounded-lg border border-border-muted px-2.5 py-0.5 font-medium hover:bg-surface-muted hover:text-text-primary"
+            >
+              Pull London prices{selected.size > 0 ? ` (${londonTargets.length} ticked)` : ''}
+            </button>
+          )}
           <span className="flex items-center gap-0.5 rounded-lg border border-border-muted p-0.5">
             {[
               { value: true, label: 'Compact' },
@@ -2583,8 +2665,9 @@ const PricingManagerPage = () => {
             <style>{`
               .pm-compact > tbody > tr > td { padding-top: 3px; padding-bottom: 3px; font-size: 13px; line-height: 20px; }
               .pm-compact .pm-sub, .pm-compact .pm-meta { display: none; }
-              .pm-compact .pm-product { min-width: 340px; }
-              .pm-compact .pm-namerow { flex-wrap: nowrap; gap: 6px; max-width: 420px; }
+              .pm-compact .pm-product { min-width: 400px; max-width: 460px; overflow: hidden; }
+              .pm-compact .pm-namerow { flex-wrap: nowrap; gap: 6px; max-width: 440px; }
+              .pm-compact .pm-why { display: none; }
               .pm-compact .pm-namerow > * { flex-shrink: 0; white-space: nowrap; }
               .pm-compact .pm-namerow > button { flex-shrink: 1; min-width: 0; }
               .pm-compact .pm-name { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
@@ -3124,21 +3207,22 @@ const PricingManagerPage = () => {
                                   : shortOwner(ownerCue.fullName)}
                               </span>
                             )}
-                            {isInbound &&
-                            (product as { shipmentNumber?: string | null })
-                              .shipmentNumber && (
-                              <span className="ml-1 rounded bg-fill-secondary px-1 py-px font-mono text-[10px] text-text-muted">
-                                {
-                                  (product as { shipmentNumber?: string | null })
-                                    .shipmentNumber
-                                }
-                              </span>
-                            )}
-                          {isInbound && (
-                              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700">
-                                Inbound
-                              </span>
-                            )}
+                            {/* One chip says it is in transit and on which
+                                shipment; the full number and ETA are in its title */}
+                            {isInbound && (() => {
+                              const shipment = (product as { shipmentNumber?: string | null })
+                                .shipmentNumber;
+                              return (
+                                <span
+                                  title={`In transit${shipment ? ` on ${shipment}` : ''}${
+                                    eta ? `, ETA ${new Date(eta).toLocaleDateString('en-GB')}` : ''
+                                  }`}
+                                  className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-amber-800"
+                                >
+                                  {shipment ? shipment.replace(/^SHP-\d{4}-/, 'SHP ') : 'Inbound'}
+                                </span>
+                              );
+                            })()}
                           {/* Whether this wine is on the price lists, and the
                               one control that changes it. */}
                           {(() => {
@@ -3232,7 +3316,7 @@ const PricingManagerPage = () => {
                             ].filter(Boolean);
 
                             return why.length > 0 ? (
-                              <span className="text-[9px] font-medium text-amber-700">
+                              <span className="pm-why text-[9px] font-medium text-amber-700">
                                 {why.join(' · ')}
                               </span>
                             ) : null;
