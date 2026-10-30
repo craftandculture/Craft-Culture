@@ -9,6 +9,7 @@ import getOrderEmailRecipients from './getOrderEmailRecipients';
 import getOrderEmailSnapshot from './getOrderEmailSnapshot';
 import getCraftCulturePartnerId from '../utils/getCraftCulturePartnerId';
 import orderEmailCopy from '../utils/orderEmailCopy';
+import { isDigestUpdate, nextDigestAt } from '../utils/orderEmailDigest';
 import type { OrderEmailAudience, OrderEmailEvent, OrderStatus } from '../utils/orderEmailTypes';
 
 /** How far the queue has read the activity log */
@@ -29,6 +30,9 @@ const BATCH = 500;
  * partner and the distributor are asked in turn whether the event concerns
  * them (orderEmailCopy); the party that caused the event is never emailed
  * about it. Private Cellar orders are left to the cellar's own emails.
+ * C&C's own orders are not emailed to C&C as the partner. A wine partner's
+ * emails go to its business address and the person who placed the order;
+ * updates that ask nothing of them wait for the daily summary (orderEmailDigest).
  *
  * The first run only records where the log stands, so switching this on never
  * sends emails about the past.
@@ -123,9 +127,19 @@ const queueOrderEmails = async () => {
         const copy = orderEmailCopy(event, audience, found.snapshot);
         if (!copy) continue;
 
-        if (!recipientsOf.has(partyId)) recipientsOf.set(partyId, await getOrderEmailRecipients(partyId));
+        // A wine partner's emails go to its business address and whoever placed the order
+        const recipientsKey = audience === 'partner' ? `${partyId}:${log.orderId}` : partyId;
+        if (!recipientsOf.has(recipientsKey)) {
+          recipientsOf.set(
+            recipientsKey,
+            await getOrderEmailRecipients(partyId, audience === 'partner' ? log.orderId : undefined),
+          );
+        }
 
-        for (const recipient of recipientsOf.get(partyId) ?? []) {
+        // Updates that ask nothing of a partner wait for their daily summary
+        const digest = isDigestUpdate(event, audience, copy);
+
+        for (const recipient of recipientsOf.get(recipientsKey) ?? []) {
           // The author of a note is never sent their own note
           if (log.userId && authorEmail.get(log.userId) === recipient.email.toLowerCase()) continue;
 
@@ -139,9 +153,9 @@ const queueOrderEmails = async () => {
               event: log.action === 'note_added' ? 'note_added' : String(log.newStatus),
               recipientEmail: recipient.email,
               recipientName: recipient.name,
-              data: { event: { ...event, at: event.at.toISOString() }, subject: copy.subject },
+              data: { event: { ...event, at: event.at.toISOString() }, subject: copy.subject, ...(digest ? { digest: true } : {}) },
               isAction: copy.isAction,
-              sendAt: new Date(log.createdAt.getTime() + MERGE_WINDOW_MS),
+              sendAt: digest ? nextDigestAt(log.createdAt) : new Date(log.createdAt.getTime() + MERGE_WINDOW_MS),
             })
             .onConflictDoNothing({ target: orderEmailOutbox.dedupeKey })
             .returning({ id: orderEmailOutbox.id });

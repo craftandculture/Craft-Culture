@@ -12,9 +12,16 @@ import getOrderEmailSnapshot from './getOrderEmailSnapshot';
 import { ORDER_EMAIL_TEMPLATE_ID } from '../constants';
 import buildOrderEmail from '../utils/buildOrderEmail';
 import groupOrderEmails from '../utils/groupOrderEmails';
+import { buildOrderDigestEmail } from '../utils/orderEmailDigest';
 import type { OrderEmailAudience, OrderEmailEvent, OrderStatus } from '../utils/orderEmailTypes';
 
 const BATCH = 100;
+
+/**
+ * Where partners' daily summaries go while partner emails are live: Kevin's
+ * inbox until the summary has been checked, then the partners themselves
+ */
+const PARTNER_DIGEST_MODE: 'shadow' | 'live' = 'shadow';
 
 /**
  * Send the order emails that are due, the way the switch says
@@ -24,6 +31,9 @@ const BATCH = 100;
  * Wine partners and distributors each have a switch. Off: their due emails
  * are set aside and never sent later. Shadow: each goes to Kevin's inbox with
  * "[SHADOW for <recipient>]" before the subject. Live: each goes to them.
+ *
+ * A wine partner's updates that ask nothing of them are held for 17:00 Gulf
+ * time and sent as one daily summary per address (PARTNER_DIGEST_MODE).
  *
  * @returns What happened this run
  */
@@ -68,8 +78,89 @@ const sendOrderEmails = async () => {
 
   let sent = 0;
   let failed = 0;
+  const statusOf = (id: string) => orders.get(id)?.snapshot.status ?? null;
+  type Row = (typeof toSend)[number];
 
-  for (const { carrier, merged } of groupOrderEmails(toSend, (id) => orders.get(id)?.snapshot.status ?? null)) {
+  /** Send one email for `carrier`, folding `mergedIds` into it, and record the outcome */
+  const deliver = async (carrier: Row, mergedIds: string[], emailData: Record<string, unknown>, rowMode: 'shadow' | 'live') => {
+    const to = rowMode === 'live' ? carrier.recipientEmail : ORDER_EMAIL_SHADOW_INBOX;
+    const data = { ...emailData };
+    if (rowMode === 'shadow') data.subject = `[SHADOW for ${carrier.recipientName} <${carrier.recipientEmail}>] ${String(data.subject)}`;
+
+    try {
+      await loops.sendTransactionalEmail({
+        transactionalId: ORDER_EMAIL_TEMPLATE_ID,
+        email: to,
+        dataVariables: data as unknown as TransactionalVariables,
+      });
+
+      await db
+        .update(orderEmailOutbox)
+        .set({
+          status: rowMode === 'live' ? 'sent' : 'shadowed',
+          sentMode: rowMode,
+          sentTo: to,
+          sentAt: new Date(),
+          data: { ...(carrier.data as Record<string, unknown>), subject: emailData.subject },
+          updatedAt: new Date(),
+        })
+        .where(eq(orderEmailOutbox.id, carrier.id));
+
+      if (mergedIds.length) {
+        await db
+          .update(orderEmailOutbox)
+          .set({ status: 'merged', mergedInto: carrier.id, sentMode: rowMode, updatedAt: new Date() })
+          .where(inArray(orderEmailOutbox.id, mergedIds));
+      }
+      sent += 1;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('Order email failed', { id: carrier.id, orderId: carrier.orderId, error: message });
+      await db
+        .update(orderEmailOutbox)
+        .set({ status: 'failed', sentMode: rowMode, error: message.slice(0, 1000), updatedAt: new Date() })
+        .where(inArray(orderEmailOutbox.id, [carrier.id, ...mergedIds]));
+      failed += 1;
+    }
+  };
+
+  /*
+    A partner's daily summary: their updates on two or more orders become one
+    email. A day with updates on only one order sends that order's usual email.
+  */
+  const isDigestRow = (row: Row) => (row.data as { digest?: boolean } | null)?.digest === true;
+  const digestByRecipient = new Map<string, Row[]>();
+  for (const row of toSend.filter(isDigestRow)) {
+    const key = row.recipientEmail.trim().toLowerCase();
+    digestByRecipient.set(key, [...(digestByRecipient.get(key) ?? []), row]);
+  }
+  const singles = toSend.filter((row) => !isDigestRow(row));
+
+  for (const rows of digestByRecipient.values()) {
+    const entries = groupOrderEmails(rows, statusOf).flatMap(({ carrier }) => {
+      const stored = carrier?.data as { event?: OrderEmailEvent & { at: string } } | undefined;
+      const found = carrier ? orders.get(carrier.orderId) : null;
+      return carrier && found && stored?.event
+        ? [{ carrier, event: { ...stored.event, at: new Date(stored.event.at), newStatus: stored.event.newStatus as OrderStatus | null }, order: found.snapshot }]
+        : [];
+    });
+
+    if (entries.length < 2) {
+      singles.push(...rows);
+      continue;
+    }
+
+    const carrier = entries[0]!.carrier;
+    const rowMode = modeOf(carrier.audience) === 'live' ? PARTNER_DIGEST_MODE : 'shadow';
+    await deliver(
+      carrier,
+      rows.filter((row) => row.id !== carrier.id).map((row) => row.id),
+      buildOrderDigestEmail(entries, `${serverConfig.appUrl}/platform/private-orders`, carrier.recipientName || 'Sir or Madam'),
+      rowMode,
+    );
+  }
+
+  for (const { carrier, merged } of groupOrderEmails(singles, statusOf)) {
     const mergedIds = merged.map((row) => row.id);
     const rowMode = modeOf((carrier ?? merged[0])?.audience ?? 'partner');
 
@@ -103,45 +194,7 @@ const sendOrderEmails = async () => {
       continue;
     }
 
-    const to = rowMode === 'live' ? carrier.recipientEmail : ORDER_EMAIL_SHADOW_INBOX;
-    const data = { ...email.data };
-    if (rowMode === 'shadow') data.subject = `[SHADOW for ${carrier.recipientName} <${carrier.recipientEmail}>] ${data.subject}`;
-
-    try {
-      await loops.sendTransactionalEmail({
-        transactionalId: ORDER_EMAIL_TEMPLATE_ID,
-        email: to,
-        dataVariables: data as unknown as TransactionalVariables,
-      });
-
-      await db
-        .update(orderEmailOutbox)
-        .set({
-          status: rowMode === 'live' ? 'sent' : 'shadowed',
-          sentMode: rowMode,
-          sentTo: to,
-          sentAt: new Date(),
-          data: { ...(carrier.data as Record<string, unknown>), subject: email.data.subject },
-          updatedAt: new Date(),
-        })
-        .where(eq(orderEmailOutbox.id, carrier.id));
-
-      if (mergedIds.length) {
-        await db
-          .update(orderEmailOutbox)
-          .set({ status: 'merged', mergedInto: carrier.id, sentMode: rowMode, updatedAt: new Date() })
-          .where(inArray(orderEmailOutbox.id, mergedIds));
-      }
-      sent += 1;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error('Order email failed', { id: carrier.id, orderId: carrier.orderId, error: message });
-      await db
-        .update(orderEmailOutbox)
-        .set({ status: 'failed', sentMode: rowMode, error: message.slice(0, 1000), updatedAt: new Date() })
-        .where(inArray(orderEmailOutbox.id, [carrier.id, ...mergedIds]));
-      failed += 1;
-    }
+    await deliver(carrier, mergedIds, email.data, rowMode === 'live' ? 'live' : 'shadow');
   }
 
   return { mode, due: due.length, sent, failed };
