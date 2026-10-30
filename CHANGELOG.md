@@ -1,3 +1,9 @@
+## [2.1.54](https://github.com/craftandculture/Craft-Culture/compare/v2.1.53...v2.1.54) (2026-10-30)
+
+### Features
+
+* wine partners get one daily summary of order updates, sent to fewer people ([36bc497](https://github.com/craftandculture/Craft-Culture/commit/36bc497bb4745ae3a72c1c41abf167a4ad7721a6))
+
 ## [2.1.53](https://github.com/craftandculture/Craft-Culture/compare/v2.1.52...v2.1.53) (2026-10-30)
 
 ### Bug Fixes
