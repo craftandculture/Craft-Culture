@@ -1,3 +1,13 @@
+## [2.1.43](https://github.com/craftandculture/Craft-Culture/compare/v2.1.42...v2.1.43) (2026-10-30)
+
+### Features
+
+* **logistics:** inbound LWIN matching asks Wine Labs first and falls back to our register ([5cc35bd](https://github.com/craftandculture/Craft-Culture/commit/5cc35bd1f6c6d8dea84ae940443c162c0e2d6b18))
+
+### Bug Fixes
+
+* logistics routes read calmly: names out of capitals, the UK flag shows, no filler for dates not yet known ([9f8fe19](https://github.com/craftandculture/Craft-Culture/commit/9f8fe19db629fb8579726cee9464289a14b6c54c))
+
 ## [2.1.42](https://github.com/craftandculture/Craft-Culture/compare/v2.1.41...v2.1.42) (2026-10-30)
 
 ### Bug Fixes
