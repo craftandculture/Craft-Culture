@@ -332,7 +332,7 @@ const ShipmentsList = () => {
                       <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-end">
                         <span className="text-right">
                           <span className="block text-sm font-semibold tabular-nums text-text-primary">
-                            {shipment.totalCases} cases
+                            {shipment.totalCases} {shipment.totalCases === 1 ? 'case' : 'cases'}
                           </span>
                           <span className="block text-xs tabular-nums text-text-muted">{shipment.totalBottles} bottles</span>
                         </span>

@@ -104,7 +104,11 @@ const LogisticsDashboardPage = () => {
   const quoteJobs = allRecent.filter((s) => s.isQuote);
   const shipmentJobs = allRecent.filter((s) => !s.isQuote);
   const recent = stageTab === 'quotes' ? quoteJobs : shipmentJobs;
-  const visible = recent.filter((s) => typeFilter === 'all' || s.type === typeFilter);
+  // Still on their way first; finished ones sink below, newest first within each
+  const finished = (s: { status: string }) => ['delivered', 'dispatched', 'cancelled'].includes(s.status);
+  const visible = recent
+    .filter((s) => typeFilter === 'all' || s.type === typeFilter)
+    .sort((a, b) => Number(finished(a)) - Number(finished(b)));
 
   const docsFlag = (metrics?.documents.expiredCount ?? 0) + (metrics?.documents.expiringCount ?? 0);
   const sideRows = [
@@ -301,7 +305,7 @@ const LogisticsDashboardPage = () => {
                             <ShipmentStatusBadge status={shipment.status} />
                             {shipment.type !== 'inbound' && <ShipmentTypeBadge type={shipment.type} />}
                             <span className="ml-auto whitespace-nowrap text-xs tabular-nums text-text-muted">
-                              {shipment.totalCases} cases
+                              {shipment.totalCases} {shipment.totalCases === 1 ? 'case' : 'cases'}
                             </span>
                           </span>
                           {stageTab === 'shipments' && <ShipmentRoute shipment={shipment} compact />}
