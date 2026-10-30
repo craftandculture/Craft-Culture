@@ -1,3 +1,9 @@
+## [2.1.42](https://github.com/craftandculture/Craft-Culture/compare/v2.1.41...v2.1.42) (2026-10-30)
+
+### Bug Fixes
+
+* logistics dashboard lists shipments still on their way above finished ones, and says 1 case ([5888f69](https://github.com/craftandculture/Craft-Culture/commit/5888f693183a4ba44ad7ecd7e1661e2d79159549))
+
 ## [2.1.41](https://github.com/craftandculture/Craft-Culture/compare/v2.1.40...v2.1.41) (2026-10-30)
 
 ### Features
