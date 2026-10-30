@@ -1,3 +1,9 @@
+## [2.1.56](https://github.com/craftandculture/Craft-Culture/compare/v2.1.55...v2.1.56) (2026-10-30)
+
+### Features
+
+* LWIN checker link in the Logistics dashboard's Go to panel ([0316528](https://github.com/craftandculture/Craft-Culture/commit/031652819e26d6d2a4ef69163c3db28dfd8ab285))
+
 ## [2.1.55](https://github.com/craftandculture/Craft-Culture/compare/v2.1.54...v2.1.55) (2026-10-30)
 
 ### Features
