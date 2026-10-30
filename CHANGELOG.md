@@ -1,3 +1,9 @@
+## [2.1.53](https://github.com/craftandculture/Craft-Culture/compare/v2.1.52...v2.1.53) (2026-10-30)
+
+### Bug Fixes
+
+* **logistics:** darker lines between shipment rows ([c29266e](https://github.com/craftandculture/Craft-Culture/commit/c29266e24768b64444c101d214ac8b96d27205ca))
+
 ## [2.1.52](https://github.com/craftandculture/Craft-Culture/compare/v2.1.51...v2.1.52) (2026-10-30)
 
 ### Bug Fixes
