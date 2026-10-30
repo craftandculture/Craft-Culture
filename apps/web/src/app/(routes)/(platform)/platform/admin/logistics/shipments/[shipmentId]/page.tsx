@@ -552,11 +552,16 @@ const ShipmentDetailPage = () => {
           ),
         );
         // The ones it declined to guess are the actual work, so they lead.
+        const byWinelabs = result.byWinelabs > 0 ? ` (${result.byWinelabs} by Wine Labs)` : '';
         toast.success(
           result.needsReview > 0
-            ? `${result.applied} matched · ${result.needsReview} need a decision — each shows why and what it was choosing between`
-            : `All ${result.applied} matched`,
+            ? `${result.applied} matched${byWinelabs} · ${result.needsReview} need a decision — each shows why and what it was choosing between`
+            : `All ${result.applied} matched${byWinelabs}`,
         );
+        // Wine Labs out of credits or unreachable: the register matched alone
+        if (result.winelabsError) {
+          toast.warning(`Wine Labs was not used for every line: ${result.winelabsError}`);
+        }
         void refetch();
       },
       onError: (error) => {

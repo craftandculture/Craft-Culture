@@ -1,34 +1,8 @@
+import lwinNameFit, { CLASSIFICATION } from './lwinNameFit';
 import nameOverlap, { wordsOf } from './nameOverlap';
 
 /** Share of the register's name our name must carry to be the same wine */
 const SAME_WINE = 0.75;
-
-/**
- * Classification words: when our name has one the register name lacks, that
- * name is another wine
- */
-const CLASSIFICATION = new Set([
-  'premier',
-  '1er',
-  'grand',
-  'cru',
-  'village',
-  'villages',
-]);
-
-/**
- * How well a register name fits our product name: its overlap, less a quarter
- * for each classification word (Premier Cru, Grand Cru) ours carries and it
- * lacks, so a village code is not read as our premier cru
- */
-const fit = (ourName: string, registerName: string | null) => {
-  if (!registerName) return 0;
-  const theirs = new Set(wordsOf(registerName));
-  const missing = [...new Set(wordsOf(ourName))].filter(
-    (word) => CLASSIFICATION.has(word) && !theirs.has(word),
-  );
-  return nameOverlap(ourName, registerName) - missing.length * 0.25;
-};
 
 /**
  * Whether two register names are one wine: every word of one is in the other,
@@ -87,8 +61,8 @@ const judgeLwinMatch = (
     return 'same_wine' as const;
   }
 
-  const ours = fit(ourName, ourRegisterName);
-  const suggested = fit(ourName, suggestedRegisterName);
+  const ours = lwinNameFit(ourName, ourRegisterName);
+  const suggested = lwinNameFit(ourName, suggestedRegisterName);
 
   if (ours >= SAME_WINE && ours >= suggested) return 'ours_right' as const;
   if (suggested >= SAME_WINE && suggested > ours)

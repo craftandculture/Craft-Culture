@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import lwinNameFit from '@/app/_winelabs/utils/lwinNameFit';
 import db from '@/database/client';
 import {
   logisticsShipmentItems,
@@ -9,6 +10,7 @@ import {
   lwinWines,
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
+import matchToLwin from '@/lib/winelabs/matchToLwin';
 
 import parseWineName from '../utils/parseWineName';
 
@@ -37,6 +39,8 @@ export interface AutoMatchRow {
   score: number;
   /** Why it was taken or left, in a phrase */
   verdict: string;
+  /** Who chose the LWIN written: Wine Labs, our LWIN register, or nobody yet */
+  source: 'winelabs' | 'register' | null;
   /**
    * What it was choosing between, composed and ready to apply.
    *
@@ -55,6 +59,33 @@ const MIN_MARGIN = 0.12;
 const MIN_SCORE = 0.45;
 
 /**
+ * Share of the register's name for Wine Labs' answer that the invoice line
+ * must carry before that answer is written on its own. Wine Labs' name search
+ * is the better reader of a messy supplier line, but in the October 2026 audit
+ * it also returned a sibling cuvee (Penfolds Bin 23A for Bin 18A, a village
+ * Gevrey for a premier cru), so its answer must read as the line first.
+ */
+const WINELABS_FIT = 0.75;
+
+/** What the register holds for a wine, to name the line once it is matched */
+const registerFields = {
+  lwin: lwinWines.lwin,
+  displayName: lwinWines.displayName,
+  producerTitle: lwinWines.producerTitle,
+  producerName: lwinWines.producerName,
+  wine: lwinWines.wine,
+  region: lwinWines.region,
+  subRegion: lwinWines.subRegion,
+  country: lwinWines.country,
+  classification: lwinWines.classification,
+};
+
+type RegisterRecord = Pick<
+  typeof lwinWines.$inferSelect,
+  'lwin' | 'displayName' | 'producerTitle' | 'producerName' | 'wine' | 'region' | 'subRegion' | 'country' | 'classification'
+>;
+
+/**
  * Match every unmapped line against the LWIN database in one pass
  *
  * A 163-line invoice is 163 searches, and searching is not the slow part —
@@ -71,6 +102,12 @@ const MIN_SCORE = 0.45;
  * Everything else is returned with its best guess for a person to accept or
  * reject, which is a list to work through rather than a form to fill in 163
  * times.
+ *
+ * Wine Labs is asked first (about 8 credits a line) and its answer is taken
+ * when the line reads as the wine it names. Otherwise our register decides,
+ * as before, with Wine Labs' answer offered first among the options. When
+ * Wine Labs cannot answer (no credits, the monthly cap, an outage), the rest
+ * of the run uses the register alone.
  */
 const adminAutoMatchLwins = adminProcedure
   .input(
@@ -120,6 +157,8 @@ const adminAutoMatchLwins = adminProcedure
 
     const rows: AutoMatchRow[] = [];
     let applied = 0;
+    // Set once Wine Labs fails, so a run out of credits stops asking
+    let winelabsError: string | null = null;
 
     for (const item of items) {
       const parsed = parseWineName(item.productName);
@@ -146,8 +185,101 @@ const adminAutoMatchLwins = adminProcedure
           matchedName: null,
           score: 0,
           verdict: 'Nothing searchable in the product name',
+          source: null,
           candidates: [],
         });
+        continue;
+      }
+
+      // LWIN18 is wine-vintage-pack-size, and the invoice supplied the last
+      // three: the vintage is in the name, the pack is what was billed, and
+      // the size is stated per bottle.
+      const vintage = parsed.vintage ?? item.vintage;
+      const sizeMl = parsed.bottleSizeMl ?? item.bottleSizeMl ?? 750;
+      const pack = item.bottlesPerCase ?? item.totalBottles ?? 1;
+
+      const compose = (wineLwin: string) =>
+        [
+          wineLwin,
+          String(vintage ?? 0).padStart(4, '0'),
+          String(pack).padStart(2, '0'),
+          String(sizeMl).padStart(5, '0'),
+        ].join('-');
+
+      /*
+        The record a line matched becomes the line: name, producer, region and
+        country (Kevin, 19 October 2026). Matching once wrote the code, the
+        vintage and the size and stopped there, which left lines with a green
+        LWIN and no producer, region or country, the fields the catalogue, the
+        stock explorer and every quote read. A supplier's "Meursault" beside a
+        LWIN for a named domaine said two things.
+      */
+      const writeMatch = async (
+        lwin18: string,
+        record: {
+          displayName: string;
+          producerTitle?: string | null;
+          producerName?: string | null;
+          subRegion?: string | null;
+          region?: string | null;
+          country?: string | null;
+        },
+      ) => {
+        if (dryRun) return;
+        const matchedProducer = [record.producerTitle, record.producerName].filter(Boolean).join(' ');
+        const region = record.subRegion ?? record.region;
+        await db
+          .update(logisticsShipmentItems)
+          .set({
+            lwin: lwin18,
+            vintage: vintage ?? undefined,
+            bottleSizeMl: sizeMl,
+            productName: record.displayName,
+            ...(matchedProducer ? { producer: matchedProducer } : {}),
+            ...(region ? { region } : {}),
+            ...(record.country ? { countryOfOrigin: record.country } : {}),
+          })
+          .where(eq(logisticsShipmentItems.id, item.id));
+        applied += 1;
+      };
+
+      // Wine Labs first: it reads a messy supplier line better than a trigram search
+      let winelabs: { lwin7: string; name: string; fit: number; record: RegisterRecord | null } | null = null;
+      if (!winelabsError) {
+        try {
+          const match = await matchToLwin([withProducer, vintage].filter(Boolean).join(' '));
+          if (match?.lwin7) {
+            const [record] = await db
+              .select(registerFields)
+              .from(lwinWines)
+              .where(eq(lwinWines.lwin, match.lwin7))
+              .limit(1);
+            const name = record?.displayName ?? match.displayName ?? '';
+            winelabs = {
+              lwin7: match.lwin7,
+              name,
+              fit: lwinNameFit(`${withProducer} ${item.productName}`, name || null),
+              record: record ?? null,
+            };
+          }
+        } catch (error) {
+          winelabsError = error instanceof Error ? error.message : 'Wine Labs did not answer';
+        }
+      }
+
+      if (winelabs && winelabs.name && winelabs.fit >= WINELABS_FIT) {
+        const lwin18 = compose(winelabs.lwin7);
+        rows.push({
+          itemId: item.id,
+          productName: item.productName,
+          lwin: lwin18,
+          matchedName: winelabs.name,
+          score: winelabs.fit,
+          verdict: vintage ? 'Matched by Wine Labs' : 'Matched by Wine Labs, but no vintage in the name',
+          source: 'winelabs',
+          candidates: [],
+        });
+        await writeMatch(lwin18, winelabs.record ?? { displayName: winelabs.name });
         continue;
       }
 
@@ -201,21 +333,6 @@ const adminAutoMatchLwins = adminProcedure
       const score = Number(best?.score ?? 0);
       const margin = score - Number(runnerUp?.score ?? 0);
 
-      // LWIN18 is wine-vintage-pack-size, and the invoice supplied the last
-      // three: the vintage is in the name, the pack is what was billed, and
-      // the size is stated per bottle.
-      const vintage = parsed.vintage ?? item.vintage;
-      const sizeMl = parsed.bottleSizeMl ?? item.bottleSizeMl ?? 750;
-      const pack = item.bottlesPerCase ?? item.totalBottles ?? 1;
-
-      const compose = (wineLwin: string) =>
-        [
-          wineLwin,
-          String(vintage ?? 0).padStart(4, '0'),
-          String(pack).padStart(2, '0'),
-          String(sizeMl).padStart(5, '0'),
-        ].join('-');
-
       /*
         Every row carries what it was choosing between, composed and ready.
 
@@ -255,6 +372,19 @@ const adminAutoMatchLwins = adminProcedure
         };
       });
 
+      // Wine Labs' answer leads the options even when it did not read as the line
+      if (winelabs?.name && !options.some((option) => option.lwin18 === compose(winelabs!.lwin7))) {
+        options.unshift({
+          lwin18: compose(winelabs.lwin7),
+          displayName: winelabs.name,
+          detail: ['Wine Labs suggests', winelabs.record?.subRegion ?? winelabs.record?.region, winelabs.lwin7]
+            .filter(Boolean)
+            .join(' · '),
+          score: winelabs.fit,
+        });
+      }
+      const winelabsNote = winelabs?.name ? `; Wine Labs suggests "${winelabs.name}", which the line does not clearly name` : '';
+
       if (!best || score < MIN_SCORE) {
         rows.push({
           itemId: item.id,
@@ -262,7 +392,8 @@ const adminAutoMatchLwins = adminProcedure
           lwin: null,
           matchedName: best?.displayName ?? null,
           score,
-          verdict: 'No wine resembles this closely enough',
+          verdict: `No wine in our register resembles this closely enough${winelabsNote}`,
+          source: null,
           candidates: options,
         });
         continue;
@@ -279,13 +410,15 @@ const adminAutoMatchLwins = adminProcedure
             runnerUp?.displayName?.toLowerCase() ===
             best.displayName.toLowerCase()
               ? `${candidates.length} records share the name "${best.displayName}"`
-              : `Too close to "${runnerUp?.displayName ?? 'another wine'}" to choose`,
+              : `Too close to "${runnerUp?.displayName ?? 'another wine'}" to choose${winelabsNote}`,
+          source: null,
           candidates: options,
         });
         continue;
       }
 
       const lwin18 = compose(best.lwin);
+      const agrees = winelabs?.lwin7 === best.lwin;
 
       rows.push({
         itemId: item.id,
@@ -293,48 +426,16 @@ const adminAutoMatchLwins = adminProcedure
         lwin: lwin18,
         matchedName: best.displayName,
         score,
-        verdict: vintage ? 'Matched' : 'Matched, but no vintage in the name',
+        verdict: agrees
+          ? 'Matched: Wine Labs and our register agree'
+          : vintage
+            ? 'Matched by our register'
+            : 'Matched by our register, but no vintage in the name',
+        source: agrees ? 'winelabs' : 'register',
         candidates: options,
       });
 
-      if (!dryRun) {
-        /*
-          The record is already in hand, so the wine's identity goes with it.
-
-          Matching wrote the code, the vintage and the size and stopped there,
-          which left every automatically-matched line with a green LWIN and no
-          producer, region or country — the fields the catalogue, the stock
-          explorer and every quote actually read. Two Chambolle lines matched
-          cleanly and still arrived as a name and a number.
-
-          Filling it here costs nothing: these columns were fetched to score
-          the candidates. Only unmapped lines are matched, and a clear match
-          is the line being identified, so the name, producer, region and
-          country all take the record's (Kevin, 19 October 2026): a supplier's
-          "Meursault" beside a LWIN for a named domaine said two things.
-        */
-        const matchedProducer = [best.producerTitle, best.producerName]
-          .filter(Boolean)
-          .join(' ');
-        const region = best.subRegion ?? best.region;
-
-        await db
-          .update(logisticsShipmentItems)
-          .set({
-            lwin: lwin18,
-            vintage: vintage ?? undefined,
-            bottleSizeMl: sizeMl,
-            // The line becomes the record it matched, name and all, so the
-            // code and the words beside it describe the same wine
-            productName: best.displayName,
-            ...(matchedProducer ? { producer: matchedProducer } : {}),
-            ...(region ? { region } : {}),
-            ...(best.country ? { countryOfOrigin: best.country } : {}),
-          })
-          .where(eq(logisticsShipmentItems.id, item.id));
-
-        applied += 1;
-      }
+      await writeMatch(lwin18, best);
     }
 
     return {
@@ -342,6 +443,8 @@ const adminAutoMatchLwins = adminProcedure
       considered: items.length,
       applied,
       needsReview: rows.filter((row) => !row.lwin).length,
+      byWinelabs: rows.filter((row) => row.lwin && row.source === 'winelabs').length,
+      winelabsError,
       rows,
     };
   });
