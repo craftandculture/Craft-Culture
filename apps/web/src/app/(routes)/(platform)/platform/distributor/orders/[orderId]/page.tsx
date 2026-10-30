@@ -37,6 +37,7 @@ import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/Priva
 import StockReceiptConfirmation from '@/app/_privateClientOrders/components/StockReceiptConfirmation';
 import StockStatusSection from '@/app/_privateClientOrders/components/StockStatusSection';
 import WorkflowStepper from '@/app/_privateClientOrders/components/WorkflowStepper';
+import { DELIVERY_STAGE_STATUSES } from '@/app/_privateClientOrders/constants';
 import describePcoLine from '@/app/_privateClientOrders/utils/describePcoLine';
 import summarisePcoQuantities from '@/app/_privateClientOrders/utils/summarisePcoQuantities';
 import AlertDialog from '@/app/_ui/components/AlertDialog/AlertDialog';
@@ -196,6 +197,20 @@ const DistributorOrderDetailPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to unlock order');
+    },
+  });
+
+  // Payment to C&C when delivery was scheduled before the payment steps
+  const { mutate: confirmPaymentToCc, isPending: isConfirmingPayment } = useMutation({
+    mutationFn: () =>
+      trpcClient.privateClientOrders.distributorConfirmPayment.mutate({ orderId }),
+    onSuccess: () => {
+      toast.success('Payment to Craft & Culture recorded');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to record payment');
     },
   });
 
@@ -505,7 +520,17 @@ const DistributorOrderDetailPage = () => {
             run: () => updateStatus.mutate(nextAction.status),
             isPending: updateStatus.isPending,
           }
-        : null;
+        : (DELIVERY_STAGE_STATUSES as readonly string[]).includes(order.status) &&
+            !order.distributorPaidAt
+          ? {
+              label: 'Confirm Payment to C&C',
+              icon: IconCheck,
+              hint: 'Delivery is under way. Once your payment to Craft & Culture has been sent, confirm it here.',
+              confirm: 'Confirm that your payment to Craft & Culture has been sent.',
+              run: () => confirmPaymentToCc(),
+              isPending: isConfirmingPayment,
+            }
+          : null;
   // The server refuses client payment without the distributor's invoice
   const invoiceMissing =
     order.status === 'awaiting_client_payment' && documents !== undefined && !hasDistributorInvoice;

@@ -21,6 +21,7 @@ import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import { useTRPCClient } from '@/lib/trpc/browser';
+import fileHref from '@/utils/fileHref';
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
 const MAX_DIMENSION = 2048; // Max width/height for resizing
@@ -228,7 +229,8 @@ const DeliveryPhotoUpload = ({
   }
 
   const hasPhoto = existingPhotoUrl || previewUrl;
-  const displayUrl = previewUrl || existingPhotoUrl;
+  // A stored file is private: it opens through /api/files, never its storage address
+  const displayUrl = previewUrl || fileHref(existingPhotoUrl);
   const isPdfFile = existingPhotoUrl?.endsWith('.pdf');
 
   return (

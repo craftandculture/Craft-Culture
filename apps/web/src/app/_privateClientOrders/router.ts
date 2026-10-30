@@ -34,6 +34,7 @@ import adminUpdateNotes from './controller/adminUpdateNotes';
 import adminUpdateStatus from './controller/adminUpdateStatus';
 import checkLocalStock from './controller/checkLocalStock';
 import distributorAddNote from './controller/distributorAddNote';
+import distributorConfirmPayment from './controller/distributorConfirmPayment';
 import distributorConfirmStockReceipt from './controller/distributorConfirmStockReceipt';
 import distributorDashboard from './controller/distributorDashboard';
 import distributorGetMany from './controller/distributorGetMany';
@@ -177,6 +178,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   distributorGetMany,
   distributorGetOne,
   distributorUpdateStatus,
+  distributorConfirmPayment,
   distributorVerification: ordersDistributorVerification,
   distributorPaymentVerification: ordersDistributorPaymentVerification,
   distributorUnlockSuspended: ordersDistributorUnlockSuspended,

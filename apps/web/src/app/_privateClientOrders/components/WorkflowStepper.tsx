@@ -124,6 +124,11 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
 
     if (step.timestamp) return 'completed';
 
+    // A step before one already done is done, whatever its own date
+    if (steps.some((later, laterIndex) => laterIndex > index && later.timestamp)) {
+      return 'completed';
+    }
+
     // Map status to current step - verification step applies when required
     const statusToStep: Record<string, string> = {
       draft: 'created',
@@ -141,6 +146,10 @@ const WorkflowStepper = ({ order, compact = false }: WorkflowStepperProps) => {
       distributor_paid: 'paid',
       awaiting_partner_payment: 'paid',
       partner_paid: 'paid',
+      awaiting_payment_verification: 'paid',
+      // Delivery is arranged once the client has paid
+      scheduling_delivery: 'in_transit',
+      delivery_scheduled: 'in_transit',
       stock_in_transit: 'in_transit',
       with_distributor: 'in_transit',
       out_for_delivery: 'in_transit',

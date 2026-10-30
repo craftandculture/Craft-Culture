@@ -187,3 +187,18 @@ export type DistributorQueue = keyof typeof DISTRIBUTOR_QUEUES;
  * progress, wines and details are written by buildOrderEmail.
  */
 export const ORDER_EMAIL_TEMPLATE_ID = 'cmvqn73i502sf0jzhynk8f1m8';
+
+/**
+ * Statuses past the payment steps, reached by scheduling delivery first
+ *
+ * Scheduling delivery from Client Paid moves the order into the delivery
+ * statuses, so the status-based payment steps are never offered again.
+ */
+export const DELIVERY_STAGE_STATUSES = [
+  'scheduling_delivery',
+  'delivery_scheduled',
+  'stock_in_transit',
+  'with_distributor',
+  'out_for_delivery',
+  'delivered',
+] as const;
