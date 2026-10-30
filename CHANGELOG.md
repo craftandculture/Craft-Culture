@@ -1,3 +1,9 @@
+## [2.1.47](https://github.com/craftandculture/Craft-Culture/compare/v2.1.46...v2.1.47) (2026-10-30)
+
+### Bug Fixes
+
+* **logistics:** inbound matching checks the producer even when the LWIN register leaves it blank ([8633eb9](https://github.com/craftandculture/Craft-Culture/commit/8633eb927016950af94a04157e42325663fcaece))
+
 ## [2.1.46](https://github.com/craftandculture/Craft-Culture/compare/v2.1.45...v2.1.46) (2026-10-30)
 
 ### Bug Fixes
