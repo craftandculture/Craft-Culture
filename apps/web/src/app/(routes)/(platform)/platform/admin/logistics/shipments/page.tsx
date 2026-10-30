@@ -289,7 +289,7 @@ const ShipmentsList = () => {
                 : search || stage || type || noNews || due ? 'No shipments match. Clear a filter or change the search.' : 'No shipments yet.'}
             </p>
           ) : (
-            <ul className={`divide-y divide-border-primary transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+            <ul className={`divide-y divide-text-muted/25 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
               {shipments.map((shipment) => {
                 const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
                 const origin = shipment.originCity ?? shipment.originCountry ?? 'Origin';

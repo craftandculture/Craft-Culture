@@ -280,7 +280,7 @@ const LogisticsDashboardPage = () => {
                       : 'No live shipments. Finished ones are under View all.'}
                 </p>
               ) : (
-                <ul className="divide-y divide-border-primary border-t border-border-primary">
+                <ul className="divide-y divide-text-muted/25 border-t border-text-muted/25">
                   {visible.map((shipment) => {
                     const ModeIcon = transportModeIcons[shipment.transportMode] ?? IconShip;
                     const late =
@@ -327,7 +327,7 @@ const LogisticsDashboardPage = () => {
 
             <section className="overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
               <p className="px-4 pb-2 pt-4 text-sm font-semibold text-text-primary">At a glance</p>
-              <ul className="divide-y divide-border-primary border-t border-border-primary">
+              <ul className="divide-y divide-text-muted/25 border-t border-text-muted/25">
                 {sideRows.map((r) => (
                   <li key={r.label}>
                     <Link
