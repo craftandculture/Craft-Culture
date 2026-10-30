@@ -1,3 +1,14 @@
+## [2.1.45](https://github.com/craftandculture/Craft-Culture/compare/v2.1.44...v2.1.45) (2026-10-30)
+
+### Features
+
+* Pricing Manager pulls London prices for the whole page in one go, and inbound rows no longer spill into Import ([5d61bc2](https://github.com/craftandculture/Craft-Culture/commit/5d61bc25ce59ab650472c444d34d9bb5414fc371))
+
+### Bug Fixes
+
+* **catalogue:** the in-transit feed works again now that shipments carry ETAs ([5532262](https://github.com/craftandculture/Craft-Culture/commit/55322624efb9891a21e34b50f8f06aef717469f2))
+* **logistics:** inbound matching leaves a line for a person when Wine Labs names another producer or disagrees with our register ([a3ce1b0](https://github.com/craftandculture/Craft-Culture/commit/a3ce1b00c6adce6d7cd5ab36a9f612a2363ed1b4))
+
 ## [2.1.44](https://github.com/craftandculture/Craft-Culture/compare/v2.1.43...v2.1.44) (2026-10-30)
 
 ### Features
