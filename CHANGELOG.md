@@ -1,3 +1,9 @@
+## [2.1.52](https://github.com/craftandculture/Craft-Culture/compare/v2.1.51...v2.1.52) (2026-10-30)
+
+### Bug Fixes
+
+* **logistics:** make the Update button stand out and the row and route lines clearer ([51f54e2](https://github.com/craftandculture/Craft-Culture/commit/51f54e27a7e5c995cc66bdc359de180f203b306e))
+
 ## [2.1.51](https://github.com/craftandculture/Craft-Culture/compare/v2.1.50...v2.1.51) (2026-10-30)
 
 ### Bug Fixes
