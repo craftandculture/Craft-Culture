@@ -198,7 +198,12 @@ const getCatalogueInboundRows = async (
       landedPerBottle: sql<
         number | null
       >`MAX(${logisticsShipmentItems.landedCostPerBottle})`,
-      eta: sql<Date | null>`MIN(${logisticsShipments.eta})`,
+      /*
+        Decoded as the eta column is. A bare MIN() comes back from the driver as
+        text, and the feed then called toISOString on a string: every in-transit
+        request failed the day shipments began carrying ETAs.
+      */
+      eta: sql<Date | null>`MIN(${logisticsShipments.eta})`.mapWith(logisticsShipments.eta),
       /*
         Already on our floor, or still on the move?
 
