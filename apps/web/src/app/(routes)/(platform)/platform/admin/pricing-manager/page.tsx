@@ -1014,9 +1014,11 @@ const VENUE_NAMES: Record<string, string> = {
 /**
  * London in-bond market for the row's bottle size, beside our In Bond price
  *
- * The lowest ask is what a trade buyer could buy it for in London today, so it
- * leads; the last trade stands in when nothing is offered. The percentage is
- * how far our price sits above or below it. A check, never a price we set.
+ * The last trade leads: it is what the wine actually changed hands for. An ask
+ * is only what one seller hopes for, and a single low or stale ask made the
+ * gap swing. The lowest ask stands in when the wine has never traded. The
+ * percentage is how far our price sits above or below it. A check, never a
+ * price we set.
  */
 /** How far above London our price may sit before it is flagged, in percent */
 const LONDON_PREMIUM_BAND = 30;
@@ -1043,7 +1045,7 @@ const LondonCell = ({
   onAsk: () => void;
 }) => {
   const ccy = useContext(CurrencyContext);
-  const lead = market?.askUsd ?? market?.lastUsd ?? null;
+  const lead = market?.lastUsd ?? market?.askUsd ?? null;
 
   const askButton = canAsk && (
     <button
@@ -1094,8 +1096,8 @@ const LondonCell = ({
     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums" title={title}>
       <span className="inline-flex items-center justify-end gap-1.5">
         <span className="font-medium text-text-primary">{money(lead, ccy, 0)}</span>
-        {market.askUsd == null && (
-          <span className="text-[9px] font-semibold uppercase tracking-wider text-text-muted">last</span>
+        {market.lastUsd == null && (
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-text-muted">ask</span>
         )}
         {gap != null && (
           <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${tone}`}>
@@ -2820,7 +2822,7 @@ const PricingManagerPage = () => {
                   <th className="px-3 pb-2.5 pt-1 text-right text-xs font-medium text-blue-600/80">
                     <span className="flex items-center justify-end gap-1">
                       London
-                      <HeaderInfo text="London in-bond market for the bottle size of the row (a magnum priced as a magnum), from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not Liv-ex): the lowest ask, or the last trade when nothing is offered, and how far our In Bond price sits from it. Our price carries freight to Dubai, so expect it above London: green is below London, grey up to 30% above, red more than 30% above. LAST means no one is offering it and the last trade is shown. Refreshed from the Wine Labs page." />
+                      <HeaderInfo text="London in-bond market for the bottle size of the row (a magnum priced as a magnum), from the exchanges Wine Labs reads (Bordeaux Index, BBX and others; not Liv-ex): the last trade, or the lowest ask when it has never traded, and how far our In Bond price sits from it. Our price carries freight to Dubai, so expect it above London: green is below London, grey up to 30% above, red more than 30% above. ASK means it has never traded and the lowest ask is shown. Refreshed from the Wine Labs page." />
                     </span>
                   </th>
                   <th

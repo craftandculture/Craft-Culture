@@ -15,8 +15,8 @@ export interface LondonMarket {
 /**
  * Our in-bond price against London's, for a line about to go to a client
  *
- * The lowest ask leads (what a trade buyer could buy it for in London today),
- * the last trade when nothing is offered. Below London is flagged: we may be
+ * The last trade leads (what it actually changed hands for), the lowest ask
+ * when it has never traded. Below London is flagged: we may be
  * giving margin away. A check only; the quote's price is never changed.
  */
 const LondonCheck = ({
@@ -33,7 +33,7 @@ const LondonCheck = ({
   onAsk: () => void;
 }) => {
   if (!canAsk) return null;
-  const lead = market ? (market.askUsd ?? market.lastUsd) : null;
+  const lead = market ? (market.lastUsd ?? market.askUsd) : null;
   const gap = lead && ours > 0 ? Math.round(((ours - lead) / lead) * 100) : null;
   const checked = market
     ? new Date(market.checkedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
@@ -47,7 +47,7 @@ const LondonCheck = ({
         ) : (
           <>
             <span>
-              London in bond {market?.askUsd == null ? 'last trade' : 'ask'} ${lead.toFixed(0)}
+              London in bond {market?.lastUsd == null ? 'ask' : 'last trade'} ${lead.toFixed(0)}
             </span>
             {gap != null && (
               <span className={gap < 0 ? 'font-medium text-amber-700 dark:text-amber-400' : ''}>
