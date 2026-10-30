@@ -1,3 +1,9 @@
+## [2.1.48](https://github.com/craftandculture/Craft-Culture/compare/v2.1.47...v2.1.48) (2026-10-30)
+
+### Features
+
+* **logistics:** invoice lines are matched to LWINs as soon as they are imported, under the code our stock already uses ([cae983f](https://github.com/craftandculture/Craft-Culture/commit/cae983fed82155539a6c7f9654e8b195e0bb6579))
+
 ## [2.1.47](https://github.com/craftandculture/Craft-Culture/compare/v2.1.46...v2.1.47) (2026-10-30)
 
 ### Bug Fixes
