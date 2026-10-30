@@ -1,3 +1,9 @@
+## [2.1.55](https://github.com/craftandculture/Craft-Culture/compare/v2.1.54...v2.1.55) (2026-10-30)
+
+### Features
+
+* LWIN from a spreadsheet — upload a wine list, download it with LWIN codes matched by Wine Labs ([ce85e12](https://github.com/craftandculture/Craft-Culture/commit/ce85e12f401a0ab4178aa40b42f40074e1ddbc3c))
+
 ## [2.1.54](https://github.com/craftandculture/Craft-Culture/compare/v2.1.53...v2.1.54) (2026-10-30)
 
 ### Features
