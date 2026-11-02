@@ -188,6 +188,7 @@ const getAccessToken = async (): Promise<string> => {
 const zohoFetch = async <T>(
   endpoint: string,
   options: RequestInit = {},
+  isRetry = false,
 ): Promise<T> => {
   if (!isZohoConfigured()) {
     throw new Error('Zoho integration not configured');
@@ -226,6 +227,18 @@ const zohoFetch = async <T>(
     });
 
     clearTimeout(timeoutId);
+
+    // Zoho keeps only a limited number of live access tokens per refresh
+    // token, so a cached one can be revoked well before it expires (a whole
+    // shipment sync failed with 401 code 57 and worked on a later retry).
+    // Drop the cached token and try once more with a fresh one.
+    if (response.status === 401 && !isRetry) {
+      logger.warn('Zoho API 401, refreshing token and retrying', { endpoint });
+      if (tokenCache?.accessToken === token) {
+        tokenCache = null;
+      }
+      return zohoFetch<T>(endpoint, options, true);
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
