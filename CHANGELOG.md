@@ -1,3 +1,9 @@
+## [2.1.57](https://github.com/craftandculture/Craft-Culture/compare/v2.1.56...v2.1.57) (2026-11-02)
+
+### Bug Fixes
+
+* Distributors can only pick a delivery date between today and one year ahead, so the year can no longer run past four digits ([1ed8767](https://github.com/craftandculture/Craft-Culture/commit/1ed8767380b8dff4a4f20b5d74da1e9721ad5d39))
+
 ## [2.1.56](https://github.com/craftandculture/Craft-Culture/compare/v2.1.55...v2.1.56) (2026-10-30)
 
 ### Features
