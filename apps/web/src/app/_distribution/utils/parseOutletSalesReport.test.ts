@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import * as XLSX from 'xlsx';
 
 import parseOutletSalesReport, {
   monthFromHeading,
@@ -80,5 +81,55 @@ describe('the month heading as City Drinks write it', () => {
 
   it('refuses a heading naming no month', () => {
     expect(monthFromHeading('Quantity', 2026)).toBeNull();
+  });
+});
+
+describe('parseOutletSalesReport, a workbook with a hidden pivot first', () => {
+  /*
+    As City Drinks sent October 2026: a hidden tab of the whole history,
+    headed on row 4 with many months, then the month's report visible.
+  */
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    book,
+    XLSX.utils.aoa_to_sheet([
+      [null, null, null, 'created_at'],
+      [null, null, null, 'Qty sold'],
+      [null, null, null, 2024],
+      ['Vendor', 'code', 'product_name_new', 'March', 'April'],
+      ['Craft & Culture', 'CDR6645813799', 'Tenuta San Guido Sassicaia 2019', 1, 4],
+    ]),
+    'Sheet 1',
+  );
+  XLSX.utils.book_append_sheet(
+    book,
+    XLSX.utils.aoa_to_sheet([
+      ['Vendor', 'Code', 'product_name_new', 'October'],
+      ['Craft & Culture', 'CDR6645813799', 'Tenuta San Guido Sassicaia 2019', null],
+      [null, 'CDR2341469877', 'Tenuta San Guido Sassicaia 2020', 3],
+      [null, 'CDR3846069263', 'Domaine de Montille Chassagne-Montrachet 2022', 12],
+    ]),
+    'Sheet 1 (2)',
+  );
+  book.Workbook = { Sheets: [{ name: 'Sheet 1', Hidden: 1 }, { name: 'Sheet 1 (2)', Hidden: 0 }] };
+
+  const parsed = parseOutletSalesReport(XLSX.write(book, { type: 'base64', bookType: 'xlsx' }) as string, 2026);
+
+  it('reads the visible report, not the hidden pivot', () => {
+    expect(parsed.month).toBe('2026-10');
+    expect(parsed.lines).toEqual([
+      { outletCode: 'CDR2341469877', productName: 'Tenuta San Guido Sassicaia 2020', bottles: 3 },
+      { outletCode: 'CDR3846069263', productName: 'Domaine de Montille Chassagne-Montrachet 2022', bottles: 12 },
+    ]);
+    expect(parsed.counts.noQuantity).toBe(1);
+  });
+
+  it('finds a heading row below the top of the sheet', () => {
+    const pivotOnly = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(pivotOnly, book.Sheets['Sheet 1']!, 'Sheet 1');
+    const pivot = parseOutletSalesReport(XLSX.write(pivotOnly, { type: 'base64', bookType: 'xlsx' }) as string, 2026);
+
+    expect(pivot.month).toBe('2026-03');
+    expect(pivot.lines).toEqual([{ outletCode: 'CDR6645813799', productName: 'Tenuta San Guido Sassicaia 2019', bottles: 1 }]);
   });
 });

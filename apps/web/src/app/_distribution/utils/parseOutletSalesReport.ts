@@ -79,6 +79,50 @@ export const monthFromHeading = (heading: string, year: number) => {
   return `${year}-${String(index + 1).padStart(2, '0')}`;
 };
 
+/** How far down a sheet its heading row may sit */
+const HEADER_SEARCH_ROWS = 10;
+
+/**
+ * Find the sheet, and the row on it, that heads the sales table
+ *
+ * City Drinks have sent a workbook whose first tab was a hidden pivot of the
+ * whole history, headed on row 4, with the month's report on the visible
+ * second tab. The first tab alone was read and the file rejected. Visible tabs
+ * are tried before hidden ones, and on each the first rows are searched for
+ * one naming a code column and a month.
+ *
+ * @param workbook - The uploaded workbook
+ * @param year - The year the report covers
+ * @returns The sheet and its heading row (0-based), or null
+ */
+const findSalesTable = (workbook: XLSX.WorkBook, year: number) => {
+  const hidden = (index: number) => !!workbook.Workbook?.Sheets?.[index]?.Hidden;
+  const order = workbook.SheetNames.map((name, index) => ({ name, index })).sort(
+    (a, b) => Number(hidden(a.index)) - Number(hidden(b.index)),
+  );
+
+  for (const { name } of order) {
+    const sheet = workbook.Sheets[name];
+    if (!sheet) continue;
+
+    const top = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null, blankrows: true });
+
+    for (let row = 0; row < Math.min(top.length, HEADER_SEARCH_ROWS); row += 1) {
+      const cells = (top[row] ?? []).map((cell) => String(cell ?? '').trim());
+      const hasCode = cells.some((cell) => /code/i.test(cell));
+      const hasMonth = cells.some((cell) => cell && monthFromHeading(cell, year));
+
+      if (hasCode && hasMonth) {
+        // sheet_to_json counts from where the sheet's data starts; `range` wants the sheet row
+        const start = sheet['!ref'] ? XLSX.utils.decode_range(sheet['!ref']).s.r : 0;
+        return { sheet, headerRow: start + row };
+      }
+    }
+  }
+
+  return null;
+};
+
 /**
  * Read an outlet's monthly sales report
  *
@@ -104,13 +148,20 @@ const parseOutletSalesReport = (
     : base64;
 
   const workbook = XLSX.read(Buffer.from(payload, 'base64'), { type: 'buffer' });
-  const sheetName = workbook.SheetNames[0];
-  const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
 
-  if (!sheet) throw new Error('That workbook has no sheets');
+  if (workbook.SheetNames.length === 0) throw new Error('That workbook has no sheets');
 
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+  const table = findSalesTable(workbook, year);
+
+  if (!table) {
+    throw new Error(
+      `No sheet with a code column and a month column found. Sheets: ${workbook.SheetNames.join(', ')}`,
+    );
+  }
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(table.sheet, {
     defval: null,
+    range: table.headerRow,
   });
 
   const first = rows[0];
