@@ -2371,6 +2371,55 @@ const runMigrations = async () => {
     console.log('✅ cons_outlet_codes ready');
 
     /*
+      What a partner is owed per bottle, from the partner's own price sheet.
+
+      Crurated are paid from the recon workbook (Ocean freight first, the
+      airfreight tabs only for wines that never came by sea) and Cru from the
+      "Cru Sales UAE" list, price per case over the case size. Neither price is
+      in the Pricing Manager, so 51 October wines read "no landed cost" and the
+      partner's statement was understated. Replaced per owner on each upload.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_owner_costs" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "owner_id" uuid NOT NULL REFERENCES "cons_owners"("id") ON DELETE CASCADE,
+        "wine_key" text,
+        "lwin18" text,
+        "w_code" text,
+        "product_name" text NOT NULL,
+        "vintage" integer,
+        "cost_per_bottle" double precision NOT NULL,
+        "tab" text,
+        "source" text NOT NULL,
+        "matched_by" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cons_owner_costs_owner_key_idx" ON "cons_owner_costs"("owner_id","wine_key")`,
+    );
+    /*
+      A change to a partner's price from a date — Crurated's 10% cut from
+      9 Oct 2026 on four wines. Kept apart from the sheet so a re-upload of
+      the sheet does not lose it.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_cost_adjustments" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "owner_id" uuid NOT NULL REFERENCES "cons_owners"("id") ON DELETE CASCADE,
+        "w_code" text NOT NULL,
+        "pct_off" double precision NOT NULL,
+        "valid_from" date NOT NULL,
+        "note" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_cost_adjustments_unique" ON "cons_cost_adjustments"("owner_id","w_code","valid_from")`,
+    );
+    console.log('✅ cons_owner_costs ready');
+
+    /*
       Two holders the October figures need and the module did not have.
 
       Philipp Strasky consigns under CONSIGNMENT_PS (INV-000399) and had no
@@ -2403,6 +2452,20 @@ const runMigrations = async () => {
         WHERE ou."slug" = 'city-drinks'
           AND ow."slug" IN ('philipp-strasky','city-drinks-own')
         ON CONFLICT ("owner_id","outlet_id") DO NOTHING
+      `);
+      /* Crurated's 10% cut from 9 Oct 2026 (Sophie, 2 Nov 2026) */
+      await client.unsafe(`
+        INSERT INTO "cons_cost_adjustments" ("owner_id","w_code","pct_off","valid_from","note")
+        SELECT ow."id", v.w_code, 10, DATE '2026-10-09', v.note
+        FROM "cons_owners" ow
+        CROSS JOIN (VALUES
+          ('W11600324','Lafouge Auxey-Duresses La Macabrée 2022'),
+          ('W0103124','Fourrier Gevrey-Chambertin VV 2023'),
+          ('W12008024','Thienpont Terre Elysée 2021'),
+          ('W35100324','Alfano Greco di Tufo Il Bosco 2022')
+        ) AS v(w_code, note)
+        WHERE ow."slug" = 'crurated'
+        ON CONFLICT ("owner_id","w_code","valid_from") DO NOTHING
       `);
       /* Sophie's list, 2 Nov 2026. Never overwrites a type set on the page. */
       await client.unsafe(`

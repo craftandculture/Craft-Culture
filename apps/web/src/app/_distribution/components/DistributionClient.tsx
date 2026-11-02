@@ -16,6 +16,7 @@ import CodeLinkPanel from './CodeLinkPanel';
 import CodesRegisterUpload from './CodesRegisterUpload';
 import InvoiceTypesPanel from './InvoiceTypesPanel';
 import MonthSummaryPanel from './MonthSummaryPanel';
+import OwnerCostsUpload from './OwnerCostsUpload';
 import SalesUpload from './SalesUpload';
 import StatementPanel from './StatementPanel';
 import UnmatchedLinesPanel from './UnmatchedLinesPanel';
@@ -484,6 +485,10 @@ const DistributionClient = () => {
             <div className="space-y-4">
               <SalesUpload outletId={outletId} onImported={invalidate} />
               <CodesRegisterUpload outletId={outletId} month={statementMonth} />
+              <OwnerCostsUpload
+                outletId={outletId}
+                owners={setup.data?.owners ?? []}
+              />
             </div>
           </div>
           <div className="relative">

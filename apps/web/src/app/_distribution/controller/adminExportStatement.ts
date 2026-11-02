@@ -60,6 +60,12 @@ const adminExportStatement = adminProcedure
         `;
 
     const summaryRows: Record<string, string | number>[] = [];
+    /*
+      A statement with a wine at no cost understates what the partner is owed,
+      and once exported it is sent. So nothing is exported while any sold wine
+      has no cost; the page lists them with a way to the Pricing Manager.
+    */
+    const uncosted: string[] = [];
 
     /*
       A sheet name Excel will accept, unique in this workbook. Excel refuses
@@ -96,6 +102,12 @@ const adminExportStatement = adminProcedure
 
       if (statement.lines.length === 0) continue;
 
+      for (const line of statement.lines) {
+        if (line.dueToOwner === null) {
+          uncosted.push(`${owner.name}: ${line.productName}`);
+        }
+      }
+
       const rows = statement.lines.map((line) => ({
         Wine: line.productName,
         'CD code': line.outletCode ?? '',
@@ -112,6 +124,7 @@ const adminExportStatement = adminProcedure
           .map((draw) => draw.docRef ?? '—')
           .join(', '),
         'Landed cost from': line.costFrom ?? '',
+        'From City Drinks own stock (not billed, not owed)': line.unsettledBottles,
         Currency: line.currency ?? '',
       }));
 
@@ -128,6 +141,13 @@ const adminExportStatement = adminProcedure
           Math.round((statement.summary?.billedToOutlet ?? 0) * 100) / 100,
         Margin: Math.round((statement.summary?.margin ?? 0) * 100) / 100,
         'Wines with no landed cost': statement.summary?.withoutCost ?? 0,
+      });
+    }
+
+    if (uncosted.length > 0) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: `${uncosted.length} sold ${uncosted.length === 1 ? 'wine has' : 'wines have'} no landed cost, so the statement would understate what is owed. Cost them first: ${uncosted.slice(0, 12).join('; ')}${uncosted.length > 12 ? '; …' : ''}`,
       });
     }
 

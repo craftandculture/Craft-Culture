@@ -15,6 +15,7 @@ import adminGetStatement from './controller/adminGetStatement';
 import adminGetUnmatchedLines from './controller/adminGetUnmatchedLines';
 import adminImportOutletCodes from './controller/adminImportOutletCodes';
 import adminImportOutletSales from './controller/adminImportOutletSales';
+import adminImportOwnerCosts from './controller/adminImportOwnerCosts';
 import adminLinkCode from './controller/adminLinkCode';
 import adminPullOutletStock from './controller/adminPullOutletStock';
 import adminReattributeMonth from './controller/adminReattributeMonth';
@@ -61,6 +62,7 @@ const distributionRouter = createTRPCRouter({
     getDuplicateWines: adminGetDuplicateWines,
     getInvoices: adminGetInvoices,
     importOutletCodes: adminImportOutletCodes,
+    importOwnerCosts: adminImportOwnerCosts,
     reattributeMonth: adminReattributeMonth,
     setInvoiceType: adminSetInvoiceType,
     getMonthSummary: adminGetMonthSummary,

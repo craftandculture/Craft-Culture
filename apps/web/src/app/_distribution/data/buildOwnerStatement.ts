@@ -185,7 +185,13 @@ const buildOwnerStatement = async (input: {
     const remembers = await wineLandedReady();
 
     /* Shared with cellar sales of partner wine, so both owe the same figure */
-    const live = await getPricingManagerLanded(keys);
+    const [owner] = await client<{ partnerId: string | null }[]>`
+      SELECT partner_id AS "partnerId" FROM cons_owners WHERE id = ${input.ownerId}
+    `;
+    const live = await getPricingManagerLanded(keys, {
+      shipmentFallback: true,
+      partnerId: owner?.partnerId ?? null,
+    });
 
     /*
       Reading a statement writes nothing. The live cost is written down by the
@@ -204,16 +210,68 @@ const buildOwnerStatement = async (input: {
       : [];
 
     /*
-      An owner's own figure beats the shared one, and a remembered figure beats
-      nothing at all. Set by hand wins outright: somebody has looked.
+      The partner's own price sheet, where they have one: Crurated's recon
+      workbook and Cru's price list. Their price is what they are owed; the
+      Pricing Manager is our cost model and, for them, has no import price.
+      A dated cut (Crurated's 10% on four wines from 9 Oct 2026) applies to
+      any month it falls in.
+    */
+    const monthEnd = `${input.month}-28`;
+    const hasSheets = await tableReady('cons_owner_costs');
+    const sheet = hasSheets && keys.length
+      ? await client<
+          { key: string; costPerBottle: number; tab: string | null; pctOff: number | null }[]
+        >`
+          SELECT DISTINCT ON (c.wine_key)
+                 c.wine_key AS key, c.cost_per_bottle::float8 AS "costPerBottle",
+                 c.tab,
+                 (
+                   SELECT MAX(j.pct_off)::float8
+                   FROM cons_cost_adjustments j
+                   WHERE j.owner_id = c.owner_id
+                     AND UPPER(j.w_code) = UPPER(c.w_code)
+                     AND j.valid_from <= (DATE_TRUNC('month', ${monthEnd}::date)
+                                          + INTERVAL '1 month - 1 day')
+                 ) AS "pctOff"
+          FROM cons_owner_costs c
+          WHERE c.owner_id = ${input.ownerId}
+            AND c.wine_key = ANY(${keys}::text[])
+          ORDER BY c.wine_key, c.created_at DESC
+        `
+      : [];
+
+    /*
+      Set by hand wins outright: somebody has looked. Then the partner's own
+      sheet, then the Pricing Manager, then the last figure it gave.
     */
     const costs = keys.map((key) => {
       const kept = remembered.find((row) => row.key === key);
+      const listed = sheet.find((row) => row.key === key);
       const now = live.find((row) => row.key === key);
-      const chosen =
-        kept?.source === 'by-hand'
-          ? kept
-          : (now ?? kept ?? null);
+
+      if (kept?.source === 'by-hand') {
+        return {
+          key,
+          landedPerBottle: kept.landedPerBottle,
+          shipmentNumber: 'Set by hand',
+          ownLine: true,
+        };
+      }
+
+      if (listed) {
+        const cut = listed.pctOff ? 1 - listed.pctOff / 100 : 1;
+
+        return {
+          key,
+          landedPerBottle: Math.round(listed.costPerBottle * cut * 100) / 100,
+          shipmentNumber: `${listed.tab ?? 'Partner price sheet'}${
+            listed.pctOff ? `, less ${listed.pctOff}%` : ''
+          }`,
+          ownLine: true,
+        };
+      }
+
+      const chosen = now ?? kept ?? null;
 
       return {
         key,
@@ -222,7 +280,7 @@ const buildOwnerStatement = async (input: {
           chosen === null
             ? null
             : chosen === now
-              ? 'Pricing Manager'
+              ? now.from
               : `last known (${kept?.source ?? 'kept'})`,
         ownLine: true,
       };

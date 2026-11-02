@@ -1152,6 +1152,19 @@ const PricingManagerPage = () => {
   // State
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  /*
+    A link can open the page on one wine: the consignment statement sends each
+    wine with no landed cost here as ?search=<LWIN>. Read once on arrival.
+  */
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get('search');
+
+    if (wanted) {
+      setSearch(wanted);
+      setDebouncedSearch(wanted);
+    }
+  }, []);
   const [category, setCategory] = useState<CategoryFilter | undefined>('Wine');
   const [ownerId, setOwnerId] = useState<string | undefined>(undefined);
   const [sortBy, setSortBy] = useState<SortField>('productName');

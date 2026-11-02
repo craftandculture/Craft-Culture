@@ -275,6 +275,10 @@ const StatementPanel = ({
                             : "No landed cost. Type this owner's own."
                         }
                       />
+                      {/* Where the cost came from, to check against the partner's sheet */}
+                      <span className="text-text-muted block text-[11px] leading-tight">
+                        {line.costFrom ?? 'no cost found'}
+                      </span>
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
                       {line.dueToOwner === null
@@ -308,12 +312,32 @@ const StatementPanel = ({
                 </div>
               ))}
               {summary.withoutCost > 0 ? (
-                <Typography variant="bodyXs" colorRole="warning" asChild>
-                  <p className="max-w-xs">
-                    {summary.withoutCost} wines have no import price recorded, so
-                    nothing can be owed for them yet.
-                  </p>
-                </Typography>
+                <div className="max-w-sm space-y-1">
+                  <Typography variant="bodyXs" colorRole="danger" asChild>
+                    <p>
+                      {summary.withoutCost} sold{' '}
+                      {summary.withoutCost === 1 ? 'wine has' : 'wines have'} no
+                      landed cost. The statement cannot be exported until each
+                      is costed:
+                    </p>
+                  </Typography>
+                  <ul className="space-y-0.5 text-xs">
+                    {lines
+                      .filter((line) => line.dueToOwner === null)
+                      .map((line) => (
+                        <li key={line.lwin18 ?? line.productName}>
+                          <a
+                            className="text-text-primary underline underline-offset-2"
+                            href={`/platform/admin/pricing-manager?search=${encodeURIComponent(line.lwin18 ?? line.productName)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {line.productName}
+                          </a>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
               ) : null}
             </div>
           ) : null}
