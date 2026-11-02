@@ -2,6 +2,7 @@
 
 import {
   IconCheck,
+  IconCloud,
   IconFileUpload,
   IconPackage,
   IconPencil,
@@ -34,6 +35,7 @@ const activityIcons: Record<string, typeof IconCheck> = {
   item_removed: IconTrash,
   shipment_created: IconPackage,
   shipment_updated: IconPencil,
+  zoho_sync: IconCloud,
 };
 
 const activityColors: Record<string, string> = {
@@ -43,6 +45,7 @@ const activityColors: Record<string, string> = {
   item_removed: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
   shipment_created: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
   shipment_updated: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
+  zoho_sync: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400',
 };
 
 /**

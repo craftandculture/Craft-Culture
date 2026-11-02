@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  IconAlertTriangle,
   IconArrowLeft,
   IconArrowRight,
   IconCalculator,
@@ -22,6 +23,7 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -41,6 +43,11 @@ import SignaturePad from '@/app/_logistics/components/SignaturePad';
 import buildShipmentItemsCsv from '@/app/_logistics/utils/buildShipmentItemsCsv';
 import isValidHsCode from '@/app/_logistics/utils/isValidHsCode';
 import { SHIPMENT_STATUSES } from '@/app/_logistics/utils/shipmentStatuses';
+import {
+  readZohoSync,
+  zohoLineState,
+  zohoSyncedCount,
+} from '@/app/_logistics/utils/zohoSyncLog';
 import type { LwinLookupResult } from '@/app/_lwin/components/LwinLookup';
 import LwinLookup from '@/app/_lwin/components/LwinLookup';
 import Badge from '@/app/_ui/components/Badge/Badge';
@@ -601,6 +608,7 @@ const ShipmentDetailPage = () => {
    * state cannot be fired by someone returning to the tab later.
    */
   const [confirmClear, setConfirmClear] = useState(false);
+  const [isZohoHistoryOpen, setIsZohoHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (!confirmClear) return;
@@ -1670,6 +1678,30 @@ const ShipmentDetailPage = () => {
           const hsCount = items.filter((i) => isValidHsCode(i.hsCode)).length;
           const totalItems = items.length;
           const allHsSet = totalItems > 0 && hsCount === totalItems;
+
+          /*
+            Every press of Sync to Zoho is in the activity log with each
+            line's outcome. The newest one says where each line stands now;
+            a line added or re-mapped since is not in Zoho as it reads here.
+          */
+          const zohoSyncs = (shipment.activityLogs ?? [])
+            .flatMap((log) => {
+              const record = readZohoSync(log.action, log.metadata);
+              return record ? [{ log, record }] : [];
+            })
+            .reverse();
+          const lastZohoSync = zohoSyncs[0] ?? null;
+          const zohoLineNote = (item: (typeof items)[number]) => {
+            if (!lastZohoSync) return null;
+            const state = zohoLineState(item, lastZohoSync.record);
+            if (state.kind === 'failed') return `Zoho sync failed: ${state.error}`;
+            if (state.kind === 'new') return 'Added since the last Zoho sync';
+            if (state.kind === 'changed') return 'LWIN changed since the last Zoho sync';
+            return null;
+          };
+          const zohoOutOfDate = items.filter((i) => zohoLineNote(i) !== null).length;
+          const zohoWho = (log: (typeof zohoSyncs)[number]['log']) =>
+            log.user?.name ?? log.user?.email ?? 'unknown';
           const lwinSheetItem = items.find((i) => i.id === sheetItemId) ?? null;
           /*
             A wine mapped once is mapped for every line of it.
@@ -2420,6 +2452,105 @@ const ShipmentDetailPage = () => {
                     </div>
                   </div>
 
+                  {/* Zoho sync status — the newest sync, opening the full history */}
+                  <button
+                    type="button"
+                    onClick={() => setIsZohoHistoryOpen(true)}
+                    disabled={!lastZohoSync}
+                    className="mb-4 flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border-muted px-3 py-2 text-left text-xs enabled:hover:bg-fill-muted/50"
+                  >
+                    {!lastZohoSync ? (
+                      <span className="text-text-muted">Not synced to Zoho yet</span>
+                    ) : (
+                      <>
+                        <span
+                          className={`h-2 w-2 shrink-0 rounded-full ${
+                            lastZohoSync.record.errors > 0
+                              ? 'bg-red-500'
+                              : zohoOutOfDate > 0 || lastZohoSync.record.skipped > 0
+                                ? 'bg-amber-500'
+                                : 'bg-green-600'
+                          }`}
+                          aria-hidden="true"
+                        />
+                        <span className="text-text-primary">
+                          Last synced to Zoho{' '}
+                          {format(new Date(lastZohoSync.log.createdAt), 'd MMM yyyy, HH:mm')} by{' '}
+                          {zohoWho(lastZohoSync.log)}
+                        </span>
+                        <span className="text-text-muted">
+                          · {zohoSyncedCount(lastZohoSync.record)} of {lastZohoSync.record.total} lines
+                        </span>
+                        {lastZohoSync.record.errors > 0 && (
+                          <span className="font-medium text-text-danger">
+                            · {lastZohoSync.record.errors} failed
+                          </span>
+                        )}
+                        {zohoOutOfDate > 0 && (
+                          <span className="font-medium text-text-warning">
+                            · {zohoOutOfDate} {zohoOutOfDate === 1 ? 'line needs' : 'lines need'} syncing again
+                          </span>
+                        )}
+                        <span className="ml-auto text-text-muted">
+                          History ({zohoSyncs.length})
+                        </span>
+                      </>
+                    )}
+                  </button>
+
+                  <Dialog open={isZohoHistoryOpen} onOpenChange={setIsZohoHistoryOpen}>
+                    <DialogContent className="max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>Zoho sync history</DialogTitle>
+                        <DialogDescription>
+                          Each sync creates or updates this shipment&apos;s wines as Zoho items.
+                          Syncing again only adds what is missing, so it never makes duplicates.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="mt-4 flex max-h-[60vh] flex-col gap-3 overflow-y-auto">
+                        {zohoSyncs.map(({ log, record }) => {
+                          const problems = record.lines.filter(
+                            (l) => l.status === 'error' || l.status === 'skipped',
+                          );
+                          return (
+                            <div key={log.id} className="rounded-lg border border-border-muted p-3">
+                              <div className="flex items-baseline justify-between gap-3">
+                                <Typography variant="bodySm" className="font-medium">
+                                  {format(new Date(log.createdAt), 'd MMM yyyy, HH:mm')}
+                                </Typography>
+                                <Typography variant="bodyXs" colorRole="muted">
+                                  {zohoWho(log)}
+                                </Typography>
+                              </div>
+                              <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+                                {log.notes}
+                              </Typography>
+                              {problems.length > 0 && (
+                                <ul className="mt-2 flex flex-col gap-1">
+                                  {problems.map((line) => (
+                                    <li key={line.itemId} className="flex gap-1.5 text-xs">
+                                      <Icon
+                                        icon={IconAlertTriangle}
+                                        size="sm"
+                                        className={line.status === 'error' ? 'text-text-danger' : 'text-text-warning'}
+                                      />
+                                      <span>
+                                        <span className="font-medium">{line.productName}</span>
+                                        <span className="text-text-muted">
+                                          {' '}— {line.status === 'error' ? line.error : 'skipped, no LWIN'}
+                                        </span>
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
                   {/* Add Item Form */}
                   {isAddingItem && (
                     <div className="mb-6 rounded-lg border border-text-primary/30 bg-text-primary/5 p-4">
@@ -2643,6 +2774,11 @@ const ShipmentDetailPage = () => {
                                     {missing.length > 0 && (
                                       <Typography variant="bodyXs" className="text-text-warning mt-0.5">
                                         No {missing.join(', ')}
+                                      </Typography>
+                                    )}
+                                    {zohoLineNote(item) && (
+                                      <Typography variant="bodyXs" className="text-text-warning mt-0.5">
+                                        {zohoLineNote(item)}
                                       </Typography>
                                     )}
                                     {item.overrideOwnerName && (
@@ -2972,6 +3108,11 @@ const ShipmentDetailPage = () => {
                             {missing.length > 0 && (
                               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
                                 Missing {missing.join(', ')}
+                              </span>
+                            )}
+                            {zohoLineNote(item) && (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                                {zohoLineNote(item)}
                               </span>
                             )}
                           </MobileCard>

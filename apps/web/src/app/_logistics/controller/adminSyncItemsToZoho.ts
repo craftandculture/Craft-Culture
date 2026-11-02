@@ -3,10 +3,17 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
+import {
+  logisticsShipmentActivityLogs,
+  logisticsShipmentItems,
+  logisticsShipments,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { findOrCreateWineItem } from '@/lib/zoho/items';
 import logger from '@/utils/logger';
+
+import type { ZohoSyncLine, ZohoSyncRecord } from '../utils/zohoSyncLog';
+import { ZOHO_SYNC_ACTION, describeZohoSync } from '../utils/zohoSyncLog';
 
 const syncItemsToZohoSchema = z.object({
   shipmentId: z.string().uuid(),
@@ -23,10 +30,14 @@ const syncItemsToZohoSchema = z.object({
  * - UPC = hsCode (for customs paperwork)
  * - ISBN = countryOfOrigin (for customs paperwork)
  * - Manufacturer/Brand = producer
+ *
+ * Every press is recorded in the shipment's activity log with each line's
+ * outcome, so who synced, when, and which lines failed and why survive the
+ * toast. The shipment page reads that record back for its sync status.
  */
 const adminSyncItemsToZoho = adminProcedure
   .input(syncItemsToZohoSchema)
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx: { user } }) => {
     const { shipmentId } = input;
 
     // Get shipment with items
@@ -55,13 +66,7 @@ const adminSyncItemsToZoho = adminProcedure
       });
     }
 
-    const results: Array<{
-      itemId: string;
-      productName: string;
-      sku: string | null;
-      status: 'created' | 'updated' | 'exists' | 'skipped' | 'error';
-      error?: string;
-    }> = [];
+    const results: ZohoSyncLine[] = [];
 
     for (const item of items) {
       // Skip items without LWIN/SKU
@@ -99,6 +104,7 @@ const adminSyncItemsToZoho = adminProcedure
           productName: item.productName,
           sku: item.lwin,
           status,
+          zohoItemId: zohoItem.item_id,
         });
 
         logger.info('[SyncItemsToZoho] Synced item:', {
@@ -132,6 +138,33 @@ const adminSyncItemsToZoho = adminProcedure
     const exists = results.filter((r) => r.status === 'exists').length;
     const skipped = results.filter((r) => r.status === 'skipped').length;
     const errors = results.filter((r) => r.status === 'error').length;
+
+    const record: ZohoSyncRecord = {
+      total: items.length,
+      created,
+      updated,
+      exists,
+      skipped,
+      errors,
+      lines: results,
+    };
+
+    // The Zoho writes have happened by now, so a failed log write must not
+    // report the sync itself as failed
+    try {
+      await db.insert(logisticsShipmentActivityLogs).values({
+        shipmentId,
+        userId: user.id,
+        action: ZOHO_SYNC_ACTION,
+        notes: describeZohoSync(record),
+        metadata: { zohoSync: record },
+      });
+    } catch (error) {
+      logger.error('[SyncItemsToZoho] Failed to record sync in activity log:', {
+        shipmentId,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
 
     return {
       success: errors === 0,
