@@ -1699,7 +1699,13 @@ const ShipmentDetailPage = () => {
             if (state.kind === 'changed') return 'LWIN changed since the last Zoho sync';
             return null;
           };
-          const zohoOutOfDate = items.filter((i) => zohoLineNote(i) !== null).length;
+          // Failed lines are counted as failed, not again as out of date
+          const zohoOutOfDate = lastZohoSync
+            ? items.filter((i) => {
+                const kind = zohoLineState(i, lastZohoSync.record).kind;
+                return kind === 'new' || kind === 'changed';
+              }).length
+            : 0;
           const zohoWho = (log: (typeof zohoSyncs)[number]['log']) =>
             log.user?.name ?? log.user?.email ?? 'unknown';
           const lwinSheetItem = items.find((i) => i.id === sheetItemId) ?? null;
