@@ -1,3 +1,9 @@
+## [2.1.58](https://github.com/craftandculture/Craft-Culture/compare/v2.1.57...v2.1.58) (2026-11-02)
+
+### Bug Fixes
+
+* Distributors can schedule a delivery up to 30 days back, are told when AM or PM is missing, and see greyed-out buttons when an action is unavailable ([1abb86c](https://github.com/craftandculture/Craft-Culture/commit/1abb86c9384796396b4b84751f414e8971d34525))
+
 ## [2.1.57](https://github.com/craftandculture/Craft-Culture/compare/v2.1.56...v2.1.57) (2026-11-02)
 
 ### Bug Fixes
