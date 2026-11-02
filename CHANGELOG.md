@@ -1,3 +1,9 @@
+## [2.1.60](https://github.com/craftandculture/Craft-Culture/compare/v2.1.59...v2.1.60) (2026-11-02)
+
+### Bug Fixes
+
+* Distributors see the order's partner notes near the top of the order page ([c2ded94](https://github.com/craftandculture/Craft-Culture/commit/c2ded9450ab5dbf768e0030d8f56faca1e0c7a10))
+
 ## [2.1.59](https://github.com/craftandculture/Craft-Culture/compare/v2.1.58...v2.1.59) (2026-11-02)
 
 ### Bug Fixes
