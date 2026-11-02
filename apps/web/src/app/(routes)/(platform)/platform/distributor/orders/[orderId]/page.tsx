@@ -231,14 +231,17 @@ const DistributorOrderDetailPage = () => {
   // Delivery scheduling state
   const [showScheduleDelivery, setShowScheduleDelivery] = useState(false);
   const [scheduledDate, setScheduledDate] = useState('');
+  // The browser reports an empty value until every part (including AM/PM) is filled
+  const [scheduledDatePartial, setScheduledDatePartial] = useState(false);
 
-  // Delivery can be booked from today up to a year ahead. The bounds also stop
-  // the browser's year field accepting more than four digits.
+  // Delivery dates run from 30 days back (recording one already arranged) to a
+  // year ahead. The bounds also stop the browser's year field taking more than
+  // four digits.
   const toLocalInput = (d: Date) => {
     const local = new Date(d.getTime() - d.getTimezoneOffset() * 60_000);
     return local.toISOString().slice(0, 16);
   };
-  const scheduleMin = toLocalInput(new Date(new Date().setHours(0, 0, 0, 0)));
+  const scheduleMin = toLocalInput(new Date(new Date().setDate(new Date().getDate() - 30)));
   const scheduleMax = toLocalInput(new Date(new Date().setFullYear(new Date().getFullYear() + 1)));
   const scheduledDateValid = !!scheduledDate && scheduledDate >= scheduleMin && scheduledDate <= scheduleMax;
   const [deliveryNotes, setDeliveryNotes] = useState('');
@@ -621,6 +624,7 @@ const DistributorOrderDetailPage = () => {
               variant="outline"
               onClick={() => sendToFinance()}
               disabled={isSendingToFinance}
+              isDisabled={isSendingToFinance}
               aria-label="Email the proforma to your finance team"
               title={order.distributor?.financeEmail ? `Sends to ${order.distributor.financeEmail}` : undefined}
             >
@@ -664,6 +668,7 @@ const DistributorOrderDetailPage = () => {
                 size="lg"
                 className="w-full shrink-0 sm:w-auto"
                 disabled={nextStep.isPending || invoiceMissing}
+                isDisabled={nextStep.isPending || invoiceMissing}
                 onClick={() =>
                   setPendingConfirm({
                     title: nextStep.label,
@@ -734,6 +739,7 @@ const DistributorOrderDetailPage = () => {
                     type="button"
                     onClick={() => distributorVerification({ response: 'verified' })}
                     disabled={isVerifying}
+                    isDisabled={isVerifying}
                     colorRole="brand"
                   >
                     <ButtonContent iconLeft={IconCheck} isLoading={isVerifying}>
@@ -755,6 +761,7 @@ const DistributorOrderDetailPage = () => {
                       })
                     }
                     disabled={isVerifying}
+                    isDisabled={isVerifying}
                     variant="outline"
                   >
                     <ButtonContent iconLeft={IconX}>Not Verified</ButtonContent>
@@ -797,6 +804,7 @@ const DistributorOrderDetailPage = () => {
                     type="button"
                     onClick={() => unlockSuspended('Client now registered and verified')}
                     disabled={isUnlocking}
+                    isDisabled={isUnlocking}
                     colorRole="brand"
                   >
                     <ButtonContent iconLeft={IconCheck} isLoading={isUnlocking}>
@@ -838,6 +846,7 @@ const DistributorOrderDetailPage = () => {
                   type="button"
                   onClick={() => invoiceInputRef.current?.click()}
                   disabled={isUploadingInvoice}
+                  isDisabled={isUploadingInvoice}
                   colorRole="brand"
                   className="w-full sm:w-auto"
                 >
@@ -961,7 +970,11 @@ const DistributorOrderDetailPage = () => {
                         value={scheduledDate}
                         min={scheduleMin}
                         max={scheduleMax}
-                        onChange={(e) => setScheduledDate(e.target.value)}
+                        onChange={(e) => {
+                          setScheduledDate(e.target.value);
+                          setScheduledDatePartial(e.target.validity.badInput);
+                        }}
+                        onInput={(e) => setScheduledDatePartial(e.currentTarget.validity.badInput)}
                         className="min-h-10 w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
                       />
                     </div>
@@ -979,13 +992,19 @@ const DistributorOrderDetailPage = () => {
                       />
                     </div>
                     {!scheduledDate ? (
-                      <Typography variant="bodyXs" colorRole="muted">
-                        Choose a date and time to confirm the schedule.
-                      </Typography>
+                      scheduledDatePartial ? (
+                        <Typography variant="bodyXs" colorRole="danger">
+                          Fill in the full date and time, including AM or PM.
+                        </Typography>
+                      ) : (
+                        <Typography variant="bodyXs" colorRole="muted">
+                          Choose a date and time to confirm the schedule.
+                        </Typography>
+                      )
                     ) : (
                       !scheduledDateValid && (
                         <Typography variant="bodyXs" colorRole="danger">
-                          Choose a date between today and one year ahead.
+                          Choose a date within the last 30 days or the next year.
                         </Typography>
                       )
                     )}
@@ -994,6 +1013,7 @@ const DistributorOrderDetailPage = () => {
                         type="button"
                         onClick={() => scheduleDelivery({ date: new Date(scheduledDate).toISOString(), notes: deliveryNotes })}
                         disabled={!scheduledDateValid || isScheduling}
+                        isDisabled={!scheduledDateValid || isScheduling}
                         colorRole="brand"
                       >
                         <ButtonContent iconLeft={IconCalendar} isLoading={isScheduling}>
@@ -1025,6 +1045,7 @@ const DistributorOrderDetailPage = () => {
                         type="button"
                         onClick={() => logContactAttempt(contactNotes)}
                         disabled={!contactNotes.trim() || isLoggingContact}
+                        isDisabled={!contactNotes.trim() || isLoggingContact}
                         variant="outline"
                       >
                         <ButtonContent iconLeft={IconPhoneOff} isLoading={isLoggingContact}>
@@ -1092,6 +1113,7 @@ const DistributorOrderDetailPage = () => {
                   type="button"
                   onClick={() => markInTransit(undefined)}
                   disabled={isMarkingInTransit}
+                  isDisabled={isMarkingInTransit}
                   colorRole="brand"
                   className="w-full sm:w-auto"
                 >
@@ -1136,6 +1158,7 @@ const DistributorOrderDetailPage = () => {
                     })
                   }
                   disabled={isMarkingDelivered}
+                  isDisabled={isMarkingDelivered}
                   colorRole="brand"
                   className="w-full sm:w-auto"
                 >

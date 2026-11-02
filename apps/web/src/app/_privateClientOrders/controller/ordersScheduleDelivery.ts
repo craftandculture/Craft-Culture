@@ -19,9 +19,9 @@ const scheduleDeliverySchema = z.object({
       (value) => {
         const date = new Date(value).getTime();
         const day = 24 * 60 * 60 * 1000;
-        return date >= Date.now() - 2 * day && date <= Date.now() + 366 * day;
+        return date >= Date.now() - 31 * day && date <= Date.now() + 366 * day;
       },
-      { message: 'Delivery date must be between today and one year ahead' },
+      { message: 'Delivery date must be within the last 30 days or the next year' },
     ),
   notes: z.string().optional(),
 });
