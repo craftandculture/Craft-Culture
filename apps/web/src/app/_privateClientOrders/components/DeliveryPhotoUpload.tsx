@@ -106,8 +106,7 @@ export interface DeliveryPhotoUploadProps {
  * Proof of Delivery Upload component for distributors
  *
  * Allows distributors to upload proof of delivery photos.
- * Shows after delivery is complete or during out_for_delivery status.
- * Can be used independently of marking order as delivered.
+ * Shows only once the order is marked delivered.
  */
 const DeliveryPhotoUpload = ({
   orderId,
@@ -221,8 +220,7 @@ const DeliveryPhotoUpload = ({
   );
 
   // Show component for these statuses
-  const showUpload =
-    orderStatus === 'out_for_delivery' || orderStatus === 'delivered';
+  const showUpload = orderStatus === 'delivered';
 
   if (!showUpload) {
     return null;

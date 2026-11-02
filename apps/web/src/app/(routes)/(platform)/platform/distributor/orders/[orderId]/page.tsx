@@ -1143,8 +1143,8 @@ const DistributorOrderDetailPage = () => {
                     {order.clientAddress && <> Address: {order.clientAddress}</>}
                   </Typography>
                   <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-                    Mark it delivered once the client has the wine, and upload the proof of delivery
-                    below.
+                    Mark it delivered once the client has the wine. You can then upload the proof of
+                    delivery.
                   </Typography>
                 </div>
                 <Button
@@ -1200,8 +1200,8 @@ const DistributorOrderDetailPage = () => {
           </Card>
         )}
 
-        {/* Delivery Photo Upload - Available during and after delivery */}
-        {(order.status === 'out_for_delivery' || order.status === 'delivered') && (
+        {/* Proof of delivery - only once the order is marked delivered */}
+        {order.status === 'delivered' && (
           <DeliveryPhotoUpload
             orderId={orderId}
             existingPhotoUrl={order.deliveryPhoto}

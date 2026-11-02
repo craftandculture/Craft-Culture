@@ -59,6 +59,13 @@ const distributorUploadDeliveryPhoto = distributorProcedure
       });
     }
 
+    if (order.status !== 'delivered') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Mark the order delivered before uploading the proof of delivery',
+      });
+    }
+
     // Extract base64 data
     const base64Data = file.split(',')[1];
     if (!base64Data) {
