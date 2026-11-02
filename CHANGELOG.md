@@ -1,3 +1,9 @@
+## [2.1.66](https://github.com/craftandculture/Craft-Culture/compare/v2.1.65...v2.1.66) (2026-11-02)
+
+### Bug Fixes
+
+* partners are owed from their own price sheets, and a statement with an uncosted wine cannot be exported ([e1fb56e](https://github.com/craftandculture/Craft-Culture/commit/e1fb56ed9233fe7ab2195e4d55b31b7e64fe38d5))
+
 ## [2.1.65](https://github.com/craftandculture/Craft-Culture/compare/v2.1.64...v2.1.65) (2026-11-02)
 
 ### Bug Fixes
