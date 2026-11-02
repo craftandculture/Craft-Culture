@@ -701,6 +701,30 @@ const DistributorOrderDetailPage = () => {
           />
         )}
 
+        {/* Order notes: billing or handling instructions written for this order */}
+        {order.partnerNotes?.trim() && (
+          <Card className="border-2 border-text-primary/30">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-text-primary/10">
+                  <Icon icon={IconFileText} size="lg" className="text-text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <Typography variant="headingSm" className="mb-1">
+                    Order Notes
+                  </Typography>
+                  <Typography variant="bodyXs" colorRole="muted" className="mb-3">
+                    Read before invoicing or delivering this order.
+                  </Typography>
+                  <Typography variant="bodySm" className="whitespace-pre-line break-words">
+                    {order.partnerNotes}
+                  </Typography>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Distributor Verification Prompt - shown when awaiting distributor verification */}
         {order.status === 'awaiting_distributor_verification' && (
           <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
