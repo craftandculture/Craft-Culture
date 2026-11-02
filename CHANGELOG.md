@@ -1,3 +1,9 @@
+## [2.1.64](https://github.com/craftandculture/Craft-Culture/compare/v2.1.63...v2.1.64) (2026-11-02)
+
+### Bug Fixes
+
+* monthly sales upload reads the visible report, not a hidden first tab ([c1fe36e](https://github.com/craftandculture/Craft-Culture/commit/c1fe36e7e6b1dfef8cd92c710a39fa0f449d4f26))
+
 ## [2.1.63](https://github.com/craftandculture/Craft-Culture/compare/v2.1.62...v2.1.63) (2026-11-02)
 
 ### Bug Fixes
