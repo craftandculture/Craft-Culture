@@ -223,6 +223,15 @@ const StatementPanel = ({
                           {line.shortBottles} unaccounted
                         </Badge>
                       ) : null}
+                      {/*
+                        Drawn from stock City Drinks already paid for: sold,
+                        but billed to nobody and owed to nobody.
+                      */}
+                      {line.unsettledBottles > 0 ? (
+                        <Badge size="xs" colorRole="muted" className="ml-2">
+                          {line.unsettledBottles} from their own stock
+                        </Badge>
+                      ) : null}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
                       {formatBottles(line.bottlesSold)}

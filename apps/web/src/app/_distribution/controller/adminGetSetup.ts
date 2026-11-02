@@ -1,6 +1,8 @@
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import tableReady from '../utils/tableReady';
+
 export interface DistributionOutlet {
   id: string;
   name: string;
@@ -56,6 +58,8 @@ export interface DistributionPartnerOption {
  * reading.
  */
 const adminGetSetup = adminProcedure.query(async () => {
+  const hasTypes = await tableReady('cons_invoice_types');
+
   const outlets = await client<DistributionOutlet[]>`
     WITH latest AS (
       SELECT outlet_id, MAX(taken_at) AS taken_at
@@ -119,7 +123,10 @@ const adminGetSetup = adminProcedure.query(async () => {
     SELECT ow.id, ow.name, ow.consignment_tag AS "consignmentTag",
            ow.takes_unattributed AS "takesUnattributed",
            a.terms_days AS "termsDays",
-           COALESCE(SUM(m.bottles) FILTER (WHERE m.kind = 'out'), 0)::float8
+           COALESCE(SUM(m.bottles) FILTER (
+             WHERE m.kind = 'out'
+               ${hasTypes ? client`AND COALESCE(m.invoice_type, 'consignment') = 'consignment'` : client``}
+           ), 0)::float8
              AS "outBottles",
            ow.partner_id AS "partnerId", pt.business_name AS "partnerName"
     FROM cons_owners ow

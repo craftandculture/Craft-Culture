@@ -77,3 +77,22 @@ describe('valueFifo', () => {
     expect(valueFifo(LAYERS, 0).value).toBe(0);
   });
 });
+
+describe('valueFifo with the outlet’s own stock', () => {
+  it('draws prepaid stock first and bills nothing for it', () => {
+    const result = valueFifo(
+      [
+        { docDate: '2026-01-10', docRef: 'INV-000150', bottles: 6, pricePerBottle: 50, currency: 'USD' },
+        { docDate: '2026-01-27', docRef: 'INV-000197', bottles: 6, pricePerBottle: 40, currency: 'USD', settles: false },
+      ],
+      8,
+    );
+
+    expect(result.unsettledBottles).toBe(6);
+    expect(result.value).toBe(100);
+    expect(result.drawnFrom.map((row) => row.docRef)).toEqual([
+      'INV-000197',
+      'INV-000150',
+    ]);
+  });
+});

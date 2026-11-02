@@ -8,9 +8,14 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { getInvoice, listInvoices } from '@/lib/zoho/invoices';
 
+import classifyInvoice from '../utils/classifyInvoice';
+import type { InvoiceType } from '../utils/classifyInvoice';
+import ownerFromRegister from '../utils/ownerFromRegister';
+import type { RegisterEntry } from '../utils/ownerFromRegister';
 import readOwnerTag from '../utils/readOwnerTag';
 import resolveOwner from '../utils/resolveOwner';
 import type { OwnerRef } from '../utils/resolveOwner';
+import tableReady from '../utils/tableReady';
 import wineOwnersReady from '../utils/wineOwnersReady';
 
 /** Stop rather than page forever if Zoho keeps saying there is more */
@@ -42,9 +47,13 @@ const squash = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '');
  * the quietest way to be wrong by six — which is why what the document actually
  * said is kept beside the computed figure.
  *
- * Only consignment invoices count. Wine an outlet bought outright is theirs,
- * and reading it here would count it as consigned and then chase its owner for
- * a bill they never owed.
+ * Every invoice to the outlet is read, and each is typed: consignment,
+ * prepaid, outright, or a private client order. Only consignment moves money
+ * at settlement, but the others still have to be here — City Drinks sell from
+ * the stock they bought too, and a sale with no line to land on is a sale
+ * nobody can account for. Prepaid and outright lines are kept so those sales
+ * draw them down (first, before any consignment line of the same wine) and are
+ * neither billed nor paid. PCO invoices are left out altogether.
  *
  * @param outletId - Which outlet to read invoices for
  * @returns What was taken, what was left out, and why
@@ -84,12 +93,51 @@ const adminSyncOutFromZoho = adminProcedure
       });
     }
 
-    const owners = await client<OwnerRef[]>`
+    const hasTypes = await tableReady('cons_invoice_types');
+    const hasRegister = await tableReady('cons_outlet_codes');
+
+    const owners = await client<(OwnerRef & { kind: string })[]>`
       SELECT id, name, consignment_tag AS "consignmentTag",
              owner_aliases AS "ownerAliases",
-             takes_unattributed AS "takesUnattributed"
+             takes_unattributed AS "takesUnattributed",
+             ${hasRegister ? client`kind` : client`'partner'`} AS kind
       FROM cons_owners WHERE is_active
     `;
+
+    /* Whose stock an outright sale is: the outlet's own, nobody to pay */
+    const outletOwn = owners.find((owner) => owner.kind === 'outlet-own');
+
+    const typesByHand = hasTypes
+      ? await client<{ docRef: string; invoiceType: string }[]>`
+          SELECT doc_ref AS "docRef", invoice_type AS "invoiceType"
+          FROM cons_invoice_types WHERE outlet_id = ${input.outletId}
+        `
+      : [];
+    const typeByDoc = new Map(
+      typesByHand.map((row) => [row.docRef, row.invoiceType]),
+    );
+
+    /*
+      A PCO is invoiced to the distributor too, and is a client's order, not
+      consignment. Known from our own orders rather than read off the document.
+    */
+    const pcoInvoices = await client<{ number: string }[]>`
+      SELECT zoho_invoice_number AS number FROM private_client_orders
+      WHERE zoho_invoice_number IS NOT NULL
+      UNION
+      SELECT invoice_number FROM pco_item_invoicing
+      WHERE invoice_number IS NOT NULL
+    `;
+    const pcoNumbers = new Set(pcoInvoices.map((row) => row.number));
+
+    const register: RegisterEntry[] = hasRegister
+      ? await client<RegisterEntry[]>`
+          SELECT doc_ref AS "docRef", wine_name AS "wineName",
+                 owner_id AS "ownerId"
+          FROM cons_outlet_codes
+          WHERE outlet_id = ${input.outletId} AND owner_id IS NOT NULL
+        `
+      : [];
 
     const arrangementByOwner = new Map(
       arrangements.map((row) => [row.ownerId, row.id]),
@@ -140,6 +188,7 @@ const adminSyncOutFromZoho = adminProcedure
       FROM cons_movements m
       JOIN cons_arrangements a ON a.id = m.arrangement_id
       WHERE m.lwin18 IS NOT NULL AND m.kind = 'out'
+        ${hasTypes ? client`AND COALESCE(m.invoice_type, 'consignment') <> 'outright'` : client``}
     `;
     const knownOwnersByLwin = new Map<string, Set<string>>();
     for (const row of knownRows) {
@@ -170,6 +219,7 @@ const adminSyncOutFromZoho = adminProcedure
 
     const rows: Record<string, unknown>[] = [];
     const notConsignment: string[] = [];
+    const typed: { docRef: string; type: InvoiceType; reason: string }[] = [];
     const unattributed: string[] = [];
     const taken = new Set<string>();
     /* Evidence about the header rows, since the codebase disagrees with itself */
@@ -185,8 +235,22 @@ const adminSyncOutFromZoho = adminProcedure
         invoice.payment_terms_label,
       );
 
-      if (!consignment.isConsignment) {
-        notConsignment.push(`${header.number} — ${consignment.reason}`);
+      const invoiceType = classifyInvoice({
+        setByHand: typeByDoc.get(invoice.invoice_number),
+        taggedConsignment: consignment.isConsignment,
+        isPco:
+          pcoNumbers.has(invoice.invoice_number) ||
+          /\bPCO[-\s]?\d/i.test(invoice.reference_number ?? ''),
+      });
+
+      typed.push({
+        docRef: invoice.invoice_number,
+        type: invoiceType.type,
+        reason: invoiceType.reason,
+      });
+
+      if (invoiceType.type === 'pco') {
+        notConsignment.push(`${header.number} — ${invoiceType.reason}`);
         continue;
       }
 
@@ -256,9 +320,22 @@ const adminSyncOutFromZoho = adminProcedure
         /* The line's own header beats the invoice's tag, being narrower */
         const lineTag = headerTag ?? invoiceTag;
         const registry = lwin18 ? knownOwnersByLwin.get(squash(lwin18)) : undefined;
+        /* The Codes tab names the owner of each line against its invoice */
+        const listedOwner = ownerFromRegister(
+          register,
+          invoice.invoice_number,
+          line.name,
+        );
+        const isOwnStock = invoiceType.type === 'outright' && Boolean(outletOwn);
 
-        if (!saidByHand && registry && registry.size > 1) {
-          // Only a tag on the document can settle a wine with two owners
+        if (
+          !saidByHand &&
+          !listedOwner &&
+          !isOwnStock &&
+          registry &&
+          registry.size > 1
+        ) {
+          // Only a tag on the document, or the Codes tab, can settle a wine with two owners
           const byTag = resolveOwner({
             tag: lineTag,
             knownOwnerId: null,
@@ -273,17 +350,25 @@ const adminSyncOutFromZoho = adminProcedure
           }
         }
 
-        const { ownerId, reason } = saidByHand
-          ? {
-              ownerId: saidByHand,
-              reason: 'Set by hand against the wine',
-            }
-          : resolveOwner({
-              tag: lineTag,
-              knownOwnerId:
-                registry && registry.size === 1 ? [...registry][0] : null,
-              owners,
-            });
+        /*
+          Bought outright is City Drinks' own wine, whoever it came from: a
+          sale of it is nobody's to be paid for.
+        */
+        const { ownerId, reason } =
+          isOwnStock && outletOwn
+            ? { ownerId: outletOwn.id, reason: 'Bought outright by the outlet' }
+            : saidByHand
+              ? {
+                  ownerId: saidByHand,
+                  reason: 'Set by hand against the wine',
+                }
+              : resolveOwner({
+                  tag: lineTag,
+                  registerOwnerId: listedOwner,
+                  knownOwnerId:
+                    registry && registry.size === 1 ? [...registry][0] : null,
+                  owners,
+                });
 
         const arrangementId = ownerId ? arrangementByOwner.get(ownerId) : null;
 
@@ -304,6 +389,7 @@ const adminSyncOutFromZoho = adminProcedure
           pack,
           pack_assumed: !packStated && !isBottles,
           owner_reason: reason,
+          ...(hasTypes ? { invoice_type: invoiceType.type } : {}),
           unit_price: line.rate,
           currency: invoice.currency_code ?? null,
           doc_ref: invoice.invoice_number,
@@ -370,6 +456,12 @@ const adminSyncOutFromZoho = adminProcedure
         bottles,
       })),
       notConsignment: notConsignment.slice(0, 25),
+      /** How many invoices of each type were read */
+      byType: typed.reduce<Record<string, number>>((counts, row) => {
+        counts[row.type] = (counts[row.type] ?? 0) + 1;
+
+        return counts;
+      }, {}),
       unattributed: unattributed.slice(0, 25),
     };
   });

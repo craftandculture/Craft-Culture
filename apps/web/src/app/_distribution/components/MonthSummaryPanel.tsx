@@ -138,6 +138,11 @@ const MonthSummaryPanel = ({ outletId, month }: MonthSummaryPanelProps) => {
                         {row.withoutCost} with no landed cost
                       </Badge>
                     ) : null}
+                    {row.unsettledBottles > 0 ? (
+                      <Badge size="xs" colorRole="muted" className="ml-2">
+                        {row.unsettledBottles} from City Drinks&rsquo; own stock
+                      </Badge>
+                    ) : null}
                   </td>
                   <td className="py-2 pr-3 text-right tabular-nums">
                     {row.bottles}

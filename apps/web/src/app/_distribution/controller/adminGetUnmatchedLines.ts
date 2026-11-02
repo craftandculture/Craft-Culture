@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import tableReady from '../utils/tableReady';
 import unmatchedReady from '../utils/unmatchedReady';
 
 /**
@@ -27,19 +28,48 @@ const adminGetUnmatchedLines = adminProcedure
   .query(async ({ input }) => {
     if (!(await unmatchedReady())) return { lines: [], bottles: 0 };
 
+    const withSuggestions = await tableReady('cons_invoice_types');
+
     const lines = await client<
       {
         outletCode: string | null;
         productName: string | null;
         bottles: number;
         reason: string | null;
+        suggestedOwnerName: string | null;
+        suggestedLwin18: string | null;
+        suggestedName: string | null;
+        suggestedWhy: string | null;
+        candidateOwners: { id: string; name: string }[] | null;
       }[]
     >`
-      SELECT outlet_code AS "outletCode", product_name AS "productName",
-             bottles::float8, reason
-      FROM cons_import_unmatched
-      WHERE outlet_id = ${input.outletId} AND month = ${input.month}
-      ORDER BY bottles DESC
+      SELECT u.outlet_code AS "outletCode", u.product_name AS "productName",
+             u.bottles::float8, u.reason,
+             ${
+               withSuggestions
+                 ? client`ow.name AS "suggestedOwnerName",
+                          u.suggested_lwin18 AS "suggestedLwin18",
+                          u.suggested_name AS "suggestedName",
+                          u.suggested_why AS "suggestedWhy",
+                          (
+                            SELECT JSON_AGG(JSON_BUILD_OBJECT('id', c.id, 'name', c.name) ORDER BY c.name)
+                            FROM cons_owners c
+                            WHERE c.id = ANY(u.candidate_owner_ids)
+                          ) AS "candidateOwners"`
+                 : client`NULL::text AS "suggestedOwnerName",
+                          NULL::text AS "suggestedLwin18",
+                          NULL::text AS "suggestedName",
+                          NULL::text AS "suggestedWhy",
+                          NULL::json AS "candidateOwners"`
+             }
+      FROM cons_import_unmatched u
+      ${
+        withSuggestions
+          ? client`LEFT JOIN cons_owners ow ON ow.id = u.suggested_owner_id`
+          : client``
+      }
+      WHERE u.outlet_id = ${input.outletId} AND u.month = ${input.month}
+      ORDER BY u.bottles DESC
     `;
 
     return {

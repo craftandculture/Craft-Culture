@@ -1,6 +1,8 @@
 import { client } from '@/database/client';
 
 import getPricingManagerLanded from './getPricingManagerLanded';
+import { settles } from '../utils/classifyInvoice';
+import tableReady from '../utils/tableReady';
 import valueFifo from '../utils/valueFifo';
 import type { OutLayer } from '../utils/valueFifo';
 import wineKey from '../utils/wineKey';
@@ -26,6 +28,8 @@ export interface StatementLine {
   costCurrency: 'AED' | 'USD';
   /** Bottles that sold with no invoice layer left to draw from */
   shortBottles: number;
+  /** Drawn from the outlet's own prepaid or outright stock: billed and paid to nobody */
+  unsettledBottles: number;
   /** Which of our invoices the value came from */
   drawnFrom: { docRef: string | null; bottles: number; value: number }[];
 }
@@ -46,13 +50,19 @@ interface LayerRow {
   unitPrice: number | null;
   pack: number | null;
   currency: string | null;
+  invoiceType: string | null;
 }
 
 /** The UAE dirham's fixed peg to the US dollar */
 const AED_PER_USD = 3.6725;
 
-const keyOf = (value: string | null | undefined) =>
-  (value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+/*
+  One wine is one line whatever pack it was invoiced or sold in. Keyed exactly,
+  a wine sold under its 3-pack code and invoiced in sixes found no invoice
+  layer — the "no invoice left to bill them against" bottles.
+*/
+const keyOf = (lwin18: string | null | undefined, name?: string | null) =>
+  wineKey(lwin18 || name);
 
 /**
  * One owner's statement for one month, as both screens read it
@@ -86,7 +96,9 @@ const buildOwnerStatement = async (input: {
       return { lines: [], summary: null, arrangement: null };
     }
 
-    const sold = await client<SoldRow[]>`
+    const hasTypes = await tableReady('cons_invoice_types');
+
+    const soldRows = await client<SoldRow[]>`
       SELECT m.lwin18, MIN(m.product_name) AS "productName",
              MIN(m.outlet_code) AS "outletCode",
              SUM(m.bottles)::float8 AS bottles
@@ -95,8 +107,23 @@ const buildOwnerStatement = async (input: {
         AND m.kind = 'sold'
         AND TO_CHAR(m.doc_date, 'YYYY-MM') = ${input.month}
       GROUP BY m.lwin18
-      HAVING SUM(m.bottles) > 0
     `;
+
+    const soldByKey = new Map<string, SoldRow>();
+
+    for (const row of soldRows) {
+      const key = keyOf(row.lwin18, row.productName);
+      const existing = soldByKey.get(key);
+
+      soldByKey.set(key, {
+        lwin18: existing?.lwin18 ?? row.lwin18,
+        productName: existing?.productName ?? row.productName,
+        outletCode: existing?.outletCode ?? row.outletCode,
+        bottles: (existing?.bottles ?? 0) + row.bottles,
+      });
+    }
+
+    const sold = [...soldByKey.values()].filter((row) => row.bottles > 0);
 
     if (sold.length === 0) {
       return { lines: [], summary: null, arrangement };
@@ -106,7 +133,8 @@ const buildOwnerStatement = async (input: {
       SELECT m.lwin18, m.product_name AS "productName",
              m.doc_date::text AS "docDate", m.doc_ref AS "docRef",
              m.bottles::float8 AS bottles, m.unit_price AS "unitPrice",
-             m.pack, m.currency
+             m.pack, m.currency,
+             ${hasTypes ? client`m.invoice_type` : client`NULL::text`} AS "invoiceType"
       FROM cons_movements m
       WHERE m.arrangement_id = ${arrangement.id} AND m.kind = 'out'
       ORDER BY m.doc_date, m.doc_ref
@@ -116,8 +144,11 @@ const buildOwnerStatement = async (input: {
       Bottles this owner sold at this outlet in earlier months. Those layers are
       spent, so this month starts where the last one finished.
     */
-    const earlier = await client<{ lwin18: string | null; bottles: number }[]>`
-      SELECT m.lwin18, SUM(m.bottles)::float8 AS bottles
+    const earlier = await client<
+      { lwin18: string | null; productName: string; bottles: number }[]
+    >`
+      SELECT m.lwin18, MIN(m.product_name) AS "productName",
+             SUM(m.bottles)::float8 AS bottles
       FROM cons_movements m
       WHERE m.arrangement_id = ${arrangement.id}
         AND m.kind = 'sold'
@@ -198,12 +229,16 @@ const buildOwnerStatement = async (input: {
     });
 
     const costByLwin = new Map(costs.map((row) => [row.key, row]));
-    const consumedByLwin = new Map(
-      earlier.map((row) => [keyOf(row.lwin18), row.bottles]),
-    );
+    const consumedByLwin = new Map<string, number>();
+
+    for (const row of earlier) {
+      const key = keyOf(row.lwin18, row.productName);
+
+      consumedByLwin.set(key, (consumedByLwin.get(key) ?? 0) + row.bottles);
+    }
 
     const lines: StatementLine[] = sold.map((row) => {
-      const key = keyOf(row.lwin18);
+      const key = keyOf(row.lwin18, row.productName);
 
       /*
         The price per BOTTLE. Our invoice states a rate against the unit sold,
@@ -211,7 +246,7 @@ const buildOwnerStatement = async (input: {
         difference between a right and a threefold-wrong settlement.
       */
       const outLayers: OutLayer[] = layers
-        .filter((layer) => keyOf(layer.lwin18) === key)
+        .filter((layer) => keyOf(layer.lwin18, layer.productName) === key)
         .map((layer) => ({
           docDate: layer.docDate,
           docRef: layer.docRef,
@@ -221,6 +256,7 @@ const buildOwnerStatement = async (input: {
               ? layer.unitPrice / layer.pack
               : (layer.unitPrice ?? 0),
           currency: layer.currency,
+          settles: settles(layer.invoiceType),
         }));
 
       const valued = valueFifo(
@@ -241,6 +277,8 @@ const buildOwnerStatement = async (input: {
       const inAed = valued.currency === 'AED';
       const costPerBottle =
         landedUsd === null ? null : inAed ? landedUsd * AED_PER_USD : landedUsd;
+      /* Bottles of the outlet's own stock are owed to nobody */
+      const owedBottles = row.bottles - valued.unsettledBottles;
 
       return {
         lwin18: row.lwin18,
@@ -250,7 +288,11 @@ const buildOwnerStatement = async (input: {
         costPerBottle,
         /** Never zero where the cost is unknown — that is a silent write-off */
         dueToOwner:
-          costPerBottle === null ? null : costPerBottle * row.bottles,
+          owedBottles <= 0
+            ? 0
+            : costPerBottle === null
+              ? null
+              : costPerBottle * owedBottles,
         /** The shipment the landed cost came from, so a figure can be traced */
         costFrom: costed?.shipmentNumber ?? null,
         /** False where the cost came from another owner's shipment line */
@@ -259,6 +301,7 @@ const buildOwnerStatement = async (input: {
         currency: valued.currency,
         costCurrency: inAed ? 'AED' : 'USD',
         shortBottles: valued.shortBottles,
+        unsettledBottles: valued.unsettledBottles,
         drawnFrom: valued.drawnFrom,
       };
     });
@@ -272,6 +315,7 @@ const buildOwnerStatement = async (input: {
         /** Bottles with no import price, so nothing can be owed for them yet */
         withoutCost: totals.withoutCost + (line.dueToOwner === null ? 1 : 0),
         shortBottles: totals.shortBottles + line.shortBottles,
+        unsettledBottles: totals.unsettledBottles + line.unsettledBottles,
       }),
       {
         wines: 0,
@@ -280,6 +324,7 @@ const buildOwnerStatement = async (input: {
         billedToOutlet: 0,
         withoutCost: 0,
         shortBottles: 0,
+        unsettledBottles: 0,
       },
     );
 

@@ -63,6 +63,8 @@ const adminGetMonthSummary = adminProcedure
           withoutCost: statement.summary?.withoutCost ?? 0,
           /** Bottles sold with no invoice layer left to bill them against */
           shortBottles: statement.summary?.shortBottles ?? 0,
+          /** Sold from prepaid or outright stock: no bill, no payment */
+          unsettledBottles: statement.summary?.unsettledBottles ?? 0,
           currency: statement.lines[0]?.currency ?? null,
         };
       }),

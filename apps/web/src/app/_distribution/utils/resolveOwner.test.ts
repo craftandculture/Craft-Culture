@@ -56,28 +56,41 @@ describe('resolveOwner', () => {
     ).toBe('cult');
   });
 
-  it('sends a line nobody named to whoever takes unattributed', () => {
+  /*
+    Crurated held "takes unattributed", and every untagged line became theirs
+    with no trace — Rare's Ramonet and Cru's prepaid Chasse-Spleen among them.
+    Nobody named means nobody, and the line waits to be answered.
+  */
+  it('never hands a line nobody named to whoever takes unattributed', () => {
     const result = resolveOwner({ tag: null, owners: OWNERS });
 
-    expect(result.ownerId).toBe('crurated');
-    expect(result.reason).toMatch(/unattributed/);
+    expect(result.ownerId).toBeNull();
+    expect(result.reason).toMatch(/waiting for an owner/);
   });
 
   it('explains an unknown tag rather than silently guessing', () => {
     const result = resolveOwner({ tag: 'CONSIGNMENT_ACME', owners: OWNERS });
 
-    // No owner claims it, so it goes where unattributed lines go — and says so
-    expect(result.ownerId).toBe('crurated');
+    expect(result.ownerId).toBeNull();
+    expect(result.reason).toMatch(/matches no owner/);
   });
 
-  it('returns nobody, with a reason, when nothing can claim it', () => {
-    const orphaned = OWNERS.map((owner) => ({
-      ...owner,
-      takesUnattributed: false,
-    }));
-    const result = resolveOwner({ tag: null, owners: orphaned });
+  it('takes the Codes tab before the wine history', () => {
+    const result = resolveOwner({
+      tag: null,
+      registerOwnerId: 'rare',
+      knownOwnerId: 'crurated',
+      owners: OWNERS,
+    });
 
-    expect(result.ownerId).toBeNull();
-    expect(result.reason).toMatch(/nothing takes unattributed/i);
+    expect(result.ownerId).toBe('rare');
+    expect(result.reason).toMatch(/Codes tab/);
+  });
+
+  it('lets the document tag beat the Codes tab', () => {
+    expect(
+      resolveOwner({ tag: 'CC', registerOwnerId: 'rare', owners: OWNERS })
+        .ownerId,
+    ).toBe('cc');
   });
 });

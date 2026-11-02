@@ -7,6 +7,12 @@ export interface OutLayer {
   /** What we billed the outlet, per bottle */
   pricePerBottle: number;
   currency: string | null;
+  /**
+   * Whether a bottle drawn from this layer is billed and paid. False for
+   * prepaid and outright stock: already the outlet's, so drawn first and
+   * settled with nobody. Absent means consignment.
+   */
+  settles?: boolean;
 }
 
 export interface FifoResult {
@@ -15,6 +21,8 @@ export interface FifoResult {
   value: number;
   /** Bottles that sold with no layer left to draw from */
   shortBottles: number;
+  /** Bottles drawn from the outlet's own (prepaid or outright) stock */
+  unsettledBottles: number;
   currency: string | null;
   /** Which invoices the value came from, for the drill-down */
   drawnFrom: { docRef: string | null; bottles: number; value: number }[];
@@ -48,6 +56,12 @@ const valueFifo = (
   alreadyConsumed = 0,
 ): FifoResult => {
   const ordered = [...layers].sort((a, b) => {
+    /* The outlet's own stock goes first, before anything it owes us for */
+    const own =
+      Number(a.settles ?? true) - Number(b.settles ?? true);
+
+    if (own !== 0) return own;
+
     const byDate = (a.docDate ?? '').localeCompare(b.docDate ?? '');
 
     if (byDate !== 0) return byDate;
@@ -59,6 +73,7 @@ const valueFifo = (
   let remaining = bottlesSold;
   let value = 0;
   let bottles = 0;
+  let unsettledBottles = 0;
   const drawnFrom: FifoResult['drawnFrom'] = [];
 
   for (const layer of ordered) {
@@ -77,7 +92,10 @@ const valueFifo = (
     if (available <= 0) continue;
 
     const take = Math.min(available, remaining);
-    const drawn = take * layer.pricePerBottle;
+    const settled = layer.settles ?? true;
+    const drawn = settled ? take * layer.pricePerBottle : 0;
+
+    if (!settled) unsettledBottles += take;
 
     value += drawn;
     bottles += take;
@@ -89,6 +107,7 @@ const valueFifo = (
     bottles,
     value,
     shortBottles: remaining,
+    unsettledBottles,
     /*
       Only one currency is reported, and only when every layer drawn from
       agrees. Two currencies added together make a number that looks like money

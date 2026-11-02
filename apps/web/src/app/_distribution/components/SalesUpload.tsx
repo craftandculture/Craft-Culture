@@ -21,6 +21,7 @@ interface Outcome {
   declaredBottles: number | null;
   agrees: boolean;
   listedUnsold: number;
+  shortBottles: number;
   unattributedBottles: number;
   unattributed: string[];
 }
@@ -141,7 +142,17 @@ const SalesUpload = ({ outletId, onImported }: SalesUploadProps) => {
               <p>
                 {outcome.agrees
                   ? `Agrees with their stated total of ${outcome.declaredBottles}.`
-                  : `They state ${outcome.declaredBottles} bottles; we read ${outcome.bottles}. Something was not read — do not settle from this until it is explained.`}
+                  : `They state ${outcome.declaredBottles} bottles; we read ${outcome.bottles + outcome.unattributedBottles}. Something was not read — do not settle from this until it is explained.`}
+              </p>
+            </Typography>
+          ) : null}
+
+          {outcome.shortBottles > 0 ? (
+            <Typography variant="bodyXs" colorRole="warning" asChild>
+              <p>
+                {outcome.shortBottles} bottles sold past every invoice line we
+                have for the wine — a missing invoice or a wrong code. They
+                show on the owner&rsquo;s statement as short.
               </p>
             </Typography>
           ) : null}

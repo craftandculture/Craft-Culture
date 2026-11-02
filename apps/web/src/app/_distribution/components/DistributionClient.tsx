@@ -13,6 +13,8 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 import CodeLinkPanel from './CodeLinkPanel';
+import CodesRegisterUpload from './CodesRegisterUpload';
+import InvoiceTypesPanel from './InvoiceTypesPanel';
 import MonthSummaryPanel from './MonthSummaryPanel';
 import SalesUpload from './SalesUpload';
 import StatementPanel from './StatementPanel';
@@ -479,7 +481,10 @@ const DistributionClient = () => {
             <span className="bg-text-primary text-surface-primary absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
               1
             </span>
-            <SalesUpload outletId={outletId} onImported={invalidate} />
+            <div className="space-y-4">
+              <SalesUpload outletId={outletId} onImported={invalidate} />
+              <CodesRegisterUpload outletId={outletId} month={statementMonth} />
+            </div>
           </div>
           <div className="relative">
             <span className="bg-text-primary text-surface-primary absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
@@ -504,6 +509,8 @@ const DistributionClient = () => {
       <MonthSummaryPanel outletId={outletId} month={statementMonth} />
 
       <UnmatchedLinesPanel outletId={outletId} month={statementMonth} />
+
+      <InvoiceTypesPanel outletId={outletId} />
 
       <CodeLinkPanel outletId={outletId} onLinked={invalidate} />
 

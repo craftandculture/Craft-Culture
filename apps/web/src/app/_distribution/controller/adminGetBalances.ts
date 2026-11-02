@@ -10,6 +10,8 @@ import {
   packAgnostic,
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
+import consignmentOnly from '../utils/consignmentOnly';
+import tableReady from '../utils/tableReady';
 import wineBoughtReady from '../utils/wineBoughtReady';
 import wineClosedReady from '../utils/wineClosedReady';
 
@@ -87,6 +89,8 @@ const adminGetBalances = adminProcedure
     }),
   )
   .query(async ({ input }) => {
+    const hasTypes = await tableReady('cons_invoice_types');
+
     const hasLinks = await confirmedLinksReady();
     const hasTheirLines = await wineBoughtReady();
     const hasClosed = await wineClosedReady();
@@ -179,6 +183,7 @@ const adminGetBalances = adminProcedure
         JOIN cons_outlets ou ON ou.id = a.outlet_id
         WHERE a.outlet_id = ${input.outletId}
           AND m.kind = 'out'
+          ${consignmentOnly(hasTypes)}
           ${input.ownerId ? client`AND a.owner_id = ${input.ownerId}` : client``}
         GROUP BY a.owner_id, o.name, ou.name,
                  ${packAgnostic(

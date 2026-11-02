@@ -10,6 +10,9 @@ import {
   confirmedLinksReady,
   resolvedSnapshotCode,
 } from '../utils/codeBridge';
+import consignmentOnly from '../utils/consignmentOnly';
+import tableReady from '../utils/tableReady';
+
 
 interface MovementRow {
   arrangementId: string;
@@ -57,6 +60,8 @@ const adminDeriveSold = adminProcedure
     }),
   )
   .mutation(async ({ input }) => {
+    const hasTypes = await tableReady('cons_invoice_types');
+
     const hasLinks = await confirmedLinksReady();
 
     if (input.from >= input.to) {
@@ -127,6 +132,7 @@ const adminDeriveSold = adminProcedure
           FROM cons_movements m
           JOIN cons_arrangements a ON a.id = m.arrangement_id
           WHERE a.outlet_id = ${input.outletId} AND m.kind = 'out'
+            ${consignmentOnly(hasTypes)}
         ) lines
         GROUP BY code
       ),
@@ -137,6 +143,7 @@ const adminDeriveSold = adminProcedure
         JOIN cons_arrangements a ON a.id = m.arrangement_id
         WHERE a.outlet_id = ${input.outletId}
           AND m.kind = 'out'
+          ${consignmentOnly(hasTypes)}
           AND m.doc_date > ${input.from}::date
           AND m.doc_date <= ${input.to}::date
         GROUP BY 1

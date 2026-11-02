@@ -2289,6 +2289,138 @@ const runMigrations = async () => {
     console.log('✅ cons_wine_landed ready');
 
     /*
+      What kind of sale an invoice to an outlet was.
+
+      Not every invoice to City Drinks is consignment. Cru's January stock
+      (INV-000195–197) was prepaid, Tignanello 2022 (INV-000311) was bought
+      outright, and PCO invoices are outside consignment altogether. Reading
+      all of them as consignment bills City Drinks for wine they have paid for
+      and pays the partner twice; reading none of them leaves the bottles they
+      sell from that stock with nowhere to land.
+
+      Set from the document's tag where there is one, and editable on the page,
+      where a person's answer is final.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_invoice_types" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "doc_ref" text NOT NULL,
+        "invoice_type" text NOT NULL,
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_invoice_types_unique" ON "cons_invoice_types"("outlet_id","doc_ref")`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "cons_movements" ADD COLUMN IF NOT EXISTS "invoice_type" text`,
+    );
+    /* An unanswered sale carries the likeliest answer, for one-click confirmation */
+    for (const column of [
+      'suggested_owner_id uuid',
+      'suggested_lwin18 text',
+      'suggested_name text',
+      'suggested_why text',
+      'candidate_owner_ids uuid[]',
+    ]) {
+      await client.unsafe(
+        `ALTER TABLE "cons_import_unmatched" ADD COLUMN IF NOT EXISTS ${column}`,
+      );
+    }
+    /*
+      A code answered from the queue can also say whose it is, for a wine two
+      owners both consign — Montille Bourgogne Blanc is Crurated's and Ihab's.
+    */
+    await client.unsafe(
+      `ALTER TABLE "cons_code_links" ADD COLUMN IF NOT EXISTS "owner_id" uuid REFERENCES "cons_owners"("id") ON DELETE SET NULL`,
+    );
+    console.log('✅ cons_invoice_types ready');
+
+    /*
+      The outlet's own register of its codes: CDR code to wine, owner and the
+      invoice it came in on. Kept in the "CD x C&C Payment Run" sheet's Codes
+      tab and uploaded here, because it is the one record that still knows a
+      wine after City Drinks have sold out of it and dropped it from their feed.
+      Replaced wholesale on each upload.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_outlet_codes" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "outlet_code" text,
+        "wine_name" text NOT NULL,
+        "owner_label" text,
+        "owner_id" uuid REFERENCES "cons_owners"("id") ON DELETE SET NULL,
+        "doc_ref" text,
+        "doc_date" date,
+        "case_config" text,
+        "is_consignment" boolean,
+        "source" text NOT NULL DEFAULT 'codes-tab',
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cons_outlet_codes_code_idx" ON "cons_outlet_codes"("outlet_id","outlet_code")`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "cons_owners" ADD COLUMN IF NOT EXISTS "kind" text NOT NULL DEFAULT 'partner'`,
+    );
+    console.log('✅ cons_outlet_codes ready');
+
+    /*
+      Two holders the October figures need and the module did not have.
+
+      Philipp Strasky consigns under CONSIGNMENT_PS (INV-000399) and had no
+      owner record, so his sales could never appear. City Drinks' own stock —
+      wine they bought outright — is somewhere a sale must be able to land
+      without anybody being billed or paid for it.
+    */
+    await dataFix('consignment owners: Philipp Strasky and City Drinks own stock', async () => {
+      await client.unsafe(`
+        INSERT INTO "cons_owners"
+          ("name","slug","consignment_tag","wms_owner_match","takes_unattributed","partner_id","kind")
+        SELECT 'Philipp Strasky','philipp-strasky','PS','STRASKY',false,
+               (SELECT p."id" FROM "partners" p
+                WHERE p."business_name" ILIKE '%strasky%'
+                ORDER BY p."created_at" LIMIT 1),
+               'partner'
+        ON CONFLICT ("slug") DO NOTHING
+      `);
+      await client.unsafe(`
+        INSERT INTO "cons_owners"
+          ("name","slug","consignment_tag","takes_unattributed","kind")
+        VALUES ('City Drinks own stock','city-drinks-own',NULL,false,'outlet-own')
+        ON CONFLICT ("slug") DO NOTHING
+      `);
+      await client.unsafe(`
+        INSERT INTO "cons_arrangements" ("owner_id","outlet_id","terms_days")
+        SELECT ow."id", ou."id", CASE WHEN ow."slug" = 'philipp-strasky' THEN 90 END
+        FROM "cons_owners" ow
+        CROSS JOIN "cons_outlets" ou
+        WHERE ou."slug" = 'city-drinks'
+          AND ow."slug" IN ('philipp-strasky','city-drinks-own')
+        ON CONFLICT ("owner_id","outlet_id") DO NOTHING
+      `);
+      /* Sophie's list, 2 Nov 2026. Never overwrites a type set on the page. */
+      await client.unsafe(`
+        INSERT INTO "cons_invoice_types" ("outlet_id","doc_ref","invoice_type")
+        SELECT ou."id", v.doc_ref, v.invoice_type
+        FROM "cons_outlets" ou
+        CROSS JOIN (VALUES
+          ('INV-000195','prepaid'),
+          ('INV-000196','prepaid'),
+          ('INV-000197','prepaid'),
+          ('INV-000311','outright')
+        ) AS v(doc_ref, invoice_type)
+        WHERE ou."slug" = 'city-drinks'
+        ON CONFLICT ("outlet_id","doc_ref") DO NOTHING
+      `);
+    });
+
+    /*
       Export invoices — the combined commercial invoice & packing list.
 
       The document is JSON; versions keep every state with the ops and request
