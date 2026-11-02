@@ -1,3 +1,13 @@
+## [2.1.61](https://github.com/craftandculture/Craft-Culture/compare/v2.1.60...v2.1.61) (2026-11-02)
+
+### Features
+
+* Shipments show when they were last synced to Zoho, by whom, and which lines failed ([7bc688d](https://github.com/craftandculture/Craft-Culture/commit/7bc688de6c7d661f98ad4f0914a512cec6db38b6))
+
+### Bug Fixes
+
+* Cellar statements convert prices agreed in euros line by line, so totals match the member's own sheet to the cent ([219d118](https://github.com/craftandculture/Craft-Culture/commit/219d1183b1d2d27cd273c57d5b3059b81432bda6))
+
 ## [2.1.60](https://github.com/craftandculture/Craft-Culture/compare/v2.1.59...v2.1.60) (2026-11-02)
 
 ### Bug Fixes
