@@ -12,7 +12,17 @@ import notifyPartnerOfOrderUpdate from '../utils/notifyPartnerOfOrderUpdate';
 
 const scheduleDeliverySchema = z.object({
   orderId: z.string().uuid(),
-  scheduledDate: z.string().datetime(),
+  scheduledDate: z
+    .string()
+    .datetime()
+    .refine(
+      (value) => {
+        const date = new Date(value).getTime();
+        const day = 24 * 60 * 60 * 1000;
+        return date >= Date.now() - 2 * day && date <= Date.now() + 366 * day;
+      },
+      { message: 'Delivery date must be between today and one year ahead' },
+    ),
   notes: z.string().optional(),
 });
 

@@ -231,6 +231,16 @@ const DistributorOrderDetailPage = () => {
   // Delivery scheduling state
   const [showScheduleDelivery, setShowScheduleDelivery] = useState(false);
   const [scheduledDate, setScheduledDate] = useState('');
+
+  // Delivery can be booked from today up to a year ahead. The bounds also stop
+  // the browser's year field accepting more than four digits.
+  const toLocalInput = (d: Date) => {
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60_000);
+    return local.toISOString().slice(0, 16);
+  };
+  const scheduleMin = toLocalInput(new Date(new Date().setHours(0, 0, 0, 0)));
+  const scheduleMax = toLocalInput(new Date(new Date().setFullYear(new Date().getFullYear() + 1)));
+  const scheduledDateValid = !!scheduledDate && scheduledDate >= scheduleMin && scheduledDate <= scheduleMax;
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [contactNotes, setContactNotes] = useState('');
   const [showContactAttempt, setShowContactAttempt] = useState(false);
@@ -949,6 +959,8 @@ const DistributorOrderDetailPage = () => {
                         id="pco-delivery-date"
                         type="datetime-local"
                         value={scheduledDate}
+                        min={scheduleMin}
+                        max={scheduleMax}
                         onChange={(e) => setScheduledDate(e.target.value)}
                         className="min-h-10 w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
                       />
@@ -966,16 +978,22 @@ const DistributorOrderDetailPage = () => {
                         rows={2}
                       />
                     </div>
-                    {!scheduledDate && (
+                    {!scheduledDate ? (
                       <Typography variant="bodyXs" colorRole="muted">
                         Choose a date and time to confirm the schedule.
                       </Typography>
+                    ) : (
+                      !scheduledDateValid && (
+                        <Typography variant="bodyXs" colorRole="danger">
+                          Choose a date between today and one year ahead.
+                        </Typography>
+                      )
                     )}
                     <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
                         onClick={() => scheduleDelivery({ date: new Date(scheduledDate).toISOString(), notes: deliveryNotes })}
-                        disabled={!scheduledDate || isScheduling}
+                        disabled={!scheduledDateValid || isScheduling}
                         colorRole="brand"
                       >
                         <ButtonContent iconLeft={IconCalendar} isLoading={isScheduling}>
