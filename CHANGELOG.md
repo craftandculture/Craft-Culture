@@ -1,3 +1,9 @@
+## [2.1.63](https://github.com/craftandculture/Craft-Culture/compare/v2.1.62...v2.1.63) (2026-11-02)
+
+### Bug Fixes
+
+* Retry Zoho requests once with a fresh login when Zoho rejects a saved one ([b827d8d](https://github.com/craftandculture/Craft-Culture/commit/b827d8d36b14430610db77a87aebe3edcb0466bd))
+
 ## [2.1.62](https://github.com/craftandculture/Craft-Culture/compare/v2.1.61...v2.1.62) (2026-11-02)
 
 ### Bug Fixes
