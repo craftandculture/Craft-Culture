@@ -1,3 +1,9 @@
+## [2.1.59](https://github.com/craftandculture/Craft-Culture/compare/v2.1.58...v2.1.59) (2026-11-02)
+
+### Bug Fixes
+
+* Distributors can upload proof of delivery only after marking the order delivered ([ca5266b](https://github.com/craftandculture/Craft-Culture/commit/ca5266be656ec86e4545d743e45d45df4b92f558))
+
 ## [2.1.58](https://github.com/craftandculture/Craft-Culture/compare/v2.1.57...v2.1.58) (2026-11-02)
 
 ### Bug Fixes
