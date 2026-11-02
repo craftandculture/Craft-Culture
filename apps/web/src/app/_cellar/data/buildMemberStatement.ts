@@ -308,7 +308,13 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
       readLeft(from),
       readLeft(null),
       db
-        .select({ lwin18: saleMandates.lwin18, lwinKey: saleMandates.lwinKey, ask: saleMandates.askPerBottleUsd })
+        .select({
+          lwin18: saleMandates.lwin18,
+          lwinKey: saleMandates.lwinKey,
+          askUsd: saleMandates.askPerBottleUsd,
+          askLocal: saleMandates.askPerBottleLocal,
+          askFxRate: saleMandates.askFxRate,
+        })
         .from(saleMandates)
         .where(
           and(
@@ -370,11 +376,19 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
       des Danguerins), so a price falls back to the key only when one offer
       holds it.
     */
-    const askByLwin = new Map(mandates.map((row) => [row.lwin18, row.ask]));
+    /*
+      A price agreed in euros is kept unrounded (EUR x the shipment rate), so
+      each line is rounded once: 3 x EUR 320 at 1.16798 is $1,121.26, as the
+      member's own sheet has it, not 3 x $373.75 = $1,121.25 (Laraine and
+      Sophie's check of Ihab Toma's October statement, Nov 2026).
+    */
+    const askOf = (row: (typeof mandates)[number]) =>
+      row.askLocal != null && row.askFxRate != null ? row.askLocal * row.askFxRate : row.askUsd;
+    const askByLwin = new Map(mandates.map((row) => [row.lwin18, askOf(row)]));
     const offersPerKey = new Map<string, number>();
     for (const row of mandates) offersPerKey.set(row.lwinKey, (offersPerKey.get(row.lwinKey) ?? 0) + 1);
     const askByKey = new Map(
-      mandates.filter((row) => offersPerKey.get(row.lwinKey) === 1).map((row) => [row.lwinKey, row.ask]),
+      mandates.filter((row) => offersPerKey.get(row.lwinKey) === 1).map((row) => [row.lwinKey, askOf(row)]),
     );
     const askFor = (lwin18: string) => askByLwin.get(lwin18) ?? askByKey.get(lwinPakKeyOf(lwin18));
     const valueOf = (row: (typeof leftRows)[number], bottles: number, isOwnDelivery: boolean) => {
