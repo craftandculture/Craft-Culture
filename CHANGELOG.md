@@ -1,3 +1,9 @@
+## [2.1.65](https://github.com/craftandculture/Craft-Culture/compare/v2.1.64...v2.1.65) (2026-11-02)
+
+### Bug Fixes
+
+* City Drinks sales reach their owner through the Codes tab and every past feed, and prepaid or outright stock is never billed or paid ([7cd0474](https://github.com/craftandculture/Craft-Culture/commit/7cd04740529a83e037c281fb2bb9f48ce6072667))
+
 ## [2.1.64](https://github.com/craftandculture/Craft-Culture/compare/v2.1.63...v2.1.64) (2026-11-02)
 
 ### Bug Fixes
