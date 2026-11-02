@@ -1,3 +1,9 @@
+## [2.1.62](https://github.com/craftandculture/Craft-Culture/compare/v2.1.61...v2.1.62) (2026-11-02)
+
+### Bug Fixes
+
+* The Zoho sync status no longer counts failed lines a second time as needing a resync ([71e5506](https://github.com/craftandculture/Craft-Culture/commit/71e550675f81cedc3db4c0b91565762d9c85c6c4))
+
 ## [2.1.61](https://github.com/craftandculture/Craft-Culture/compare/v2.1.60...v2.1.61) (2026-11-02)
 
 ### Features
