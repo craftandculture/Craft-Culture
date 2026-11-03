@@ -10,6 +10,7 @@ import parseCruratedReconSheet from '../utils/parseCruratedReconSheet';
 import type { OwnerCostRow } from '../utils/parseCruratedReconSheet';
 import parseCruSalesSheet from '../utils/parseCruSalesSheet';
 import tableReady from '../utils/tableReady';
+import wineKey from '../utils/wineKey';
 
 /**
  * Take a partner's own price sheet in as what they are owed per bottle
@@ -88,10 +89,29 @@ const adminImportOwnerCosts = adminProcedure
 
     const matched = matchCostRows(parsed.rows, candidates, lwinByWCode);
 
+    /*
+      Crurated's lines often reach City Drinks under the W code itself
+      (Noizons as W11600924), so a price filed only under the LWIN never meets
+      the sale. Each W-coded price is also filed under its W code.
+    */
+    const byWCode = matched
+      .filter(
+        (row) =>
+          row.wCode &&
+          row.wineKey &&
+          wineKey(row.wCode) !== row.wineKey,
+      )
+      .map((row) => ({
+        ...row,
+        wineKey: wineKey(row.wCode),
+        lwin18: row.wCode,
+        matchedBy: `W code ${row.wCode}`,
+      }));
+
     await client.begin(async (sql) => {
       await sql`DELETE FROM cons_owner_costs WHERE owner_id = ${input.ownerId}`;
       await sql`INSERT INTO cons_owner_costs ${sql(
-        matched.map((row) => ({
+        [...matched, ...byWCode].map((row) => ({
           owner_id: input.ownerId,
           wine_key: row.wineKey,
           lwin18: row.lwin18,
