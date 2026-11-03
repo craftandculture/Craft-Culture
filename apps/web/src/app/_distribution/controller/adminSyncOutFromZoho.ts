@@ -8,6 +8,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { getInvoice, listInvoices } from '@/lib/zoho/invoices';
 
+import getWineAliases from '../data/getWineAliases';
+import canonicalWineCode, { isLwin18 } from '../utils/canonicalWineCode';
 import classifyInvoice from '../utils/classifyInvoice';
 import type { InvoiceType } from '../utils/classifyInvoice';
 import ownerFromRegister from '../utils/ownerFromRegister';
@@ -113,6 +115,10 @@ const adminSyncOutFromZoho = adminProcedure
           FROM cons_invoice_types WHERE outlet_id = ${input.outletId}
         `
       : [];
+    /* Codes merged into another wine, applied to every line as it is read */
+    const aliases = await getWineAliases(input.outletId);
+    const notLwin = new Set<string>();
+
     const typeByDoc = new Map(
       typesByHand.map((row) => [row.docRef, row.invoiceType]),
     );
@@ -303,7 +309,14 @@ const adminSyncOutFromZoho = adminProcedure
 
         if (!line.quantity) continue;
 
-        const lwin18 = line.sku?.trim() || null;
+        /*
+          Dashes put back and merges applied before anything keys on it, so a
+          code that lost its dashes or was folded into another wine lands on
+          that wine's line.
+        */
+        const lwin18 = canonicalWineCode(line.sku, aliases).code;
+
+        if (lwin18 && !isLwin18(lwin18)) notLwin.add(lwin18);
         const statedPack = PACK_IN_DESCRIPTION.exec(line.description ?? '');
         const isBottles = /bottle|btl/i.test(line.unit ?? '');
         const parsedPack = statedPack?.[1] ? Number(statedPack[1]) : null;
@@ -456,6 +469,8 @@ const adminSyncOutFromZoho = adminProcedure
         bottles,
       })),
       notConsignment: notConsignment.slice(0, 25),
+      /** Codes that are not a LWIN18 — W codes, internal codes — to map or merge */
+      notLwin: [...notLwin].slice(0, 25),
       /** How many invoices of each type were read */
       byType: typed.reduce<Record<string, number>>((counts, row) => {
         counts[row.type] = (counts[row.type] ?? 0) + 1;

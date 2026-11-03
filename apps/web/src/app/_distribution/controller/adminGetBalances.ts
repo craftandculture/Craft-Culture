@@ -258,9 +258,19 @@ const adminGetBalances = adminProcedure
           sent, less what they still hold. Only counted where their position is
           known — an unknown position would otherwise read as everything gone.
         */
+        /*
+          Only what genuinely left their shelf. A line where they hold more
+          than we sent is an alert (a missing invoice or a wrong code), not a
+          negative sale — added in, it would quietly shrink the total.
+        */
         gone:
           totals.gone +
-          (row.heldDeclared === null ? 0 : row.outBottles - row.heldDeclared),
+          (row.heldDeclared === null
+            ? 0
+            : Math.max(0, row.outBottles - row.heldDeclared)),
+        holdingMore:
+          totals.holdingMore +
+          (row.heldDeclared !== null && row.heldDeclared > row.outBottles ? 1 : 0),
         packAssumed: totals.packAssumed + (row.packAssumed ? 1 : 0),
       }),
       {
@@ -270,6 +280,7 @@ const adminGetBalances = adminProcedure
         heldDeclared: 0,
         unmatched: 0,
         gone: 0,
+        holdingMore: 0,
         packAssumed: 0,
       },
     );

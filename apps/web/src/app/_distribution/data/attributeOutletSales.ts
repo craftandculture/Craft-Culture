@@ -1,7 +1,9 @@
 import { client } from '@/database/client';
 
+import getWineAliases from './getWineAliases';
 import allocateSale from '../utils/allocateSale';
 import type { SaleLayer } from '../utils/allocateSale';
+import canonicalWineCode from '../utils/canonicalWineCode';
 import { settles } from '../utils/classifyInvoice';
 import {
   codeBridgeCtes,
@@ -13,6 +15,7 @@ import matchSaleLine from '../utils/matchSaleLine';
 import type { RegisterCode } from '../utils/matchSaleLine';
 import tableReady from '../utils/tableReady';
 import wineKey from '../utils/wineKey';
+
 
 export interface OutletSaleLine {
   outletCode: string;
@@ -99,14 +102,18 @@ const attributeOutletSales = async (input: {
   /* Whose a code is, where a person said so for a wine two owners consign */
   const ownerOfCode = new Map<string, string>();
 
+  /* A code merged into another wine reaches that wine's lines */
+  const aliases = await getWineAliases(input.outletId);
+  const canonical = (code: string) => canonicalWineCode(code, aliases).code ?? code;
+
   for (const row of bridged) {
-    if (row.code) bridge.set(squash(row.outletCode), row.code);
+    if (row.code) bridge.set(squash(row.outletCode), canonical(row.code));
   }
 
   /* A person's link is final, and reaches codes no feed ever carried */
   for (const row of links) {
     if (row.lwin18 === 'NOT-OURS') notOurs.add(squash(row.outletCode));
-    else bridge.set(squash(row.outletCode), row.lwin18);
+    else bridge.set(squash(row.outletCode), canonical(row.lwin18));
 
     if (row.ownerId) ownerOfCode.set(squash(row.outletCode), row.ownerId);
   }

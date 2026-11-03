@@ -18,6 +18,7 @@ import InvoiceTypesPanel from './InvoiceTypesPanel';
 import MonthSummaryPanel from './MonthSummaryPanel';
 import OwnerCostsUpload from './OwnerCostsUpload';
 import SalesUpload from './SalesUpload';
+import SameWinePanel from './SameWinePanel';
 import StatementPanel from './StatementPanel';
 import UnmatchedLinesPanel from './UnmatchedLinesPanel';
 import ownerColour from '../utils/ownerColour';
@@ -517,6 +518,8 @@ const DistributionClient = () => {
 
       <InvoiceTypesPanel outletId={outletId} />
 
+      <SameWinePanel outletId={outletId} />
+
       <CodeLinkPanel outletId={outletId} onLinked={invalidate} />
 
       <div className="space-y-2">
@@ -774,7 +777,8 @@ const DistributionClient = () => {
                     */}
                     {(goneOf(row) ?? 0) < 0 ? (
                       <Badge size="xs" colorRole="danger" className="ml-2">
-                        they hold {Math.abs(goneOf(row) ?? 0)} more than we sent
+                        they hold {Math.abs(goneOf(row) ?? 0)} more than we sent —
+                        a missing invoice or a wrong code
                       </Badge>
                     ) : null}
                     {row.packAssumed ? (
@@ -836,12 +840,18 @@ const DistributionClient = () => {
                     {row.heldDeclared === null ? (
                       <span className="text-text-faint">—</span>
                     ) : row.outBottles - row.heldDeclared < 0 ? (
-                      <span
-                        className="text-text-danger"
-                        title="They hold more than we ever invoiced out — a wrong pack, or a code matched to the wrong wine."
+                      /*
+                        An alert, not a figure: City Drinks holding more than
+                        we sent means a missing invoice or a wrong code, and a
+                        negative "sold" added into a total would hide it.
+                      */
+                      <Badge
+                        size="xs"
+                        colorRole="danger"
+                        title="They hold more than we ever invoiced out — a missing invoice, a wrong pack, or a code matched to the wrong wine. Merge the codes or find the invoice."
                       >
-                        {formatBottles(row.outBottles - row.heldDeclared)}
-                      </span>
+                        check
+                      </Badge>
                     ) : (
                       formatBottles(row.outBottles - row.heldDeclared)
                     )}
@@ -938,7 +948,7 @@ const DistributionClient = () => {
                 fields={[
                   { label: 'Out', value: formatBottles(row.outBottles) },
                   { label: 'Their stock', value: row.heldDeclared === null ? '—' : formatBottles(row.heldDeclared) },
-                  { label: 'Sold', value: sold === null ? '—' : <span className={sold < 0 ? 'text-text-danger' : ''}>{formatBottles(sold)}</span> },
+                  { label: 'Sold', value: sold === null ? '—' : sold < 0 ? <Badge size="xs" colorRole="danger">check</Badge> : formatBottles(sold) },
                   { label: 'Sold value', value: soldValue === null ? '—' : formatValue(soldValue ?? 0, row.currency) },
                 ]}
               >
@@ -970,6 +980,11 @@ const DistributionClient = () => {
             {summary.wines} wines · {formatBottles(summary.outBottles)} out ·{' '}
             {formatBottles(summary.heldDeclared)} in their stock ·{' '}
             {formatBottles(summary.gone)} sold ·{' '}
+            {summary.holdingMore > 0 ? (
+              <span className="text-text-danger">
+                {summary.holdingMore} lines where they hold more than we sent ·{' '}
+              </span>
+            ) : null}
             {formatValue(soldValueTotal, rows[0]?.currency ?? null)} sold
             {summary.unmatched > 0
               ? ` · ${summary.unmatched} position unknown`

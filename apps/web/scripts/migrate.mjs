@@ -2420,6 +2420,32 @@ const runMigrations = async () => {
     console.log('✅ cons_owner_costs ready');
 
     /*
+      One wine under several codes, folded into one.
+
+      Bambinuto Rafilù 2019 reached City Drinks as 3051757-2019-06-00750,
+      305175720106200750 and W28500124; sales landed on one line and the
+      invoice on another, which is where "no invoice left to bill them against"
+      and negative sold came from. A merge records that the code is the other
+      wine, so every later sync and import folds it in too.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_wine_aliases" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "from_key" text NOT NULL,
+        "from_code" text NOT NULL,
+        "to_lwin18" text NOT NULL,
+        "to_name" text,
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_wine_aliases_unique" ON "cons_wine_aliases"("outlet_id","from_key")`,
+    );
+    console.log('✅ cons_wine_aliases ready');
+
+    /*
       Two holders the October figures need and the module did not have.
 
       Philipp Strasky consigns under CONSIGNMENT_PS (INV-000399) and had no
