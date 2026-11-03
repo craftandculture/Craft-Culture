@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { cellarReleaseRequestItems, cellarUkMoveItems } from '@/database/schema';
+import { cellarReleaseRequestItems, cellarUkMoveItems, cellarUkMoves } from '@/database/schema';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
@@ -230,8 +230,20 @@ const ukMoveWines = async (moveId: string) => {
     .from(cellarUkMoveItems)
     .where(eq(cellarUkMoveItems.moveId, moveId));
 
+  /*
+    One line per wine, not per LCB rotation. LCB books every case as its own
+    rotation, so Jon de Jager's move read "193 wines" with Sassicaia 2012
+    listed twice, where his cellar shows 76.
+  */
+  const byWine = new Map<string, (typeof lines)[number]>();
+  for (const line of lines) {
+    const key = `${line.lwin18 ?? line.name}|${line.vintage ?? ''}|${line.bottleSizeLitres ?? ''}`;
+    const seen = byWine.get(key);
+    byWine.set(key, seen ? { ...seen, totalBottles: seen.totalBottles + line.totalBottles } : { ...line });
+  }
+
   const wines = await buildEmailWines(
-    lines.map(
+    [...byWine.values()].map(
       (line): EmailWineLine => ({
         name: line.name,
         vintage: line.vintage,
@@ -251,24 +263,40 @@ interface UkMoveRef {
 }
 
 /** Staff have prepared a move from the UK; the member is asked to confirm it */
-export const queueUkMoveQuoted = safely('queueUkMoveQuoted', async ({ partnerId, moveId, moveNumber }: UkMoveRef) =>
-  queueMemberEmail({
+export const queueUkMoveQuoted = safely('queueUkMoveQuoted', async ({ partnerId, moveId, moveNumber }: UkMoveRef) => {
+  // The figure they are confirming; the template has no price slot, so it is in the body
+  const [move] = await db
+    .select({ totalUsd: cellarUkMoves.totalUsd })
+    .from(cellarUkMoves)
+    .where(eq(cellarUkMoves.id, moveId))
+    .limit(1);
+  const total =
+    typeof move?.totalUsd === 'number'
+      ? `US$${move.totalUsd.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : null;
+
+  return queueMemberEmail({
     kind: 'ukMoveQuoted',
     partnerId,
     entityId: moveId,
     data: {
       subject: 'Your move to the UAE is ready to confirm',
-      preheader: 'Please review the wines and confirm your move from the United Kingdom.',
+      preheader: total
+        ? `${total} all in. Please review the wines and confirm your move from the United Kingdom.`
+        : 'Please review the wines and confirm your move from the United Kingdom.',
       eyebrow: 'Transfer from the UK',
       headline: 'Your move to the UAE is ready to confirm',
-      body: 'Your move from our bonded warehouse in the United Kingdom has been prepared. Please review the wines below and confirm, and we will arrange their shipment to your cellar in the UAE.',
+      body: total
+        ? `Your move from our bonded warehouse in the United Kingdom has been prepared. The price is ${total} all in: collection from London City Bond, freight to the UAE and receipt into our bonded warehouse, with duty and VAT remaining suspended. Please review the wines below and confirm, and we will arrange their shipment to your cellar in the UAE.`
+        : 'Your move from our bonded warehouse in the United Kingdom has been prepared. Please review the wines below and confirm, and we will arrange their shipment to your cellar in the UAE.',
       ...(await ukMoveWines(moveId)),
       ctaLabel: 'Review and confirm',
       ctaUrl: cellarUrl(),
       note: 'No wine will leave the United Kingdom until you have confirmed.',
       reference: `Move ${moveNumber}`,
     },
-  }));
+  });
+});
 
 /** Staff have closed a move from the UK */
 export const queueUkMoveSentBack = safely('queueUkMoveSentBack', async ({ partnerId, moveId, moveNumber, adminNotes }: UkMoveRef & { adminNotes?: string | null }) =>
