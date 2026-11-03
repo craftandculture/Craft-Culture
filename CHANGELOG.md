@@ -1,3 +1,9 @@
+## [2.1.68](https://github.com/craftandculture/Craft-Culture/compare/v2.1.67...v2.1.68) (2026-11-03)
+
+### Bug Fixes
+
+* a wine several owners hold is priced per owner, so one owner's override or margin no longer changes another's ([64c84b7](https://github.com/craftandculture/Craft-Culture/commit/64c84b7c92442f5d7c80e5a58dae03c351cf7cfa))
+
 ## [2.1.67](https://github.com/craftandculture/Craft-Culture/compare/v2.1.66...v2.1.67) (2026-11-03)
 
 ### Bug Fixes
