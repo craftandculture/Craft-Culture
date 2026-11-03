@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddUkRates from './controller/adminAddUkRates';
+import adminAddUkWineToShipment from './controller/adminAddUkWineToShipment';
 import adminAmendReleaseItems from './controller/adminAmendReleaseItems';
 import adminAssignUkRotation from './controller/adminAssignUkRotation';
 import adminAssignUkRotations from './controller/adminAssignUkRotations';
@@ -16,6 +17,7 @@ import adminGetPaymentDetails from './controller/adminGetPaymentDetails';
 import adminGetReleaseRates from './controller/adminGetReleaseRates';
 import adminGetReleases from './controller/adminGetReleases';
 import adminGetRepacks from './controller/adminGetRepacks';
+import adminGetShipmentUkWine from './controller/adminGetShipmentUkWine';
 import adminGetUkMoves from './controller/adminGetUkMoves';
 import adminGetUkRates from './controller/adminGetUkRates';
 import adminGetUkStock from './controller/adminGetUkStock';
@@ -111,6 +113,8 @@ const adminRouter = createTRPCRouter({
   getUkMoves: adminGetUkMoves,
   quoteUkMove: adminQuoteUkMove,
   shipUkMove: adminShipUkMove,
+  getShipmentUkWine: adminGetShipmentUkWine,
+  addUkWineToShipment: adminAddUkWineToShipment,
   getMemberIdentity: adminGetMemberIdentity,
   encryptIdentityDocuments: adminEncryptIdentityDocuments,
   getPaymentDetails: adminGetPaymentDetails,

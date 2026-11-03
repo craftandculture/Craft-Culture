@@ -29,6 +29,7 @@ import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigat
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import ShipmentUkWinePanel from '@/app/_cellar/components/admin/ShipmentUkWinePanel';
 import ActivityLog from '@/app/_logistics/components/ActivityLog';
 import LogisticsDocumentUpload from '@/app/_logistics/components/DocumentUpload';
 import LogUpdateSheet from '@/app/_logistics/components/LogUpdateSheet';
@@ -2399,6 +2400,9 @@ const ShipmentDetailPage = () => {
                   </CardContent>
                 </Card>
               )}
+
+              {/* The client's wine at LCB Burton, raised as a UK move onto this shipment */}
+              <ShipmentUkWinePanel shipmentId={shipmentId} onAdded={() => void refetch()} />
 
               <Card>
                 <CardContent className="p-6">

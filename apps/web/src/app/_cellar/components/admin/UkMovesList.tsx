@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import useTRPC from '@/lib/trpc/browser';
 import type { AppRouter } from '@/trpc-router';
 
-import csvCell from '../../utils/csvCell';
+import downloadVisionLines from '../../utils/downloadVisionLines';
 import ukMoveTotal, { LCB_RECHARGE_MARKUP } from '../../utils/ukMoveTotal';
 import ConfirmAction from '../ConfirmAction';
 
@@ -44,54 +44,6 @@ const filterOf = (move: Move): Exclude<Filter, 'all'> => {
     default:
       return 'closed';
   }
-};
-
-/** A CSV cell, quoted when it needs to be and never read as a formula */
-const cell = (value: string | number | null | undefined) => csvCell(value);
-
-/**
- * Lines for LCB's Vision export order, one per LCB line
- *
- * Export (Non EC) under Goods Outwards → Enter Orders: the product code is the
- * dashed LWIN18, picked by rotation, consignee postcode "Export", and the move
- * number as Your Ref so the order and the request can be matched.
- */
-const downloadVisionLines = (move: Move) => {
-  const header = [
-    'Your Ref',
-    'Order Type',
-    'Rotation',
-    'Product Code',
-    'Description',
-    'Vintage',
-    'Cases',
-    'Singles',
-    'Consignee',
-    'Postcode',
-  ];
-
-  const rows = move.items.map((item) => [
-    move.moveNumber,
-    'Export (Non EC)',
-    item.rotation,
-    item.lwin18,
-    item.name,
-    item.vintage ?? 'NV',
-    item.cases,
-    item.singles,
-    'Craft & Culture FZE, United Arab Emirates',
-    'Export',
-  ]);
-
-  const csv = [header, ...rows].map((row) => row.map(cell).join(',')).join('\n');
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = `${move.moveNumber}-lcb-export-order.csv`;
-  link.click();
-  /* Revoked on the next tick: revoking straight after click can cancel the download in Safari */
-  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
 interface QuoteFormProps {

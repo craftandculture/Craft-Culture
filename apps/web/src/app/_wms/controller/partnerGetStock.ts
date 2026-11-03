@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, inArray, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, isNull, or, sql } from 'drizzle-orm';
 
 import getClaimedBottles from '@/app/_cellar/data/getClaimedBottles';
 import getListPricePerBottle from '@/app/_cellar/data/getListPricePerBottle';
@@ -337,6 +337,10 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     Wine bought and shipped but not yet received owns no warehouse row, so it
     was invisible here — a collector who has just bought sees nothing at all
     until it lands, which is exactly when they most want to look.
+
+    A line is theirs when it names them as its owner, or when the shipment is
+    theirs and the line names nobody else: a member's wine travelling on a
+    C&C or shared shipment shows, and another member's lines on theirs do not.
   */
   const inbound = await db
     .select({
@@ -358,7 +362,16 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
     )
     .where(
       and(
-        eq(logisticsShipments.partnerId, partner.id),
+        or(
+          eq(logisticsShipmentItems.overrideOwnerId, partner.id),
+          and(
+            eq(logisticsShipments.partnerId, partner.id),
+            or(
+              isNull(logisticsShipmentItems.overrideOwnerId),
+              eq(logisticsShipmentItems.overrideOwnerId, partner.id),
+            ),
+          ),
+        ),
         eq(logisticsShipments.type, 'inbound'),
         inArray(logisticsShipments.status, [...INBOUND_SHIPMENT_STATUSES]),
       ),

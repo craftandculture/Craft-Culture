@@ -1,19 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import assertActivated from '@/app/_onboarding/data/assertActivated';
 import db from '@/database/client';
-import {
-  cellarUkHoldings,
-  cellarUkMoveItems,
-  cellarUkMoves,
-  cellarUkRotations,
-  lwinWines,
-} from '@/database/schema';
+import { cellarUkMoveItems, cellarUkMoves } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 
-import { OPEN_UK_MOVE_STATUSES } from '../constants/ukMoveStatuses';
+import resolveUkMoveLines from '../data/resolveUkMoveLines';
 import generateUkMoveNumber from '../utils/generateUkMoveNumber';
 import notifyUkMoveUpdate from '../utils/notifyUkMoveUpdate';
 
@@ -74,99 +67,7 @@ const memberRequestUkMove = stockOwnerProcedure
 
     const create = (attempt: number) =>
       db.transaction(async (tx) => {
-        await tx.execute(
-          sql`SELECT pg_advisory_xact_lock(hashtext(${`uk-move:${partnerId}`}))`,
-        );
-
-        const lines = await tx
-          .select({
-            id: cellarUkHoldings.id,
-            rotation: cellarUkHoldings.rotation,
-            line: cellarUkHoldings.line,
-            lwin18: cellarUkHoldings.lwin18,
-            brand: cellarUkHoldings.brand,
-            description: cellarUkHoldings.description,
-            vintage: cellarUkHoldings.vintage,
-            bottlesPerCase: cellarUkHoldings.bottlesPerCase,
-            bottleSizeLitres: cellarUkHoldings.bottleSizeLitres,
-            cases: cellarUkHoldings.cases,
-            singles: cellarUkHoldings.singles,
-            totalBottles: cellarUkHoldings.totalBottles,
-          })
-          .from(cellarUkHoldings)
-          .innerJoin(
-            cellarUkRotations,
-            eq(cellarUkHoldings.rotation, cellarUkRotations.rotation),
-          )
-          .where(
-            and(
-              inArray(cellarUkHoldings.id, input.holdingIds),
-              eq(cellarUkRotations.partnerId, partnerId),
-            ),
-          );
-
-        /*
-          Fewer lines than ids means a new LCB report replaced the snapshot
-          while the member was choosing, or an id that is not theirs.
-        */
-        if (lines.length !== input.holdingIds.length) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message:
-              'Your UK holdings have just been updated. Refresh the page and choose again.',
-          });
-        }
-
-        const open = await tx
-          .select({
-            rotation: cellarUkMoveItems.rotation,
-            line: cellarUkMoveItems.line,
-          })
-          .from(cellarUkMoveItems)
-          .innerJoin(cellarUkMoves, eq(cellarUkMoves.id, cellarUkMoveItems.moveId))
-          .where(
-            and(
-              eq(cellarUkMoves.partnerId, partnerId),
-              inArray(cellarUkMoves.status, OPEN_UK_MOVE_STATUSES),
-            ),
-          );
-
-        const taken = new Set(open.map((item) => `${item.rotation}:${item.line}`));
-
-        if (lines.some((line) => taken.has(`${line.rotation}:${line.line}`))) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Some of this wine is already on its way to the UAE, or waiting for a quote.',
-          });
-        }
-
-        const partial = input.casesByHolding ?? {};
-        for (const line of lines) {
-          const wanted = partial[line.id];
-          if (wanted !== undefined && (wanted > line.cases || !line.bottlesPerCase)) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'More cases were chosen than are held. Refresh the page and choose again.',
-            });
-          }
-        }
-
-        const lwin7s = [
-          ...new Set(
-            lines
-              .map((line) => line.lwin18.slice(0, 7))
-              .filter((code) => /^\d{7}$/.test(code)),
-          ),
-        ];
-
-        const names = lwin7s.length
-          ? await tx
-              .select({ lwin: lwinWines.lwin, displayName: lwinWines.displayName })
-              .from(lwinWines)
-              .where(inArray(lwinWines.lwin, lwin7s))
-          : [];
-
-        const nameByLwin = new Map(names.map((row) => [row.lwin, row.displayName]));
+        const items = await resolveUkMoveLines(tx, partnerId, input.holdingIds, input.casesByHolding);
 
         const moveNumber = await generateUkMoveNumber(tx, attempt);
 
@@ -188,28 +89,7 @@ const memberRequestUkMove = stockOwnerProcedure
           });
         }
 
-        await tx.insert(cellarUkMoveItems).values(
-          lines.map((line) => ({
-            moveId: move.id,
-            rotation: line.rotation,
-            line: line.line,
-            lwin18: line.lwin18,
-            name:
-              nameByLwin.get(line.lwin18.slice(0, 7)) ??
-              (line.brand && line.brand !== 'NA' ? line.brand : line.description) ??
-              'Wine',
-            vintage: line.vintage,
-            bottlesPerCase: line.bottlesPerCase,
-            bottleSizeLitres: line.bottleSizeLitres,
-            ...(partial[line.id] !== undefined && partial[line.id]! < line.cases
-              ? {
-                  cases: partial[line.id]!,
-                  singles: 0,
-                  totalBottles: partial[line.id]! * (line.bottlesPerCase ?? 1),
-                }
-              : { cases: line.cases, singles: line.singles, totalBottles: line.totalBottles }),
-          })),
-        );
+        await tx.insert(cellarUkMoveItems).values(items.map((item) => ({ ...item, moveId: move.id })));
 
         return move;
       });
