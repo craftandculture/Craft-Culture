@@ -13,7 +13,6 @@ import {
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
 
 
-import partnerDocumentTypes from '../constants/partnerDocumentTypes';
 import isPartnerShipmentItem from '../utils/isPartnerShipmentItem';
 import toPartnerShipment from '../utils/toPartnerShipment';
 import toPartnerShipmentDocument from '../utils/toPartnerShipmentDocument';
@@ -22,11 +21,10 @@ import toPartnerShipmentItem from '../utils/toPartnerShipmentItem';
 /**
  * One shipment, as the current partner may see it
  *
- * Only the partner's own lines. Documents describe the whole consignment, so
- * on a shipment shared with other owners the partner sees only documents they
- * uploaded themselves; on a shipment wholly theirs, the shipping documents but
- * never our freight or agent invoices. Of the activity log, only status changes
- * and the partner's own entries are shown.
+ * Only the partner's own lines, and only the documents their own people
+ * uploaded: nothing C&C uploads, since a mis-tagged freight invoice would show
+ * our marked-up costs. Of the activity log, only status changes and the
+ * partner's own entries are shown.
  */
 const partnerGetOne = winePartnerProcedure
   .input(z.object({ id: z.string().uuid() }))
@@ -46,8 +44,6 @@ const partnerGetOne = winePartnerProcedure
     if (!shipment || (shipment.partnerId !== partner.id && items.length === 0)) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Shipment not found' });
     }
-
-    const whollyTheirs = shipment.partnerId === partner.id && items.length === allItems.length;
 
     const [documents, activityLogs, people] = await Promise.all([
       db
@@ -75,13 +71,13 @@ const partnerGetOne = winePartnerProcedure
       ...toPartnerShipment(shipment, items),
       reachedAt,
       items: items.map(toPartnerShipmentItem),
-      // Their own people's uploads, and on a shipment wholly theirs, our paperwork that carries no costs
+      /*
+        Only what their own people uploaded. Nothing C&C uploads is shown,
+        whatever it is tagged: a freight invoice tagged as a packing list
+        would otherwise show our marked-up freight.
+      */
       documents: documents
-        .filter(
-          (doc) =>
-            (doc.uploadedBy && partnerUserIds.has(doc.uploadedBy)) ||
-            (whollyTheirs && partnerDocumentTypes.has(doc.documentType)),
-        )
+        .filter((doc) => doc.uploadedBy && partnerUserIds.has(doc.uploadedBy))
         .map(toPartnerShipmentDocument),
       activityLogs: activityLogs
         .filter((log) => log.newStatus !== null || log.partnerId === partner.id)
