@@ -1,3 +1,13 @@
+## [2.1.79](https://github.com/craftandculture/Craft-Culture/compare/v2.1.78...v2.1.79) (2026-11-03)
+
+### Features
+
+* wine partners hear when their shipment departs, arrives and is in stock, with a dated tracker on their shipment page ([8ab5634](https://github.com/craftandculture/Craft-Culture/commit/8ab5634438a6771ebb9cbb922c2e77ac9fd4cc1b))
+
+### Bug Fixes
+
+* wine partners no longer see shipment documents that can carry our freight costs ([b33ed70](https://github.com/craftandculture/Craft-Culture/commit/b33ed7092aab9029803c5114f48168443e78a7cb))
+
 ## [2.1.78](https://github.com/craftandculture/Craft-Culture/compare/v2.1.77...v2.1.78) (2026-11-03)
 
 ### Bug Fixes
