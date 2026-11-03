@@ -1,37 +1,24 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
-import db from '@/database/client';
 import auth from '@/lib/better-auth/server';
-import {
-  WMS_DEVICE_COOKIE,
-  WMS_DEVICE_COOKIE_MAX_AGE_SECONDS,
-  WMS_DEVICE_HEADER,
-} from '@/lib/wms/deviceTokenCookie';
+import { WMS_DEVICE_COOKIE, WMS_DEVICE_HEADER } from '@/lib/wms/deviceTokenCookie';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
-import matchesSecret from '@/utils/matchesSecret';
 
 /**
- * Device authentication endpoint for WMS terminals (TC27)
+ * Device sign-in for warehouse scanners (TC27)
  *
- * This allows warehouse devices to authenticate without magic links
- * by using a pre-shared device token stored in environment variables.
+ * Usage: GET /api/auth/device?token=YOUR_DEVICE_TOKEN, or with the token in an
+ * `x-device-token` header or the device cookie
  *
- * Usage: GET /api/auth/device?token=YOUR_DEVICE_TOKEN, or send the token in an
- * `x-device-token` header (preferred: it stays out of URLs and logs)
+ * Scanners normally sign in with the warehouse PIN (/warehouse). That sets the
+ * device cookie, and middleware sends a WMS page whose session has lapsed back
+ * here, so the scanner is signed in again without anyone typing anything. The
+ * session itself is made by the warehouse sign-in endpoint, so its cookie is
+ * signed like any other. Every response sets Referrer-Policy: no-referrer.
  *
- * The query form stays because the TC27 opens this from a bookmark and cannot
- * add headers. Every response sets Referrer-Policy: no-referrer and the
- * success path redirects at once, so the token does not travel any further.
- *
- * The device token and user email must be configured in:
- * - WMS_DEVICE_TOKEN: A secure random token
- * - WMS_DEVICE_USER_EMAIL: The email of the user to authenticate as
- *
- * A scanner is meant to stay signed in around the clock. Sign-in also sets the
- * device cookie, and middleware sends a WMS page with that cookie but no
- * session back here, so an expired session is replaced without anyone opening
- * the link again. The cookie is accepted as the token for that reason.
+ * Configured by WMS_DEVICE_TOKEN (a secure random token, never shown) and
+ * WMS_DEVICE_USER_EMAIL (the warehouse login).
  */
 const handleDeviceAuth = async (request: NextRequest) => {
   const url = new URL(request.url);
@@ -42,121 +29,33 @@ const handleDeviceAuth = async (request: NextRequest) => {
 
   // Validate redirect to prevent open redirect attacks
   const allowedPrefixes = ['/platform/', '/wms/'];
-  const rawRedirect = url.searchParams.get('redirect') || '/platform/admin/wms/labels';
-  const redirect = allowedPrefixes.some((p) => rawRedirect.startsWith(p))
-    ? rawRedirect
-    : '/platform/admin/wms/labels';
+  const rawRedirect = url.searchParams.get('redirect') || '/platform/admin/wms';
+  const redirect = allowedPrefixes.some((p) => rawRedirect.startsWith(p)) ? rawRedirect : '/platform/admin/wms';
+  const baseUrl = serverConfig.appUrl.toString().replace(/\/$/, '');
 
-  logger.info('[Device Auth] Authentication attempt', {
-    hasToken: !!token,
-    redirect,
-    userAgent: request.headers.get('user-agent')?.substring(0, 100),
+  if (!token) {
+    return NextResponse.redirect(`${baseUrl}/warehouse?next=${encodeURIComponent(redirect)}`);
+  }
+
+  const response = await auth.api.warehouseSignIn({
+    body: { deviceToken: token },
+    headers: request.headers,
+    asResponse: true,
   });
 
-  // Validate device token
-  if (!serverConfig.wmsDeviceToken || !serverConfig.wmsDeviceUserEmail) {
-    logger.error('[Device Auth] Device authentication not configured');
-    return NextResponse.json(
-      { error: 'Device authentication not configured' },
-      { status: 500 },
-    );
+  if (!response.ok) {
+    logger.warn('[Device Auth] Refused', { status: response.status });
+    // A stale device cookie goes to the PIN page rather than a dead end
+    const refused = NextResponse.redirect(`${baseUrl}/warehouse?next=${encodeURIComponent(redirect)}`);
+    refused.cookies.delete(WMS_DEVICE_COOKIE);
+    return refused;
   }
 
-  if (!token || !matchesSecret(token, serverConfig.wmsDeviceToken)) {
-    logger.warn('[Device Auth] Invalid token attempt');
-    return NextResponse.json(
-      { error: 'Invalid device token' },
-      { status: 401 },
-    );
+  const redirectResponse = NextResponse.redirect(`${baseUrl}${redirect}`);
+  for (const cookie of response.headers.getSetCookie()) {
+    redirectResponse.headers.append('set-cookie', cookie);
   }
-
-  // Find the user
-  const user = await db.query.users.findFirst({
-    where: { email: serverConfig.wmsDeviceUserEmail },
-  });
-
-  if (!user) {
-    logger.error('[Device Auth] User not found', {
-      email: serverConfig.wmsDeviceUserEmail,
-    });
-    return NextResponse.json(
-      { error: 'User not found' },
-      { status: 404 },
-    );
-  }
-
-  try {
-    // Use Better Auth's internal API to create a session
-    // This ensures the session is created in the format Better Auth expects
-    const response = await auth.api.signInEmail({
-      body: {
-        email: serverConfig.wmsDeviceUserEmail,
-        // Better Auth magic link plugin allows empty password when callbackURL is provided
-        password: '',
-        callbackURL: redirect,
-      },
-      asResponse: true,
-      headers: request.headers,
-    });
-
-    // If sign-in requires verification, create session directly using internal context
-    if (!response.ok) {
-      // Fallback: Create session using Better Auth's internal adapter
-      const ctx = await auth.$context;
-      // The second argument is "do not remember me": passing anything truthy
-      // (the request headers once sat here) cut the session to one day
-      const sessionResult = await ctx.internalAdapter.createSession(user.id, false);
-
-      if (!sessionResult) {
-        throw new Error('Failed to create session');
-      }
-
-      logger.info('[Device Auth] Session created via internal adapter', {
-        userId: user.id,
-        sessionId: sessionResult.id,
-      });
-
-      // Build redirect response with session cookie
-      const baseUrl = serverConfig.appUrl.toString().replace(/\/$/, '');
-      const redirectResponse = NextResponse.redirect(`${baseUrl}${redirect}`);
-
-      // Set the session cookie
-      const cookieName = ctx.authCookies.sessionToken.name;
-      redirectResponse.cookies.set(cookieName, sessionResult.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        expires: sessionResult.expiresAt,
-      });
-      redirectResponse.cookies.set(WMS_DEVICE_COOKIE, token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: WMS_DEVICE_COOKIE_MAX_AGE_SECONDS,
-      });
-
-      return redirectResponse;
-    }
-
-    // If sign-in succeeded, forward the response (it has the cookie set)
-    logger.info('[Device Auth] Session created via signInEmail', {
-      userId: user.id,
-    });
-
-    return response;
-  } catch (error) {
-    logger.error('[Device Auth] Failed to create session', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      userId: user.id,
-    });
-
-    return NextResponse.json(
-      { error: 'Failed to create session' },
-      { status: 500 },
-    );
-  }
+  return redirectResponse;
 };
 
 export const GET = async (request: NextRequest) => {

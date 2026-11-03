@@ -90,8 +90,10 @@ export const middleware = async (request: NextRequest) => {
     }) !== null;
 
   if (protectedRoutes.some((route) => route.test(pathname)) && !hasSession) {
+    // A signed-out scanner lands on the warehouse PIN, not the email sign-in
+    const door = isWmsRoute ? '/warehouse' : '/sign-in';
     return NextResponse.redirect(
-      new URL(`/sign-in?next=${pathname}`, request.url),
+      new URL(`${door}?next=${encodeURIComponent(pathname)}`, request.url),
     );
   }
 

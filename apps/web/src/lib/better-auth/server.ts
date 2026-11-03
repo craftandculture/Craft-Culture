@@ -20,6 +20,7 @@ import logger from '@/utils/logger';
 import logUserActivity from '@/utils/logUserActivity';
 
 import rateLimitStore from './rateLimitStore';
+import warehouseSignIn from './warehouseSignIn';
 import encrypt from '../encryption/encrypt';
 import loops from '../loops/client';
 
@@ -122,6 +123,7 @@ const authServerClient = betterAuth({
         webAuthnChallengeCookie: 'craft-culture.passkey-challenge',
       },
     }),
+    warehouseSignIn(),
     nextCookies(),
   ],
   socialProviders: {},
