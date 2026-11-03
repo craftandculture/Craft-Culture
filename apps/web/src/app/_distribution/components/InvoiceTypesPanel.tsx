@@ -12,6 +12,8 @@ import type { InvoiceType } from '../utils/classifyInvoice';
 
 export interface InvoiceTypesPanelProps {
   outletId: string | null;
+  /** Owners an invoice can be given, where the document names none */
+  owners: { id: string; name: string }[];
 }
 
 /** Shown open only when something needs looking at; the list is long */
@@ -26,9 +28,9 @@ const COLLAPSED_ROWS = 8;
  * here; a correction is kept and holds on every later sync.
  *
  * @example
- *   <InvoiceTypesPanel outletId={outletId} />
+ *   <InvoiceTypesPanel outletId={outletId} owners={owners} />
  */
-const InvoiceTypesPanel = ({ outletId }: InvoiceTypesPanelProps) => {
+const InvoiceTypesPanel = ({ outletId, owners }: InvoiceTypesPanelProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const [showAll, setShowAll] = useState(false);
@@ -107,7 +109,11 @@ const InvoiceTypesPanel = ({ outletId }: InvoiceTypesPanelProps) => {
                 </span>
               </Typography>
               <Typography variant="bodyXs" colorRole="muted" asChild>
-                <p className="truncate">{row.owners.join(', ')}</p>
+                <p className="truncate">
+                  {row.owners.length > 0
+                    ? row.owners.join(', ')
+                    : 'No lines found an owner — set one here, then sync invoices'}
+                </p>
               </Typography>
             </div>
             <label className="flex items-center gap-2">
@@ -129,6 +135,28 @@ const InvoiceTypesPanel = ({ outletId }: InvoiceTypesPanelProps) => {
                 {INVOICE_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {INVOICE_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+              {/* Whose stock, where the invoice names nobody */}
+              <select
+                value={row.ownerIdSet ?? ''}
+                disabled={setType.isPending}
+                onChange={(event) =>
+                  setType.mutate({
+                    outletId,
+                    docRef: row.docRef,
+                    invoiceType: (row.invoiceType ?? 'consignment') as InvoiceType,
+                    ownerId: event.target.value || null,
+                  })
+                }
+                className="border-border-primary bg-fill-primary text-text-primary min-h-9 max-w-40 rounded-md border px-2 text-sm"
+                title="Whose stock this invoice was, where the invoice itself does not say"
+              >
+                <option value="">Owner from the invoice</option>
+                {owners.map((owner) => (
+                  <option key={owner.id} value={owner.id}>
+                    {owner.name}
                   </option>
                 ))}
               </select>

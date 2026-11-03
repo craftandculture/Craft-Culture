@@ -110,8 +110,9 @@ const adminSyncOutFromZoho = adminProcedure
     const outletOwn = owners.find((owner) => owner.kind === 'outlet-own');
 
     const typesByHand = hasTypes
-      ? await client<{ docRef: string; invoiceType: string }[]>`
-          SELECT doc_ref AS "docRef", invoice_type AS "invoiceType"
+      ? await client<{ docRef: string; invoiceType: string; ownerId: string | null }[]>`
+          SELECT doc_ref AS "docRef", invoice_type AS "invoiceType",
+                 owner_id AS "ownerId"
           FROM cons_invoice_types WHERE outlet_id = ${input.outletId}
         `
       : [];
@@ -121,6 +122,12 @@ const adminSyncOutFromZoho = adminProcedure
 
     const typeByDoc = new Map(
       typesByHand.map((row) => [row.docRef, row.invoiceType]),
+    );
+    /* Whose an invoice was, set by hand — Cru's prepaid January stock */
+    const ownerByDoc = new Map(
+      typesByHand
+        .filter((row) => row.ownerId)
+        .map((row) => [row.docRef, row.ownerId as string]),
     );
 
     /*
@@ -341,8 +348,11 @@ const adminSyncOutFromZoho = adminProcedure
         );
         const isOwnStock = invoiceType.type === 'outright' && Boolean(outletOwn);
 
+        const invoiceOwner = ownerByDoc.get(invoice.invoice_number) ?? null;
+
         if (
           !saidByHand &&
+          !invoiceOwner &&
           !listedOwner &&
           !isOwnStock &&
           registry &&
@@ -375,7 +385,9 @@ const adminSyncOutFromZoho = adminProcedure
                   ownerId: saidByHand,
                   reason: 'Set by hand against the wine',
                 }
-              : resolveOwner({
+              : invoiceOwner
+                ? { ownerId: invoiceOwner, reason: 'Owner set on the invoice' }
+                : resolveOwner({
                   tag: lineTag,
                   registerOwnerId: listedOwner,
                   knownOwnerId:

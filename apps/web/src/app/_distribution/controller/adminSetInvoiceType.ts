@@ -21,6 +21,8 @@ import tableReady from '../utils/tableReady';
  * @param outletId - The outlet
  * @param docRef - The invoice, e.g. INV-000197
  * @param invoiceType - The type, or null to let the document decide
+ * @param ownerId - Whose stock the invoice was, where the document does not
+ *   say (Cru's prepaid January invoices); null clears it
  * @returns The type now in force, and whether a sync is needed
  */
 const adminSetInvoiceType = adminProcedure
@@ -29,6 +31,7 @@ const adminSetInvoiceType = adminProcedure
       outletId: z.string().uuid(),
       docRef: z.string().min(1).max(40),
       invoiceType: z.enum(INVOICE_TYPES).nullable(),
+      ownerId: z.string().uuid().nullish(),
     }),
   )
   .mutation(async ({ input, ctx }) => {
@@ -58,10 +61,12 @@ const adminSetInvoiceType = adminProcedure
     }
 
     await client`
-      INSERT INTO cons_invoice_types (outlet_id, doc_ref, invoice_type, set_by)
-      VALUES (${input.outletId}, ${input.docRef}, ${input.invoiceType}, ${ctx.user.id})
+      INSERT INTO cons_invoice_types (outlet_id, doc_ref, invoice_type, owner_id, set_by)
+      VALUES (${input.outletId}, ${input.docRef}, ${input.invoiceType},
+              ${input.ownerId ?? null}, ${ctx.user.id})
       ON CONFLICT (outlet_id, doc_ref) DO UPDATE SET
         invoice_type = EXCLUDED.invoice_type,
+        ${input.ownerId !== undefined ? client`owner_id = EXCLUDED.owner_id,` : client``}
         set_by = EXCLUDED.set_by,
         updated_at = NOW()
     `;
@@ -76,7 +81,8 @@ const adminSetInvoiceType = adminProcedure
     `;
 
     const crossesOwnStock =
-      (before?.invoiceType === 'outright') !== (input.invoiceType === 'outright');
+      (before?.invoiceType === 'outright') !== (input.invoiceType === 'outright') ||
+      input.ownerId !== undefined;
 
     return {
       docRef: input.docRef,

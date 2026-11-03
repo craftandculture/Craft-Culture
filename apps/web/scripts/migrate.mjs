@@ -2337,6 +2337,14 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "cons_code_links" ADD COLUMN IF NOT EXISTS "owner_id" uuid REFERENCES "cons_owners"("id") ON DELETE SET NULL`,
     );
+    /*
+      Whose stock an invoice was, set by hand. INV-000195–197 are Cru's,
+      prepaid by City Drinks in January, and carry no owner tag; without this
+      every line on them was dropped as nobody's.
+    */
+    await client.unsafe(
+      `ALTER TABLE "cons_invoice_types" ADD COLUMN IF NOT EXISTS "owner_id" uuid REFERENCES "cons_owners"("id") ON DELETE SET NULL`,
+    );
     console.log('✅ cons_invoice_types ready');
 
     /*
@@ -2538,6 +2546,16 @@ const runMigrations = async () => {
         ) AS v(doc_ref, invoice_type)
         WHERE ou."slug" = 'city-drinks'
         ON CONFLICT ("outlet_id","doc_ref") DO NOTHING
+      `);
+      /* Cru's January stock, prepaid by City Drinks (Sophie, 2 Nov 2026) */
+      await client.unsafe(`
+        UPDATE "cons_invoice_types" t
+        SET "owner_id" = ow."id"
+        FROM "cons_owners" ow, "cons_outlets" ou
+        WHERE ow."slug" = 'cru-wine' AND ou."slug" = 'city-drinks'
+          AND t."outlet_id" = ou."id"
+          AND t."doc_ref" IN ('INV-000195','INV-000196','INV-000197')
+          AND t."owner_id" IS NULL
       `);
     });
 

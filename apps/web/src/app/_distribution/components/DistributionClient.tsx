@@ -516,7 +516,10 @@ const DistributionClient = () => {
 
       <UnmatchedLinesPanel outletId={outletId} month={statementMonth} />
 
-      <InvoiceTypesPanel outletId={outletId} />
+      <InvoiceTypesPanel
+        outletId={outletId}
+        owners={setup.data?.owners ?? []}
+      />
 
       <SameWinePanel outletId={outletId} />
 
