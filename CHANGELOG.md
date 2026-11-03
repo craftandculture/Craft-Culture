@@ -1,3 +1,9 @@
+## [2.1.71](https://github.com/craftandculture/Craft-Culture/compare/v2.1.70...v2.1.71) (2026-11-03)
+
+### Bug Fixes
+
+* an invoice that names no owner can be given one, so Cru's prepaid January stock is no longer dropped ([5407341](https://github.com/craftandculture/Craft-Culture/commit/54073410b52132e947f5e88ff17a45ac70d62246))
+
 ## [2.1.70](https://github.com/craftandculture/Craft-Culture/compare/v2.1.69...v2.1.70) (2026-11-03)
 
 ### Bug Fixes
