@@ -1,3 +1,9 @@
+## [2.1.87](https://github.com/craftandculture/Craft-Culture/compare/v2.1.86...v2.1.87) (2026-11-03)
+
+### Bug Fixes
+
+* New Pick List totals dollar and dirham orders separately instead of adding them together ([19150ef](https://github.com/craftandculture/Craft-Culture/commit/19150efa8cdebef0464f799101fd2b5df4a32422))
+
 ## [2.1.86](https://github.com/craftandculture/Craft-Culture/compare/v2.1.85...v2.1.86) (2026-11-03)
 
 ### Features
