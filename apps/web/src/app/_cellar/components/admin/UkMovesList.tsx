@@ -90,7 +90,11 @@ const QuoteForm = ({ move, onDone }: QuoteFormProps) => {
     }),
   );
 
-  const amount = (value: string) => (value.trim() === '' ? undefined : Number(value));
+  // "13,887.50" is how people type money; Number() read it as not a number and greyed out Send quote
+  const amount = (value: string) => {
+    const cleaned = value.replace(/[,\s]/g, '');
+    return cleaned === '' ? undefined : Number(cleaned);
+  };
   const { lcbChargedUsd, totalUsd: total } = ukMoveTotal({
     freightUsd: amount(freight) ?? 0,
     lcbChargesUsd: amount(lcb) ?? 0,
@@ -147,7 +151,11 @@ const QuoteForm = ({ move, onDone }: QuoteFormProps) => {
       </label>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-text-primary text-sm font-semibold tabular-nums">
-          Member sees {Number.isNaN(total) ? '' : money(total)} all in
+          {Number.isNaN(total) ? (
+            <span className="text-red-700 dark:text-red-400">Check the amounts: one of them is not a number</span>
+          ) : (
+            <>Member sees {money(total)} all in</>
+          )}
         </p>
         <div className="flex items-center gap-2">
           <ConfirmAction
