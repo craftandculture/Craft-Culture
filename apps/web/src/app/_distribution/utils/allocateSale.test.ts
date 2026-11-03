@@ -21,8 +21,8 @@ describe('allocateSale', () => {
     ]);
   });
 
-  /* What the outlet paid for is what it sells first */
-  it('draws prepaid and outright stock before consignment', () => {
+  /* Prepaid first; their own purchases only once consignment runs out */
+  it('draws consignment before stock the outlet bought outright', () => {
     const shares = allocateSale(
       [
         layer({ docRef: 'INV-000250', docDate: '2026-06-01' }),
@@ -40,8 +40,8 @@ describe('allocateSale', () => {
     );
 
     expect(shares).toEqual([
-      expect.objectContaining({ arrangementId: 'own', bottles: 11 }),
-      expect.objectContaining({ arrangementId: 'cc', bottles: 3 }),
+      expect.objectContaining({ arrangementId: 'cc', bottles: 6 }),
+      expect.objectContaining({ arrangementId: 'own', bottles: 8 }),
     ]);
   });
 
@@ -71,7 +71,7 @@ describe('allocateSale', () => {
     ]);
   });
 
-  /* Bottles Cru sold never drew down City Drinks' own stock */
+  /* Bottles C&C sold never drew down City Drinks' own stock */
   it('counts earlier months per owner', () => {
     const shares = allocateSale(
       [
@@ -85,6 +85,22 @@ describe('allocateSale', () => {
 
     expect(shares).toEqual([
       expect.objectContaining({ arrangementId: 'own', bottles: 3, short: false }),
+    ]);
+  });
+
+  it('draws prepaid stock before consignment', () => {
+    const shares = allocateSale(
+      [
+        layer({ arrangementId: 'cru', docRef: 'INV-000277', docDate: '2026-07-07', bottles: 12 }),
+        layer({ arrangementId: 'cru', docRef: 'INV-000197', docDate: '2026-01-27', invoiceType: 'prepaid', bottles: 6 }),
+      ],
+      8,
+      new Map(),
+      null,
+    );
+
+    expect(shares).toEqual([
+      expect.objectContaining({ arrangementId: 'cru', bottles: 8, short: false }),
     ]);
   });
 

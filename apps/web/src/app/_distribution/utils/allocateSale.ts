@@ -1,4 +1,3 @@
-import { settles } from './classifyInvoice';
 import type { InvoiceType } from './classifyInvoice';
 
 export interface SaleLayer {
@@ -20,13 +19,23 @@ export interface SaleShare {
   short: boolean;
 }
 
+/*
+  Prepaid stock first: City Drinks paid for it in advance, so it is what they
+  sell before they start selling what they owe us for (Sophie, 2 Nov 2026).
+  Consignment next. Stock they bought outright last: their consignment sales
+  report counts consigned wine, and drawing their own purchases first moved
+  150 October bottles of consigned wine off the partners' statements. An
+  outright line is reached only by a wine nobody consigned — Tignanello 2022.
+*/
+const RANK: Record<string, number> = { prepaid: 0, consignment: 1, outright: 2 };
+
+const rankOf = (type: string | null | undefined) => RANK[type ?? 'consignment'] ?? 1;
+
 /**
  * The order bottles leave a wine's invoice lines in
  *
- * Stock the outlet already owns goes first: prepaid and outright lines before
- * any consignment line of the same wine, because what City Drinks have paid
- * for is what they sell before they start selling what they owe us for. Then
- * oldest first within each, by date and then invoice number.
+ * Prepaid, then consignment, then outright; oldest first within each, by date
+ * and then invoice number.
  *
  * @param a - A layer
  * @param b - Another layer
@@ -36,9 +45,9 @@ export const layerOrder = (
   a: Pick<SaleLayer, 'invoiceType' | 'docDate' | 'docRef'>,
   b: Pick<SaleLayer, 'invoiceType' | 'docDate' | 'docRef'>,
 ) => {
-  const own = Number(settles(a.invoiceType)) - Number(settles(b.invoiceType));
+  const byType = rankOf(a.invoiceType) - rankOf(b.invoiceType);
 
-  if (own !== 0) return own;
+  if (byType !== 0) return byType;
 
   const byDate = (a.docDate ?? '').localeCompare(b.docDate ?? '');
 
