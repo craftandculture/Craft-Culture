@@ -1,3 +1,9 @@
+## [2.1.75](https://github.com/craftandculture/Craft-Culture/compare/v2.1.74...v2.1.75) (2026-11-03)
+
+### Features
+
+* incoming wine tracker follows warehouse receiving, shows cleared customs, what happens next, and asks for departure dates ([738d5f9](https://github.com/craftandculture/Craft-Culture/commit/738d5f917aeb3993bbd3b9d017e031260ec386e0))
+
 ## [2.1.74](https://github.com/craftandculture/Craft-Culture/compare/v2.1.73...v2.1.74) (2026-11-03)
 
 ### Bug Fixes
