@@ -1,3 +1,9 @@
+## [2.1.74](https://github.com/craftandculture/Craft-Culture/compare/v2.1.73...v2.1.74) (2026-11-03)
+
+### Bug Fixes
+
+* cellar incoming wine shows the right case count and a dated, step-by-step tracker ([a2c539a](https://github.com/craftandculture/Craft-Culture/commit/a2c539a118ab5665001172291102230e0d6c17ca))
+
 ## [2.1.73](https://github.com/craftandculture/Craft-Culture/compare/v2.1.72...v2.1.73) (2026-11-03)
 
 ### Bug Fixes
