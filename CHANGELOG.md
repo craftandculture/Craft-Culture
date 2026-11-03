@@ -1,3 +1,9 @@
+## [2.1.85](https://github.com/craftandculture/Craft-Culture/compare/v2.1.84...v2.1.85) (2026-11-03)
+
+### Bug Fixes
+
+* warehouse scanners stay signed in around the clock and sign back in by themselves ([840af0e](https://github.com/craftandculture/Craft-Culture/commit/840af0e8c6fb3d8c42de777cc32b1a389d1799d3))
+
 ## [2.1.84](https://github.com/craftandculture/Craft-Culture/compare/v2.1.83...v2.1.84) (2026-11-03)
 
 ### Bug Fixes
