@@ -2,6 +2,11 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import db from '@/database/client';
 import auth from '@/lib/better-auth/server';
+import {
+  WMS_DEVICE_COOKIE,
+  WMS_DEVICE_COOKIE_MAX_AGE_SECONDS,
+  WMS_DEVICE_HEADER,
+} from '@/lib/wms/deviceTokenCookie';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 import matchesSecret from '@/utils/matchesSecret';
@@ -22,10 +27,18 @@ import matchesSecret from '@/utils/matchesSecret';
  * The device token and user email must be configured in:
  * - WMS_DEVICE_TOKEN: A secure random token
  * - WMS_DEVICE_USER_EMAIL: The email of the user to authenticate as
+ *
+ * A scanner is meant to stay signed in around the clock. Sign-in also sets the
+ * device cookie, and middleware sends a WMS page with that cookie but no
+ * session back here, so an expired session is replaced without anyone opening
+ * the link again. The cookie is accepted as the token for that reason.
  */
 const handleDeviceAuth = async (request: NextRequest) => {
   const url = new URL(request.url);
-  const token = request.headers.get('x-device-token') ?? url.searchParams.get('token');
+  const token =
+    request.headers.get(WMS_DEVICE_HEADER) ??
+    url.searchParams.get('token') ??
+    request.cookies.get(WMS_DEVICE_COOKIE)?.value;
 
   // Validate redirect to prevent open redirect attacks
   const allowedPrefixes = ['/platform/', '/wms/'];
@@ -90,11 +103,9 @@ const handleDeviceAuth = async (request: NextRequest) => {
     if (!response.ok) {
       // Fallback: Create session using Better Auth's internal adapter
       const ctx = await auth.$context;
-      const sessionResult = await ctx.internalAdapter.createSession(
-        user.id,
-        request.headers,
-        false, // not remember me
-      );
+      // The second argument is "do not remember me": passing anything truthy
+      // (the request headers once sat here) cut the session to one day
+      const sessionResult = await ctx.internalAdapter.createSession(user.id, false);
 
       if (!sessionResult) {
         throw new Error('Failed to create session');
@@ -102,7 +113,7 @@ const handleDeviceAuth = async (request: NextRequest) => {
 
       logger.info('[Device Auth] Session created via internal adapter', {
         userId: user.id,
-        sessionId: sessionResult.session.id,
+        sessionId: sessionResult.id,
       });
 
       // Build redirect response with session cookie
@@ -111,12 +122,19 @@ const handleDeviceAuth = async (request: NextRequest) => {
 
       // Set the session cookie
       const cookieName = ctx.authCookies.sessionToken.name;
-      redirectResponse.cookies.set(cookieName, sessionResult.session.token, {
+      redirectResponse.cookies.set(cookieName, sessionResult.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        expires: sessionResult.session.expiresAt,
+        expires: sessionResult.expiresAt,
+      });
+      redirectResponse.cookies.set(WMS_DEVICE_COOKIE, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: WMS_DEVICE_COOKIE_MAX_AGE_SECONDS,
       });
 
       return redirectResponse;

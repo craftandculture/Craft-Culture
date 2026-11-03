@@ -55,9 +55,30 @@ export const middleware = async (request: NextRequest) => {
 
     // Constant-time: edge runtime has no node crypto
     if (deviceToken && constantTimeEqual(deviceToken, wmsDeviceToken)) {
+      // A scanner whose session has lapsed signs in again by itself
+      const hasDeviceSession =
+        getSessionCookie(request, { cookiePrefix: clientConfig.cookiePrefix }) !== null;
+      if (!hasDeviceSession) {
+        const signIn = new URL('/api/auth/device', request.url);
+        signIn.searchParams.set('redirect', `${pathname}${request.nextUrl.search}`);
+        const response = NextResponse.redirect(signIn);
+        response.headers.set('Referrer-Policy', 'no-referrer');
+        return response;
+      }
+
       const response = NextResponse.next();
       response.headers.set('x-pathname', pathname);
       response.headers.set('Referrer-Policy', 'no-referrer');
+      // Slide the device cookie so a scanner in daily use never reaches its end
+      if (request.cookies.get(WMS_DEVICE_COOKIE)?.value === deviceToken) {
+        response.cookies.set(WMS_DEVICE_COOKIE, deviceToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: WMS_DEVICE_COOKIE_MAX_AGE_SECONDS,
+        });
+      }
       return response;
     }
   }
