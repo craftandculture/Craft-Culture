@@ -367,8 +367,11 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
       otherwise at what the wine cost them before freight (Laraine's check of
       Ihab Toma's October statement: Theo Dancer Aligoté at its $27.54 invoice
       cost, not $37.94 landed). Damage is reimbursed at landed cost. Deliveries, collections and count corrections
-      carry no money. No price yet means null: shown as "price being agreed",
-      never as $0.
+      carry no money. A sale with no agreed price is owed at the wine's import
+      price, what it cost the member (Sophie, Nov 2026: Alain Brahamcha has no
+      offers, so his September and October sales all read "No price set").
+      Only a wine with no cost on file either stays null: shown as "price
+      being agreed", never as $0.
     */
     /*
       The exact code first: two wines can share the pack-agnostic key and
@@ -408,8 +411,8 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
         return null;
       }
       if (row.movementType === 'count') return null;
-      const ask = askFor(row.lwin18);
-      return ask != null ? bottles * ask : null;
+      const price = askFor(row.lwin18) ?? costs.get(lwinPakKeyOf(row.lwin18))?.importPerBottle;
+      return price != null ? bottles * price : null;
     };
 
     /*
@@ -797,9 +800,11 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
                   : 'No value'
               : row.movementType === 'count'
                 ? 'Count, no value'
-                : amountUsd != null
+                : amountUsd != null && askFor(row.lwin18) != null
                   ? 'Member price'
-                  : 'No price set';
+                  : amountUsd != null
+                    ? 'Import price'
+                    : 'No price set';
           return {
             id: row.id,
             at: row.at,
