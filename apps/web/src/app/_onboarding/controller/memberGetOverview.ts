@@ -140,6 +140,7 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
               transportMode: shipment.transportMode,
               eta: shipment.eta,
               arrivedAt: shipment.arrivedAt,
+              shipmentNumber: shipment.shipmentNumber,
               status: shipment.status,
               reachedAt: shipment.reachedAt,
               wines: shipment.wines,

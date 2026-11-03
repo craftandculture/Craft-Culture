@@ -572,6 +572,21 @@ const CellarPage = () => {
 
 
   const inbound = useMemo(() => data?.inbound ?? [], [data]);
+  const { data: overview } = useQuery(api.onboarding.member.overview.queryOptions());
+  /*
+    Wine on a shipment that already has its own incoming card. The card lists
+    it with vintages and a tracker; listed again here without vintages it read
+    as the same Puligny three times.
+  */
+  const untrackedInbound = useMemo(() => {
+    const tracked = new Set(
+      (overview?.intakes ?? [])
+        .filter((intake) => intake.stage !== 'in_cellar')
+        .map((intake) => intake.shipment?.shipmentNumber)
+        .filter(Boolean),
+    );
+    return inbound.filter((line) => !tracked.has(line.shipmentNumber));
+  }, [inbound, overview]);
   /* Wine at C&C's UK bond, from LCB's own report: part of the same collection */
   const { data: ukData } = useQuery(api.cellar.member.getUkHoldings.queryOptions());
   const hasUk = (ukData?.holdings.length ?? 0) > 0;
@@ -1174,14 +1189,14 @@ const CellarPage = () => {
           },
           {
             value: totals.inboundBottles.toLocaleString(),
-            label: 'In transit',
+            label: 'Bottles in transit',
             detail: `${inbound.length} ${inbound.length === 1 ? 'wine' : 'wines'} on the way`,
             icon: IconTruck,
             tone: 'emerald' as const,
           },
         ]
           // In transit counts wine already on a shipment; a zero beside a transfer card contradicts it
-          .filter((card) => card.label !== 'In transit' || inbound.length > 0)
+          .filter((card) => card.label !== 'Bottles in transit' || inbound.length > 0)
           .filter((card) => card.label !== 'Indicative value' || collection.indicative > 0)
           .map((card) => (
           <CellarStatTile
@@ -1211,7 +1226,7 @@ const CellarPage = () => {
       )}
 
 
-      {inbound.length > 0 && (
+      {untrackedInbound.length > 0 && (
         <section className="border-border-muted bg-surface-primary mb-5 rounded-xl border shadow-sm">
           <div className="border-border-muted flex items-center gap-2 border-b px-3 py-2.5">
             <Icon icon={IconShip} size="sm" className="text-text-muted" />
@@ -1220,12 +1235,13 @@ const CellarPage = () => {
             </Typography>
           </div>
           <div className="divide-border-muted divide-y">
-            {inbound.map((line, index) => (
+            {untrackedInbound.map((line, index) => (
               <div
                 key={`${line.shipmentNumber}-${line.lwin18 ?? index}`}
                 className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
               >
                 <Typography variant="bodySm" className="min-w-0 break-words">
+                  {line.vintage ? `${line.vintage} ` : ''}
                   {line.productName}
                 </Typography>
                 <Typography
