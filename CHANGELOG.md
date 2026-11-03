@@ -1,3 +1,9 @@
+## [2.1.72](https://github.com/craftandculture/Craft-Culture/compare/v2.1.71...v2.1.72) (2026-11-03)
+
+### Bug Fixes
+
+* City Drinks' consignment sales are drawn from consigned stock before anything they bought outright ([4e4d69d](https://github.com/craftandculture/Craft-Culture/commit/4e4d69db812046356e044045449aecf29d932a5a))
+
 ## [2.1.71](https://github.com/craftandculture/Craft-Culture/compare/v2.1.70...v2.1.71) (2026-11-03)
 
 ### Bug Fixes
