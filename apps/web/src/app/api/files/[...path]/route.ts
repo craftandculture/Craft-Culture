@@ -1,13 +1,16 @@
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, isNotNull, ne, or } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import getCurrentUser from '@/app/_auth/data/getCurrentUser';
+import partnerDocumentTypes from '@/app/_logistics/constants/partnerDocumentTypes';
+import getPartnerUsers from '@/app/_privateClientOrders/data/getPartnerUsers';
 import resolveOrderParty from '@/app/_privateClientOrders/utils/resolveOrderParty';
 import visibleDocumentTypes from '@/app/_privateClientOrders/utils/visibleDocumentTypes';
 import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
 import db from '@/database/client';
 import {
   logisticsDocuments,
+  logisticsShipmentItems,
   logisticsShipments,
   partnerMembers,
   privateClientOrderDocuments,
@@ -63,7 +66,12 @@ const mayOpen = async (viewer: Viewer, url: string, pathname: string) => {
 
   // A shipment's documents: staff, or the wine partner the shipment is for
   const [shipmentDocument] = await db
-    .select({ partnerId: logisticsShipments.partnerId })
+    .select({
+      partnerId: logisticsShipments.partnerId,
+      shipmentId: logisticsShipments.id,
+      documentType: logisticsDocuments.documentType,
+      uploadedBy: logisticsDocuments.uploadedBy,
+    })
     .from(logisticsDocuments)
     .innerJoin(logisticsShipments, eq(logisticsDocuments.shipmentId, logisticsShipments.id))
     .where(eq(logisticsDocuments.fileUrl, url))
@@ -72,7 +80,6 @@ const mayOpen = async (viewer: Viewer, url: string, pathname: string) => {
   if (shipmentDocument) {
     if (isTeamMember(viewer)) return true;
     if (!shipmentDocument.partnerId) return false;
-    if (viewer.partnerId === shipmentDocument.partnerId) return true;
 
     const [membership] = await db
       .select({ partnerId: partnerMembers.partnerId })
@@ -84,8 +91,33 @@ const mayOpen = async (viewer: Viewer, url: string, pathname: string) => {
         ),
       )
       .limit(1);
+    if (viewer.partnerId !== shipmentDocument.partnerId && !membership) return false;
 
-    return !!membership;
+    /*
+      The same rule as the partner's shipment page. Being the shipment's
+      partner opened every document on it, freight and agent invoices
+      included, to anyone holding the link; we mark freight up. Now: what
+      their own people uploaded, or our paperwork that carries no costs on a
+      shipment that is wholly theirs.
+    */
+    const people = await getPartnerUsers(shipmentDocument.partnerId);
+    if (shipmentDocument.uploadedBy && (shipmentDocument.uploadedBy === viewer.id || people.some((person) => person.id === shipmentDocument.uploadedBy))) {
+      return true;
+    }
+    if (!partnerDocumentTypes.has(shipmentDocument.documentType)) return false;
+
+    const [othersWine] = await db
+      .select({ id: logisticsShipmentItems.id })
+      .from(logisticsShipmentItems)
+      .where(
+        and(
+          eq(logisticsShipmentItems.shipmentId, shipmentDocument.shipmentId),
+          isNotNull(logisticsShipmentItems.overrideOwnerId),
+          ne(logisticsShipmentItems.overrideOwnerId, shipmentDocument.partnerId),
+        ),
+      )
+      .limit(1);
+    return !othersWine;
   }
 
   // An order's delivery photo: anyone on the order

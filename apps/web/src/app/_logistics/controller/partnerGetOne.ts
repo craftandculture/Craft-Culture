@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getPartnerUsers from '@/app/_privateClientOrders/data/getPartnerUsers';
 import db from '@/database/client';
 import {
   logisticsDocuments,
@@ -10,6 +11,7 @@ import {
   logisticsShipments,
 } from '@/database/schema';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
+
 
 import partnerDocumentTypes from '../constants/partnerDocumentTypes';
 import isPartnerShipmentItem from '../utils/isPartnerShipmentItem';
@@ -47,7 +49,7 @@ const partnerGetOne = winePartnerProcedure
 
     const whollyTheirs = shipment.partnerId === partner.id && items.length === allItems.length;
 
-    const [documents, activityLogs] = await Promise.all([
+    const [documents, activityLogs, people] = await Promise.all([
       db
         .select()
         .from(logisticsDocuments)
@@ -59,14 +61,26 @@ const partnerGetOne = winePartnerProcedure
         .where(eq(logisticsShipmentActivityLogs.shipmentId, input.id))
         .orderBy(desc(logisticsShipmentActivityLogs.createdAt))
         .limit(50),
+      getPartnerUsers(partner.id),
     ]);
+    const partnerUserIds = new Set([user.id, ...people.map((person) => person.id)]);
+
+    // When the shipment first reached each status, for the tracker
+    const reachedAt: Record<string, string> = {};
+    for (const log of [...activityLogs].reverse()) {
+      if (log.newStatus && !reachedAt[log.newStatus]) reachedAt[log.newStatus] = log.createdAt.toISOString();
+    }
 
     return {
       ...toPartnerShipment(shipment, items),
+      reachedAt,
       items: items.map(toPartnerShipmentItem),
+      // Their own people's uploads, and on a shipment wholly theirs, our paperwork that carries no costs
       documents: documents
-        .filter((doc) =>
-          whollyTheirs ? partnerDocumentTypes.has(doc.documentType) : doc.uploadedBy === user.id,
+        .filter(
+          (doc) =>
+            (doc.uploadedBy && partnerUserIds.has(doc.uploadedBy)) ||
+            (whollyTheirs && partnerDocumentTypes.has(doc.documentType)),
         )
         .map(toPartnerShipmentDocument),
       activityLogs: activityLogs
