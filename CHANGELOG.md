@@ -1,3 +1,9 @@
+## [2.1.86](https://github.com/craftandculture/Craft-Culture/compare/v2.1.85...v2.1.86) (2026-11-03)
+
+### Features
+
+* warehouse scanners sign in with a six-digit PIN and stay signed in ([53f5a9b](https://github.com/craftandculture/Craft-Culture/commit/53f5a9bfbbc6f1710475669e058ceb7117d98b23))
+
 ## [2.1.85](https://github.com/craftandculture/Craft-Culture/compare/v2.1.84...v2.1.85) (2026-11-03)
 
 ### Bug Fixes
