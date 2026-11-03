@@ -1,3 +1,10 @@
+## [2.1.78](https://github.com/craftandculture/Craft-Culture/compare/v2.1.77...v2.1.78) (2026-11-03)
+
+### Bug Fixes
+
+* finishing sign-up no longer creates a second wine partner for someone already added to one ([2409b1d](https://github.com/craftandculture/Craft-Culture/commit/2409b1dd5ab6e54a6ee198371d41649dd50d1a20))
+* Member statements value a sale at the wine's import price when no price was agreed ([bd85d91](https://github.com/craftandculture/Craft-Culture/commit/bd85d91a2d965d4e4b31667df14a9307058358ce))
+
 ## [2.1.77](https://github.com/craftandculture/Craft-Culture/compare/v2.1.76...v2.1.77) (2026-11-03)
 
 ### Bug Fixes
