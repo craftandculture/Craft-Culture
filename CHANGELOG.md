@@ -1,3 +1,9 @@
+## [2.1.82](https://github.com/craftandculture/Craft-Culture/compare/v2.1.81...v2.1.82) (2026-11-03)
+
+### Bug Fixes
+
+* UK move quotes accept amounts typed with thousands commas ([f365566](https://github.com/craftandculture/Craft-Culture/commit/f3655660cc1a5d7175749e79a4d7011d227abc18))
+
 ## [2.1.81](https://github.com/craftandculture/Craft-Culture/compare/v2.1.80...v2.1.81) (2026-11-03)
 
 ### Features
