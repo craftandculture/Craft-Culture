@@ -1,3 +1,9 @@
+## [2.1.70](https://github.com/craftandculture/Craft-Culture/compare/v2.1.69...v2.1.70) (2026-11-03)
+
+### Bug Fixes
+
+* consignment statements load again after the per-owner pricing change ([ef5be21](https://github.com/craftandculture/Craft-Culture/commit/ef5be21669e5a7c974e6dcc3c87a81a513a8f94e))
+
 ## [2.1.69](https://github.com/craftandculture/Craft-Culture/compare/v2.1.68...v2.1.69) (2026-11-03)
 
 ### Bug Fixes
