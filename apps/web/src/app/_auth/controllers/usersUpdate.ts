@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import createAdminNotifications from '@/app/_notifications/utils/createAdminNotifications';
 import normalisePartnerName from '@/app/_partners/utils/normalisePartnerName';
 import db from '@/database/client';
-import { partners, users } from '@/database/schema';
+import { partnerMembers, partners, users } from '@/database/schema';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -51,13 +51,22 @@ const usersUpdate = protectedProcedure
 
     // Auto-create Partner record for Wine Partners
     if (updatedUser && input.customerType === 'private_clients') {
-      // Check if partner record already exists for this user
-      const [existingPartner] = await db
-        .select({ id: partners.id })
-        .from(partners)
-        .where(eq(partners.userId, ctx.user.id));
+      /*
+        A login already acting for a partner needs no record of its own.
+        Mathilde at Maison Wineted was added as a member, then finished
+        signing up and got a second wine partner named "mathilde" beside it.
+        Only a record she owned was checked, not one she belonged to.
+      */
+      const [[existingPartner], [membership]] = await Promise.all([
+        db.select({ id: partners.id }).from(partners).where(eq(partners.userId, ctx.user.id)),
+        db
+          .select({ id: partnerMembers.id })
+          .from(partnerMembers)
+          .where(eq(partnerMembers.userId, ctx.user.id))
+          .limit(1),
+      ]);
 
-      if (!existingPartner) {
+      if (!existingPartner && !membership) {
         /*
           A partner already trading under this name is never claimed here.
 
