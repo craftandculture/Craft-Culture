@@ -1,3 +1,9 @@
+## [2.1.89](https://github.com/craftandculture/Craft-Culture/compare/v2.1.88...v2.1.89) (2026-11-03)
+
+### Features
+
+* tell Private Cellar members when their wine reaches the warehouse ([bfa3599](https://github.com/craftandculture/Craft-Culture/commit/bfa359905ec9972f98613d8a1b5333b13779f708))
+
 ## [2.1.88](https://github.com/craftandculture/Craft-Culture/compare/v2.1.87...v2.1.88) (2026-11-03)
 
 ### Bug Fixes
