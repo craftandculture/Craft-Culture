@@ -1,3 +1,9 @@
+## [2.1.81](https://github.com/craftandculture/Craft-Culture/compare/v2.1.80...v2.1.81) (2026-11-03)
+
+### Features
+
+* Staff can add a cellar member's UK wine to an inbound shipment, so freight arranged from a quote reaches the member's cellar ([56bb42f](https://github.com/craftandculture/Craft-Culture/commit/56bb42fd8b01129c73ba14869ceec297f1425e1f))
+
 ## [2.1.80](https://github.com/craftandculture/Craft-Culture/compare/v2.1.79...v2.1.80) (2026-11-03)
 
 ### Bug Fixes
