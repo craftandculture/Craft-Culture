@@ -1,3 +1,9 @@
+## [2.1.84](https://github.com/craftandculture/Craft-Culture/compare/v2.1.83...v2.1.84) (2026-11-03)
+
+### Bug Fixes
+
+* the UK move email states the all-in price and counts wines, not LCB rotations ([e1e88d8](https://github.com/craftandculture/Craft-Culture/commit/e1e88d8fab298b9e31cd6458269fb0017ace15dd))
+
 ## [2.1.83](https://github.com/craftandculture/Craft-Culture/compare/v2.1.82...v2.1.83) (2026-11-03)
 
 ### Features
