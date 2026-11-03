@@ -1,3 +1,9 @@
+## [2.1.90](https://github.com/craftandculture/Craft-Culture/compare/v2.1.89...v2.1.90) (2026-11-03)
+
+### Bug Fixes
+
+* **orders:** cancellation emails read properly to the distributor ([c6723d6](https://github.com/craftandculture/Craft-Culture/commit/c6723d6a697923ee7e67d342dfeb43ec43b9c538))
+
 ## [2.1.89](https://github.com/craftandculture/Craft-Culture/compare/v2.1.88...v2.1.89) (2026-11-03)
 
 ### Features
