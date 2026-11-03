@@ -197,8 +197,16 @@ const NewPickListPage = () => {
         (sum, o) => sum + (o.bottleCount ?? o.totalQuantity ?? 0),
         0,
       ),
-      value: scope.reduce((sum, o) => sum + (o.total ?? 0), 0),
-      currency: scope[0]?.currencyCode ?? 'USD',
+      // One total per currency: dollar and dirham orders were added as plain numbers and labelled with the first order's currency
+      values: [
+        ...scope
+          .reduce((byCurrency, o) => {
+            const currency = o.currencyCode ?? 'USD';
+            byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + (o.total ?? 0));
+            return byCurrency;
+          }, new Map<string, number>())
+          .entries(),
+      ].map(([currency, value]) => ({ currency, value })),
     };
   }, [filteredOrders, selectedOrderIds]);
 
@@ -351,9 +359,19 @@ const NewPickListPage = () => {
             </div>
             <div className="w-px bg-border-muted" />
             <div className="flex-1 text-center">
-              <p className="text-[15px] font-bold leading-none tabular-nums">
-                {formatPrice(totals.value, totals.currency)}
-              </p>
+              {totals.values.length === 0 && (
+                <p className="text-[15px] font-bold leading-none tabular-nums">
+                  {formatPrice(0, 'USD')}
+                </p>
+              )}
+              {totals.values.map(({ currency, value }) => (
+                <p
+                  key={currency}
+                  className="text-[15px] font-bold leading-tight tabular-nums"
+                >
+                  {formatPrice(value, currency)}
+                </p>
+              ))}
               <p className="mt-1 text-[10px] uppercase tracking-wide text-text-muted">
                 Value
               </p>
