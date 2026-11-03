@@ -1226,6 +1226,19 @@ const CellarPage = () => {
       )}
 
 
+      {/*
+        A move from the UK sits above the wine, not below it: once priced it
+        waits on the member to accept, and Jon de Jager's sat under 76 wines.
+      */}
+      {ukData && showUk && (
+        <UkHoldingsPanel
+          data={ukData}
+          formatValue={(usd) => money(usd, true)}
+          readOnly={isViewer}
+          movesOnly
+        />
+      )}
+
       {untrackedInbound.length > 0 && (
         <section className="border-border-muted bg-surface-primary mb-5 rounded-xl border shadow-sm">
           <div className="border-border-muted flex items-center gap-2 border-b px-3 py-2.5">
@@ -2121,7 +2134,9 @@ const CellarPage = () => {
                           const movable = (wine.uk ?? []).filter((line) => !line.moveStatus && line.cases > 0);
                           if (movable.length === 0) {
                             return (wine.uk ?? []).some((line) => line.moveStatus) ? (
-                              <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300">Moving to the UAE</span>
+                              <a href="#uk-moves" className="text-[11px] font-semibold text-blue-700 hover:underline dark:text-blue-300">
+                                Moving to the UAE
+                              </a>
                             ) : null;
                           }
                           const chosenCases = movable.reduce((sum, line) => sum + (moveBasket.get(line.key) ?? 0), 0);
@@ -2718,14 +2733,6 @@ const CellarPage = () => {
         </>
       )}
 
-      {ukData && showUk && (
-        <UkHoldingsPanel
-          data={ukData}
-          formatValue={(usd) => money(usd, true)}
-          readOnly={isViewer}
-          movesOnly
-        />
-      )}
 
       {/*
         Keeping the cellar on the home screen and Face ID are offered beneath

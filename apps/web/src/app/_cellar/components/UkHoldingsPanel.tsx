@@ -7,6 +7,7 @@ import { differenceInDays, format } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import StepsTracker from '@/app/_logistics/components/StepsTracker';
 import ContactLinks from '@/app/_onboarding/components/ContactLinks';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import useTRPC from '@/lib/trpc/browser';
@@ -14,6 +15,7 @@ import type { AppRouter } from '@/trpc-router';
 
 import ConfirmAction from './ConfirmAction';
 import bottleName from '../utils/bottleName';
+import ukMoveSteps from '../utils/ukMoveSteps';
 
 type UkHoldings = inferRouterOutputs<AppRouter>['cellar']['member']['getUkHoldings'];
 type UkMove = inferRouterOutputs<AppRouter>['cellar']['member']['getUkMoves']['moves'][number];
@@ -243,7 +245,10 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false, movesOnly = fals
     });
 
   return (
-    <section className="border-border-muted bg-surface-primary mt-8 overflow-hidden rounded-xl border shadow-sm">
+    <section
+      id={movesOnly ? 'uk-moves' : undefined}
+      className={`border-border-muted bg-surface-primary overflow-hidden rounded-xl border shadow-sm ${movesOnly ? 'mb-5 scroll-mt-24' : 'mt-8'}`}
+    >
       {activationSheet}
       <header className="border-border-muted flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
         <div className="flex items-center gap-2">
@@ -305,8 +310,14 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false, movesOnly = fals
                   </span>
                 </div>
 
+                {move.status !== 'cancelled' && (
+                  <div className="mt-3">
+                    <StepsTracker {...ukMoveSteps(move)} bare />
+                  </div>
+                )}
+
                 {move.status === 'quoted' && typeof move.totalUsd === 'number' && (
-                  <p className="text-text-primary mt-2 text-lg font-bold tabular-nums">{price(move.totalUsd)}</p>
+                  <p className="text-text-primary mt-3 text-lg font-bold tabular-nums">{price(move.totalUsd)}</p>
                 )}
                 <p className="text-text-muted mt-1 max-w-[70ch] text-xs leading-5">{detailOf(move)}</p>
 

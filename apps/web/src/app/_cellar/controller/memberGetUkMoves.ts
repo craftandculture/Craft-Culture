@@ -1,3 +1,7 @@
+import { and, asc, inArray, isNotNull } from 'drizzle-orm';
+
+import db from '@/database/client';
+import { logisticsShipmentActivityLogs } from '@/database/schema';
 import { stockOwnerProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
@@ -20,6 +24,34 @@ const memberGetUkMoves = stockOwnerProcedure.query(async ({ ctx }) => {
   try {
     const moves = await getUkMoves(ctx.partner.id);
 
+    // When each move's shipment first reached each status, for the member's tracker
+    const shipmentIds = [...new Set(moves.map((move) => move.shipmentId).filter((id): id is string => Boolean(id)))];
+    const changes = shipmentIds.length
+      ? await db
+          .select({
+            shipmentId: logisticsShipmentActivityLogs.shipmentId,
+            status: logisticsShipmentActivityLogs.newStatus,
+            at: logisticsShipmentActivityLogs.createdAt,
+          })
+          .from(logisticsShipmentActivityLogs)
+          .where(
+            and(
+              inArray(logisticsShipmentActivityLogs.shipmentId, shipmentIds),
+              isNotNull(logisticsShipmentActivityLogs.newStatus),
+            ),
+          )
+          .orderBy(asc(logisticsShipmentActivityLogs.createdAt))
+      : [];
+    const reachedAtFor = (shipmentId: string | null) => {
+      const reached: Record<string, string> = {};
+      for (const change of changes) {
+        if (change.shipmentId === shipmentId && change.status && !reached[change.status]) {
+          reached[change.status] = change.at.toISOString();
+        }
+      }
+      return reached;
+    };
+
     return {
       moves: moves.map((move) => ({
         id: move.id,
@@ -33,6 +65,8 @@ const memberGetUkMoves = stockOwnerProcedure.query(async ({ ctx }) => {
         shippedAt: move.shippedAt,
         createdAt: move.createdAt,
         eta: move.shipmentEta,
+        shipmentStatus: move.shipmentStatus,
+        reachedAt: reachedAtFor(move.shipmentId),
         arrivedAt: move.displayStatus === 'arrived' ? move.deliveredAt : null,
         items: move.items.map((item) => ({
           id: item.id,
