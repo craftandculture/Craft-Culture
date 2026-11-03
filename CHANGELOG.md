@@ -1,3 +1,9 @@
+## [2.1.80](https://github.com/craftandculture/Craft-Culture/compare/v2.1.79...v2.1.80) (2026-11-03)
+
+### Bug Fixes
+
+* wine partners see only the shipment documents their own people uploaded ([d99cd97](https://github.com/craftandculture/Craft-Culture/commit/d99cd9785802964161b567e19b98f86513b8d35c))
+
 ## [2.1.79](https://github.com/craftandculture/Craft-Culture/compare/v2.1.78...v2.1.79) (2026-11-03)
 
 ### Features
