@@ -70,6 +70,12 @@ export interface WineMatchScore {
   score: number;
   /** Why it was rejected outright, if it was */
   rejected: string | null;
+  /**
+   * Shared words over all words. Strict: any word one name has and the other
+   * lacks counts against it, so a cuvée ("Le Clos du Château") is never the
+   * plain wine. What a merge proposal is judged on.
+   */
+  overlap: number;
 }
 
 /**
@@ -102,21 +108,21 @@ const scoreWineMatch = (ours: string, theirs: string): WineMatchScore => {
   const theirVintage = VINTAGE.exec(theirs)?.[0];
 
   if (ourVintage && theirVintage && ourVintage !== theirVintage) {
-    return { score: 0, rejected: `vintage ${ourVintage} against ${theirVintage}` };
+    return { score: 0, overlap: 0, rejected: `vintage ${ourVintage} against ${theirVintage}` };
   }
 
   const ourSize = sizeInCl(ours);
   const theirSize = sizeInCl(theirs);
 
   if (ourSize && theirSize && Math.abs(ourSize - theirSize) > 1) {
-    return { score: 0, rejected: `size ${ourSize}cl against ${theirSize}cl` };
+    return { score: 0, overlap: 0, rejected: `size ${ourSize}cl against ${theirSize}cl` };
   }
 
   const mine = new Set(words(ours));
   const yours = new Set(words(theirs));
 
   if (mine.size === 0 || yours.size === 0) {
-    return { score: 0, rejected: 'nothing distinguishing in the name' };
+    return { score: 0, overlap: 0, rejected: 'nothing distinguishing in the name' };
   }
 
   let shared = 0;
@@ -134,7 +140,7 @@ const scoreWineMatch = (ours: string, theirs: string): WineMatchScore => {
   const containment = shared / Math.min(mine.size, yours.size);
   const overlap = shared / (mine.size + yours.size - shared);
 
-  return { score: (containment + overlap) / 2, rejected: null };
+  return { score: (containment + overlap) / 2, overlap, rejected: null };
 };
 
 export default scoreWineMatch;

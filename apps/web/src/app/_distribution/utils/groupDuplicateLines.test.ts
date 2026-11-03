@@ -33,6 +33,18 @@ describe('groupDuplicateLines', () => {
     ).toEqual([]);
   });
 
+  /* A cuvée is not the plain wine, however much of the name they share */
+  it('keeps a cuvée apart from the plain wine', () => {
+    expect(
+      groupDuplicateLines([
+        line('2943576-2022-06-00750', 'Domaine de Montille Bourgogne Blanc 2022', 12),
+        line('1828577-2022-06-00750', 'Domaine de Montille Bourgogne Blanc Le Clos du Château 2022', 12),
+        line('1032361-2023-06-00750', 'Domaine Fourrier Gevrey-Chambertin 2023', 12),
+        line('W0101024', 'Domaine Fourrier Gevrey-Chambertin Village Aux Echezeaux 2023', 6),
+      ]),
+    ).toEqual([]);
+  });
+
   it('keeps different wines apart', () => {
     expect(
       groupDuplicateLines([

@@ -17,8 +17,14 @@ export interface DuplicateLineGroup {
   duplicates: LineCode[];
 }
 
-/** Names this close, in the same vintage, are one wine */
-const SAME_WINE = 0.6;
+/*
+  Names this close, in the same vintage, are proposed as one wine. Judged on
+  strict overlap, not the blended score: blended, "Montille Bourgogne Blanc"
+  matched "Montille Bourgogne Blanc Le Clos du Château" and Fourrier's village
+  Gevrey matched his Aux Echezeaux — different wines, one click from merged.
+  A misspelt pair falls below this and is merged by hand.
+*/
+const SAME_WINE = 0.75;
 
 const VINTAGE = /\b(19|20)\d{2}\b/;
 
@@ -69,7 +75,7 @@ const groupDuplicateLines = (lines: LineCode[]) => {
 
       if (vintage && otherVintage && vintage !== otherVintage) return false;
 
-      return scoreWineMatch(main.name, other.name).score >= SAME_WINE;
+      return scoreWineMatch(main.name, other.name).overlap >= SAME_WINE;
     });
 
     if (duplicates.length === 0) continue;
