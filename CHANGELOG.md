@@ -1,3 +1,9 @@
+## [2.1.88](https://github.com/craftandculture/Craft-Culture/compare/v2.1.87...v2.1.88) (2026-11-03)
+
+### Bug Fixes
+
+* keep pricing checks off the printed sales order for PCOs ([1da8f77](https://github.com/craftandculture/Craft-Culture/commit/1da8f77030ff5599c8a344e47250ba24509254af))
+
 ## [2.1.87](https://github.com/craftandculture/Craft-Culture/compare/v2.1.86...v2.1.87) (2026-11-03)
 
 ### Bug Fixes
