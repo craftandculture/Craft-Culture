@@ -84,7 +84,7 @@ const getPricingManagerLanded = async (
           AND ${keyOf('i.lwin')} = ANY(${keys}::text[])
       ) rows
       ORDER BY key, own DESC, created_at DESC
-    )
+    ),
     owned AS (
       ${
         perOwner
