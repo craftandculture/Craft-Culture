@@ -162,6 +162,23 @@ const markSalesOrderAsOpen = async (salesOrderId: string) => {
 };
 
 /**
+ * Add an internal comment to a sales order
+ *
+ * Comments sit in the order's history and never print. Anything meant for
+ * staff only (margins, cost-model checks) goes here, not in `notes`, which
+ * prints on the PDF the customer receives.
+ *
+ * @param salesOrderId - Zoho sales order ID
+ * @param description - The comment text
+ */
+const addSalesOrderComment = async (salesOrderId: string, description: string) => {
+  await zohoFetch(`/salesorders/${salesOrderId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ description }),
+  });
+};
+
+/**
  * List all sales orders with a given status, paginating through all pages
  *
  * @param status - Zoho sales order status to filter by
@@ -220,6 +237,7 @@ const getSalesOrdersModifiedSince = async (sinceTime: string) => {
 };
 
 export {
+  addSalesOrderComment,
   createSalesOrder,
   getSalesOrder,
   getSalesOrdersModifiedSince,

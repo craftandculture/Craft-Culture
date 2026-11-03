@@ -8,7 +8,7 @@ import { privateClientOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { createWineItem, searchItems, updateItem } from '@/lib/zoho/items';
-import { createSalesOrder } from '@/lib/zoho/salesOrders';
+import { addSalesOrderComment, createSalesOrder } from '@/lib/zoho/salesOrders';
 import logger from '@/utils/logger';
 
 import planZohoSalesOrder, {
@@ -247,22 +247,38 @@ const adminCreateZohoSalesOrder = adminProcedure
         */
         reference_number: plan.order.orderNumber,
         line_items: lineItems,
-        notes:
-          `Raised from ${plan.order.orderNumber} for ${plan.order.clientName}. ` +
-          'Priced at Landed Duty Free (the agreed line prices plus the C&C margin), ' +
-          'what the distributor is billed before their own margin and VAT. Check before confirming.' +
-          (plan.unpriced.length > 0
-            ? ` NEEDS A PRICE — no price on the order line, sent at zero: ${plan.unpriced.join('; ')}.`
-            : '') +
-          (plan.belowTrade.length > 0
-            ? ` Below the cost model's price: ${plan.belowTrade.join('; ')}.`
-            : ''),
+        /*
+          Customer Notes print on the PDF the distributor receives, so only the
+          PCO reference goes here. The pricing checks are for staff and go on
+          as an internal comment below.
+        */
+        notes: `Raised from ${plan.order.orderNumber} for ${plan.order.clientName}.`,
       });
 
       if (!order?.salesorder_id) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Zoho did not return a sales order. Nothing was raised.',
+        });
+      }
+
+      try {
+        await addSalesOrderComment(
+          order.salesorder_id,
+          'Priced at Landed Duty Free (the agreed line prices plus the C&C margin), ' +
+            'what the distributor is billed before their own margin and VAT. Check before confirming.' +
+            (plan.unpriced.length > 0
+              ? ` NEEDS A PRICE — no price on the order line, sent at zero: ${plan.unpriced.join('; ')}.`
+              : '') +
+            (plan.belowTrade.length > 0
+              ? ` Below the cost model's price: ${plan.belowTrade.join('; ')}.`
+              : ''),
+        );
+      } catch (error) {
+        // The order exists; a missing comment must not unclaim it and invite a duplicate
+        logger.error('[PCO] Could not add the internal pricing comment', {
+          salesOrderId: order.salesorder_id,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
 
