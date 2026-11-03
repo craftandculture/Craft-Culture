@@ -1,3 +1,9 @@
+## [2.1.67](https://github.com/craftandculture/Craft-Culture/compare/v2.1.66...v2.1.67) (2026-11-03)
+
+### Bug Fixes
+
+* one consignment line per wine, with a merge tool for codes that split a wine's sales from its invoices ([79831e7](https://github.com/craftandculture/Craft-Culture/commit/79831e7ca6df753ec4514341c16a3284ebfd256e))
+
 ## [2.1.66](https://github.com/craftandculture/Craft-Culture/compare/v2.1.65...v2.1.66) (2026-11-02)
 
 ### Bug Fixes
