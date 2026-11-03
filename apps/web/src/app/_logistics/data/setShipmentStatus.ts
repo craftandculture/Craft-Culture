@@ -1,13 +1,12 @@
-import { tasks } from '@trigger.dev/sdk/v3';
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
 import { logisticsShipmentActivityLogs, logisticsShipments } from '@/database/schema';
-import { shipmentMilestoneNotificationJob } from '@/trigger/jobs/logistics-alerts/shipmentMilestoneNotificationJob';
-import logger from '@/utils/logger';
 
+import notifyPartnerOfShipment, { milestoneForStatus } from './notifyPartnerOfShipment';
+import notifyStaffOfShipmentStatus from './notifyStaffOfShipmentStatus';
 import { inboundStatusMessage } from '../notifications/logisticsSlackMessages';
 import queueLogisticsSlack from '../notifications/queueLogisticsSlack';
 import type { ShipmentStatus } from '../utils/shipmentStatuses';
@@ -16,8 +15,8 @@ import type { ShipmentStatus } from '../utils/shipmentStatuses';
  * Move a shipment to a status, with everything that follows from it
  *
  * The status change itself, the arrival and delivery dates it stamps, the
- * activity log line, members' transfers riding on the shipment, the milestone
- * job and the #logistics post on departure or arrival. Shared by the status
+ * activity log line, members' transfers riding on the shipment, the staff and
+ * wine partner notices, and the #logistics post on departure or arrival. Shared by the status
  * dropdown and the quick update, so neither can skip a step the other takes.
  *
  * @param input - The shipment, its new status, a note, who made the change and,
@@ -86,17 +85,13 @@ const setShipmentStatus = async ({
   // Members whose transfer rides on this shipment follow it
   await advanceShipmentIntakes(id);
 
-  // Trigger milestone notification job (fire and forget)
-  tasks
-    .trigger(shipmentMilestoneNotificationJob.id, {
-      shipmentId: id,
-      newStatus: status,
-      previousStatus,
-      triggeredBy: userId,
-    })
-    .catch((err) => {
-      logger.error('Failed to trigger milestone notification', { err, shipmentId: id });
-    });
+  if (status !== previousStatus) {
+    await notifyStaffOfShipmentStatus(shipment, status, previousStatus, userId);
+
+    // The wine partner hears when it departs, arrives and is in stock (Order Emails switch)
+    const milestone = milestoneForStatus(status);
+    if (milestone) await notifyPartnerOfShipment(id, milestone);
+  }
 
   // Tell #logistics when an inbound shipment departs or lands; never blocks the update
   if (

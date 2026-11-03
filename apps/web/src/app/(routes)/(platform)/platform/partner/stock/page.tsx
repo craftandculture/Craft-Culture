@@ -294,7 +294,9 @@ const PartnerStockPage = () => {
               <div className="mt-0.5 text-[10px] text-text-muted">
                 {data.summary.nextEta
                   ? `next ${format(new Date(data.summary.nextEta), 'd MMM')}`
-                  : 'nothing in transit'}
+                  : data.summary.inboundCases > 0
+                    ? 'on its way'
+                    : 'nothing in transit'}
               </div>
             </div>
 

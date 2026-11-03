@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import notifyPartnerOfShipment from '@/app/_logistics/data/notifyPartnerOfShipment';
 import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
 import { logisticsShipments, wmsReceivingDrafts, wmsStock } from '@/database/schema';
@@ -50,6 +51,8 @@ const adminFinalizeReceiving = wmsOperatorProcedure
 
     // Members' transfers on this shipment are now in their cellars
     await advanceShipmentIntakes(shipmentId);
+    // The wine partner hears it is in stock (Order Emails switch)
+    await notifyPartnerOfShipment(shipmentId, 'received');
 
     // Backfill photos from draft items to stock records before deleting
     const [draft] = await db

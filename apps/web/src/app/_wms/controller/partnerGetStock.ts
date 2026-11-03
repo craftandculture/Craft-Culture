@@ -411,7 +411,8 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       casesPickedLast30: depletion?.cases ?? 0,
       bottlesPickedLast30: depletion?.bottles ?? 0,
       inboundCases: inbound.reduce((sum, line) => sum + (line.cases ?? 0), 0),
-      nextEta: inbound.find((line) => line.eta)?.eta ?? null,
+      // The next arrival still ahead; a date already passed says only that it is late
+      nextEta: inbound.find((line) => line.eta && line.eta.getTime() > Date.now())?.eta ?? null,
       /*
         What the wine cost on import, not a market valuation — C&C does not
         value collections, and an insurance declaration is built from this.

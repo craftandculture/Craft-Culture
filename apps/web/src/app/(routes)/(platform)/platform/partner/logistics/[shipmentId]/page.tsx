@@ -15,6 +15,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
 import PartnerDocumentUpload from '@/app/_logistics/components/PartnerDocumentUpload';
+import PartnerShipmentTracker from '@/app/_logistics/components/PartnerShipmentTracker';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
@@ -126,6 +127,15 @@ const PartnerShipmentDetailPage = () => {
             </Typography>
           </div>
         </div>
+
+        {shipment.type === 'inbound' && (
+          <PartnerShipmentTracker
+            status={shipment.status}
+            reachedAt={shipment.reachedAt}
+            atd={shipment.atd}
+            eta={shipment.eta}
+          />
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border-muted overflow-x-auto">

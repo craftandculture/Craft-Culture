@@ -1,9 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, gte, sql } from 'drizzle-orm';
 
 import { queueWineArrived } from '@/app/_cellar/data/queueCellarEmails';
 import createNotification from '@/app/_notifications/utils/createNotification';
 import db from '@/database/client';
-import { partnerMembers, partners } from '@/database/schema';
+import { notifications, partnerMembers, partners } from '@/database/schema';
 import serverConfig from '@/server.config';
 
 
@@ -81,7 +81,50 @@ const notifyOwnerOfArrival = async ({
         ? `${cases} ${cases === 1 ? 'case' : 'cases'} (${bottles} ${bottles === 1 ? 'bottle' : 'bottles'})`
         : `${cases} ${cases === 1 ? 'case' : 'cases'}`;
 
+    /*
+      One notice per shipment, kept up to date as each wine is received.
+      Receiving notified every wine line on its own, so a 58-line shipment
+      would have put 58 notices in each login's bell.
+    */
+    const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const collector = owner.type === 'private_collector';
+
     for (const userId of recipients) {
+      if (shipmentNumber) {
+        const [existing] = await db
+          .select({ id: notifications.id, metadata: notifications.metadata })
+          .from(notifications)
+          .where(
+            and(
+              eq(notifications.userId, userId),
+              eq(notifications.type, 'cellar_wine_received'),
+              gte(notifications.createdAt, since),
+              sql`${notifications.metadata}->>'shipmentNumber' = ${shipmentNumber}`,
+            ),
+          )
+          .limit(1);
+
+        if (existing) {
+          const before = (existing.metadata ?? {}) as { wines?: number; cases?: number; bottles?: number };
+          const wines = (before.wines ?? 1) + 1;
+          const totalCases = (before.cases ?? 0) + cases;
+          const totalBottles = (before.bottles ?? 0) + bottles;
+          await db
+            .update(notifications)
+            .set({
+              title: collector ? 'Wine received into your cellar' : 'Stock received',
+              message: `${wines} wines (${totalCases} ${totalCases === 1 ? 'case' : 'cases'}, ${totalBottles} bottles) from shipment ${shipmentNumber} ${
+                collector ? 'are now in your cellar' : 'are now in stock'
+              }.`,
+              metadata: { ...before, wines, cases: totalCases, bottles: totalBottles, shipmentNumber, productName },
+              isRead: false,
+              readAt: null,
+            })
+            .where(eq(notifications.id, existing.id));
+          continue;
+        }
+      }
+
       await createNotification({
         userId,
         type: 'cellar_wine_received',
@@ -92,7 +135,7 @@ const notifyOwnerOfArrival = async ({
         entityType: 'wms_stock',
         entityId: ownerId,
         actionUrl: home,
-        metadata: { productName, cases, bottles, shipmentNumber },
+        metadata: { productName, cases, bottles, shipmentNumber, wines: 1 },
       });
     }
 

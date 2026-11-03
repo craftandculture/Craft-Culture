@@ -14,12 +14,24 @@ import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import useTRPC from '@/lib/trpc/browser';
 
 type Mode = 'off' | 'shadow' | 'live';
-type Audience = 'partner' | 'distributor';
+type Audience = 'partner' | 'distributor' | 'shipments';
 
 const AUDIENCES: { audience: Audience; label: string; plural: string }[] = [
   { audience: 'partner', label: 'Wine partners', plural: 'wine partners' },
   { audience: 'distributor', label: 'Distributors', plural: 'distributors' },
+  { audience: 'shipments', label: 'Shipment updates to wine partners', plural: 'wine partners about their shipments' },
 ];
+
+/** What each switch position means for wine partners' shipment updates */
+const shipmentModeText = (mode: Mode | undefined, inbox: string | undefined) =>
+  mode === 'live'
+    ? 'Live. Partners get an email and a notice when their shipment departs, arrives in the UAE, and is in stock.'
+    : mode === 'shadow'
+      ? `Shadow. Each shipment email goes to ${inbox}; partners get nothing yet.`
+      : 'Off. Partners are not told about their shipments.';
+
+const audienceName = (audience: Audience) =>
+  audience === 'partner' ? 'Order emails to wine partners' : audience === 'distributor' ? 'Order emails to distributors' : 'Shipment updates to wine partners';
 
 const MODES: { mode: Mode; label: string; detail: string }[] = [
   {
@@ -83,10 +95,10 @@ const OrderEmailsAdmin = () => {
     onSuccess: (result) => {
       toast.success(
         result.mode === 'live'
-          ? `Order emails to ${result.audience === 'partner' ? 'wine partners' : 'distributors'} are now live`
+          ? `${audienceName(result.audience)} are now live`
           : result.mode === 'shadow'
-            ? `Order emails to ${result.audience === 'partner' ? 'wine partners' : 'distributors'} now go to Kevin`
-            : `Order emails to ${result.audience === 'partner' ? 'wine partners' : 'distributors'} are off`,
+            ? `${audienceName(result.audience)} now go to Kevin`
+            : `${audienceName(result.audience)} are off`,
       );
       setConfirm(null);
       void queryClient.invalidateQueries({ queryKey: api.privateClientOrders.adminGetOrderEmails.queryKey() });
@@ -116,7 +128,9 @@ const OrderEmailsAdmin = () => {
                 <span className="font-semibold">{label}: </span>
                 {!data
                   ? 'Loading…'
-                  : mode === 'live'
+                  : audience === 'shipments'
+                    ? shipmentModeText(mode, data.shadowInbox)
+                    : mode === 'live'
                     ? 'Live. The new emails reach them, and replace the older ones.'
                     : mode === 'shadow'
                       ? `Shadow. Each new email goes to ${data?.shadowInbox}; they still receive the older emails.`
@@ -205,7 +219,11 @@ const OrderEmailsAdmin = () => {
                   ? `Send order emails for ${confirmLabel} to Kevin first?`
                   : `Turn order emails to ${confirmLabel} off?`}
             </DialogTitle>
-            <DialogDescription>{MODES.find((m) => m.mode === confirm?.mode)?.detail}</DialogDescription>
+            <DialogDescription>
+              {confirm?.audience === 'shipments'
+                ? shipmentModeText(confirm.mode, data?.shadowInbox)
+                : MODES.find((m) => m.mode === confirm?.mode)?.detail}
+            </DialogDescription>
           </DialogHeader>
           <DialogBody>
             <p className="text-text-muted text-sm">
