@@ -1,3 +1,9 @@
+## [2.1.77](https://github.com/craftandculture/Craft-Culture/compare/v2.1.76...v2.1.77) (2026-11-03)
+
+### Bug Fixes
+
+* order emails go to a distributor's business inbox and the people working the order, not every login ([b3d379c](https://github.com/craftandculture/Craft-Culture/commit/b3d379c866facdc490a24c80392cb51ab5d765fb))
+
 ## [2.1.76](https://github.com/craftandculture/Craft-Culture/compare/v2.1.75...v2.1.76) (2026-11-03)
 
 ### Bug Fixes
