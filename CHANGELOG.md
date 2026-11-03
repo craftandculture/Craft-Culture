@@ -1,3 +1,9 @@
+## [2.1.69](https://github.com/craftandculture/Craft-Culture/compare/v2.1.68...v2.1.69) (2026-11-03)
+
+### Bug Fixes
+
+* the merge tool no longer proposes a wine's cuvée or another village as the same wine ([0ff5997](https://github.com/craftandculture/Craft-Culture/commit/0ff5997e8d2cdc13a57d96b094557b6c8b7ba456))
+
 ## [2.1.68](https://github.com/craftandculture/Craft-Culture/compare/v2.1.67...v2.1.68) (2026-11-03)
 
 ### Bug Fixes
