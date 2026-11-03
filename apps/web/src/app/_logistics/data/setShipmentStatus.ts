@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
+import notifyMembersWineAtWarehouse from '@/app/_cellar/data/notifyMembersWineAtWarehouse';
 import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
 import { logisticsShipmentActivityLogs, logisticsShipments } from '@/database/schema';
@@ -91,6 +92,11 @@ const setShipmentStatus = async ({
     // The wine partner hears when it departs, arrives and is in stock (Order Emails switch)
     const milestone = milestoneForStatus(status);
     if (milestone) await notifyPartnerOfShipment(id, milestone);
+
+    // Private Cellar members hear the moment it lands, not only once every bottle is checked in
+    if (status === 'at_warehouse' || status === 'partially_received') {
+      await notifyMembersWineAtWarehouse(id);
+    }
   }
 
   // Tell #logistics when an inbound shipment departs or lands; never blocks the update

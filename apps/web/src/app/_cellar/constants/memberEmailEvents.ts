@@ -53,6 +53,7 @@ export const MEMBER_EMAIL_EVENTS = {
   ukMoveSentBack: { template: 'cellarUpdate', action: true, essential: true },
   ukMoveShipped: { template: 'cellarUpdate', action: false, essential: false },
   ukMoveArrived: { template: 'cellarWines', action: false, essential: false, merge: true },
+  wineAtWarehouse: { template: 'cellarUpdate', action: false, essential: false },
   wineArrived: { template: 'cellarWines', action: false, essential: false, merge: true },
   purchaseComplete: { template: 'cellarWines', action: false, essential: true },
   reservationLapsing: { template: 'cellarWines', action: true, essential: true },

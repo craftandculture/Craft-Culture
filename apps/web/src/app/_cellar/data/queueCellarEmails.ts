@@ -182,6 +182,38 @@ export const queueDeliveryCollected = safely('queueDeliveryCollected', async ({ 
     },
   }));
 
+/** A shipment carrying a member's wine has reached the warehouse, before it is checked in */
+export const queueWineAtWarehouse = safely('queueWineAtWarehouse', async ({
+  partnerId,
+  shipmentId,
+  shipmentNumber,
+  bottles,
+}: {
+  partnerId: string;
+  shipmentId: string;
+  shipmentNumber?: string | null;
+  bottles: number;
+}) =>
+  queueMemberEmail({
+    kind: 'wineAtWarehouse',
+    partnerId,
+    entityId: shipmentId,
+    data: {
+      subject: 'Your wine has reached our warehouse',
+      preheader: 'Your wine has arrived safely and is now being checked in.',
+      eyebrow: 'New arrival',
+      headline: 'Your wine has reached our warehouse',
+      body:
+        `Your wine${bottles > 0 ? `, ${plural(bottles, 'bottle')} in all,` : ''} has arrived at the C&C Warehouse. ` +
+        'Our team will now inspect and label each bottle and place it in your cellar. ' +
+        'We will write to you again as soon as it is ready to view.',
+      ctaLabel: 'View your cellar',
+      ctaUrl: cellarUrl(),
+      note: 'You may follow its progress in your cellar at any time.',
+      reference: shipmentNumber ? `Shipment ${shipmentNumber}` : '',
+    },
+  }));
+
 /** Wine has been received into a member's UAE cellar */
 export const queueWineArrived = safely('queueWineArrived', async ({
   partnerId,
