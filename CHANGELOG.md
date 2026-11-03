@@ -1,3 +1,9 @@
+## [2.1.76](https://github.com/craftandculture/Craft-Culture/compare/v2.1.75...v2.1.76) (2026-11-03)
+
+### Bug Fixes
+
+* cellar says "Bottles in transit" and no longer lists incoming wines twice ([086da2f](https://github.com/craftandculture/Craft-Culture/commit/086da2f2a6809592c1fbf4ea597b3c76d6efcd3e))
+
 ## [2.1.75](https://github.com/craftandculture/Craft-Culture/compare/v2.1.74...v2.1.75) (2026-11-03)
 
 ### Features
