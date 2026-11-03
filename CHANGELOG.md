@@ -1,3 +1,9 @@
+## [2.1.83](https://github.com/craftandculture/Craft-Culture/compare/v2.1.82...v2.1.83) (2026-11-03)
+
+### Features
+
+* a member's move from the UK shows above their wine with a dated step-by-step tracker ([9299a74](https://github.com/craftandculture/Craft-Culture/commit/9299a74d001f9f7c57d52564ce67defdeb93879a))
+
 ## [2.1.82](https://github.com/craftandculture/Craft-Culture/compare/v2.1.81...v2.1.82) (2026-11-03)
 
 ### Bug Fixes
