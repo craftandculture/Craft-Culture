@@ -127,13 +127,10 @@ const queueOrderEmails = async () => {
         const copy = orderEmailCopy(event, audience, found.snapshot);
         if (!copy) continue;
 
-        // A wine partner's emails go to its business address and whoever placed the order
-        const recipientsKey = audience === 'partner' ? `${partyId}:${log.orderId}` : partyId;
+        // The business address and the people who work this order, never the whole account
+        const recipientsKey = `${audience}:${partyId}:${log.orderId}`;
         if (!recipientsOf.has(recipientsKey)) {
-          recipientsOf.set(
-            recipientsKey,
-            await getOrderEmailRecipients(partyId, audience === 'partner' ? log.orderId : undefined),
-          );
+          recipientsOf.set(recipientsKey, await getOrderEmailRecipients(partyId, log.orderId, audience));
         }
 
         // Updates that ask nothing of a partner wait for their daily summary

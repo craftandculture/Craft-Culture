@@ -29,8 +29,9 @@ const PARTNER_DIGEST_MODE: 'shadow' | 'live' = 'shadow';
  * Each email is written now, from the order as it stands, so its progress,
  * wines and details are current even if it waited for others to join it.
  * Wine partners and distributors each have a switch. Off: their due emails
- * are set aside and never sent later. Shadow: each goes to Kevin's inbox with
- * "[SHADOW for <recipient>]" before the subject. Live: each goes to them.
+ * are set aside and never sent later. Shadow: Kevin's inbox gets one copy of
+ * each email, "[SHADOW for <recipients>]" before the subject, however many
+ * people it is for. Live: each goes to them.
  *
  * A wine partner's updates that ask nothing of them are held for 17:00 Gulf
  * time and sent as one daily summary per address (PARTNER_DIGEST_MODE).
@@ -82,10 +83,16 @@ const sendOrderEmails = async () => {
   type Row = (typeof toSend)[number];
 
   /** Send one email for `carrier`, folding `mergedIds` into it, and record the outcome */
-  const deliver = async (carrier: Row, mergedIds: string[], emailData: Record<string, unknown>, rowMode: 'shadow' | 'live') => {
+  const send = async (
+    carrier: Row,
+    mergedIds: string[],
+    emailData: Record<string, unknown>,
+    rowMode: 'shadow' | 'live',
+    shadowFor = `${carrier.recipientName} <${carrier.recipientEmail}>`,
+  ) => {
     const to = rowMode === 'live' ? carrier.recipientEmail : ORDER_EMAIL_SHADOW_INBOX;
     const data = { ...emailData };
-    if (rowMode === 'shadow') data.subject = `[SHADOW for ${carrier.recipientName} <${carrier.recipientEmail}>] ${String(data.subject)}`;
+    if (rowMode === 'shadow') data.subject = `[SHADOW for ${shadowFor}] ${String(data.subject)}`;
 
     try {
       await loops.sendTransactionalEmail({
@@ -122,6 +129,16 @@ const sendOrderEmails = async () => {
         .where(inArray(orderEmailOutbox.id, [carrier.id, ...mergedIds]));
       failed += 1;
     }
+  };
+
+  /*
+    Everything to send this run, sent at the end. A shadow email for twelve
+    people at City Drinks put twelve identical copies in Kevin's inbox; now
+    the same email to several people is one copy naming them all.
+  */
+  const outgoing: { carrier: Row; mergedIds: string[]; emailData: Record<string, unknown>; rowMode: 'shadow' | 'live' }[] = [];
+  const deliver = async (carrier: Row, mergedIds: string[], emailData: Record<string, unknown>, rowMode: 'shadow' | 'live') => {
+    outgoing.push({ carrier, mergedIds, emailData, rowMode });
   };
 
   /*
@@ -195,6 +212,23 @@ const sendOrderEmails = async () => {
     }
 
     await deliver(carrier, mergedIds, email.data, rowMode === 'live' ? 'live' : 'shadow');
+  }
+
+  for (const item of outgoing.filter((entry) => entry.rowMode === 'live')) {
+    await send(item.carrier, item.mergedIds, item.emailData, 'live');
+  }
+
+  const shadowGroups = new Map<string, typeof outgoing>();
+  for (const item of outgoing.filter((entry) => entry.rowMode === 'shadow')) {
+    const key = `${item.carrier.orderId}:${item.carrier.audience}:${String(item.emailData.subject)}`;
+    shadowGroups.set(key, [...(shadowGroups.get(key) ?? []), item]);
+  }
+  for (const [first, ...rest] of shadowGroups.values()) {
+    if (!first) continue;
+    const names = [first, ...rest].map(({ carrier }) => `${carrier.recipientName} <${carrier.recipientEmail}>`);
+    const shadowFor = names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ');
+    // One copy carries the group; the others are recorded as shadowed with it
+    await send(first.carrier, [...first.mergedIds, ...rest.flatMap((item) => [item.carrier.id, ...item.mergedIds])], first.emailData, 'shadow', shadowFor);
   }
 
   return { mode, due: due.length, sent, failed };
