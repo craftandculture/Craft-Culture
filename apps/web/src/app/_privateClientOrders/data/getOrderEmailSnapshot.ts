@@ -21,7 +21,7 @@ const getOrderEmailSnapshot = async (orderId: string) => {
   const [order] = await db.select().from(privateClientOrders).where(eq(privateClientOrders.id, orderId)).limit(1);
   if (!order) return null;
 
-  const [items, history, [partner], [distributor]] = await Promise.all([
+  const [items, history, [partner], [distributor], [received]] = await Promise.all([
     db
       .select({
         productName: privateClientOrderItems.productName,
@@ -49,6 +49,18 @@ const getOrderEmailSnapshot = async (orderId: string) => {
           .where(eq(partners.id, order.distributorId))
           .limit(1)
       : Promise.resolve([]),
+    // Receipt moves the wines, not the order's status, so it is read from the log
+    db
+      .select({ at: privateClientOrderActivityLogs.createdAt })
+      .from(privateClientOrderActivityLogs)
+      .where(
+        and(
+          eq(privateClientOrderActivityLogs.orderId, orderId),
+          eq(privateClientOrderActivityLogs.action, 'stock_received_at_distributor'),
+        ),
+      )
+      .orderBy(asc(privateClientOrderActivityLogs.createdAt))
+      .limit(1),
   ]);
 
   const snapshot: OrderEmailSnapshot = {
@@ -67,6 +79,7 @@ const getOrderEmailSnapshot = async (orderId: string) => {
     cancellationReason: order.cancellationReason,
     distributorVerificationNotes: order.distributorVerificationNotes,
     items,
+    stockReceivedAt: received?.at ?? null,
     history: history.flatMap((row) => (row.status ? [{ status: row.status as OrderStatus, at: row.at }] : [])),
   };
 

@@ -63,6 +63,8 @@ export interface OrderEmailSnapshot {
     caseConfig: number | null;
     quantity: number;
   }[];
+  /** When the distributor confirmed it has the wine, if it has */
+  stockReceivedAt?: Date | null;
   /** Every status the order has entered, with when: from its activity log */
   history: { status: OrderStatus; at: Date }[];
 }

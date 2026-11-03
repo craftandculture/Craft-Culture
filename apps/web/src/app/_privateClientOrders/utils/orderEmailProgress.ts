@@ -76,6 +76,12 @@ const distributorStage = (status: OrderStatus): number => {
  * the order's history reached it. The step after the last one done is marked
  * as the current one. A cancelled order keeps the steps it reached.
  *
+ * The distributor's receipt of the wine ticks its own step even when the
+ * order's status never moved on: PCO-2026-00071 was received at City Drinks
+ * while still awaiting payment, and its cancellation email showed "Stock
+ * received" as not done. Earlier steps stay as they are, so an unpaid order
+ * never shows as paid.
+ *
  * @param order - The order, with its history
  * @param audience - Whose steps
  * @returns Six rows of mark, label and date
@@ -86,6 +92,8 @@ const orderEmailProgress = (order: OrderEmailSnapshot, audience: OrderEmailAudie
 
   // The furthest the order has been, so a cancellation does not undo its steps
   const reached = Math.max(stageOf(order.status), ...order.history.map((h) => stageOf(h.status)));
+  // "Stock received" for the distributor, "With the distributor" for the partner
+  const receivedStep = audience === 'partner' ? 5 : 4;
 
   return labels.map((label, index) => {
     const step = index + 1;
@@ -94,6 +102,9 @@ const orderEmailProgress = (order: OrderEmailSnapshot, audience: OrderEmailAudie
         .filter((h) => stageOf(h.status) >= step)
         .sort((a, b) => a.at.getTime() - b.at.getTime())[0];
       return { mark: '✓', label, when: first ? formatGulfDate(first.at, 'short') : '' };
+    }
+    if (step === receivedStep && order.stockReceivedAt) {
+      return { mark: '✓', label, when: formatGulfDate(order.stockReceivedAt, 'short') };
     }
     if (step === reached + 1 && order.status !== 'cancelled') return { mark: '→', label, when: 'Next' };
     return { mark: '○', label, when: '' };

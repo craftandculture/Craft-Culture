@@ -118,6 +118,31 @@ describe('buildOrderEmail', () => {
     const steps = buildOrderEmail(event('cancelled'), 'partner', order({ status: 'cancelled' }), links, 'L')!.data.steps;
     expect(steps.map((s) => s.mark)).toEqual(['✓', '✓', '○', '○', '○', '○']);
   });
+  it('cancels for a distributor holding the wine: no system wording, receipt ticked, payment not', () => {
+    const cancelled = order({
+      status: 'cancelled',
+      stockReceivedAt: at(5),
+      history: [
+        { status: 'awaiting_distributor_verification', at: at(1) },
+        { status: 'awaiting_client_payment', at: at(1) },
+        { status: 'cancelled', at: at(30) },
+      ],
+    });
+    const data = buildOrderEmail(
+      event('cancelled', {
+        previousStatus: 'awaiting_client_payment',
+        notes: 'Admin changed status from awaiting_client_payment to cancelled',
+      }),
+      'distributor',
+      cancelled,
+      links,
+      'Nathaniel',
+    )!.data;
+    expect(data.note).toEqual([]);
+    expect(data.steps.map((s) => s.mark)).toEqual(['✓', '✓', '○', '✓', '○', '○']);
+    expect(String(data.body)).toContain('keep the wine aside');
+  });
+
 });
 
 describe('groupOrderEmails', () => {

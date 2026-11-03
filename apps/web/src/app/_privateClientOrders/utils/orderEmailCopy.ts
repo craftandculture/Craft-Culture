@@ -24,6 +24,16 @@ import type { OrderEmailAudience, OrderEmailCopy, OrderEmailEvent, OrderEmailSna
 */
 
 /**
+ * A note a person wrote, or null for the log's own wording
+ *
+ * A status change with no reason given carries the system's line, "Admin
+ * changed status from awaiting_client_payment to cancelled", which reached
+ * City Drinks as the reason for a cancellation.
+ */
+const writtenNote = (notes: string | null | undefined) =>
+  notes && !/changed status from|confirmed as a correction/i.test(notes) ? notes : null;
+
+/**
  * What one event says to one party, or null when that party hears nothing
  *
  * @param event - The activity-log row
@@ -68,7 +78,7 @@ const orderEmailCopy = (
           eyebrow: 'Changes requested',
           headline: 'Your order needs a few changes',
           body: `We have reviewed this order for ${client} and need a few changes before we can approve it.`,
-          note: { title: 'Our note', text: order.revisionReason ?? event.notes },
+          note: { title: 'Our note', text: order.revisionReason ?? writtenNote(event.notes) },
           action: 'Update the order and submit it again.',
           ctaLabel: 'Update the order',
         };
@@ -101,7 +111,7 @@ const orderEmailCopy = (
           eyebrow: 'Action required',
           headline: 'Your client could not be verified',
           body: `${dist} was unable to verify ${client} for this order, so it is on hold until this is resolved.`,
-          note: { title: `Notes from ${dist}`, text: order.distributorVerificationNotes ?? event.notes },
+          note: { title: `Notes from ${dist}`, text: order.distributorVerificationNotes ?? writtenNote(event.notes) },
           action: `Resolve the matter with ${client}, then send the order back for verification.`,
           ctaLabel: 'Review the order',
         };
@@ -187,7 +197,7 @@ const orderEmailCopy = (
           eyebrow: 'Cancelled',
           headline: 'This order has been cancelled',
           body: `The order for ${client} has been cancelled. No further action is needed.`,
-          note: { title: 'Reason', text: order.cancellationReason ?? event.notes },
+          note: { title: 'Reason', text: order.cancellationReason ?? writtenNote(event.notes) },
           ctaLabel: 'View the order',
         };
       default:
@@ -254,8 +264,11 @@ const orderEmailCopy = (
         preheader: `The order for ${client} has been cancelled.`,
         eyebrow: 'Cancelled',
         headline: 'This order has been cancelled',
-        body: `The order for ${client} has been cancelled. Please do not collect payment or arrange delivery.`,
-        note: { title: 'Reason', text: order.cancellationReason ?? event.notes },
+        body:
+          order.stockReceivedAt && !order.deliveredAt
+            ? `The order for ${client} has been cancelled. Please do not collect payment or arrange delivery, and keep the wine aside: Craft & Culture will be in touch about collecting it.`
+            : `The order for ${client} has been cancelled. Please do not collect payment or arrange delivery.`,
+        note: { title: 'Reason', text: order.cancellationReason ?? writtenNote(event.notes) },
         ctaLabel: 'View the order',
       };
     default:
