@@ -1,7 +1,13 @@
-import { and, asc, inArray, isNotNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsShipmentActivityLogs, logisticsShipmentItems, logisticsShipments } from '@/database/schema';
+import {
+  logisticsShipmentActivityLogs,
+  logisticsShipmentItems,
+  logisticsShipments,
+  wmsStock,
+  wmsStockMovements,
+} from '@/database/schema';
 
 import intakeRouteOf from '../utils/intakeRouteOf';
 import intakeStageFromShipment from '../utils/intakeStageFromShipment';
@@ -23,7 +29,11 @@ interface IntakeRef {
  * shows is what arrives.
  *
  * Each shipment also carries when it first reached each status, from its
- * activity log, so the member's tracker can date every step.
+ * activity log, so the member's tracker can date every step, and how many of
+ * the member's bottles the warehouse has received from it. Wine is in the
+ * member's cellar once every bottle is received, whether or not anyone has
+ * marked the shipment Delivered: the arrival email goes on receipt, and the
+ * tracker must not still say "Checking in" after it.
  *
  * @param intakes - Transfers, with the member they belong to
  * @returns Shipment summary keyed by transfer id; unlinked transfers are absent
@@ -43,12 +53,13 @@ const getIntakeShipments = async (intakes: IntakeRef[]) => {
       wines: { name: string; vintage: number | null; cases: number; bottlesPerCase: number; bottleSizeMl: number }[];
       memberCases: number;
       memberBottles: number;
+      receivedBottles: number;
       reachedAt: Record<string, string>;
     }
   >();
   if (!shipmentIds.length) return byIntake;
 
-  const [shipments, items, statusChanges] = await Promise.all([
+  const [shipments, items, statusChanges, receipts] = await Promise.all([
     db
       .select({
         id: logisticsShipments.id,
@@ -89,10 +100,22 @@ const getIntakeShipments = async (intakes: IntakeRef[]) => {
         ),
       )
       .orderBy(asc(logisticsShipmentActivityLogs.createdAt)),
+    db
+      .select({
+        shipmentId: wmsStockMovements.shipmentId,
+        ownerId: wmsStockMovements.toOwnerId,
+        cases: wmsStockMovements.quantityCases,
+        bottles: wmsStockMovements.quantityBottles,
+        caseConfig: wmsStock.caseConfig,
+        at: wmsStockMovements.performedAt,
+      })
+      .from(wmsStockMovements)
+      .leftJoin(wmsStock, eq(wmsStock.id, wmsStockMovements.stockId))
+      .where(and(eq(wmsStockMovements.movementType, 'receive'), inArray(wmsStockMovements.shipmentId, shipmentIds))),
   ]);
 
-  // First time each shipment reached each status; the recorded departure,
-  // arrival and delivery dates win where the team filled them in
+  // First time each shipment reached each status, with the recorded
+  // departure, arrival and delivery dates
   const reachedAtFor = (shipment: (typeof shipments)[number]) => {
     const reached: Record<string, string> = {};
     for (const change of statusChanges) {
@@ -100,9 +123,11 @@ const getIntakeShipments = async (intakes: IntakeRef[]) => {
         reached[change.status] = change.at.toISOString();
       }
     }
+    // A departure the team typed in is the real day, not when it was clicked.
+    // ATA is also stamped on reaching the warehouse, so it only fills a gap.
     if (shipment.atd) reached.in_transit = shipment.atd.toISOString();
-    if (shipment.ata) reached.arrived_port = shipment.ata.toISOString();
-    if (shipment.deliveredAt) reached.delivered = shipment.deliveredAt.toISOString();
+    if (shipment.ata && !reached.arrived_port) reached.arrived_port = shipment.ata.toISOString();
+    if (shipment.deliveredAt && !reached.delivered) reached.delivered = shipment.deliveredAt.toISOString();
     return reached;
   };
 
@@ -124,18 +149,33 @@ const getIntakeShipments = async (intakes: IntakeRef[]) => {
         bottleSizeMl: item.bottleSizeMl ?? 750,
       }));
 
+    const memberBottles = wines.reduce((sum, wine) => sum + wine.cases * wine.bottlesPerCase, 0);
+    const received = receipts
+      .filter((receipt) => receipt.shipmentId === shipment.id && receipt.ownerId === intake.partnerId)
+      .sort((a, b) => a.at.getTime() - b.at.getTime());
+    const receivedBottles = received.reduce(
+      (sum, receipt) => sum + (receipt.bottles ?? receipt.cases * (receipt.caseConfig ?? 12)),
+      0,
+    );
+    const allReceived = memberBottles > 0 && receivedBottles >= memberBottles;
+
+    const reachedAt = reachedAtFor(shipment);
+    if (received.length && !reachedAt.at_warehouse) reachedAt.at_warehouse = received.at(0)!.at.toISOString();
+    if (allReceived && !reachedAt.delivered) reachedAt.delivered = received.at(-1)!.at.toISOString();
+
     byIntake.set(intake.id, {
       shipmentId: shipment.id,
       shipmentNumber: shipment.shipmentNumber,
       status: shipment.status,
-      impliedStage: intakeStageFromShipment(shipment.status, intakeRouteOf(intake)),
+      impliedStage: allReceived ? 'in_cellar' : intakeStageFromShipment(shipment.status, intakeRouteOf(intake)),
       transportMode: shipment.transportMode,
       eta: shipment.eta,
       arrivedAt: shipment.ata,
       wines,
       memberCases: wines.reduce((sum, wine) => sum + wine.cases, 0),
-      memberBottles: wines.reduce((sum, wine) => sum + wine.cases * wine.bottlesPerCase, 0),
-      reachedAt: reachedAtFor(shipment),
+      memberBottles,
+      receivedBottles,
+      reachedAt,
     });
   }
 

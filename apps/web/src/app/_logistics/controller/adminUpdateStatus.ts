@@ -11,6 +11,11 @@ const updateStatusSchema = z.object({
   id: z.string().uuid(),
   status: z.enum(SHIPMENT_STATUS_KEYS),
   notes: z.string().optional(),
+  /** The day it departed, YYYY-MM-DD, asked for when none is recorded */
+  departedAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 
 /**
@@ -27,9 +32,16 @@ const adminUpdateStatus = adminProcedure
   .input(updateStatusSchema)
   .mutation(async ({ input, ctx: { user } }) => {
     try {
-      const { id, status, notes } = input;
+      const { id, status, notes, departedAt } = input;
 
-      const shipment = await setShipmentStatus({ id, status, notes, userId: user.id });
+      // Noon UTC, so the date reads the same in Dubai and London
+      const shipment = await setShipmentStatus({
+        id,
+        status,
+        notes,
+        userId: user.id,
+        departedAt: departedAt ? new Date(`${departedAt}T12:00:00Z`) : undefined,
+      });
 
       return shipment;
     } catch (error) {

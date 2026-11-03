@@ -20,7 +20,8 @@ import type { ShipmentStatus } from '../utils/shipmentStatuses';
  * job and the #logistics post on departure or arrival. Shared by the status
  * dropdown and the quick update, so neither can skip a step the other takes.
  *
- * @param input - The shipment, its new status, a note and who made the change
+ * @param input - The shipment, its new status, a note, who made the change and,
+ *   when the team gives it, the day it departed
  * @returns The updated shipment
  */
 const setShipmentStatus = async ({
@@ -28,11 +29,13 @@ const setShipmentStatus = async ({
   status,
   notes,
   userId,
+  departedAt,
 }: {
   id: string;
   status: ShipmentStatus;
   notes?: string;
   userId: string;
+  departedAt?: Date;
 }) => {
   const [existing] = await db.select().from(logisticsShipments).where(eq(logisticsShipments.id, id));
 
@@ -48,6 +51,12 @@ const setShipmentStatus = async ({
 
   if (status === 'delivered') {
     timestampUpdates.deliveredAt = now;
+  }
+
+  // The departure members see on their tracker: the day the team gives, or
+  // the moment it is marked In transit; never overwrites one already recorded
+  if (!existing.atd && (departedAt || status === 'in_transit')) {
+    timestampUpdates.atd = departedAt ?? now;
   }
 
   if (status === 'at_warehouse' && !existing.ata) {

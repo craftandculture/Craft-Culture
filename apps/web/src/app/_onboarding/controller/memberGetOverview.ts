@@ -145,6 +145,7 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
               wines: shipment.wines,
               cases: shipment.memberCases,
               bottles: shipment.memberBottles,
+              receivedBottles: shipment.receivedBottles,
             }
           : null,
       };

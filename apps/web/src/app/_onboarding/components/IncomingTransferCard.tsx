@@ -41,7 +41,7 @@ const bottleLabel = (bottleSizeMl: number) =>
 const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) => {
   const [showAll, setShowAll] = useState(false);
   const [showHow, setShowHow] = useState(false);
-  const { steps: intakeStages, current: at } = intakeTimeline(
+  const { steps: intakeStages, current: at, next } = intakeTimeline(
     intake.route,
     intake.stage,
     intake.shipment,
@@ -65,7 +65,8 @@ const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) 
         : null,
     arrivedAt
       ? `Arrived ${format(new Date(arrivedAt), 'd MMM')}`
-      : shipment?.eta
+      : // An expected date already gone tells the member nothing but that it is late
+        shipment?.eta && new Date(shipment.eta).getTime() > Date.now()
         ? `Expected ${format(new Date(shipment.eta), 'd MMM')}`
         : null,
   ].filter(Boolean);
@@ -118,10 +119,16 @@ const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) 
             >
               {stage.label}
             </span>
-            {stage.date && (
+            {stage.date ? (
               <span className="text-text-muted mt-0.5 text-[10px] tabular-nums">
                 {format(new Date(stage.date), 'd MMM')}
               </span>
+            ) : (
+              stage.expected && (
+                <span className="text-text-muted mt-0.5 text-[10px] italic tabular-nums">
+                  Expected {format(new Date(stage.expected), 'd MMM')}
+                </span>
+              )
             )}
           </li>
         ))}
@@ -139,12 +146,20 @@ const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) 
               {index <= at && <IconCheck size={11} stroke={3} />}
             </span>
             <span className={index === at ? 'text-text-primary font-semibold' : 'text-text-muted'}>{stage.label}</span>
-            {stage.date && (
+            {stage.date ? (
               <span className="text-text-muted ml-auto text-xs tabular-nums">{format(new Date(stage.date), 'd MMM')}</span>
+            ) : (
+              stage.expected && (
+                <span className="text-text-muted ml-auto text-xs italic tabular-nums">
+                  Expected {format(new Date(stage.expected), 'd MMM')}
+                </span>
+              )
             )}
           </li>
         ))}
       </ol>
+
+      {next && <p className="text-text-muted mt-4 text-sm">{next}</p>}
 
       {wines.length > 0 && (
         <div className="border-border-muted mt-5 border-t pt-3">

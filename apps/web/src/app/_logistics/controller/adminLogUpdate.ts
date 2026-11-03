@@ -40,6 +40,11 @@ const adminLogUpdate = adminProcedure
         .nullable()
         .optional(),
       etaConfirmed: z.boolean().optional(),
+      /** The day it departed, YYYY-MM-DD, asked for when none is recorded */
+      departedAt: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional(),
       nextAction: z.string().trim().max(300).nullable().optional(),
       nextActionOwnerId: z.string().uuid().nullable().optional(),
       note: z.string().trim().max(1000).optional(),
@@ -58,7 +63,13 @@ const adminLogUpdate = adminProcedure
     const note = input.note || undefined;
 
     if (input.status && input.status !== existing.status) {
-      await setShipmentStatus({ id: input.id, status: input.status, notes: note, userId: user.id });
+      await setShipmentStatus({
+        id: input.id,
+        status: input.status,
+        notes: note,
+        userId: user.id,
+        departedAt: input.departedAt ? new Date(`${input.departedAt}T12:00:00Z`) : undefined,
+      });
     }
 
     // Noon UTC, so the date reads the same in Dubai and London

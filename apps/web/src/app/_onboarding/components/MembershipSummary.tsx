@@ -57,10 +57,12 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
       (sum, intake) =>
         sum +
         (intake.shipment?.wines.length
-          ? intake.shipment.wines.reduce(
+          ? // Less what the warehouse has already received, which is counted above
+            intake.shipment.wines.reduce(
               (cases, wine) => cases + (wine.cases * wine.bottlesPerCase * wine.bottleSizeMl) / 9000,
               0,
-            )
+            ) *
+            (1 - Math.min(1, intake.shipment.receivedBottles / Math.max(1, intake.shipment.bottles)))
           : intake.approxCases || 0),
       0,
     );

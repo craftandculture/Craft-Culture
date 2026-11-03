@@ -9,6 +9,7 @@ import SheetContent from '@/app/_ui/components/Sheet/SheetContent';
 import SheetTitle from '@/app/_ui/components/Sheet/SheetTitle';
 import useTRPC from '@/lib/trpc/browser';
 
+import needsDepartureDate from '../utils/needsDepartureDate';
 import { SHIPMENT_STATUSES, type ShipmentStatus } from '../utils/shipmentStatuses';
 
 /** The statuses a quick update moves between; receiving and delivery have their own screens */
@@ -32,6 +33,9 @@ export interface LogUpdateSheetShipment {
   etaConfirmed: boolean;
   nextAction: string | null;
   nextActionOwnerId: string | null;
+  /** Inbound shipments ask for a departure date when none is recorded */
+  type?: string | null;
+  atd?: Date | string | null;
 }
 
 export interface LogUpdateSheetProps {
@@ -58,6 +62,8 @@ const UpdateForm = ({ shipment, onClose }: { shipment: LogUpdateSheetShipment; o
   const [nextAction, setNextAction] = useState(shipment.nextAction ?? '');
   const [ownerId, setOwnerId] = useState<string | null>(shipment.nextActionOwnerId);
   const [note, setNote] = useState('');
+  const [departedAt, setDepartedAt] = useState('');
+  const askDeparture = status !== shipment.status && needsDepartureDate(shipment, status);
 
   const { data: teamData } = useQuery(api.logistics.admin.getTeam.queryOptions());
 
@@ -83,6 +89,7 @@ const UpdateForm = ({ shipment, onClose }: { shipment: LogUpdateSheetShipment; o
           status,
           eta: eta || null,
           etaConfirmed,
+          departedAt: askDeparture && departedAt ? departedAt : undefined,
           nextAction: nextAction.trim() || null,
           nextActionOwnerId: ownerId,
           note: note.trim() || undefined,
@@ -104,6 +111,26 @@ const UpdateForm = ({ shipment, onClose }: { shipment: LogUpdateSheetShipment; o
           ))}
         </div>
       </fieldset>
+
+      {askDeparture && (
+        <div className="flex flex-col gap-2">
+          <label htmlFor="update-departed" className="text-xs font-semibold text-text-muted">
+            Departed on
+          </label>
+          <input
+            id="update-departed"
+            type="date"
+            value={departedAt}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(event) => setDepartedAt(event.target.value)}
+            className="h-11 rounded-lg border border-border-muted bg-surface-primary px-3 text-sm text-text-primary"
+          />
+          <p className="text-xs text-text-muted">
+            Members see this on their incoming wine. Leave blank if not known
+            {status === 'in_transit' ? '; today is used' : ''}.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <label htmlFor="update-eta" className="text-xs font-semibold text-text-muted">

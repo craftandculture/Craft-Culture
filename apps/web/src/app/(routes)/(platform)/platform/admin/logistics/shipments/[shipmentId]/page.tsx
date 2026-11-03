@@ -42,6 +42,7 @@ import ShipmentTypeBadge from '@/app/_logistics/components/ShipmentTypeBadge';
 import SignaturePad from '@/app/_logistics/components/SignaturePad';
 import buildShipmentItemsCsv from '@/app/_logistics/utils/buildShipmentItemsCsv';
 import isValidHsCode from '@/app/_logistics/utils/isValidHsCode';
+import needsDepartureDate from '@/app/_logistics/utils/needsDepartureDate';
 import { SHIPMENT_STATUSES } from '@/app/_logistics/utils/shipmentStatuses';
 import {
   readZohoSync,
@@ -363,6 +364,9 @@ const ShipmentDetailPage = () => {
   });
 
   const [isLoggingUpdate, setIsLoggingUpdate] = useState(false);
+  // A status that needs the departure date first, and the date being typed
+  const [departureFor, setDepartureFor] = useState<ShipmentStatus | null>(null);
+  const [departedAt, setDepartedAt] = useState('');
   const { data: teamData } = useQuery(api.logistics.admin.getTeam.queryOptions());
   const { data: shipment, isLoading, isError, error, refetch } = useQuery({
     ...api.logistics.admin.getOne.queryOptions({ id: shipmentId }),
@@ -746,7 +750,18 @@ const ShipmentDetailPage = () => {
   );
 
   const handleStatusChange = (status: ShipmentStatus) => {
+    if (shipment && status !== shipment.status && needsDepartureDate(shipment, status)) {
+      setDepartedAt('');
+      setDepartureFor(status);
+      return;
+    }
     updateStatus({ id: shipmentId, status });
+  };
+
+  const confirmDeparture = (withDate: boolean) => {
+    if (!departureFor) return;
+    updateStatus({ id: shipmentId, status: departureFor, departedAt: withDate && departedAt ? departedAt : undefined });
+    setDepartureFor(null);
   };
 
   const handlePartnerChange = (partnerId: string) => {
@@ -1172,6 +1187,34 @@ const ShipmentDetailPage = () => {
         )}
 
         <LogUpdateSheet shipment={isLoggingUpdate ? shipment : null} onClose={() => setIsLoggingUpdate(false)} />
+
+        <Dialog open={Boolean(departureFor)} onOpenChange={(open) => !open && setDepartureFor(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>When did it depart?</DialogTitle>
+              <DialogDescription>
+                No departure is recorded yet. Members see this date on their incoming wine.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 flex flex-col gap-4">
+              <Input
+                type="date"
+                value={departedAt}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(event) => setDepartedAt(event.target.value)}
+                aria-label="Departure date"
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => confirmDeparture(false)}>
+                  {departureFor === 'in_transit' ? 'Use today' : 'Not known'}
+                </Button>
+                <Button size="sm" onClick={() => confirmDeparture(true)} disabled={!departedAt}>
+                  Save
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Status Stepper */}
         <Card>
