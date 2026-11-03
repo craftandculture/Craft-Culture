@@ -39,15 +39,31 @@ const MembershipSummary = ({ overview }: MembershipSummaryProps) => {
     }),
   );
 
-  // Only transfers still on their way; wine already in the cellar is counted above
+  /*
+    Only wine actually moving. A transfer still at "Request received" is the
+    member's estimate of their whole collection from the application (Michael
+    Humphreys-Davies' "about 100" was added to the 18 cartons on his flight
+    and read as 118). Shipped wine counts in allowance cases, twelve 75cl
+    bottles each, as the line below the bar explains, not in the shipper's
+    cartons.
+  */
   const incomingCases = intakes
     .filter(
       (intake) =>
         wineSources.find((source) => source.value === intake.source)?.isTransfer &&
-        intake.stage !== 'in_cellar' &&
-        intake.stage !== 'closed',
+        ['in_progress', 'arriving_uk', 'shipping_uae'].includes(intake.stage),
     )
-    .reduce((sum, intake) => sum + (intake.shipment?.cases || intake.approxCases || 0), 0);
+    .reduce(
+      (sum, intake) =>
+        sum +
+        (intake.shipment?.wines.length
+          ? intake.shipment.wines.reduce(
+              (cases, wine) => cases + (wine.cases * wine.bottlesPerCase * wine.bottleSizeMl) / 9000,
+              0,
+            )
+          : intake.approxCases || 0),
+      0,
+    );
 
   const used = Math.min(100, includedCases > 0 ? (cases / includedCases) * 100 : 0);
 

@@ -9,7 +9,7 @@ import type { AppRouter } from '@/trpc-router';
 
 import TransferInstructions from './TransferInstructions';
 import wineSources from '../constants/wineSources';
-import intakeStagesFor from '../utils/intakeStagesFor';
+import intakeTimeline from '../utils/intakeTimeline';
 
 type Intake = inferRouterOutputs<AppRouter>['onboarding']['member']['overview']['intakes'][number];
 
@@ -35,13 +35,18 @@ const bottleLabel = (bottleSizeMl: number) =>
  *
  * The tracker runs across the card on a wide screen and down it on a phone.
  * Once the team links the shipment carrying it, the card shows the member's
- * own wines on board and when they are expected.
+ * own wines on board, when they are expected, and the date each step was
+ * reached, with the UAE leg split into flight, arrival, customs and check-in.
  */
 const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) => {
   const [showAll, setShowAll] = useState(false);
   const [showHow, setShowHow] = useState(false);
-  const intakeStages = intakeStagesFor(intake.route);
-  const at = intakeStages.findIndex((stage) => stage.value === intake.stage);
+  const { steps: intakeStages, current: at } = intakeTimeline(
+    intake.route,
+    intake.stage,
+    intake.shipment,
+    intake.createdAt,
+  );
   const source = wineSources.find((item) => item.value === intake.source);
   const title = intake.holderName && intake.source !== 'lcb' ? intake.holderName : (source?.label ?? 'Your wine');
   const shipment = intake.shipment;
@@ -49,14 +54,17 @@ const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) 
   const shown = showAll ? wines : wines.slice(0, WINES_SHOWN);
   const transport = shipment ? transportLabel(shipment.transportMode) : null;
 
+  // Bottles, not the shipper's cartons: six-bottle cartons read as twice the
+  // cases the member's own allowance counts
+  const arrivedAt = shipment?.arrivedAt ?? shipment?.reachedAt.arrived_port ?? null;
   const facts = [
-    shipment && shipment.cases > 0
-      ? `${shipment.cases} ${shipment.cases === 1 ? 'case' : 'cases'}`
+    shipment && shipment.bottles > 0
+      ? `${shipment.bottles} ${shipment.bottles === 1 ? 'bottle' : 'bottles'}`
       : intake.approxCases
         ? `About ${intake.approxCases} cases`
         : null,
-    shipment?.arrivedAt
-      ? `Arrived ${format(new Date(shipment.arrivedAt), 'd MMM')}`
+    arrivedAt
+      ? `Arrived ${format(new Date(arrivedAt), 'd MMM')}`
       : shipment?.eta
         ? `Expected ${format(new Date(shipment.eta), 'd MMM')}`
         : null,
@@ -82,7 +90,7 @@ const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) 
           )}
         </div>
         <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-900">
-          {intakeStages[Math.max(at, 0)]?.label}
+          {intakeStages[at]?.label}
         </span>
       </header>
 
@@ -110,6 +118,11 @@ const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) 
             >
               {stage.label}
             </span>
+            {stage.date && (
+              <span className="text-text-muted mt-0.5 text-[10px] tabular-nums">
+                {format(new Date(stage.date), 'd MMM')}
+              </span>
+            )}
           </li>
         ))}
       </ol>
@@ -126,6 +139,9 @@ const IncomingTransferCard = ({ intake, reference }: IncomingTransferCardProps) 
               {index <= at && <IconCheck size={11} stroke={3} />}
             </span>
             <span className={index === at ? 'text-text-primary font-semibold' : 'text-text-muted'}>{stage.label}</span>
+            {stage.date && (
+              <span className="text-text-muted ml-auto text-xs tabular-nums">{format(new Date(stage.date), 'd MMM')}</span>
+            )}
           </li>
         ))}
       </ol>

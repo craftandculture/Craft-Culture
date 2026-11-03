@@ -1,7 +1,7 @@
-import { inArray } from 'drizzle-orm';
+import { and, asc, inArray, isNotNull } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsShipmentItems, logisticsShipments } from '@/database/schema';
+import { logisticsShipmentActivityLogs, logisticsShipmentItems, logisticsShipments } from '@/database/schema';
 
 import intakeRouteOf from '../utils/intakeRouteOf';
 import intakeStageFromShipment from '../utils/intakeStageFromShipment';
@@ -22,6 +22,9 @@ interface IntakeRef {
  * receiving uses to decide whose cellar a case lands in, so what the card
  * shows is what arrives.
  *
+ * Each shipment also carries when it first reached each status, from its
+ * activity log, so the member's tracker can date every step.
+ *
  * @param intakes - Transfers, with the member they belong to
  * @returns Shipment summary keyed by transfer id; unlinked transfers are absent
  */
@@ -39,11 +42,13 @@ const getIntakeShipments = async (intakes: IntakeRef[]) => {
       arrivedAt: Date | null;
       wines: { name: string; vintage: number | null; cases: number; bottlesPerCase: number; bottleSizeMl: number }[];
       memberCases: number;
+      memberBottles: number;
+      reachedAt: Record<string, string>;
     }
   >();
   if (!shipmentIds.length) return byIntake;
 
-  const [shipments, items] = await Promise.all([
+  const [shipments, items, statusChanges] = await Promise.all([
     db
       .select({
         id: logisticsShipments.id,
@@ -52,7 +57,9 @@ const getIntakeShipments = async (intakes: IntakeRef[]) => {
         transportMode: logisticsShipments.transportMode,
         partnerId: logisticsShipments.partnerId,
         eta: logisticsShipments.eta,
+        atd: logisticsShipments.atd,
         ata: logisticsShipments.ata,
+        deliveredAt: logisticsShipments.deliveredAt,
       })
       .from(logisticsShipments)
       .where(inArray(logisticsShipments.id, shipmentIds)),
@@ -68,7 +75,36 @@ const getIntakeShipments = async (intakes: IntakeRef[]) => {
       })
       .from(logisticsShipmentItems)
       .where(inArray(logisticsShipmentItems.shipmentId, shipmentIds)),
+    db
+      .select({
+        shipmentId: logisticsShipmentActivityLogs.shipmentId,
+        status: logisticsShipmentActivityLogs.newStatus,
+        at: logisticsShipmentActivityLogs.createdAt,
+      })
+      .from(logisticsShipmentActivityLogs)
+      .where(
+        and(
+          inArray(logisticsShipmentActivityLogs.shipmentId, shipmentIds),
+          isNotNull(logisticsShipmentActivityLogs.newStatus),
+        ),
+      )
+      .orderBy(asc(logisticsShipmentActivityLogs.createdAt)),
   ]);
+
+  // First time each shipment reached each status; the recorded departure,
+  // arrival and delivery dates win where the team filled them in
+  const reachedAtFor = (shipment: (typeof shipments)[number]) => {
+    const reached: Record<string, string> = {};
+    for (const change of statusChanges) {
+      if (change.shipmentId === shipment.id && change.status && !reached[change.status]) {
+        reached[change.status] = change.at.toISOString();
+      }
+    }
+    if (shipment.atd) reached.in_transit = shipment.atd.toISOString();
+    if (shipment.ata) reached.arrived_port = shipment.ata.toISOString();
+    if (shipment.deliveredAt) reached.delivered = shipment.deliveredAt.toISOString();
+    return reached;
+  };
 
   for (const intake of intakes) {
     const shipment = shipments.find((item) => item.id === intake.shipmentId);
@@ -98,6 +134,8 @@ const getIntakeShipments = async (intakes: IntakeRef[]) => {
       arrivedAt: shipment.ata,
       wines,
       memberCases: wines.reduce((sum, wine) => sum + wine.cases, 0),
+      memberBottles: wines.reduce((sum, wine) => sum + wine.cases * wine.bottlesPerCase, 0),
+      reachedAt: reachedAtFor(shipment),
     });
   }
 

@@ -140,8 +140,11 @@ const memberGetOverview = stockOwnerProcedure.query(async ({ ctx }) => {
               transportMode: shipment.transportMode,
               eta: shipment.eta,
               arrivedAt: shipment.arrivedAt,
+              status: shipment.status,
+              reachedAt: shipment.reachedAt,
               wines: shipment.wines,
               cases: shipment.memberCases,
+              bottles: shipment.memberBottles,
             }
           : null,
       };
