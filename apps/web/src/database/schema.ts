@@ -6682,6 +6682,48 @@ export const wmsProductPricing = pgTable(
 
 export type WmsProductPricing = typeof wmsProductPricing.$inferSelect;
 
+/**
+ * One owner's own pricing of a wine that more than one owner holds
+ *
+ * `wms_product_pricing` is one row per wine, so an override or margin set for
+ * Crurated's Montille Bourgogne Blanc changed Ihab's as well. The first time a
+ * shared wine is priced for one owner, every holder gets a row here copied
+ * from the shared one; from then on each owner's row is read instead of the
+ * shared row and changes alone. A wine one owner holds never gets a row here.
+ *
+ * Keyed on the pack-agnostic key (LWIN7-vintage-size), like every pricing read.
+ * No RLS: the pooled connection does not honour the owner's bypass, which once
+ * made every pricing write fail silently.
+ */
+export const wmsOwnerProductPricing = pgTable(
+  'wms_owner_product_pricing',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id')
+      .references(() => partners.id, { onDelete: 'cascade' })
+      .notNull(),
+    pakKey: text('pak_key').notNull(),
+    lwin18: text('lwin18').notNull(),
+    importPricePerBottle: doublePrecision('import_price_per_bottle'),
+    costOverridePerBottle: doublePrecision('cost_override_per_bottle'),
+    logisticsPerBottle: doublePrecision('logistics_per_bottle'),
+    transferPricePerBottle: doublePrecision('transfer_price_per_bottle'),
+    sellingPricePerBottle: doublePrecision('selling_price_per_bottle'),
+    sellMarginPct: doublePrecision('sell_margin_pct'),
+    b2bMarginPct: doublePrecision('b2b_margin_pct'),
+    pcMarginPct: doublePrecision('pc_margin_pct'),
+    updatedBy: uuid('updated_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('wms_owner_product_pricing_unique').on(table.ownerId, table.pakKey),
+  ],
+);
+
+export type WmsOwnerProductPricing = typeof wmsOwnerProductPricing.$inferSelect;
+
 export const wmsOwnerPricing = pgTable(
   'wms_owner_pricing',
   {

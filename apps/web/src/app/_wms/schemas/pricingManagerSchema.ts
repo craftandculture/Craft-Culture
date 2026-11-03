@@ -67,6 +67,8 @@ export const getPricingProductsSchema = z.object({
 /** Schema for setting/upserting a selling price for a product */
 export const setSellingPriceSchema = z.object({
   lwin18: z.string().min(1),
+  /** The partner whose holding this is; a wine several hold is priced per owner */
+  ownerId: z.string().uuid().nullish(),
   sellingPricePerBottle: z.number().positive(),
 });
 
@@ -76,6 +78,8 @@ export const setSellingPriceSchema = z.object({
  */
 export const setSellMarginSchema = z.object({
   lwin18: z.string().min(1),
+  /** The partner whose holding this is; a wine several hold is priced per owner */
+  ownerId: z.string().uuid().nullish(),
   sellMarginPct: z.number().min(0.1).max(99.9).nullable(),
   sellingPricePerBottle: z.number().positive().nullable(),
 });
@@ -87,6 +91,8 @@ export const setSellMarginSchema = z.object({
  */
 export const setCostOverrideSchema = z.object({
   lwin18: z.string().min(1),
+  /** The partner whose holding this is; a wine several hold is priced per owner */
+  ownerId: z.string().uuid().nullish(),
   costOverridePerBottle: z.number().min(-100000).max(100000).nullable(),
 });
 
@@ -96,6 +102,8 @@ export const setCostOverrideSchema = z.object({
  */
 export const setLineLogisticsSchema = z.object({
   lwin18: z.string().min(1),
+  /** The partner whose holding this is; a wine several hold is priced per owner */
+  ownerId: z.string().uuid().nullish(),
   logisticsPerBottle: z.number().min(0).max(100000).nullable(),
 });
 
@@ -105,6 +113,8 @@ export const setLineLogisticsSchema = z.object({
  */
 export const setTransferPriceSchema = z.object({
   lwin18: z.string().min(1),
+  /** The partner whose holding this is; a wine several hold is priced per owner */
+  ownerId: z.string().uuid().nullish(),
   transferPricePerBottle: z.number().min(0).max(100000).nullable(),
 });
 

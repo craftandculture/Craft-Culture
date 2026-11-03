@@ -17,11 +17,16 @@ import writeProductPricing from '../utils/writeProductPricing';
 const adminSetLineLogistics = adminProcedure
   .input(setLineLogisticsSchema)
   .mutation(async ({ input, ctx }) => {
-    const { lwin18, logisticsPerBottle } = input;
+    const { lwin18, logisticsPerBottle, ownerId } = input;
 
-    await writeProductPricing({ lwin18, set: { logisticsPerBottle }, userId: ctx.user.id });
+    const written = await writeProductPricing({
+      lwin18,
+      ownerId,
+      set: { logisticsPerBottle },
+      userId: ctx.user.id,
+    });
 
-    return { lwin18, logisticsPerBottle };
+    return { lwin18, logisticsPerBottle, ownerOnly: written.ownerOnly };
   });
 
 export default adminSetLineLogistics;

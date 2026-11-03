@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 /** Schema for setting/upserting an import price for a product */
 export const setImportPriceSchema = z.object({
+  /** The partner whose holding this is; a wine several hold is priced per owner */
+  ownerId: z.string().uuid().nullish(),
   lwin18: z.string().min(1),
   importPricePerBottle: z.number().positive(),
   source: z.enum(['manual', 'shipment']).default('manual'),

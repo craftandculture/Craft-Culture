@@ -24,13 +24,15 @@ const adminSetLineMargins = adminProcedure
   .input(
     z.object({
       lwin18s: z.array(z.string()).min(1).max(500),
+      /** The holding these rows are; a wine several own is priced per owner */
+      ownerId: z.string().uuid().nullish(),
       /** Null clears the override for that book. */
       b2bMarginPct: z.number().min(0).lt(100).nullable().optional(),
       pcMarginPct: z.number().min(0).lt(100).nullable().optional(),
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const { lwin18s, b2bMarginPct, pcMarginPct } = input;
+    const { lwin18s, b2bMarginPct, pcMarginPct, ownerId } = input;
 
     if (b2bMarginPct === undefined && pcMarginPct === undefined) {
       return { updated: 0 };
@@ -47,6 +49,7 @@ const adminSetLineMargins = adminProcedure
       lwin18s.map((lwin18) =>
         writeProductPricing({
           lwin18,
+          ownerId,
           set: {
             ...(b2bMarginPct !== undefined ? { b2bMarginPct: b2bMarginPct ?? null } : {}),
             ...(pcMarginPct !== undefined ? { pcMarginPct: pcMarginPct ?? null } : {}),

@@ -20,11 +20,16 @@ import writeProductPricing from '../utils/writeProductPricing';
 const adminSetCostOverride = adminProcedure
   .input(setCostOverrideSchema)
   .mutation(async ({ input, ctx }) => {
-    const { lwin18, costOverridePerBottle } = input;
+    const { lwin18, costOverridePerBottle, ownerId } = input;
 
-    await writeProductPricing({ lwin18, set: { costOverridePerBottle }, userId: ctx.user.id });
+    const written = await writeProductPricing({
+      lwin18,
+      ownerId,
+      set: { costOverridePerBottle },
+      userId: ctx.user.id,
+    });
 
-    return { lwin18, costOverridePerBottle };
+    return { lwin18, costOverridePerBottle, ownerOnly: written.ownerOnly };
   });
 
 export default adminSetCostOverride;

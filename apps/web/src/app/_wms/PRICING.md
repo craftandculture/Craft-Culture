@@ -50,6 +50,28 @@ at all.
 Use `writeProductPricing()` for every pricing write. It updates every row sharing
 the pack-agnostic key and inserts only when there is none.
 
+### A wine several owners hold is priced per owner
+
+`wms_product_pricing` is one row per wine, so an override or margin set for
+Crurated's Montille Bourgogne Blanc moved Ihab's too (a +$11.64 override took
+Crurated's in-bond from $35.11 to $49.06; clearing a Dancer override changed
+Ihab's row). Every pricing write now takes the row's `ownerId`.
+
+- A wine **one** owner holds keeps its single shared row, exactly as before.
+- The first owner-specific write to a wine **several** owners hold gives every
+  holder a row in `wms_owner_product_pricing`, copied from the shared one (so
+  nothing moves at the fork); from then on each owner's row is read and
+  written on its own. Release, notes and the import's source stay on the
+  shared row: they belong to the wine.
+- Reads take the owner's row through `ownerPricingJoin()` / `ownerPriced()`
+  (Pricing Manager rows and KPIs, the catalogue, the stock overview, the
+  consignment statement's cost). The whole owner row stands in, not field by
+  field — an owner clearing an override means cleared.
+- Rows say who else holds the wine ("also held by … · priced per owner"), and
+  "last sold" is per owner where the sale's stock line is known.
+- `ownerPricingReady()` guards every read: until the table exists the join is
+  an empty row of the same shape, never a reference to a missing table.
+
 ### Cost belongs to the lot, not the wine
 
 Import cost is read per stock row through `lotShipmentCost()`: the line on the

@@ -1,5 +1,4 @@
 import { and, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import { SELLABLE_STATUSES } from '@/app/_consignment/utils/mandateStatuses';
@@ -16,6 +15,9 @@ import {
 import isCraftCultureOwner from '../utils/isCraftCultureOwner';
 import lwinPakKey from '../utils/lwinPakKey';
 import onPriceListConditions from '../utils/onPriceListConditions';
+import ownerPricingJoin, { ownerPriced } from '../utils/ownerPricingJoin';
+import type { OwnerPricedField } from '../utils/ownerPricingJoin';
+import ownerPricingReady from '../utils/ownerPricingReady';
 import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 export interface CatalogueRow {
@@ -100,10 +102,11 @@ const getCatalogueRows = async (
    * single must beat the case price it was cut from — MAX() alone would let the
    * (usually higher) case price override a deliberate single-bottle rate.
    */
-  const preferExact = (col: AnyPgColumn) =>
+  /* Each holder's own figure where a wine several own is priced per owner */
+  const preferExact = (field: OwnerPricedField) =>
     sql`COALESCE(
-      MAX(CASE WHEN ${wmsProductPricing.lwin18} = ${wmsStock.lwin18} THEN ${col} END),
-      MAX(${col})
+      MAX(CASE WHEN ${wmsProductPricing.lwin18} = ${wmsStock.lwin18} THEN ${ownerPriced(field)} END),
+      MAX(${ownerPriced(field)})
     )`;
 
   /*
@@ -136,21 +139,11 @@ const getCatalogueRows = async (
       caseConfig: sql<number>`MAX(${wmsStock.caseConfig})`,
       bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
       availableCases: sql<number>`${sumAcrossPricingRows(wmsStock.availableCases)}::int`,
-      importPrice: sql<number | null>`${preferExact(
-        wmsProductPricing.importPricePerBottle,
-      )}`,
-      logistics: sql<number | null>`${preferExact(
-        wmsProductPricing.logisticsPerBottle,
-      )}`,
-      transfer: sql<number | null>`${preferExact(
-        wmsProductPricing.transferPricePerBottle,
-      )}`,
-      override: sql<number | null>`${preferExact(
-        wmsProductPricing.costOverridePerBottle,
-      )}`,
-      selling: sql<number | null>`${preferExact(
-        wmsProductPricing.sellingPricePerBottle,
-      )}`,
+      importPrice: sql<number | null>`${preferExact('importPricePerBottle')}`,
+      logistics: sql<number | null>`${preferExact('logisticsPerBottle')}`,
+      transfer: sql<number | null>`${preferExact('transferPricePerBottle')}`,
+      override: sql<number | null>`${preferExact('costOverridePerBottle')}`,
+      selling: sql<number | null>`${preferExact('sellingPricePerBottle')}`,
       /*
         A margin set on the wine beats the owner's default, as it does on the
         pricing screen.
@@ -167,12 +160,12 @@ const getCatalogueRows = async (
         and RTD) counts as its In Bond margin, as the Pricing Manager shows it.
       */
       inbondPct: sql<number | null>`COALESCE(
-        ${preferExact(wmsProductPricing.b2bMarginPct)},
-        ${preferExact(wmsProductPricing.sellMarginPct)},
+        ${preferExact('b2bMarginPct')},
+        ${preferExact('sellMarginPct')},
         MAX(${wmsOwnerPricingSettings.inbondMarginPct})
       )`,
       pcPct: sql<number | null>`COALESCE(
-        ${preferExact(wmsProductPricing.pcMarginPct)},
+        ${preferExact('pcMarginPct')},
         MAX(${wmsOwnerPricingSettings.pcMarginPct})
       )`,
     })
@@ -181,6 +174,7 @@ const getCatalogueRows = async (
       wmsProductPricing,
       sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
     )
+    .leftJoin(ownerPricingJoin(await ownerPricingReady()), sql`true`)
     .leftJoin(
       wmsOwnerPricingSettings,
       eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),

@@ -33,6 +33,8 @@ import inboundLogisticsPerBottle from '../utils/inboundLogisticsPerBottle';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lotShipmentCost from '../utils/lotShipmentCost';
 import lwinPakKey from '../utils/lwinPakKey';
+import ownerPricingJoin, { ownerPriced } from '../utils/ownerPricingJoin';
+import ownerPricingReady from '../utils/ownerPricingReady';
 import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 /**
@@ -45,6 +47,9 @@ import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 const adminGetPricingProducts = adminProcedure
   .input(getPricingProductsSchema)
   .query(async ({ input }) => {
+    /* A wine several owners hold may be priced per owner; see ownerPricingJoin */
+    const ownerReady = await ownerPricingReady();
+
     const {
       search,
       category,
@@ -85,25 +90,25 @@ const adminGetPricingProducts = adminProcedure
 
     if (active.has('unpriced')) {
       conditions.push(
-        sql`MAX(${wmsProductPricing.importPricePerBottle}) > 0 AND COALESCE(MAX(${wmsProductPricing.sellingPricePerBottle}), 0) = 0`,
+        sql`MAX(${ownerPriced('importPricePerBottle')}) > 0 AND COALESCE(MAX(${ownerPriced('sellingPricePerBottle')}), 0) = 0`,
       );
     }
 
     if (active.has('lossMaking')) {
       // Below cost = EFFECTIVE PC (computed when owner has a PC%, else stored)
       // at/below landed cost — matches the Below-Cost KPI and the red rows.
-      const landedH = sql`(MAX(${wmsProductPricing.importPricePerBottle}) + COALESCE(MAX(${wmsProductPricing.costOverridePerBottle}), 0) + COALESCE(MAX(${wmsProductPricing.transferPricePerBottle}), 2.5))`;
+      const landedH = sql`(MAX(${ownerPriced('importPricePerBottle')}) + COALESCE(MAX(${ownerPriced('costOverridePerBottle')}), 0) + COALESCE(MAX(${ownerPriced('transferPricePerBottle')}), 2.5))`;
       const effH = sql`(CASE
         WHEN MAX(${wmsOwnerPricingSettings.pcMarginPct}) IS NOT NULL AND MAX(${wmsOwnerPricingSettings.pcMarginPct}) < 100
         THEN ${landedH} / (1 - COALESCE(MAX(${wmsOwnerPricingSettings.inbondMarginPct}), 0) / 100.0) / (1 - MAX(${wmsOwnerPricingSettings.pcMarginPct}) / 100.0)
-        ELSE MAX(${wmsProductPricing.sellingPricePerBottle})
+        ELSE MAX(${ownerPriced('sellingPricePerBottle')})
       END)`;
       conditions.push(sql`${effH} > 0 AND ${effH} <= ${landedH}`);
     }
 
     if (active.has('noImport')) {
       conditions.push(
-        sql`COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) = 0`,
+        sql`COALESCE(MAX(${ownerPriced('importPricePerBottle')}), 0) = 0`,
       );
     }
 
@@ -132,7 +137,7 @@ const adminGetPricingProducts = adminProcedure
       const listed = sql`(
         MAX(${wmsProductPricing.pricingReleasedAt}) IS NOT NULL
         AND BOOL_AND(${wmsStock.notForSale} = false)
-        AND COALESCE(MAX(${wmsProductPricing.importPricePerBottle}), 0) > 0
+        AND COALESCE(MAX(${ownerPriced('importPricePerBottle')}), 0) > 0
       )`;
 
       if (active.has('onPriceList')) conditions.push(listed);
@@ -168,9 +173,9 @@ const adminGetPricingProducts = adminProcedure
       productName: sql`MAX(${wmsStock.productName})`,
       vintage: sql`MAX(${wmsStock.vintage})`,
       totalCases: sumAcrossPricingRows(wmsStock.quantityCases),
-      importPrice: sql`MAX(${wmsProductPricing.importPricePerBottle})`,
-      sellingPrice: sql`MAX(${wmsProductPricing.sellingPricePerBottle})`,
-      margin: sql`CASE WHEN MAX(${wmsProductPricing.sellingPricePerBottle}) > 0 AND MAX(${wmsProductPricing.importPricePerBottle}) > 0 THEN (1 - MAX(${wmsProductPricing.importPricePerBottle}) / MAX(${wmsProductPricing.sellingPricePerBottle})) * 100 ELSE -999 END`,
+      importPrice: sql`MAX(${ownerPriced('importPricePerBottle')})`,
+      sellingPrice: sql`MAX(${ownerPriced('sellingPricePerBottle')})`,
+      margin: sql`CASE WHEN MAX(${ownerPriced('sellingPricePerBottle')}) > 0 AND MAX(${ownerPriced('importPricePerBottle')}) > 0 THEN (1 - MAX(${ownerPriced('importPricePerBottle')}) / MAX(${ownerPriced('sellingPricePerBottle')})) * 100 ELSE -999 END`,
     };
 
     const sortExpr = sortExpressions[sortBy];
@@ -201,6 +206,20 @@ const adminGetPricingProducts = adminProcedure
         // split across consignors (rare, but worth flagging visually).
         ownerNames: sql<string[]>`array_agg(DISTINCT ${wmsStock.ownerName})`,
         ownerCount: sql<number>`COUNT(DISTINCT ${wmsStock.ownerId})::int`,
+        /*
+          Who else holds this wine. A price set on one row of a wine several
+          owners hold is that owner's alone; the screen names the others so
+          nobody wonders whether theirs moved too.
+        */
+        otherHolders: sql<string[] | null>`(
+          SELECT ARRAY_AGG(DISTINCT s2.owner_name ORDER BY s2.owner_name)
+          FROM wms_stock s2
+          WHERE ${lwinPakKey(sql`s2.lwin18`)} = ${lwinPakKey(sql`MAX(${wmsStock.lwin18})`)}
+            AND s2.owner_id IS DISTINCT FROM ${wmsStock.ownerId}
+            AND s2.quantity_cases > 0
+        )`,
+        /** Priced on its own row, apart from the other holders */
+        ownPricing: sql<boolean>`BOOL_OR(opp.opp_id IS NOT NULL)`,
         // 1 when Craft & Culture owns this stock — drives the $22.50 wine
         // logistics fallback for old C&C imports with no freight profile.
         isCraftCulture: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' THEN 1 ELSE 0 END)::int`,
@@ -209,25 +228,25 @@ const adminGetPricingProducts = adminProcedure
         isZeroTransferOwner: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 1 ELSE 0 END)::int`,
         importPricePerBottle: sql<
           number | null
-        >`MAX(${wmsProductPricing.importPricePerBottle})`,
+        >`MAX(${ownerPriced('importPricePerBottle')})`,
         costOverridePerBottle: sql<
           number | null
-        >`MAX(${wmsProductPricing.costOverridePerBottle})`,
+        >`MAX(${ownerPriced('costOverridePerBottle')})`,
         // Per-line logistics override ($/btl); null = fall back to owner/global
         lineLogistics: sql<
           number | null
-        >`MAX(${wmsProductPricing.logisticsPerBottle})`,
+        >`MAX(${ownerPriced('logisticsPerBottle')})`,
         // Per-SKU FZ→mainland transfer fee ($/btl); null = the $2.50 default
         transferPricePerBottle: sql<
           number | null
-        >`MAX(${wmsProductPricing.transferPricePerBottle})`,
+        >`MAX(${ownerPriced('transferPricePerBottle')})`,
         sellingPricePerBottle: sql<
           number | null
-        >`MAX(${wmsProductPricing.sellingPricePerBottle})`,
+        >`MAX(${ownerPriced('sellingPricePerBottle')})`,
         // Bespoke per-line margin % over landed (Spirits/RTD only)
         sellMarginPct: sql<
           number | null
-        >`MAX(${wmsProductPricing.sellMarginPct})`,
+        >`MAX(${ownerPriced('sellMarginPct')})`,
         /*
           A margin typed on THIS line, which beats the owner's rate.
 
@@ -243,8 +262,8 @@ const adminGetPricingProducts = adminProcedure
         */
         b2bMarginPct: sql<
           number | null
-        >`MAX(${wmsProductPricing.b2bMarginPct})`,
-        pcMarginPct: sql<number | null>`MAX(${wmsProductPricing.pcMarginPct})`,
+        >`MAX(${ownerPriced('b2bMarginPct')})`,
+        pcMarginPct: sql<number | null>`MAX(${ownerPriced('pcMarginPct')})`,
         // Owner's own rates (explicit settings; null if the owner hasn't set them)
         ownerLogistics: sql<
           number | null
@@ -261,6 +280,7 @@ const adminGetPricingProducts = adminProcedure
         wmsProductPricing,
         sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
       )
+      .leftJoin(ownerPricingJoin(ownerReady), sql`true`)
       .leftJoin(
         wmsOwnerPricingSettings,
         eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
@@ -296,6 +316,25 @@ const adminGetPricingProducts = adminProcedure
     > = {};
     const isNewer = (a: Date | null, b: { soldAt: Date | null } | undefined) =>
       !b || (a != null && (b.soldAt == null || a > b.soldAt));
+    /*
+      The same, per owner: a sale whose stock line is known belongs to that
+      line's owner. Montille Bourgogne Blanc is held by Crurated and Ihab, and
+      both rows showed the one sale (SO-00200) whoever's bottles it was.
+    */
+    const lastSoldByOwner: typeof lastSoldMap = {};
+    const record = (
+      key: string,
+      ownerOfSale: string | null,
+      sale: (typeof lastSoldMap)[string],
+    ) => {
+      if (isNewer(sale.soldAt, lastSoldMap[key])) lastSoldMap[key] = sale;
+
+      const ownKey = `${key}|${ownerOfSale ?? ''}`;
+
+      if (ownerOfSale && isNewer(sale.soldAt, lastSoldByOwner[ownKey])) {
+        lastSoldByOwner[ownKey] = sale;
+      }
+    };
 
     const zohoSold = await db
       .select({
@@ -304,6 +343,9 @@ const adminGetPricingProducts = adminProcedure
         description: zohoSalesOrderItems.description,
         ref: zohoSalesOrders.salesOrderNumber,
         soldAt: zohoSalesOrders.updatedAt,
+        ownerOfSale: sql<string | null>`(
+          SELECT st.owner_id FROM wms_stock st WHERE st.id = ${zohoSalesOrderItems.stockId}
+        )`,
       })
       .from(zohoSalesOrderItems)
       .innerJoin(
@@ -330,14 +372,12 @@ const adminGetPricingProducts = adminProcedure
         Number(/^(\d+)/.exec(r.description ?? '')?.[1]) ||
         Number(r.sku.split('-')[2]) ||
         1;
-      if (isNewer(r.soldAt, lastSoldMap[key])) {
-        lastSoldMap[key] = {
-          pricePerBottle: Math.round((r.rate / pack) * 100) / 100,
-          ref: r.ref,
-          soldAt: r.soldAt,
-          tier: 'B2B',
-        };
-      }
+      record(key, r.ownerOfSale, {
+        pricePerBottle: Math.round((r.rate / pack) * 100) / 100,
+        ref: r.ref,
+        soldAt: r.soldAt,
+        tier: 'B2B',
+      });
     }
 
     const pcoSold = await db
@@ -347,6 +387,10 @@ const adminGetPricingProducts = adminProcedure
         caseConfig: privateClientOrderItems.caseConfig,
         ref: privateClientOrders.orderNumber,
         soldAt: privateClientOrders.updatedAt,
+        ownerOfSale: sql<string | null>`(
+          SELECT st.owner_id FROM wms_stock st
+          WHERE st.id = ${privateClientOrderItems.sourceStockId}
+        )`,
       })
       .from(privateClientOrderItems)
       .innerJoin(
@@ -369,14 +413,12 @@ const adminGetPricingProducts = adminProcedure
       const key = pak(r.lwin);
       if (!wantedKeys.has(key)) continue;
       const pack = r.caseConfig && r.caseConfig > 0 ? r.caseConfig : 1;
-      if (isNewer(r.soldAt, lastSoldMap[key])) {
-        lastSoldMap[key] = {
-          pricePerBottle: Math.round((r.priceCase / pack) * 100) / 100,
-          ref: r.ref,
-          soldAt: r.soldAt,
-          tier: 'PC',
-        };
-      }
+      record(key, r.ownerOfSale, {
+        pricePerBottle: Math.round((r.priceCase / pack) * 100) / 100,
+        ref: r.ref,
+        soldAt: r.soldAt,
+        tier: 'PC',
+      });
     }
 
     const enrichedProducts = products.map((p) => {
@@ -410,7 +452,15 @@ const adminGetPricingProducts = adminProcedure
         // live group/shipment freight per bottle (read-only; auto-updates)
         systemLogistics,
         // most recent realized sale (Zoho B2B or PCO), null if never sold
-        lastSold: lastSoldMap[pak(p.lwin18)] ?? null,
+        /*
+          This owner's own last sale; the wine's only where nobody else holds
+          it, since then there is no doubt whose bottles sold.
+        */
+        lastSold:
+          lastSoldByOwner[`${pak(p.lwin18)}|${p.ownerId ?? ''}`] ??
+          ((p.otherHolders ?? []).length === 0
+            ? (lastSoldMap[pak(p.lwin18)] ?? null)
+            : null),
       };
     });
 
@@ -424,6 +474,7 @@ const adminGetPricingProducts = adminProcedure
         wmsProductPricing,
         sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
       )
+      .leftJoin(ownerPricingJoin(ownerReady), sql`true`)
       .leftJoin(
         wmsOwnerPricingSettings,
         eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
@@ -462,7 +513,7 @@ const adminGetPricingProducts = adminProcedure
     // freight = shipment landed − product) + FZ→mainland transfer (default
     // $2.50) + manual override. Replaces the old flat owner logistics rate.
     // Same rule as the rows: an own invoice line beats a typed import price
-    const importPaidExpr = sql`COALESCE(CASE WHEN ship.own_line THEN NULLIF(ship.product_cost, 0) END, NULLIF(${wmsProductPricing.importPricePerBottle}, 0), ship.product_cost, 0)`;
+    const importPaidExpr = sql`COALESCE(CASE WHEN ship.own_line THEN NULLIF(ship.product_cost, 0) END, NULLIF(${ownerPriced('importPricePerBottle')}, 0), ship.product_cost, 0)`;
     const freightExpr = sql`GREATEST(COALESCE(ship.landed_cost, 0) - COALESCE(ship.product_cost, 0), 0)`;
     // Logistics = per-line override if set; else live freight; else $22.50
     // fallback for C&C-owned wine with no freight profile (old imports).
@@ -475,9 +526,9 @@ const adminGetPricingProducts = adminProcedure
     // import + transfer. Do not "fix" this by defaulting to the owner's
     // logistics rate — that inflates landed cost, and every price built on it,
     // on exactly the stock C&C ships for free.
-    const logisticsExpr = sql`COALESCE(${wmsProductPricing.logisticsPerBottle}, (CASE WHEN ${freightExpr} > 0 THEN ${freightExpr} WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END))`;
-    const transferExpr = sql`COALESCE(${wmsProductPricing.transferPricePerBottle}, CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 0 ELSE 2.5 END)`;
-    const overrideExpr = sql`COALESCE(${wmsProductPricing.costOverridePerBottle}, 0)`;
+    const logisticsExpr = sql`COALESCE(${ownerPriced('logisticsPerBottle')}, (CASE WHEN ${freightExpr} > 0 THEN ${freightExpr} WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END))`;
+    const transferExpr = sql`COALESCE(${ownerPriced('transferPricePerBottle')}, CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 0 ELSE 2.5 END)`;
+    const overrideExpr = sql`COALESCE(${ownerPriced('costOverridePerBottle')}, 0)`;
     const landedExpr = sql`(CASE WHEN (${importPaidExpr} > 0 OR ${overrideExpr} <> 0) THEN ${importPaidExpr} + ${logisticsExpr} + ${transferExpr} + ${overrideExpr} ELSE 0 END)`;
     // The margin for each book, most specific source first: a per-line override,
     // then the band matching this wine's landed cost (the owner's own band
@@ -496,13 +547,13 @@ const adminGetPricingProducts = adminProcedure
     )`;
 
     const b2bMarginExpr = sql`COALESCE(
-      NULLIF(${wmsProductPricing.b2bMarginPct}, 100),
+      NULLIF(${ownerPriced('b2bMarginPct')}, 100),
       ${bandPick('b2b_margin_pct')},
       ${wmsOwnerPricingSettings.inbondMarginPct},
       10
     )`;
     const pcMarginExpr = sql`COALESCE(
-      NULLIF(${wmsProductPricing.pcMarginPct}, 100),
+      NULLIF(${ownerPriced('pcMarginPct')}, 100),
       ${bandPick('pc_margin_pct')},
       ${wmsOwnerPricingSettings.pcMarginPct},
       10
@@ -517,16 +568,16 @@ const adminGetPricingProducts = adminProcedure
       WHEN COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, 0) > 0
       THEN ${wmsOwnerPricing.pcSellingPricePerBottle}
       WHEN ${landedExpr} > 0 THEN ${landedExpr} / (1 - ${pcMarginExpr} / 100.0)
-      ELSE COALESCE(${wmsProductPricing.sellingPricePerBottle}, 0)
+      ELSE COALESCE(${ownerPriced('sellingPricePerBottle')}, 0)
     END)`;
     const bottlesExpr = sql`${wmsStock.quantityCases} * ${wmsStock.caseConfig}`;
 
     const [summaryResult] = await db
       .select({
         totalProducts: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
-        totalImportValue: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} * ${wmsProductPricing.importPricePerBottle}), 0)::float`,
-        pricedImportCount: sql<number>`COUNT(DISTINCT CASE WHEN ${wmsProductPricing.importPricePerBottle} IS NOT NULL AND ${wmsProductPricing.importPricePerBottle} > 0 THEN ${wmsStock.lwin18} END)::int`,
-        pricedSellingCount: sql<number>`COUNT(DISTINCT CASE WHEN ${wmsProductPricing.sellingPricePerBottle} IS NOT NULL AND ${wmsProductPricing.sellingPricePerBottle} > 0 THEN ${wmsStock.lwin18} END)::int`,
+        totalImportValue: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} * ${ownerPriced('importPricePerBottle')}), 0)::float`,
+        pricedImportCount: sql<number>`COUNT(DISTINCT CASE WHEN ${ownerPriced('importPricePerBottle')} IS NOT NULL AND ${ownerPriced('importPricePerBottle')} > 0 THEN ${wmsStock.lwin18} END)::int`,
+        pricedSellingCount: sql<number>`COUNT(DISTINCT CASE WHEN ${ownerPriced('sellingPricePerBottle')} IS NOT NULL AND ${ownerPriced('sellingPricePerBottle')} > 0 THEN ${wmsStock.lwin18} END)::int`,
         // Landed cost value of stock on hand (import/shipment + override + logistics)
         stockAtCost: sql<number>`COALESCE(SUM(${bottlesExpr} * ${landedExpr}), 0)::float`,
         // In-bond (B2B) value of stock
@@ -543,6 +594,7 @@ const adminGetPricingProducts = adminProcedure
         wmsProductPricing,
         sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
       )
+      .leftJoin(ownerPricingJoin(ownerReady), sql`true`)
       .leftJoin(
         wmsOwnerPricingSettings,
         eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),

@@ -16,11 +16,16 @@ import writeProductPricing from '../utils/writeProductPricing';
 const adminSetSellingPrice = adminProcedure
   .input(setSellingPriceSchema)
   .mutation(async ({ input, ctx }) => {
-    const { lwin18, sellingPricePerBottle } = input;
+    const { lwin18, sellingPricePerBottle, ownerId } = input;
 
-    await writeProductPricing({ lwin18, set: { sellingPricePerBottle }, userId: ctx.user.id });
+    const written = await writeProductPricing({
+      lwin18,
+      ownerId,
+      set: { sellingPricePerBottle },
+      userId: ctx.user.id,
+    });
 
-    return { lwin18, sellingPricePerBottle };
+    return { lwin18, sellingPricePerBottle, ownerOnly: written.ownerOnly };
   });
 
 export default adminSetSellingPrice;

@@ -50,7 +50,7 @@ const adminSetPricingRelease = adminProcedure
           }),
         ),
       )
-    ).reduce((sum, n) => sum + n, 0);
+    ).reduce((sum, written) => sum + written.rows, 0);
 
     return { released, count: lwin18s.length, touched };
   });

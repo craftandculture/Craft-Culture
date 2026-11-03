@@ -31,7 +31,7 @@ import writeProductPricing from '../utils/writeProductPricing';
 const adminSetImportPrice = adminProcedure
   .input(setImportPriceSchema)
   .mutation(async ({ input, ctx }) => {
-    const { lwin18, importPricePerBottle, source, shipmentItemId, notes } =
+    const { lwin18, importPricePerBottle, source, shipmentItemId, notes, ownerId } =
       input;
 
     const current = await db
@@ -43,8 +43,9 @@ const adminSetImportPrice = adminProcedure
       (row) => row.importPrice !== importPricePerBottle,
     );
 
-    await writeProductPricing({
+    const written = await writeProductPricing({
       lwin18,
+      ownerId,
       set: {
         importPricePerBottle,
         importPriceSource: source,
@@ -55,7 +56,7 @@ const adminSetImportPrice = adminProcedure
       userId: ctx.user.id,
     });
 
-    return { lwin18, importPricePerBottle, source };
+    return { lwin18, importPricePerBottle, source, ownerOnly: written.ownerOnly };
   });
 
 export default adminSetImportPrice;

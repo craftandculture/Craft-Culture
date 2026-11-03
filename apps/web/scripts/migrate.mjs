@@ -2446,6 +2446,38 @@ const runMigrations = async () => {
     console.log('✅ cons_wine_aliases ready');
 
     /*
+      One owner's own pricing of a wine several owners hold. Without it an
+      override set for Crurated's Montille Bourgogne Blanc moved Ihab's too.
+      RLS stays off: the pooled connection does not honour the bypass.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "wms_owner_product_pricing" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "owner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "pak_key" text NOT NULL,
+        "lwin18" text NOT NULL,
+        "import_price_per_bottle" double precision,
+        "cost_override_per_bottle" double precision,
+        "logistics_per_bottle" double precision,
+        "transfer_price_per_bottle" double precision,
+        "selling_price_per_bottle" double precision,
+        "sell_margin_pct" double precision,
+        "b2b_margin_pct" double precision,
+        "pc_margin_pct" double precision,
+        "updated_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "wms_owner_product_pricing_unique" ON "wms_owner_product_pricing"("owner_id","pak_key")`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "wms_owner_product_pricing" DISABLE ROW LEVEL SECURITY`,
+    );
+    console.log('✅ wms_owner_product_pricing ready');
+
+    /*
       Two holders the October figures need and the module did not have.
 
       Philipp Strasky consigns under CONSIGNMENT_PS (INV-000399) and had no

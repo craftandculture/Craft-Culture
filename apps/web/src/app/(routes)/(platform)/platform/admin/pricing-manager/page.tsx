@@ -3095,6 +3095,14 @@ const PricingManagerPage = () => {
 
                     // The two prices a phone can change too; one definition for both layouts.
                     // In bond: the margin the typed price implies is what gets stored.
+                    /*
+                      The holding this row is. A wine several owners hold is
+                      priced per owner, so every edit says whose it is.
+                    */
+                    const rowOwnerId =
+                      (product as { ownerId?: string | null }).ownerId ?? null;
+                    const otherHolders =
+                      (product as { otherHolders?: string[] | null }).otherHolders ?? [];
                     const saveInBond = (price: number) => {
                       if (landed == null || landed <= 0) {
                         toast.error('This wine has no landed cost yet, so an In Bond price cannot be set. Add the cost first.');
@@ -3103,6 +3111,7 @@ const PricingManagerPage = () => {
                       const pct = ((price - landed) / price) * 100;
                       setLineMarginsMut.mutate({
                         lwin18s: [product.lwin18],
+                        ownerId: rowOwnerId,
                         b2bMarginPct: Math.max(0, Math.min(99, Number(pct.toFixed(2)))),
                       });
                     };
@@ -3122,6 +3131,7 @@ const PricingManagerPage = () => {
                       } else {
                         setSellingPriceMut.mutate({
                           lwin18: product.lwin18,
+                          ownerId: rowOwnerId,
                           sellingPricePerBottle: v,
                         });
                       }
@@ -3198,6 +3208,15 @@ const PricingManagerPage = () => {
                                 {product.productName}
                               </span>
                             </button>
+                            {/* Held by others too: an edit here is this owner's alone */}
+                            {otherHolders.length > 0 && (
+                              <span
+                                className="text-[11px] text-text-muted"
+                                title="Prices set on this row apply to this owner only; the other holders keep their own."
+                              >
+                                also held by {otherHolders.join(', ')} · priced per owner
+                              </span>
+                            )}
                             {/* Vintage and a non-standard size ride in the pinned
                                 column, so a row still reads as one wine when the
                                 table is scrolled across to the prices */}
@@ -3380,6 +3399,7 @@ const PricingManagerPage = () => {
                           onSave={(v) =>
                             setImportPriceMut.mutate({
                               lwin18: product.lwin18,
+                              ownerId: rowOwnerId,
                               importPricePerBottle: v,
                               source: 'manual',
                             })
@@ -3393,6 +3413,7 @@ const PricingManagerPage = () => {
                           onSave={(v) =>
                             setLineLogisticsMut.mutate({
                               lwin18: product.lwin18,
+                              ownerId: rowOwnerId,
                               logisticsPerBottle: v,
                             })
                           }
@@ -3405,6 +3426,7 @@ const PricingManagerPage = () => {
                           onSave={(v) =>
                             setTransferPriceMut.mutate({
                               lwin18: product.lwin18,
+                              ownerId: rowOwnerId,
                               transferPricePerBottle: v,
                             })
                           }
@@ -3416,6 +3438,7 @@ const PricingManagerPage = () => {
                           onSave={(v) =>
                             setCostOverrideMut.mutate({
                               lwin18: product.lwin18,
+                              ownerId: rowOwnerId,
                               costOverridePerBottle: v,
                             })
                           }
@@ -3483,6 +3506,7 @@ const PricingManagerPage = () => {
                           onSave={(pct) =>
                             setLineMarginsMut.mutate({
                               lwin18s: [product.lwin18],
+                              ownerId: rowOwnerId,
                               ...(marginBasis === 'pcIb'
                                 ? { pcMarginPct: pct }
                                 : { b2bMarginPct: pct }),

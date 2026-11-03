@@ -19,11 +19,16 @@ import writeProductPricing from '../utils/writeProductPricing';
 const adminSetTransferPrice = adminProcedure
   .input(setTransferPriceSchema)
   .mutation(async ({ input, ctx }) => {
-    const { lwin18, transferPricePerBottle } = input;
+    const { lwin18, transferPricePerBottle, ownerId } = input;
 
-    await writeProductPricing({ lwin18, set: { transferPricePerBottle }, userId: ctx.user.id });
+    const written = await writeProductPricing({
+      lwin18,
+      ownerId,
+      set: { transferPricePerBottle },
+      userId: ctx.user.id,
+    });
 
-    return { lwin18, transferPricePerBottle };
+    return { lwin18, transferPricePerBottle, ownerOnly: written.ownerOnly };
   });
 
 export default adminSetTransferPrice;

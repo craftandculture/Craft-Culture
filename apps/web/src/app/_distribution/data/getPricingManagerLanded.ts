@@ -1,6 +1,7 @@
 import { client } from '@/database/client';
 
 import { packAgnostic } from '../utils/codeBridge';
+import tableReady from '../utils/tableReady';
 
 /**
  * What each wine cost its owner, landed, as the Pricing Manager has it
@@ -32,6 +33,12 @@ const getPricingManagerLanded = async (
 ) => {
   const partnerId = options.partnerId ?? null;
   const fallback = options.shipmentFallback ?? false;
+  /*
+    A wine several owners hold may carry this owner's own import and override
+    (wms_owner_product_pricing); theirs stands in for the shared row.
+  */
+  const perOwner =
+    partnerId !== null && (await tableReady('wms_owner_product_pricing'));
 
   if (keys.length === 0) return [];
 
@@ -78,18 +85,41 @@ const getPricingManagerLanded = async (
       ) rows
       ORDER BY key, own DESC, created_at DESC
     )
-    SELECT k.key,
+    owned AS (
+      ${
+        perOwner
+          ? client`
+              SELECT REPLACE(o.pak_key, '-', '') AS key,
+                     o.import_price_per_bottle AS import_price,
+                     o.cost_override_per_bottle AS override
+              FROM wms_owner_product_pricing o
+              WHERE o.owner_id = ${partnerId}::uuid
+                AND REPLACE(o.pak_key, '-', '') = ANY(${keys}::text[])
+            `
+          : client`SELECT NULL::text AS key, NULL::float8 AS import_price, NULL::float8 AS override WHERE false`
+      }
+    ),
+    priced AS (
+      SELECT k.key,
+             CASE WHEN o.key IS NOT NULL THEN o.import_price ELSE t.import_price END AS import_price,
+             CASE WHEN o.key IS NOT NULL THEN o.override ELSE t.override END AS override,
+             o.key IS NOT NULL AS own
+      FROM UNNEST(${keys}::text[]) AS k(key)
+      LEFT JOIN typed t ON t.key = k.key
+      LEFT JOIN owned o ON o.key = k.key
+    )
+    SELECT p.key,
            (
-             COALESCE(NULLIF(t.import_price, 0), sh.product_cost)
-             + COALESCE(t.override, 0)
+             COALESCE(NULLIF(p.import_price, 0), sh.product_cost)
+             + COALESCE(p.override, 0)
            )::float8 AS "landedPerBottle",
-           CASE WHEN t.import_price > 0 THEN 'Pricing Manager'
+           CASE WHEN p.import_price > 0
+                  THEN CASE WHEN p.own THEN 'Pricing Manager (this owner)' ELSE 'Pricing Manager' END
                 ELSE 'Pricing Manager (shipment ' || sh.shipment_number || ')'
            END AS "from"
-    FROM UNNEST(${keys}::text[]) AS k(key)
-    LEFT JOIN typed t ON t.key = k.key
-    LEFT JOIN shipped sh ON sh.key = k.key
-    WHERE COALESCE(NULLIF(t.import_price, 0), sh.product_cost) IS NOT NULL
+    FROM priced p
+    LEFT JOIN shipped sh ON sh.key = p.key
+    WHERE COALESCE(NULLIF(p.import_price, 0), sh.product_cost) IS NOT NULL
   `;
 };
 

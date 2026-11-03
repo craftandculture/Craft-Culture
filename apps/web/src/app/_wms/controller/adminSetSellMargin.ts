@@ -19,15 +19,21 @@ import writeProductPricing from '../utils/writeProductPricing';
 const adminSetSellMargin = adminProcedure
   .input(setSellMarginSchema)
   .mutation(async ({ input, ctx }) => {
-    const { lwin18, sellMarginPct, sellingPricePerBottle } = input;
+    const { lwin18, sellMarginPct, sellingPricePerBottle, ownerId } = input;
 
-    await writeProductPricing({
+    const written = await writeProductPricing({
       lwin18,
+      ownerId,
       set: { sellMarginPct, sellingPricePerBottle },
       userId: ctx.user.id,
     });
 
-    return { lwin18, sellMarginPct, sellingPricePerBottle };
+    return {
+      lwin18,
+      sellMarginPct,
+      sellingPricePerBottle,
+      ownerOnly: written.ownerOnly,
+    };
   });
 
 export default adminSetSellMargin;
