@@ -1,3 +1,9 @@
+## [2.1.92](https://github.com/craftandculture/Craft-Culture/compare/v2.1.91...v2.1.92) (2026-11-04)
+
+### Bug Fixes
+
+* **stock:** read 37.5cl as a half bottle in the LWIN check, pack buttons only for pack mismatches ([f8f3bc3](https://github.com/craftandculture/Craft-Culture/commit/f8f3bc3f99a379254368e7a41e63910b42209773))
+
 ## [2.1.91](https://github.com/craftandculture/Craft-Culture/compare/v2.1.90...v2.1.91) (2026-11-04)
 
 ### Features
