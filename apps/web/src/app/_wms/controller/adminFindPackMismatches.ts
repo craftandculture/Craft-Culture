@@ -76,13 +76,14 @@ const adminFindPackMismatches = adminProcedure.query(async () => {
       }
 
       // '75cl' and '750ml' are the same bottle written two ways, so compare in
-      // millilitres rather than as text.
-      const sizeDigits = Number(
-        (row.bottleSize ?? '').replace(/[^0-9]/g, '') || 0,
+      // millilitres rather than as text. The decimal point counts: stripping
+      // it read a half bottle's '37.5cl' as 3750ml (Noble Late Harvest, 4 Nov).
+      const size = (row.bottleSize ?? '').match(/(\d+(?:[.,]\d+)?)\s*(ml|cl|l)?/i);
+      const amount = size ? Number(size[1]!.replace(',', '.')) : 0;
+      const unit = size?.[2]?.toLowerCase();
+      const rowSizeMl = Math.round(
+        unit === 'cl' ? amount * 10 : unit === 'l' ? amount * 1000 : amount,
       );
-      const rowSizeMl = /cl/i.test(row.bottleSize ?? '')
-        ? sizeDigits * 10
-        : sizeDigits;
 
       if (rowSizeMl > 0 && rowSizeMl !== row.lwinSizeMl) {
         differs.push(`bottle is ${rowSizeMl}ml, its LWIN says ${row.lwinSizeMl}ml`);

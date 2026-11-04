@@ -2902,7 +2902,7 @@ const StockExplorerPage = () => {
           <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
               {packMismatches.length} stock row
-              {packMismatches.length === 1 ? '' : 's'} disagree with their own
+              {packMismatches.length === 1 ? ' disagrees with its' : 's disagree with their'} own
               LWIN
             </p>
             <p className="mt-0.5 text-xs text-text-muted">
@@ -2939,7 +2939,8 @@ const StockExplorerPage = () => {
                     meant finding each wine by hand and re-entering a pack it
                     already had — which is why these sat here.
                   */}
-                  {row.caseConfig ? (
+                  {/* Only a pack disagreement has these two ways out */}
+                  {row.caseConfig && row.caseConfig !== row.lwinPack ? (
                     <div className="flex flex-none gap-1">
                       <Button
                         variant="outline"
