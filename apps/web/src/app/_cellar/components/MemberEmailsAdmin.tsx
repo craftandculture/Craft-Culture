@@ -116,10 +116,10 @@ const MemberEmailsAdmin = () => {
           <p className="text-text-primary text-sm">
             <span className="font-semibold">
               {data?.mode === 'live'
-                ? 'Live: emails go to members.'
+                ? 'Live.'
                 : data?.mode === 'shadow'
                   ? `Shadow: every email goes to ${data.shadowInbox}.`
-                  : 'Off: nothing is sent.'}
+                  : 'Off.'}
             </span>{' '}
             {MODES.find((m) => m.mode === data?.mode)?.detail}
           </p>

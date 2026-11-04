@@ -8676,3 +8676,30 @@ export const orderEmailOutbox = pgTable(
 ).enableRLS();
 
 export type OrderEmailOutboxRow = typeof orderEmailOutbox.$inferSelect;
+
+/**
+ * Every email the app hands to Loops, as it leaves
+ *
+ * Written by the Loops client itself, so no email can skip it: the Sent
+ * Emails feed reads it to check that the right emails went to the right
+ * people. Only the subject and a reference are kept, never the email's
+ * data: a sign-in email carries a one-time link.
+ */
+export const emailLog = pgTable(
+  'email_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    transactionalId: text('transactional_id').notNull(),
+    /** The address it actually went to: the team inbox for a shadow copy */
+    toEmail: text('to_email').notNull(),
+    subject: text('subject'),
+    /** Who a shadow copy was written for, from its "[SHADOW for …]" subject */
+    shadowFor: text('shadow_for'),
+    /** The order, shipment or statement it is about, when the email names one */
+    reference: text('reference'),
+    ok: boolean('ok').notNull().default(true),
+    error: text('error'),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [index('email_log_created_idx').on(table.createdAt)],
+).enableRLS();

@@ -4481,6 +4481,30 @@ const runMigrations = async () => {
     }
     console.log('✅ Shipment next actions ready');
 
+    /*
+      Sent Emails feed (4 Nov 2026). Every email the app hands to Loops is
+      logged as it leaves, by the Loops client, so the team can check the
+      right emails went to the right people once member emails went live.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "email_log" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "transactional_id" text NOT NULL,
+        "to_email" text NOT NULL,
+        "subject" text,
+        "shadow_for" text,
+        "reference" text,
+        "ok" boolean DEFAULT true NOT NULL,
+        "error" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "email_log" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "email_log_created_idx" ON "email_log" ("created_at")`,
+    );
+    console.log('✅ Email log ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

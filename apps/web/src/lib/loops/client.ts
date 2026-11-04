@@ -3,6 +3,7 @@ import { LoopsClient } from 'loops';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
+import logEmailSend from './logEmailSend';
 import createMockLoopsClient from './mockClient';
 
 let cachedClient: LoopsClient | null = null;
@@ -46,6 +47,19 @@ const getLoopsClient = (): LoopsClient => {
 const loops = new Proxy({} as LoopsClient, {
   get(_target, prop: keyof LoopsClient) {
     const client = getLoopsClient();
+    // Every transactional email is logged as it leaves, for the Sent Emails feed
+    if (prop === 'sendTransactionalEmail') {
+      return async (params: Parameters<LoopsClient['sendTransactionalEmail']>[0]) => {
+        try {
+          const result = await client.sendTransactionalEmail(params);
+          await logEmailSend(params, null);
+          return result;
+        } catch (error) {
+          await logEmailSend(params, error instanceof Error ? error.message : String(error));
+          throw error;
+        }
+      };
+    }
     const value = client[prop];
     if (typeof value === 'function') {
       return value.bind(client);

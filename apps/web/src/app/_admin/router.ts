@@ -11,6 +11,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import activityLogCreate from './controllers/activityLogCreate';
 import activityLogsGetManyController from './controllers/activityLogsGetMany';
+import adminGetEmailLog from './controllers/adminGetEmailLog';
 import adminMoveFilesToPrivate from './controllers/adminMoveFilesToPrivate';
 import localInventorySheetUpdate from './controllers/localInventorySheetUpdate';
 import settingsGetController from './controllers/settingsGetController';
@@ -110,6 +111,7 @@ const adminRouter = createTRPCRouter({
   settings: settingsRouter,
   localInventorySheet: localInventorySheetRouter,
   moveFilesToPrivate: adminMoveFilesToPrivate,
+  emailLog: adminGetEmailLog,
 });
 
 export default adminRouter;

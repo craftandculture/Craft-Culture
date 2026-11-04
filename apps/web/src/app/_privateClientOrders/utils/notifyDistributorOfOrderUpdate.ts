@@ -13,7 +13,7 @@ import isLegacyOrderEmailOn from '../data/isLegacyOrderEmailOn';
 /**
  * Loops template IDs for distributor notifications
  */
-const DISTRIBUTOR_TEMPLATE_IDS = {
+export const DISTRIBUTOR_TEMPLATE_IDS = {
   order_assigned: 'cmkj88ybu0hm20izqhu21bqd5',
   verification_required: 'cmkj8iab307bf0i20to5ndu0j',
   invoice_acknowledged: 'cmkj8msvp08bw0i2f8dqys427',
@@ -22,7 +22,7 @@ const DISTRIBUTOR_TEMPLATE_IDS = {
 /**
  * Loops template ID specifically for finance team proforma invoice
  */
-const FINANCE_PROFORMA_TEMPLATE_ID = 'cmklmzgr612b40ixqdeluo8qb';
+export const FINANCE_PROFORMA_TEMPLATE_ID = 'cmklmzgr612b40ixqdeluo8qb';
 
 type DistributorNotificationType = keyof typeof DISTRIBUTOR_TEMPLATE_IDS;
 

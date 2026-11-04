@@ -13,7 +13,7 @@ import isLegacyOrderEmailOn from '../data/isLegacyOrderEmailOn';
 /**
  * Loops template IDs for partner notifications
  */
-const PARTNER_TEMPLATE_IDS = {
+export const PARTNER_TEMPLATE_IDS = {
   approved: 'cmkguphqs0k6d0iz0gcfl1pey',
   revision_requested: 'cmkgvlamx0l7v0iy9b26wgwx6',
   verification_required: 'cmkgvocem1ozc0izgt1yx9wzj',

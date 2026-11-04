@@ -184,6 +184,7 @@ const adminNav: AdminNavSection[] = [
     forOperators: false,
     links: [
       { label: 'Activity', href: '/platform/admin/activity' },
+      { label: 'Sent Emails', href: '/platform/admin/sent-emails', staffOnly: true },
       { label: 'Zoho Import', href: '/platform/admin/zoho-import' },
       { label: 'Settings', href: '/platform/admin/settings' },
     ],
