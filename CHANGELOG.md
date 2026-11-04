@@ -1,3 +1,9 @@
+## [2.1.93](https://github.com/craftandculture/Craft-Culture/compare/v2.1.92...v2.1.93) (2026-11-04)
+
+### Bug Fixes
+
+* an order for six single bottles of a wine held in 6-packs no longer asks for a case to be broken ([7be3b03](https://github.com/craftandculture/Craft-Culture/commit/7be3b033dec3cbee00d778ab796f9501e283caec))
+
 ## [2.1.92](https://github.com/craftandculture/Craft-Culture/compare/v2.1.91...v2.1.92) (2026-11-04)
 
 ### Bug Fixes
