@@ -189,7 +189,16 @@ const resolveRepackFromStock = (stock: RepackStockRow[], line: RepackLine) => {
 
   if (configs.length === 0) return empty;
 
-  if (configs.includes(orderedPack)) {
+  /*
+    Six single bottles off a 6-pack is one sealed case, not a break: the pick
+    screen already says "do not open" (PCO-2026-00106, Nov 2026). Only a
+    remainder needs a case cracked.
+  */
+  const fillsWholeCases = configs.some(
+    (config) => config > orderedPack && orderedBottles % config === 0,
+  );
+
+  if (configs.includes(orderedPack) || fillsWholeCases) {
     return {
       orderedPack,
       needsRepack: false,

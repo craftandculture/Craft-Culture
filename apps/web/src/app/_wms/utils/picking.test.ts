@@ -252,6 +252,20 @@ describe('resolveRepackFromStock', () => {
     expect(result.suggestedLocation).toBe('C-04-00');
   });
 
+  it('needs no break when the singles fill whole cases (6 bottles off a 6-pack)', () => {
+    const result = resolveRepackFromStock([stockRow()], { ...line, quantity: 6 });
+
+    expect(result.hasStock).toBe(true);
+    expect(result.needsRepack).toBe(false);
+  });
+
+  it('still breaks a case for a remainder (7 bottles off 6-packs)', () => {
+    const result = resolveRepackFromStock([stockRow()], { ...line, quantity: 7 });
+
+    expect(result.needsRepack).toBe(true);
+    expect(result.fromPack).toBe(6);
+  });
+
   it('counts loose bottles as stock (0 cases, 5 open)', () => {
     const result = resolveRepackFromStock(
       [stockRow({ quantityCases: 0, availableCases: 0, openBottles: 5 })],
