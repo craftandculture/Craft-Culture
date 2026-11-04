@@ -1,3 +1,9 @@
+## [2.1.91](https://github.com/craftandculture/Craft-Culture/compare/v2.1.90...v2.1.91) (2026-11-04)
+
+### Features
+
+* **admin:** Sent Emails feed of every email the Index sends ([8b508c0](https://github.com/craftandculture/Craft-Culture/commit/8b508c082faecc7695b66c9a712d3cfb2d42801a))
+
 ## [2.1.90](https://github.com/craftandculture/Craft-Culture/compare/v2.1.89...v2.1.90) (2026-11-03)
 
 ### Bug Fixes
