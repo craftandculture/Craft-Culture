@@ -1,25 +1,13 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
-import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
+import canonicalSku from '@/app/_wms/utils/canonicalSku';
+import zohoLineChanged from '@/app/_wms/utils/zohoLineChanged';
 import {
   wmsStock,
   wmsStockReservations,
   zohoSalesOrderItems,
 } from '@/database/schema';
 import discountAmount from '@/lib/zoho/discountAmount';
-
-/**
- * Canonicalise a Zoho SKU to the dashed LWIN18 form when it encodes one — even
- * if the dashes were entered in the wrong places (e.g. `1358261-2021-0100-750`
- * → `1358261-2021-01-00750`). Non-LWIN SKUs (alphanumeric, wrong length) are
- * returned trimmed & unchanged so real dashes aren't stripped. The pick's pack
- * count comes off this SKU, so a mis-dashed value must not survive.
- */
-const canonicalSku = (sku: string | null | undefined): string | null => {
-  if (sku == null) return null;
-  const digits = sku.replace(/-/g, '');
-  return /^\d{18}$/.test(digits) ? normalizeLwin18(digits) : sku.trim();
-};
 
 interface ZohoLineItem {
   line_item_id: string;
@@ -116,16 +104,7 @@ const reconcileZohoSalesOrderItems = async ({
       const local = existingByZohoId.get(item.line_item_id);
       if (
         local &&
-        (local.quantity !== item.quantity ||
-          local.rate !== item.rate ||
-          local.name !== item.name ||
-          local.itemTotal !== item.item_total ||
-          // SKU carries the pack config (…-06-… = 6-pack) which drives the
-          // pick's bottle count, and description mirrors it. A pack change that
-          // keeps the same total was previously invisible here — sync both.
-          // Compare canonicalised so a re-dashing alone isn't churned forever.
-          (canonicalSku(local.sku) ?? '') !== (canonicalSku(item.sku) ?? '') ||
-          (local.description ?? '') !== (item.description ?? ''))
+        zohoLineChanged(local, item)
       ) {
         changed.push({ zoho: item, localId: local.id });
       }
