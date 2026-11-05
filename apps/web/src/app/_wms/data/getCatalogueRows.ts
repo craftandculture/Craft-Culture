@@ -11,6 +11,7 @@ import {
   wmsStock,
 } from '@/database/schema';
 
+import DEFAULT_INBOND_MARGIN_PCT from '../constants/defaultInbondMarginPct';
 import isCraftCultureOwner from '../utils/isCraftCultureOwner';
 import lotShipmentCost from '../utils/lotShipmentCost';
 import lwinPakKey from '../utils/lwinPakKey';
@@ -255,7 +256,7 @@ const getCatalogueRows = async (
       importPaid > 0 || override !== 0
         ? importPaid + logistics + transfer + override
         : 0;
-    const inbondPct = r.inbondPct ?? 0;
+    const inbondPct = r.inbondPct ?? DEFAULT_INBOND_MARGIN_PCT;
     const ib = landed > 0 ? landed / (1 - inbondPct / 100) : 0;
     const pc =
       r.pcPct != null && r.pcPct < 100

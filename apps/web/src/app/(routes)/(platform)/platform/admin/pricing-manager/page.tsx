@@ -44,6 +44,7 @@ import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import PricingBandsEditor from '@/app/_wms/components/PricingBandsEditor';
+import DEFAULT_INBOND_MARGIN_PCT from '@/app/_wms/constants/defaultInbondMarginPct';
 import pricePricingManagerRow, {
   type PricingManagerRowInput,
 } from '@/app/_wms/utils/pricePricingManagerRow';
@@ -51,7 +52,7 @@ import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const IN_BOND_MARKUP = 0.10; // 10% on top of import price
+const IN_BOND_MARKUP = DEFAULT_INBOND_MARGIN_PCT / 100;
 const PAGE_SIZES = [50, 100, 200] as const;
 
 type CategoryFilter = 'Wine' | 'Spirits' | 'RTD';
