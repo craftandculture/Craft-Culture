@@ -1,3 +1,9 @@
+## [2.1.98](https://github.com/craftandculture/Craft-Culture/compare/v2.1.97...v2.1.98) (2026-11-05)
+
+### Bug Fixes
+
+* **wms:** the dispatch wizard lists distributors on the warehouse login ([5386baf](https://github.com/craftandculture/Craft-Culture/commit/5386bafcdf69a7d4d49bb6215a79d13304406beb))
+
 ## [2.1.97](https://github.com/craftandculture/Craft-Culture/compare/v2.1.96...v2.1.97) (2026-11-05)
 
 ### Bug Fixes
