@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import notifyMembersWineAtWarehouse from '@/app/_cellar/data/notifyMembersWineAtWarehouse';
 import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
-import { logisticsShipmentActivityLogs, logisticsShipments } from '@/database/schema';
+import { logisticsShipmentActivityLogs, logisticsShipments, wmsReceivingDrafts } from '@/database/schema';
 
 import notifyPartnerOfShipment, { milestoneForStatus } from './notifyPartnerOfShipment';
 import notifyStaffOfShipmentStatus from './notifyStaffOfShipmentStatus';
@@ -44,6 +44,26 @@ const setShipmentStatus = async ({
   }
 
   const previousStatus = existing.status;
+
+  /*
+    Delivered takes a shipment off the scanner's receiving list, so it cannot
+    be set by hand while receiving is still open there: SHP-2026-0034 was
+    marked Delivered with 44 of 58 lines checked and vanished mid-job (Nov
+    2026). Finishing on the scanner sets Delivered itself.
+  */
+  if (status === 'delivered' && previousStatus !== 'delivered') {
+    const [draft] = await db
+      .select({ items: wmsReceivingDrafts.items, status: wmsReceivingDrafts.status })
+      .from(wmsReceivingDrafts)
+      .where(eq(wmsReceivingDrafts.shipmentId, id));
+    if (draft && draft.status !== 'completed') {
+      const checked = draft.items.filter((item) => item.isChecked).length;
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: `Receiving is still open on the scanner (${checked} of ${draft.items.length} lines checked). Finish it there and it is marked Delivered.`,
+      });
+    }
+  }
 
   // Update timestamp based on status
   const timestampUpdates: Record<string, Date> = {};
