@@ -1,3 +1,9 @@
+## [2.1.94](https://github.com/craftandculture/Craft-Culture/compare/v2.1.93...v2.1.94) (2026-11-05)
+
+### Bug Fixes
+
+* a shipment cannot be marked Delivered while its receiving is still open on the scanner ([5efe999](https://github.com/craftandculture/Craft-Culture/commit/5efe999882b570e01a516060ad1adeaaec131425))
+
 ## [2.1.93](https://github.com/craftandculture/Craft-Culture/compare/v2.1.92...v2.1.93) (2026-11-04)
 
 ### Bug Fixes
