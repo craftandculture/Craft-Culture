@@ -209,12 +209,26 @@ const syncExistingSalesOrder = async ({
   const invoiceNumber = pickInvoiceNumber(fullOrder);
   const invoiceUpdate = invoiceNumber ? { invoiceNumber } : {};
 
-  if (PRE_PICK_STATUSES.has(status)) {
-    await db
+  /*
+    Zoho's status and last-modified time are what the short-circuit above
+    compares, so they are written LAST, once every step that depends on them has
+    succeeded. Written first, a reconcile or hold that failed part-way (a dropped
+    connection) left the order looking unchanged, and no later run retried it —
+    its lines stayed on the old quantities until someone edited it in Zoho.
+  */
+  const markSynced = () =>
+    db
       .update(zohoSalesOrders)
       .set({
         zohoStatus: zohoOrder.status,
         zohoLastModifiedTime: zohoModifiedAt,
+      })
+      .where(eq(zohoSalesOrders.id, existing.id));
+
+  if (PRE_PICK_STATUSES.has(status)) {
+    await db
+      .update(zohoSalesOrders)
+      .set({
         total: fullOrder.total,
         subTotal: fullOrder.sub_total,
         // Only the insert captured this, so a reference typed into Zoho after
@@ -247,6 +261,8 @@ const syncExistingSalesOrder = async ({
       orderNumber: fullOrder.salesorder_number,
     });
 
+    await markSynced();
+
     return { outcome: 'reconciled' as const, reconciled };
   }
 
@@ -264,9 +280,11 @@ const syncExistingSalesOrder = async ({
   // Zoho reporting a newer last-modified time is enough on its own. A forced
   // pass on an order Zoho says is unchanged must prove the lines moved before
   // flagging, so a routine force-refresh doesn't mark every released pick for
-  // review.
+  // review. An order never stamped (its first hold failed, then it was
+  // released before the retry) has no time to compare, so it too must prove
+  // the lines moved.
   const zohoReportsChange =
-    !(current?.zohoLastModifiedTime instanceof Date) ||
+    current?.zohoLastModifiedTime instanceof Date &&
     current.zohoLastModifiedTime.getTime() !== zohoModifiedAt.getTime();
 
   const shouldFlag =
@@ -280,8 +298,6 @@ const syncExistingSalesOrder = async ({
   await db
     .update(zohoSalesOrders)
     .set({
-      zohoStatus: zohoOrder.status,
-      zohoLastModifiedTime: zohoModifiedAt,
       total: fullOrder.total,
       subTotal: fullOrder.sub_total,
       referenceNumber: fullOrder.reference_number,
@@ -300,8 +316,12 @@ const syncExistingSalesOrder = async ({
       db,
     });
 
+    await markSynced();
+
     return { outcome: 'reconciled' as const, reconciled };
   }
+
+  await markSynced();
 
   return shouldFlag
     ? ({ outcome: 'flagged' } as const)
