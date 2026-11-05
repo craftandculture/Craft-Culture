@@ -1,10 +1,9 @@
-import { and, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import { SELLABLE_STATUSES } from '@/app/_consignment/utils/mandateStatuses';
 import db from '@/database/client';
 import {
-  logisticsShipmentItems,
   products,
   saleMandates,
   wmsOwnerPricingSettings,
@@ -13,6 +12,7 @@ import {
 } from '@/database/schema';
 
 import isCraftCultureOwner from '../utils/isCraftCultureOwner';
+import lotShipmentCost from '../utils/lotShipmentCost';
 import lwinPakKey from '../utils/lwinPakKey';
 import onPriceListConditions from '../utils/onPriceListConditions';
 import ownerPricingJoin, { ownerPriced } from '../utils/ownerPricingJoin';
@@ -58,8 +58,9 @@ const isZeroTransferOwner = (owner: string | null) =>
  * per-owner rates and derives the same In-Bond (B2B/trade) and Private-Client
  * (retail) prices shown on the Pricing Manager screen — so the public portals
  * match it to the cent. Price = Landed ÷ (1 − InBond%), then ÷ (1 − PC%), where
- * Landed = importPaid + logistics + transfer + override. Import falls back to
- * the latest shipment's product cost (pack-agnostic) when no manual price.
+ * Landed = importPaid + logistics + transfer + override. Import is chosen by the
+ * Pricing Manager's rule: the lot's own invoice line, then a typed import price,
+ * then the nearest line for the wine (lotShipmentCost).
  *
  * @param filters - Optional category / owner / search narrowing
  * @returns One row per product (lwin18) with live availability + IB & PC prices
@@ -140,6 +141,16 @@ const getCatalogueRows = async (
       bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
       availableCases: sql<number>`${sumAcrossPricingRows(wmsStock.availableCases)}::int`,
       importPrice: sql<number | null>`${preferExact('importPricePerBottle')}`,
+      /*
+        The lot's own cost, as the Pricing Manager reads it. This used to be the
+        latest shipment line for the wine from anyone, so Alain's Fourrier
+        Chambolle 1er VV 2021 (invoiced $282.07) listed at $203.22 off another
+        lot's $170 line, below what it cost. Where several lots share a code the
+        highest wins, so no owner's bottles sell under their own cost.
+      */
+      ownLineCost: sql<number | null>`MAX(CASE WHEN ship.own_line THEN NULLIF(ship.product_cost, 0) END)`,
+      lotCost: sql<number | null>`MAX(NULLIF(ship.product_cost, 0))`,
+      lotFreight: sql<number | null>`MAX(CASE WHEN ship.landed_cost IS NOT NULL AND ship.product_cost IS NOT NULL THEN GREATEST(ship.landed_cost - ship.product_cost, 0) END)`,
       logistics: sql<number | null>`${preferExact('logisticsPerBottle')}`,
       transfer: sql<number | null>`${preferExact('transferPricePerBottle')}`,
       override: sql<number | null>`${preferExact('costOverridePerBottle')}`,
@@ -175,6 +186,7 @@ const getCatalogueRows = async (
       sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
     )
     .leftJoin(ownerPricingJoin(await ownerPricingReady()), sql`true`)
+    .leftJoin(lotShipmentCost, sql`true`)
     .leftJoin(
       wmsOwnerPricingSettings,
       eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
@@ -219,47 +231,16 @@ const getCatalogueRows = async (
     }
   });
 
-  // Latest shipment product/landed cost, matched pack-agnostically (LWIN7 +
-  // vintage + bottle size) so repacked SKUs inherit the base wine's cost.
-  const pakStock = sql`split_part(${wmsStock.lwin18}, '-', 1) || '-' || split_part(${wmsStock.lwin18}, '-', 2) || '-' || split_part(${wmsStock.lwin18}, '-', 4)`;
-  const pakItem = sql`split_part(${logisticsShipmentItems.lwin}, '-', 1) || '-' || split_part(${logisticsShipmentItems.lwin}, '-', 2) || '-' || split_part(${logisticsShipmentItems.lwin}, '-', 4)`;
-  const shipRows = await db
-    .select({
-      lwin18: wmsStock.lwin18,
-      productCost: logisticsShipmentItems.productCostPerBottle,
-      landedCost: logisticsShipmentItems.landedCostPerBottle,
-    })
-    .from(wmsStock)
-    .innerJoin(
-      logisticsShipmentItems,
-      and(
-        isNotNull(logisticsShipmentItems.lwin),
-        sql`${pakItem} = ${pakStock}`,
-      ),
-    )
-    .where(inArray(wmsStock.lwin18, lwins))
-    .orderBy(desc(logisticsShipmentItems.createdAt));
-  const shipMap = new Map<
-    string,
-    { productCost: number | null; landedCost: number | null }
-  >();
-  for (const r of shipRows) {
-    if (!shipMap.has(r.lwin18))
-      shipMap.set(r.lwin18, {
-        productCost: r.productCost,
-        landedCost: r.landedCost,
-      });
-  }
-
   return rows.map((r) => {
-    const ship = shipMap.get(r.lwin18);
     const manualImport =
       r.importPrice && r.importPrice > 0 ? r.importPrice : null;
-    const importPaid = manualImport ?? ship?.productCost ?? 0;
+    // An own invoice line beats a typed import price, as on the Pricing Manager
+    const importPaid =
+      (r.ownLineCost != null ? Number(r.ownLineCost) : null) ??
+      manualImport ??
+      (r.lotCost != null ? Number(r.lotCost) : 0);
     const systemLogistics =
-      ship && ship.landedCost != null && ship.productCost != null
-        ? Math.max(0, round2(ship.landedCost - ship.productCost))
-        : 0;
+      r.lotFreight != null ? Math.max(0, round2(Number(r.lotFreight))) : 0;
     const logistics =
       r.logistics ??
       (systemLogistics > 0
