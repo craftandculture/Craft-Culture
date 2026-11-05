@@ -1,3 +1,9 @@
+## [2.1.95](https://github.com/craftandculture/Craft-Culture/compare/v2.1.94...v2.1.95) (2026-11-05)
+
+### Bug Fixes
+
+* **catalogue:** price each lot from its own invoice line, as the Pricing Manager does ([7038aa2](https://github.com/craftandculture/Craft-Culture/commit/7038aa2dff0df19df52d633132c988dd15b48200))
+
 ## [2.1.94](https://github.com/craftandculture/Craft-Culture/compare/v2.1.93...v2.1.94) (2026-11-05)
 
 ### Bug Fixes
