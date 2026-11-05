@@ -1,3 +1,9 @@
+## [2.1.96](https://github.com/craftandculture/Craft-Culture/compare/v2.1.95...v2.1.96) (2026-11-05)
+
+### Bug Fixes
+
+* **catalogue:** wine with no margin set lists at 10% over landed, as in the Pricing Manager ([a829a00](https://github.com/craftandculture/Craft-Culture/commit/a829a009340b6e40d10000f39dc8a80f4c652198))
+
 ## [2.1.95](https://github.com/craftandculture/Craft-Culture/compare/v2.1.94...v2.1.95) (2026-11-05)
 
 ### Bug Fixes
