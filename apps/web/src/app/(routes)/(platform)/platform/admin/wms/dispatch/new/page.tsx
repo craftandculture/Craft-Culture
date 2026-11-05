@@ -103,7 +103,7 @@ const DispatchWizardPage = () => {
 
   // Fetch distributors
   const { data: distributors, isLoading: isLoadingDistributors } = useQuery({
-    ...api.partners.list.queryOptions({ type: 'distributor' }),
+    ...api.wms.admin.dispatch.distributors.queryOptions(),
   });
 
   // Sync Zoho orders

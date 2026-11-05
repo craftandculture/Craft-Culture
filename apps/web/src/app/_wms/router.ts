@@ -46,6 +46,7 @@ import adminGetCycleCount from './controller/adminGetCycleCount';
 import adminGetCycleCounts from './controller/adminGetCycleCounts';
 import adminGetDispatchBatch from './controller/adminGetDispatchBatch';
 import adminGetDispatchBatches from './controller/adminGetDispatchBatches';
+import adminGetDispatchDistributors from './controller/adminGetDispatchDistributors';
 import adminGetExpiringStock from './controller/adminGetExpiringStock';
 import adminGetHiddenLabelOwners from './controller/adminGetHiddenLabelOwners';
 import adminGetInboundStock from './controller/adminGetInboundStock';
@@ -294,6 +295,7 @@ const dispatchRouter = createTRPCRouter({
   updateStatus: adminUpdateBatchStatus,
   generateDeliveryNote: adminGenerateDeliveryNote,
   quickDispatch: adminQuickDispatch,
+  distributors: adminGetDispatchDistributors,
 });
 
 const palletRouter = createTRPCRouter({
