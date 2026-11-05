@@ -96,6 +96,7 @@ import adminRecordCycleCountItem from './controller/adminRecordCycleCountItem';
 import adminReleaseReservation from './controller/adminReleaseReservation';
 import adminRemoveCaseFromPallet from './controller/adminRemoveCaseFromPallet';
 import adminRemoveOrderFromBatch from './controller/adminRemoveOrderFromBatch';
+import adminReopenShortPick from './controller/adminReopenShortPick';
 import adminRepack from './controller/adminRepack';
 import adminReprintCaseLabels from './controller/adminReprintCaseLabels';
 import adminResendPickListPost from './controller/adminResendPickListPost';
@@ -121,6 +122,7 @@ import adminSetSellingPrice from './controller/adminSetSellingPrice';
 import adminSetSellMargin from './controller/adminSetSellMargin';
 import adminSetStockForSale from './controller/adminSetStockForSale';
 import adminSetTransferPrice from './controller/adminSetTransferPrice';
+import adminShipShortRemainder from './controller/adminShipShortRemainder';
 import adminStartCycleCount from './controller/adminStartCycleCount';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
 import adminTakeOutOfStock from './controller/adminTakeOutOfStock';
@@ -275,6 +277,8 @@ const pickingRouter = createTRPCRouter({
   pickItem: adminPickItem,
   complete: adminCompletePickList,
   resync: adminResyncPickList,
+  reopenShortPick: adminReopenShortPick,
+  shipShortRemainder: adminShipShortRemainder,
   resolvePcoOrder: adminResolvePcoOrder,
   feedStatus: adminWarehouseFeedStatus,
   resendPost: adminResendPickListPost,

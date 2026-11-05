@@ -153,14 +153,17 @@ const WMSPickListDetailPage = () => {
   // Whole-case pick — routes through local NUC when available
   const pickItemMutation = useMutation({
     ...wmsApi.pickItemMutationOptions(),
-    onSuccess: () => {
+    onSuccess: (result) => {
       // Built before the reset clears it. The local NUC returns a thinner
       // shape than the cloud, so this says it from what the screen knows.
       const where = pickedLocationCode || pickedLocationId ? ` from ${pickedLocationCode}` : '';
       const qty = pickedQuantity;
 
       resetAfterPick();
-      toast.success(`Picked ${qty} case(s)${where}`);
+      // A short pick leaves the rest as the next line, which has to be said or
+      // it reads as the same pick asked for twice
+      const message = (result as { message?: string } | undefined)?.message;
+      toast.success(message?.includes('still to pick') ? message : `Picked ${qty} case(s)${where}`);
     },
     // Re-read the list so the bay shown is one that can still cover the pick.
     onError: () => invalidatePickQueries(),
@@ -178,6 +181,18 @@ const WMSPickListDetailPage = () => {
       if (result?.remainder) setRemainderToRelabel(result.remainder);
     },
     onError: () => invalidatePickQueries(),
+  });
+
+  // The rest of a short pick is not in the building: let the order go short
+  const [confirmShortId, setConfirmShortId] = useState<string | null>(null);
+  const shipShortMutation = useMutation({
+    ...api.wms.admin.picking.shipShortRemainder.mutationOptions(),
+    onSuccess: (result) => {
+      setConfirmShortId(null);
+      invalidatePickQueries();
+      toast.success(result.message);
+    },
+    onError: (error) => toast.error(error.message),
   });
 
   // Complete pick list mutation — routes through local NUC when available
@@ -1329,7 +1344,26 @@ const WMSPickListDetailPage = () => {
                         </span>
                       )}
                     </div>
+                    {!item.isPicked && item.notes?.startsWith('Remainder of a short pick') && (
+                      <Typography variant="bodyXs" colorRole="muted" className="text-[10px]">
+                        {item.notes}
+                      </Typography>
+                    )}
                   </div>
+                  {!item.isPicked && item.notes?.startsWith('Remainder of a short pick') && (
+                    <button
+                      type="button"
+                      disabled={shipShortMutation.isPending}
+                      onClick={() =>
+                        confirmShortId === item.id
+                          ? shipShortMutation.mutate({ pickListItemId: item.id })
+                          : setConfirmShortId(item.id)
+                      }
+                      className="shrink-0 rounded-lg border border-border-primary px-2 py-1 text-[10px] font-medium text-text-muted transition-colors hover:bg-fill-secondary"
+                    >
+                      {confirmShortId === item.id ? 'Tap again: none left' : 'Not here — ship short'}
+                    </button>
+                  )}
                 </div>
               ))}
             </CardContent>

@@ -24,6 +24,7 @@ import moveBottlesToSingles from '../utils/moveBottlesToSingles';
 import parseSkuPack from '../utils/parseSkuPack';
 import rankStockByPack from '../utils/rankStockByPack';
 import readLineVintage from '../utils/readLineVintage';
+import splitShortPick from '../utils/splitShortPick';
 
 /**
  * Read a bottle size in millilitres from text such as "75cl", "1.5L" or "750ml"
@@ -76,6 +77,8 @@ const adminPickItem = wmsOperatorProcedure
           quantityBottles: wmsPickListItems.quantityBottles,
           isPicked: wmsPickListItems.isPicked,
           pickedQuantity: wmsPickListItems.pickedQuantity,
+          suggestedLocationId: wmsPickListItems.suggestedLocationId,
+          suggestedStockId: wmsPickListItems.suggestedStockId,
         })
         .from(wmsPickListItems)
         .where(eq(wmsPickListItems.id, pickListItemId))
@@ -673,6 +676,23 @@ const adminPickItem = wmsOperatorProcedure
           code: 'CONFLICT',
           message: 'This line was picked by someone else a moment ago. Refresh the list.',
         });
+      }
+
+      // Less than the line asked for: the rest stays on the list to be picked
+      const pickedInLineUnits =
+        pickListItem.quantityBottles != null
+          ? isBottlePick
+            ? pickedBottles
+            : casesRemoved * pack
+          : !isBottlePick || parseSkuPack(pickListItem.lwin18)?.pack === 1
+            ? recordedPickedQuantity
+            : null;
+      const shortRemainder =
+        pickedInLineUnits != null
+          ? await splitShortPick({ line: pickListItem, picked: pickedInLineUnits, db: tx })
+          : null;
+      if (shortRemainder) {
+        resultMessage += `. ${shortRemainder.quantity} ${shortRemainder.unit} still to pick on this line`;
       }
 
       // Record movement
