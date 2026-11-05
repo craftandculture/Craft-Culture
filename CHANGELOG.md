@@ -1,3 +1,9 @@
+## [2.1.97](https://github.com/craftandculture/Craft-Culture/compare/v2.1.96...v2.1.97) (2026-11-05)
+
+### Bug Fixes
+
+* **wms:** a short pick keeps the rest of the line open to pick ([86e8959](https://github.com/craftandculture/Craft-Culture/commit/86e89590fcb66363cd17b09930a6d6a43afc0fea))
+
 ## [2.1.96](https://github.com/craftandculture/Craft-Culture/compare/v2.1.95...v2.1.96) (2026-11-05)
 
 ### Bug Fixes
