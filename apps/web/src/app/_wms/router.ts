@@ -71,6 +71,7 @@ import adminGetPricingBands from './controller/adminGetPricingBands';
 import adminGetPricingProducts from './controller/adminGetPricingProducts';
 import adminGetProductPricing from './controller/adminGetProductPricing';
 import adminGetReceivingDraft from './controller/adminGetReceivingDraft';
+import adminGetRepacks from './controller/adminGetRepacks';
 import adminGetShipmentForReceiving from './controller/adminGetShipmentForReceiving';
 import adminGetStockAtLocation from './controller/adminGetStockAtLocation';
 import adminGetStockByOwner from './controller/adminGetStockByOwner';
@@ -225,6 +226,8 @@ const stockRouter = createTRPCRouter({
   getMovements: adminGetMovementHistory,
   // Who each outflow belonged to, and where it went: the statement check
   getOwnerOutflows: adminGetOwnerOutflows,
+  // Every repack in a period with its owner: the basis for repack charges
+  getRepacks: adminGetRepacks,
   getExpiring: adminGetExpiringStock,
   search: adminSearchStock,
   searchRows: adminSearchStockRows,
