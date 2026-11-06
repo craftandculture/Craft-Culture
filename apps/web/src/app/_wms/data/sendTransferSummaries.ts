@@ -7,6 +7,7 @@ import buildEmailWines from '@/app/_cellar/data/buildEmailWines';
 import getCellarHolderIds from '@/app/_cellar/data/getCellarHolderIds';
 import queueMemberEmail from '@/app/_cellar/data/queueMemberEmail';
 import { gulfDay } from '@/app/_cellar/utils/memberEmailTiming';
+import { finishEmailData } from '@/app/_cellar/utils/mergeMemberEmails';
 import createNotification from '@/app/_notifications/utils/createNotification';
 import getCraftCultureOwnerIds from '@/app/_partners/data/getCraftCultureOwnerIds';
 import { ORDER_EMAIL_TEMPLATE_ID } from '@/app/_privateClientOrders/constants';
@@ -178,8 +179,9 @@ const sendTransferSummaries = async (now: Date = new Date()) => {
               await loops.sendTransactionalEmail({
                 transactionalId: MEMBER_EMAIL_TEMPLATES.cellarWines,
                 email: ORDER_EMAIL_SHADOW_INBOX,
+                // The outbox finishes live emails; a shadow copy needs the same (listTitle is required)
                 dataVariables: {
-                  ...data,
+                  ...finishEmailData(data),
                   name: holder.name ?? '',
                   subject: `[SHADOW for ${holder.name || holder.email} <${holder.email}>] ${data.subject}`,
                 } as unknown as TransactionalVariables,
