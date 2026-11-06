@@ -1,4 +1,5 @@
 import getLondonInBond from '@/app/_winelabs/controller/getLondonInBond';
+import priceSheetLines from '@/app/_winelabs/controller/priceSheetLines';
 import refreshLondonInBond from '@/app/_winelabs/controller/refreshLondonInBond';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
@@ -208,6 +209,8 @@ const stockPricingRouter = createTRPCRouter({
   getLondonInBond,
   // One wine asked again now, for a price about to be quoted (spends credits)
   refreshLondonInBond,
+  // A client's or supplier's list priced against Wine Labs (spends credits)
+  priceSheetLines,
   autoPopulate: adminAutoPopulateImportPrice,
   getProducts: adminGetPricingProducts,
   getBands: adminGetPricingBands,
