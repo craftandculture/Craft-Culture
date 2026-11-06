@@ -1,3 +1,9 @@
+## [2.1.103](https://github.com/craftandculture/Craft-Culture/compare/v2.1.102...v2.1.103) (2026-11-06)
+
+### Bug Fixes
+
+* **wms:** a hold is given back only once, so a picked case no longer shows as for sale ([5d2a7a6](https://github.com/craftandculture/Craft-Culture/commit/5d2a7a6cd17234120dd68205724842dade196310))
+
 ## [2.1.102](https://github.com/craftandculture/Craft-Culture/compare/v2.1.101...v2.1.102) (2026-11-06)
 
 ### Features
