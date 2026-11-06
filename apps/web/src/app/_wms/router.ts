@@ -36,6 +36,7 @@ import adminDissolvePallet from './controller/adminDissolvePallet';
 import adminFinalizeReceiving from './controller/adminFinalizeReceiving';
 import adminFindPackMismatches from './controller/adminFindPackMismatches';
 import adminGenerateDeliveryNote from './controller/adminGenerateDeliveryNote';
+import adminGetActivityByOwner from './controller/adminGetActivityByOwner';
 import adminGetAllStockRecords from './controller/adminGetAllStockRecords';
 import adminGetBayDetails from './controller/adminGetBayDetails';
 import adminGetBayTotems from './controller/adminGetBayTotems';
@@ -229,6 +230,8 @@ const stockRouter = createTRPCRouter({
   getOwnerOutflows: adminGetOwnerOutflows,
   // Every repack in a period with its owner: the basis for repack charges
   getRepacks: adminGetRepacks,
+  // Warehouse work by owner and kind: the basis for handling charges
+  getActivityByOwner: adminGetActivityByOwner,
   // Picks that took bottles, not whole cases: cases opened on the floor
   getSplitCasePicks: adminGetSplitCasePicks,
   getExpiring: adminGetExpiringStock,
