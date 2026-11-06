@@ -1,3 +1,9 @@
+## [2.1.100](https://github.com/craftandculture/Craft-Culture/compare/v2.1.99...v2.1.100) (2026-11-06)
+
+### Features
+
+* staff can list every repack in a period with whose wine it was ([bcc17c9](https://github.com/craftandculture/Craft-Culture/commit/bcc17c99052111d5d2a3d8672bdb2eedc26685e8))
+
 ## [2.1.99](https://github.com/craftandculture/Craft-Culture/compare/v2.1.98...v2.1.99) (2026-11-06)
 
 ### Features
