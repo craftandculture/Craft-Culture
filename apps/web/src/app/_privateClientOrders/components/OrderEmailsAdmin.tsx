@@ -25,7 +25,7 @@ const AUDIENCES: { audience: Audience; label: string; plural: string }[] = [
 /** What each switch position means for wine partners' shipment updates */
 const shipmentModeText = (mode: Mode | undefined, inbox: string | undefined) =>
   mode === 'live'
-    ? 'Live. Partners get an email and a notice when their shipment departs, arrives in the UAE, and is in stock.'
+    ? 'Live. Partners get an email and a notice when their shipment departs, arrives in the UAE, reaches our warehouse, and is racked and in stock.'
     : mode === 'shadow'
       ? `Shadow. Each shipment email goes to ${inbox}; partners get nothing yet.`
       : 'Off. Partners are not told about their shipments.';
