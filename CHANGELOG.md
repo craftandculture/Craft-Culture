@@ -1,3 +1,9 @@
+## [2.1.104](https://github.com/craftandculture/Craft-Culture/compare/v2.1.103...v2.1.104) (2026-11-06)
+
+### Bug Fixes
+
+* Shadow copies of the daily cellar transfer summary now send instead of failing on a missing list title ([65c12a5](https://github.com/craftandculture/Craft-Culture/commit/65c12a5972212d6a5c6cb49d893705fbc2ce8546))
+
 ## [2.1.103](https://github.com/craftandculture/Craft-Culture/compare/v2.1.102...v2.1.103) (2026-11-06)
 
 ### Bug Fixes
