@@ -59,8 +59,6 @@ import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
-import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
-import type { MovementTypeBadgeProps } from '@/app/_wms/components/MovementTypeBadge';
 import { conditionReportFee } from '@/app/_wms/constants/conditionReportFee';
 import displayWineName from '@/app/_wms/utils/displayWineName';
 import useTRPC from '@/lib/trpc/browser';
@@ -172,6 +170,41 @@ type QuickFilter = 'all' | 'largeFormat' | 'magnumPlus' | 'reserved';
 
 type CellarSortKey = 'wine' | 'producer' | 'vintage' | 'size' | 'bottles' | 'value';
 
+/**
+ * A warehouse movement in the member's words, or null for one that is ours
+ *
+ * Putaways, bay transfers, counts and pallet work are how the warehouse keeps
+ * itself in order; the wine did not change hands or leave, so a member is not
+ * shown them. "Ownership" was the badge text for a transfer, which tells a
+ * member nothing about whether the wine came to them or went.
+ */
+const describeMemberMovement = (movementType: string, isInbound: boolean) => {
+  switch (movementType) {
+    case 'receive':
+      return 'Arrived at the warehouse';
+    case 'ownership_transfer':
+      return isInbound ? 'Added to your cellar' : 'Transferred from your cellar';
+    case 'pick':
+      return 'Prepared for delivery';
+    case 'dispatch':
+    case 'pallet_dispatch':
+      return 'Left the warehouse';
+    case 'repack_out':
+    case 'repack_in':
+      return 'Case opened';
+    case 'adjust':
+      return 'Holding corrected';
+    default:
+      return null;
+  }
+};
+
+/** Bottles per case from an LWIN18's pack segment, 1 when it has none */
+const packOfLwin = (lwin18: string | null) => {
+  const pack = Number(String(lwin18 ?? '').split('-')[2]);
+  return Number.isFinite(pack) && pack > 0 ? pack : 1;
+};
+
 const bottlesOf = (wine: {
   totalCases: number;
   caseConfig: number | null;
@@ -188,9 +221,25 @@ const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n ==
 const describeHolding = (bottles: number, sealedCases: number, pack: number) => {
   if (sealedCases <= 0 || pack <= 1) return plural(bottles, 'bottle');
   const loose = bottles - sealedCases * pack;
-  const cased = `${plural(sealedCases, 'case')} of ${pack}`;
+  const cased =
+    sealedCases === 1
+      ? `Sealed case of ${pack}`
+      : `${sealedCases.toLocaleString()} sealed cases of ${pack}`;
   return loose > 0 ? `${cased} + ${plural(loose, 'bottle')}` : cased;
 };
+
+/**
+ * Said beside the stepper when a member takes part of a sealed case
+ *
+ * Two bottles from a six means the case is opened. Saying so, and that the
+ * rest stays in their cellar, answers the question before it is asked.
+ */
+const OpenedCaseNote = ({ remaining }: { remaining: number }) => (
+  <span className="text-text-muted block max-w-[180px] whitespace-normal text-left text-[11px] leading-snug">
+    We open one case for these; the other {plural(remaining, 'bottle')}{' '}
+    {remaining === 1 ? 'stays' : 'stay'} in your cellar.
+  </span>
+);
 
 const sizeMl = (size: string | null) => {
   if (!size) return 750;
@@ -1838,7 +1887,7 @@ const CellarPage = () => {
             colorRole="muted"
             className="ml-auto hidden flex-shrink-0 self-center lg:block"
           >
-            {rows.length} {rows.length === 1 ? 'wine' : 'wines'}
+            Showing {rows.length} {rows.length === 1 ? 'wine' : 'wines'}
           </Typography>
         </div>
       </div>
@@ -1941,7 +1990,7 @@ const CellarPage = () => {
               <th className={`${th} hidden text-right lg:table-cell`}>
                 <Tooltip>
                   <TooltipTrigger className="inline-flex items-center gap-1">
-                    {currency} / btl
+                    Per bottle
                     <Icon icon={IconInfoCircle} size="xs" colorRole="muted" />
                   </TooltipTrigger>
                   <TooltipContent
@@ -1992,7 +2041,13 @@ const CellarPage = () => {
 
             {rows.map((wine) => {
               const isOpen = openWine === wine.lwin18;
-              const history = movementsByWine.get(wine.lwin18) ?? [];
+              const history = (movementsByWine.get(wine.lwin18) ?? []).filter(
+                (movement) =>
+                  describeMemberMovement(
+                    movement.movementType,
+                    movement.toOwnerId === data?.partner.id,
+                  ) !== null,
+              );
 
               return (
                 <Fragment key={wine.lwin18}>
@@ -2193,6 +2248,9 @@ const CellarPage = () => {
                                 label={`bottle of ${wine.productName}`}
                                 onChange={(next) => addToWine(wine, next - chosen)}
                               />
+                              {pack > 1 && chosen % pack !== 0 && (
+                                <OpenedCaseNote remaining={held - chosen} />
+                              )}
                               {pack > 1 && chosen + pack <= held && (
                                 <button
                                   type="button"
@@ -2330,9 +2388,6 @@ const CellarPage = () => {
                                     <th className="whitespace-nowrap px-3 py-1.5 text-right">Bottles</th>
                                   </>
                                 )}
-                                <th className="hidden whitespace-nowrap px-3 py-1.5 text-left sm:table-cell">
-                                  Lot
-                                </th>
                                 <th className="whitespace-nowrap px-3 py-1.5 text-left">From</th>
                                 <th className="whitespace-nowrap px-3 py-1.5 text-left">Arrived</th>
                                 <th className="whitespace-nowrap px-3 py-1.5 text-left">Status</th>
@@ -2348,14 +2403,16 @@ const CellarPage = () => {
                                   key={parcel.stockId}
                                 >
                                   {bottleWording ? (
-                                    <td className="whitespace-nowrap px-3 py-1.5">
+                                    <td
+                                      className="whitespace-nowrap px-3 py-1.5"
+                                      title={parcel.lotNumber ? `Lot ${parcel.lotNumber}` : undefined}
+                                    >
                                       <span className="font-semibold tabular-nums">
-                                        {(wine.caseConfig ?? 1) > 1
-                                          ? `${plural(parcel.quantityCases, 'case')} of ${wine.caseConfig} · ${plural(
-                                              parcel.quantityCases * (wine.caseConfig ?? 1),
-                                              'bottle',
-                                            )}`
-                                          : plural(parcel.quantityCases, 'bottle')}
+                                        {describeHolding(
+                                          parcel.quantityCases * (wine.caseConfig ?? 1),
+                                          parcel.quantityCases,
+                                          wine.caseConfig ?? 1,
+                                        )}
                                       </span>
                                       {/* Where single bottles came from, so a row never appears from nowhere */}
                                       {(wine.caseConfig ?? 1) === 1 && (parcel.openedFromPack ?? 0) > 1 && (
@@ -2378,9 +2435,6 @@ const CellarPage = () => {
                                       </td>
                                     </>
                                   )}
-                                  <td className="text-text-muted hidden whitespace-nowrap px-3 py-1.5 font-mono text-xs sm:table-cell">
-                                    {parcel.lotNumber ?? ''}
-                                  </td>
                                   <td className="text-text-muted whitespace-nowrap px-3 py-1.5">
                                     {originOf(parcel) ?? ''}
                                   </td>
@@ -2426,11 +2480,10 @@ const CellarPage = () => {
                                             event.stopPropagation()
                                           }
                                         >
-                                          {pack > 1 && (
+                                          {pack > 1 && inBasket + pack <= held && (
                                             <button
                                               type="button"
                                               aria-label={`Add a case of ${wine.productName}`}
-                                              disabled={inBasket + pack > held}
                                               onClick={() =>
                                                 setParcelBottles(
                                                   parcel.stockId,
@@ -2451,6 +2504,9 @@ const CellarPage = () => {
                                               setParcelBottles(parcel.stockId, next, held)
                                             }
                                           />
+                                          {pack > 1 && inBasket % pack !== 0 && (
+                                            <OpenedCaseNote remaining={held - inBasket} />
+                                          )}
                                         </span>
                                       );
                                     })()}
@@ -2678,13 +2734,10 @@ const CellarPage = () => {
                                       When
                                     </th>
                                     <th className="whitespace-nowrap px-3 py-1.5 text-left">
-                                      Type
+                                      What happened
                                     </th>
                                     <th className="whitespace-nowrap px-3 py-1.5 text-right">
-                                      Cases
-                                    </th>
-                                    <th className="whitespace-nowrap px-3 py-1.5 text-left">
-                                      Reference
+                                      Bottles
                                     </th>
                                   </tr>
                                 </thead>
@@ -2699,19 +2752,18 @@ const CellarPage = () => {
                                             )
                                           : ''}
                                       </td>
-                                      <td className="whitespace-nowrap px-3 py-1.5">
-                                        <MovementTypeBadge
-                                          movementType={
-                                            movement.movementType as MovementTypeBadgeProps['movementType']
-                                          }
-                                          size="sm"
-                                        />
+                                      <td
+                                        className="text-text-primary whitespace-nowrap px-3 py-1.5"
+                                        title={movement.movementNumber ?? undefined}
+                                      >
+                                        {describeMemberMovement(
+                                          movement.movementType,
+                                          movement.toOwnerId === data?.partner.id,
+                                        )}
                                       </td>
                                       <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
-                                        {movement.quantityCases ?? ''}
-                                      </td>
-                                      <td className="text-text-muted whitespace-nowrap px-3 py-1.5 font-mono text-xs">
-                                        {movement.movementNumber ?? ''}
+                                        {movement.quantityBottles ??
+                                          movement.quantityCases * packOfLwin(movement.lwin18)}
                                       </td>
                                     </tr>
                                   ))}
