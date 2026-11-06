@@ -40,18 +40,22 @@ const releaseLineHolds = async ({
   let casesReleased = 0;
 
   for (const hold of holds) {
+    // Claimed first, so two releases at once cannot both return its cases
+    const claimed = await db
+      .update(wmsStockReservations)
+      .set({ status: 'released' as const, releasedAt: now, releaseReason: reason, updatedAt: now })
+      .where(and(eq(wmsStockReservations.id, hold.id), eq(wmsStockReservations.status, 'active')))
+      .returning({ id: wmsStockReservations.id });
+    if (claimed.length === 0) continue;
+
     await db
       .update(wmsStock)
       .set({
-        reservedCases: sql`${wmsStock.reservedCases} - ${hold.quantityCases}`,
+        reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${hold.quantityCases}, 0)`,
         availableCases: sql`${wmsStock.availableCases} + ${hold.quantityCases}`,
         updatedAt: now,
       })
       .where(eq(wmsStock.id, hold.stockId));
-    await db
-      .update(wmsStockReservations)
-      .set({ status: 'released' as const, releasedAt: now, releaseReason: reason, updatedAt: now })
-      .where(eq(wmsStockReservations.id, hold.id));
     casesReleased += hold.quantityCases;
   }
 

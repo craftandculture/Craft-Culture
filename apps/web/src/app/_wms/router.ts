@@ -102,6 +102,7 @@ import adminRemoveCaseFromPallet from './controller/adminRemoveCaseFromPallet';
 import adminRemoveOrderFromBatch from './controller/adminRemoveOrderFromBatch';
 import adminReopenShortPick from './controller/adminReopenShortPick';
 import adminRepack from './controller/adminRepack';
+import adminRepairStockCounters from './controller/adminRepairStockCounters';
 import adminReprintCaseLabels from './controller/adminReprintCaseLabels';
 import adminResendPickListPost from './controller/adminResendPickListPost';
 import adminReserveStock from './controller/adminReserveStock';
@@ -253,6 +254,8 @@ const stockRouter = createTRPCRouter({
   recordCorrectionAsTakeOut: adminRecordCorrectionAsTakeOut,
   // A pick booked to the wrong owner's row, moved to the bottles that left
   correctPickSource: adminCorrectPickSource,
+  // Reserved and available back in line with the holds that exist
+  repairCounters: adminRepairStockCounters,
   correctMovementRecord: adminCorrectMovementRecord,
   // Fills blanks a repacked row never inherited — producer, re-export BOE
   backfillDetails: adminBackfillStockDetails,

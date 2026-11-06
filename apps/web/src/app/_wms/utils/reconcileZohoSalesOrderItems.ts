@@ -155,16 +155,14 @@ const reconcileZohoSalesOrderItems = async ({
 
       const now = new Date();
       for (const reservation of activeReservations) {
-        await tx
-          .update(wmsStock)
-          .set({
-            reservedCases: sql`${wmsStock.reservedCases} - ${reservation.quantityCases}`,
-            availableCases: sql`${wmsStock.availableCases} + ${reservation.quantityCases}`,
-            updatedAt: now,
-          })
-          .where(eq(wmsStock.id, reservation.stockId));
-
-        await tx
+        /*
+          Claim the hold before giving its cases back. Two syncs of the same
+          order at once (the schedule and the Sync button) both read it as
+          active and both returned its cases: on 4 Nov that left 39 rows
+          offering a case already picked, Mouton 2010 among them, with
+          reserved at -1.
+        */
+        const claimed = await tx
           .update(wmsStockReservations)
           .set({
             status: 'released' as const,
@@ -172,7 +170,24 @@ const reconcileZohoSalesOrderItems = async ({
             releaseReason: 'Line removed or changed in Zoho sync',
             updatedAt: now,
           })
-          .where(eq(wmsStockReservations.id, reservation.id));
+          .where(
+            and(
+              eq(wmsStockReservations.id, reservation.id),
+              eq(wmsStockReservations.status, 'active'),
+            ),
+          )
+          .returning({ id: wmsStockReservations.id });
+
+        if (claimed.length === 0) continue;
+
+        await tx
+          .update(wmsStock)
+          .set({
+            reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${reservation.quantityCases}, 0)`,
+            availableCases: sql`${wmsStock.availableCases} + ${reservation.quantityCases}`,
+            updatedAt: now,
+          })
+          .where(eq(wmsStock.id, reservation.stockId));
       }
     }
 
