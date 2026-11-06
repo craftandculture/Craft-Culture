@@ -1,7 +1,7 @@
 import formatGulfDate from '@/app/_privateClientOrders/utils/formatGulfDate';
 
 /** The moments a wine partner is emailed about an inbound shipment, in order */
-export const SHIPMENT_MILESTONES = ['departed', 'arrived', 'received'] as const;
+export const SHIPMENT_MILESTONES = ['departed', 'arrived', 'landed', 'received'] as const;
 
 export type ShipmentMilestone = (typeof SHIPMENT_MILESTONES)[number];
 
@@ -9,9 +9,10 @@ export interface ShipmentEmailInput {
   shipmentNumber: string;
   transportMode: string | null;
   eta: Date | null;
-  /** When it departed, arrived in the UAE and was received, where known */
+  /** When it departed, arrived in the UAE, reached our warehouse and was received, where known */
   departedAt: Date | null;
   arrivedAt: Date | null;
+  landedAt: Date | null;
   receivedAt: Date | null;
   wines: { name: string; vintage: number | null; cases: number; bottlesPerCase: number; bottleSizeMl: number }[];
 }
@@ -26,8 +27,10 @@ const how = (mode: string | null) =>
 /**
  * The orderUpdate template's variables for a wine partner's shipment email
  *
- * Three emails a shipment at most: when it departs, when it arrives in the
- * UAE, and when it is in stock. Uses the same approved Loops template as the
+ * Four emails a shipment at most: when it departs, when it arrives in the
+ * UAE, when it reaches our warehouse, and when it is racked and in stock.
+ * Partners kept asking where their wine was between landing and the stock
+ * page filling, so the warehouse arrival is told on its own. Uses the same approved Loops template as the
  * order emails, with the shipment's own progress and wines.
  *
  * @example
@@ -73,21 +76,29 @@ const buildShipmentPartnerEmail = (
       ctaLabel: 'View the shipment',
       ctaUrl: links.shipmentUrl,
     },
+    landed: {
+      subject: `Shipment ${n} has reached our warehouse`,
+      eyebrow: 'Shipment update',
+      headline: 'Your shipment is at our warehouse',
+      body: `Shipment ${n} has been delivered to our bonded warehouse. The team is now checking it in and racking it, and we will let you know as soon as it is in your stock.`,
+      ctaLabel: 'View the shipment',
+      ctaUrl: links.shipmentUrl,
+    },
     received: {
       subject: `Shipment ${n} is in stock`,
       eyebrow: 'Stock received',
       headline: 'Your wine is in stock',
       body: `${plural(shipment.wines.length, 'wine', 'wines')} from shipment ${n}, ${plural(cases, 'case', 'cases')} in all, ${
         shipment.wines.length === 1 ? 'has' : 'have'
-      } been received into our bonded warehouse and ${shipment.wines.length === 1 ? 'is' : 'are'} now available in your stock.`,
+      } been checked in and racked in our bonded warehouse and ${shipment.wines.length === 1 ? 'is' : 'are'} now available in your stock.`,
       ctaLabel: 'View your stock',
       ctaUrl: links.stockUrl,
     },
   }[milestone];
 
   const reached = SHIPMENT_MILESTONES.indexOf(milestone);
-  const stepDates = [shipment.departedAt, shipment.arrivedAt, shipment.receivedAt];
-  const stepLabels = ['Departed', 'Arrived in the UAE', 'In stock'];
+  const stepDates = [shipment.departedAt, shipment.arrivedAt, shipment.landedAt, shipment.receivedAt];
+  const stepLabels = ['Departed', 'Arrived in the UAE', 'At our warehouse', 'In stock'];
   const steps = stepLabels.map((label, index) => {
     const at = stepDates.at(index);
     if (index <= reached) return { mark: '✓', label, when: at ? formatGulfDate(at, 'short') : '' };

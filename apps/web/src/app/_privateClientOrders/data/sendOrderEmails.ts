@@ -21,7 +21,7 @@ const BATCH = 100;
  * Where partners' daily summaries go while partner emails are live: Kevin's
  * inbox until the summary has been checked, then the partners themselves
  */
-const PARTNER_DIGEST_MODE: 'shadow' | 'live' = 'shadow';
+const PARTNER_DIGEST_MODE: 'shadow' | 'live' = 'live';
 
 /**
  * Send the order emails that are due, the way the switch says

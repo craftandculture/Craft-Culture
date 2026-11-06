@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, like, sql } from 'drizzle-orm';
 
+import notifyPartnerOfShipment from '@/app/_logistics/data/notifyPartnerOfShipment';
 import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
 import db from '@/database/client';
@@ -420,6 +421,9 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
       stockId: createdStock[0]?.stockId ?? null,
       lwin18,
     });
+
+    // The first case scanned means the shipment is here, whatever its status says
+    await notifyPartnerOfShipment(shipmentId, 'landed');
 
     return {
       success: true,

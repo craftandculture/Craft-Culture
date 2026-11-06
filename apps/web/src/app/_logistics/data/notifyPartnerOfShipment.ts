@@ -30,12 +30,13 @@ const NOTIFIED = 'partner_notified';
 const LABELS: Record<ShipmentMilestone, string> = {
   departed: 'departed for the UAE',
   arrived: 'arrived in the UAE',
+  landed: 'reached our warehouse',
   received: 'in stock',
 };
 
 /**
- * Tell a wine partner their inbound shipment has departed, arrived, or is in
- * stock: one email and one notice each, the way the switch says
+ * Tell a wine partner their inbound shipment has departed, arrived, reached
+ * our warehouse, or is in stock: one email and one notice each, the way the switch says
  *
  * Each moment is told once, and never after a later one: a shipment moved
  * straight from Collected to At port is told it has arrived, not that it
@@ -113,6 +114,7 @@ const notifyPartnerOfShipment = async (shipmentId: string, milestone: ShipmentMi
         eta: shipment.eta,
         departedAt: shipment.atd ?? first(['in_transit']),
         arrivedAt: first(['arrived_port']) ?? shipment.ata,
+        landedAt: first(['at_warehouse', 'partially_received']) ?? receipts.at(0)?.at ?? null,
         receivedAt: receipts.at(-1)?.at ?? shipment.deliveredAt,
         wines: items.map((item) => ({
           name: item.name,
@@ -181,7 +183,8 @@ const notifyPartnerOfShipment = async (shipmentId: string, milestone: ShipmentMi
 /** The partner milestone a shipment status reaches, if any */
 export const milestoneForStatus = (status: string): ShipmentMilestone | null => {
   if (status === 'in_transit') return 'departed';
-  if (['arrived_port', 'customs_clearance', 'cleared', 'at_warehouse', 'partially_received'].includes(status)) return 'arrived';
+  if (['arrived_port', 'customs_clearance', 'cleared'].includes(status)) return 'arrived';
+  if (['at_warehouse', 'partially_received'].includes(status)) return 'landed';
   if (status === 'delivered') return 'received';
   return null;
 };
