@@ -1,3 +1,9 @@
+## [2.1.99](https://github.com/craftandculture/Craft-Culture/compare/v2.1.98...v2.1.99) (2026-11-06)
+
+### Features
+
+* wine partners are told when their shipment reaches the warehouse, and partner summaries go live ([159412b](https://github.com/craftandculture/Craft-Culture/commit/159412b3583e5a552d718cc832e2f2fabdf6499c))
+
 ## [2.1.98](https://github.com/craftandculture/Craft-Culture/compare/v2.1.97...v2.1.98) (2026-11-05)
 
 ### Bug Fixes
