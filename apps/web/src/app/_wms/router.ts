@@ -73,6 +73,7 @@ import adminGetProductPricing from './controller/adminGetProductPricing';
 import adminGetReceivingDraft from './controller/adminGetReceivingDraft';
 import adminGetRepacks from './controller/adminGetRepacks';
 import adminGetShipmentForReceiving from './controller/adminGetShipmentForReceiving';
+import adminGetSplitCasePicks from './controller/adminGetSplitCasePicks';
 import adminGetStockAtLocation from './controller/adminGetStockAtLocation';
 import adminGetStockByOwner from './controller/adminGetStockByOwner';
 import adminGetStockByProduct from './controller/adminGetStockByProduct';
@@ -228,6 +229,8 @@ const stockRouter = createTRPCRouter({
   getOwnerOutflows: adminGetOwnerOutflows,
   // Every repack in a period with its owner: the basis for repack charges
   getRepacks: adminGetRepacks,
+  // Picks that took bottles, not whole cases: cases opened on the floor
+  getSplitCasePicks: adminGetSplitCasePicks,
   getExpiring: adminGetExpiringStock,
   search: adminSearchStock,
   searchRows: adminSearchStockRows,
