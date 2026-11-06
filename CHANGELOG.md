@@ -1,3 +1,9 @@
+## [2.1.102](https://github.com/craftandculture/Craft-Culture/compare/v2.1.101...v2.1.102) (2026-11-06)
+
+### Features
+
+* staff can count warehouse work by owner for a period ([0194899](https://github.com/craftandculture/Craft-Culture/commit/0194899bb9963ca28a1ecf644a70e76218011911))
+
 ## [2.1.101](https://github.com/craftandculture/Craft-Culture/compare/v2.1.100...v2.1.101) (2026-11-06)
 
 ### Features
