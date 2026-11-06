@@ -63,6 +63,8 @@ export const MEMBER_EMAIL_EVENTS = {
   allocated: { template: 'cellarWines', action: true, essential: false },
   listingSentBack: { template: 'cellarUpdate', action: true, essential: false },
   wineSold: { template: 'cellarWines', action: false, essential: false, merge: true },
+  /* The day's ownership changes on the cellar, one summary at 17:00 Gulf (sendTransferSummaries) */
+  stockTransferred: { template: 'cellarWines', action: false, essential: false },
   proceedsPaid: { template: 'cellarUpdate', action: false, essential: true },
   sharedAccessInvite: { template: 'cellarUpdate', action: true, essential: true },
   invoiceDue: { template: 'cellarUpdate', action: true, essential: true },

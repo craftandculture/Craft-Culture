@@ -14,13 +14,22 @@ import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import useTRPC from '@/lib/trpc/browser';
 
 type Mode = 'off' | 'shadow' | 'live';
-type Audience = 'partner' | 'distributor' | 'shipments';
+type Audience = 'partner' | 'distributor' | 'shipments' | 'transfers';
 
 const AUDIENCES: { audience: Audience; label: string; plural: string }[] = [
   { audience: 'partner', label: 'Wine partners', plural: 'wine partners' },
   { audience: 'distributor', label: 'Distributors', plural: 'distributors' },
   { audience: 'shipments', label: 'Shipment updates to wine partners', plural: 'wine partners about their shipments' },
+  { audience: 'transfers', label: 'Daily stock transfer summaries', plural: 'partners and Private Cellar members about stock transfers' },
 ];
+
+/** What each switch position means for the daily stock transfer summaries */
+const transferModeText = (mode: Mode | undefined, inbox: string | undefined) =>
+  mode === 'live'
+    ? 'Live. At 17:00 each partner and Private Cellar member gets one summary of the stock transferred to or from them that day.'
+    : mode === 'shadow'
+      ? `Shadow. Each day's summaries go to ${inbox}; partners and members get nothing yet.`
+      : 'Off. Nobody is told about stock transfers.';
 
 /** What each switch position means for wine partners' shipment updates */
 const shipmentModeText = (mode: Mode | undefined, inbox: string | undefined) =>
@@ -31,7 +40,13 @@ const shipmentModeText = (mode: Mode | undefined, inbox: string | undefined) =>
       : 'Off. Partners are not told about their shipments.';
 
 const audienceName = (audience: Audience) =>
-  audience === 'partner' ? 'Order emails to wine partners' : audience === 'distributor' ? 'Order emails to distributors' : 'Shipment updates to wine partners';
+  audience === 'partner'
+    ? 'Order emails to wine partners'
+    : audience === 'distributor'
+      ? 'Order emails to distributors'
+      : audience === 'transfers'
+        ? 'Stock transfer summaries'
+        : 'Shipment updates to wine partners';
 
 const MODES: { mode: Mode; label: string; detail: string }[] = [
   {
@@ -130,6 +145,8 @@ const OrderEmailsAdmin = () => {
                   ? 'Loading…'
                   : audience === 'shipments'
                     ? shipmentModeText(mode, data.shadowInbox)
+                    : audience === 'transfers'
+                    ? transferModeText(mode, data.shadowInbox)
                     : mode === 'live'
                     ? 'Live. The new emails reach them, and replace the older ones.'
                     : mode === 'shadow'
@@ -222,12 +239,16 @@ const OrderEmailsAdmin = () => {
             <DialogDescription>
               {confirm?.audience === 'shipments'
                 ? shipmentModeText(confirm.mode, data?.shadowInbox)
-                : MODES.find((m) => m.mode === confirm?.mode)?.detail}
+                : confirm?.audience === 'transfers'
+                  ? transferModeText(confirm.mode, data?.shadowInbox)
+                  : MODES.find((m) => m.mode === confirm?.mode)?.detail}
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
             <p className="text-text-muted text-sm">
-              {confirm?.mode === 'live'
+              {confirm?.audience === 'transfers' && confirm.mode === 'live'
+                ? 'The first summaries go at 17:00 Gulf time, covering transfers since the last run.'
+                : confirm?.mode === 'live'
                 ? `Within five minutes ${confirmLabel} receive the new emails, and their older emails stop.`
                 : confirm?.mode === 'shadow'
                   ? `Nothing new reaches a partner. Each email goes to ${data?.shadowInbox ?? 'Kevin'} with the recipient in the subject.`
