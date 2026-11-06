@@ -1,3 +1,9 @@
+## [2.1.101](https://github.com/craftandculture/Craft-Culture/compare/v2.1.100...v2.1.101) (2026-11-06)
+
+### Features
+
+* staff can list picks that opened a case, with whose wine it was ([c68bc96](https://github.com/craftandculture/Craft-Culture/commit/c68bc96821f31804bebdc301c31a9798c05ee865))
+
 ## [2.1.100](https://github.com/craftandculture/Craft-Culture/compare/v2.1.99...v2.1.100) (2026-11-06)
 
 ### Features
