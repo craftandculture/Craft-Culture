@@ -132,18 +132,26 @@ const PlatformLayout = async ({ children }: React.PropsWithChildren) => {
               {/* Inventory — a wine partner's stock, or a collector's cellar */}
               {access.can.ownsStock && (
                 <div className="flex items-center rounded-lg border border-border-muted/50 px-1.5 py-1">
+                  {/*
+                    A collector's cellar names itself in its own tabs and title,
+                    so the bar says only where they are, once.
+                  */}
                   <Link
                     href={access.home}
-                    className="border-r border-border-muted/50 pr-2 text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
+                    className={`text-[10px] font-medium uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors ${
+                      access.kind === 'collector' ? 'px-1' : 'border-r border-border-muted/50 pr-2'
+                    }`}
                   >
                     {access.kind === 'collector' ? 'Cellar' : 'Inventory'}
                   </Link>
-                  <Link
-                    href={access.home}
-                    className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
-                  >
-                    {access.inventoryLabel}
-                  </Link>
+                  {access.kind !== 'collector' && (
+                    <Link
+                      href={access.home}
+                      className="text-text-primary hover:bg-fill-muted ml-1 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                    >
+                      {access.inventoryLabel}
+                    </Link>
+                  )}
                   {/*
                     Wine partners only. A collector's cellar is a different
                     screen with a different procedure behind it.

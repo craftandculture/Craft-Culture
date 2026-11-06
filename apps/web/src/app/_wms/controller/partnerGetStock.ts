@@ -251,6 +251,7 @@ const partnerGetStock = stockOwnerProcedure.query(async ({ ctx: { partner } }) =
       productName: wmsStockMovements.productName,
       lwin18: wmsStockMovements.lwin18,
       quantityCases: wmsStockMovements.quantityCases,
+      quantityBottles: wmsStockMovements.quantityBottles,
       fromOwnerId: wmsStockMovements.fromOwnerId,
       toOwnerId: wmsStockMovements.toOwnerId,
       reasonCode: wmsStockMovements.reasonCode,
