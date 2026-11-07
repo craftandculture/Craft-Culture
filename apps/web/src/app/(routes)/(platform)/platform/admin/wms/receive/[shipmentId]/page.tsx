@@ -543,17 +543,8 @@ const WMSReceiveShipmentPage = () => {
     try {
       const result = await locationLookupMutation.mutateAsync({ barcode });
       if (result?.location) {
-        // Check if this location is already assigned to current item
-        const currentItem = getCurrentItem();
-        if (currentItem) {
-          const alreadyAssigned = currentItem.locationAssignments.some(
-            (a) => a.locationId === result.location.id,
-          );
-          if (alreadyAssigned) {
-            setScanError(`Location ${result.location.locationCode} already assigned to this product`);
-            return;
-          }
-        }
+        // A bay already used for this product is fine: the next batch is
+        // added to it when its labels print
         setScannedLocationCode(result.location.locationCode);
         setScannedLocationId(result.location.id);
         setCasesForThisBay(pendingCases);
@@ -645,9 +636,24 @@ const WMSReceiveShipmentPage = () => {
         isPalletized: isPalletMode,
       };
 
+      // A second batch into the same bay (same mode) adds to that bay's entry
+      const sameBayIndex = currentItem.locationAssignments.findIndex(
+        (a) =>
+          a.locationId === newAssignment.locationId &&
+          !!a.isPalletized === !!newAssignment.isPalletized,
+      );
+      const locationAssignments =
+        sameBayIndex === -1
+          ? [...currentItem.locationAssignments, newAssignment]
+          : currentItem.locationAssignments.map((a, i) =>
+              i === sameBayIndex
+                ? { ...a, cases: a.cases + newAssignment.cases }
+                : a,
+            );
+
       const updatedItem = {
         ...currentItem,
-        locationAssignments: [...currentItem.locationAssignments, newAssignment],
+        locationAssignments,
         totalLabelsPrinted: currentItem.totalLabelsPrinted + labelCount,
       };
 
