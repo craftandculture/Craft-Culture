@@ -135,7 +135,14 @@ const withMDX = createMDX({
 
 const configWithMDX = withMDX(nextConfig);
 
-export default process.env.NODE_ENV === 'development'
+/*
+  The Sentry build wrapper instruments every route and roughly doubles the
+  build's memory. With no Craft & Culture Sentry org it uploads nothing, and
+  an uncached build ran out of memory on Vercel (8 Nov 2026), so it is only
+  applied once SENTRY_ORG is set. Runtime set-up (instrumentation*.ts) is
+  unaffected.
+*/
+export default process.env.NODE_ENV === 'development' || !process.env.SENTRY_ORG
   ? configWithMDX
   : withSentryConfig(configWithMDX, {
       // For all available options, see:
