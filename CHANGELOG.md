@@ -1,3 +1,9 @@
+## [2.1.106](https://github.com/craftandculture/Craft-Culture/compare/v2.1.105...v2.1.106) (2026-11-08)
+
+### Bug Fixes
+
+* Builds skip the Sentry wrapper while no Sentry org is set up, so they fit in memory ([b6f6a1b](https://github.com/craftandculture/Craft-Culture/commit/b6f6a1b532d5ac33b144b8c1456a40ebb734ceca))
+
 ## [2.1.105](https://github.com/craftandculture/Craft-Culture/compare/v2.1.104...v2.1.105) (2026-11-08)
 
 ### Bug Fixes
