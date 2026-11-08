@@ -1,3 +1,9 @@
+## [2.1.105](https://github.com/craftandculture/Craft-Culture/compare/v2.1.104...v2.1.105) (2026-11-08)
+
+### Bug Fixes
+
+* Builds use fewer page workers so a full rebuild fits in the build machine's memory ([6abb2e4](https://github.com/craftandculture/Craft-Culture/commit/6abb2e46db11c1b736d38609459e0d438e19bb9e))
+
 ## [2.1.104](https://github.com/craftandculture/Craft-Culture/compare/v2.1.103...v2.1.104) (2026-11-06)
 
 ### Bug Fixes
