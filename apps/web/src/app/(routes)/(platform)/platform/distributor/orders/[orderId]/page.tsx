@@ -14,6 +14,7 @@ import {
   IconLoader2,
   IconMail,
   IconPackage,
+  IconPencil,
   IconPhone,
   IconPhoneOff,
   IconPhoto,
@@ -275,7 +276,7 @@ const DistributorOrderDetailPage = () => {
         notes,
       }),
     onSuccess: () => {
-      toast.success('Delivery scheduled');
+      toast.success(order?.status === 'delivery_scheduled' ? 'Delivery date changed' : 'Delivery scheduled');
       setShowScheduleDelivery(false);
       setScheduledDate('');
       setDeliveryNotes('');
@@ -564,6 +565,94 @@ const DistributorOrderDetailPage = () => {
     const amount = Number(usdAmount) || 0;
     return currency === 'USD' ? amount : amount * usdToAedRate;
   };
+
+  /*
+    The date stays editable until the order is marked out for delivery: a
+    distributor who keyed the wrong day had no way back once it was saved.
+    The same form serves the first booking and a change of date.
+  */
+  const isRescheduling = order.status === 'delivery_scheduled';
+
+  const openReschedule = () => {
+    setScheduledDate(order.scheduledDeliveryDate ? toLocalInput(new Date(order.scheduledDeliveryDate)) : '');
+    setDeliveryNotes(order.deliveryNotes ?? '');
+    setShowScheduleDelivery(true);
+  };
+
+  const closeScheduleDelivery = () => {
+    setShowScheduleDelivery(false);
+    setScheduledDate('');
+    setDeliveryNotes('');
+  };
+
+  const scheduleDeliveryForm = (
+    <div className="space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4 sm:ml-16">
+      <div>
+        <label htmlFor="pco-delivery-date" className="mb-1 block text-xs font-medium text-text-muted">
+          Delivery date and time
+        </label>
+        <input
+          id="pco-delivery-date"
+          type="datetime-local"
+          value={scheduledDate}
+          min={scheduleMin}
+          max={scheduleMax}
+          onChange={(e) => {
+            setScheduledDate(e.target.value);
+            setScheduledDatePartial(e.target.validity.badInput);
+          }}
+          onInput={(e) => setScheduledDatePartial(e.currentTarget.validity.badInput)}
+          className="min-h-10 w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
+        />
+      </div>
+      <div>
+        <label htmlFor="pco-delivery-notes" className="mb-1 block text-xs font-medium text-text-muted">
+          Notes (optional)
+        </label>
+        <textarea
+          id="pco-delivery-notes"
+          value={deliveryNotes}
+          onChange={(e) => setDeliveryNotes(e.target.value)}
+          placeholder="Any special instructions"
+          className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
+          rows={2}
+        />
+      </div>
+      {!scheduledDate ? (
+        scheduledDatePartial ? (
+          <Typography variant="bodyXs" colorRole="danger">
+            Fill in the full date and time, including AM or PM.
+          </Typography>
+        ) : (
+          <Typography variant="bodyXs" colorRole="muted">
+            Choose a date and time to confirm the schedule.
+          </Typography>
+        )
+      ) : (
+        !scheduledDateValid && (
+          <Typography variant="bodyXs" colorRole="danger">
+            Choose a date within the last 30 days or the next year.
+          </Typography>
+        )
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          onClick={() => scheduleDelivery({ date: new Date(scheduledDate).toISOString(), notes: deliveryNotes })}
+          disabled={!scheduledDateValid || isScheduling}
+          isDisabled={!scheduledDateValid || isScheduling}
+          colorRole="brand"
+        >
+          <ButtonContent iconLeft={IconCalendar} isLoading={isScheduling}>
+            {isRescheduling ? 'Save New Date' : 'Confirm Schedule'}
+          </ButtonContent>
+        </Button>
+        <Button type="button" variant="ghost" onClick={closeScheduleDelivery}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
@@ -983,72 +1072,7 @@ const DistributorOrderDetailPage = () => {
 
                 {/* Schedule Form */}
                 {showScheduleDelivery ? (
-                  <div className="space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4 sm:ml-16">
-                    <div>
-                      <label htmlFor="pco-delivery-date" className="mb-1 block text-xs font-medium text-text-muted">
-                        Delivery date and time
-                      </label>
-                      <input
-                        id="pco-delivery-date"
-                        type="datetime-local"
-                        value={scheduledDate}
-                        min={scheduleMin}
-                        max={scheduleMax}
-                        onChange={(e) => {
-                          setScheduledDate(e.target.value);
-                          setScheduledDatePartial(e.target.validity.badInput);
-                        }}
-                        onInput={(e) => setScheduledDatePartial(e.currentTarget.validity.badInput)}
-                        className="min-h-10 w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="pco-delivery-notes" className="mb-1 block text-xs font-medium text-text-muted">
-                        Notes (optional)
-                      </label>
-                      <textarea
-                        id="pco-delivery-notes"
-                        value={deliveryNotes}
-                        onChange={(e) => setDeliveryNotes(e.target.value)}
-                        placeholder="Any special instructions"
-                        className="w-full rounded-md border border-border-muted bg-background-primary px-3 py-2 text-sm"
-                        rows={2}
-                      />
-                    </div>
-                    {!scheduledDate ? (
-                      scheduledDatePartial ? (
-                        <Typography variant="bodyXs" colorRole="danger">
-                          Fill in the full date and time, including AM or PM.
-                        </Typography>
-                      ) : (
-                        <Typography variant="bodyXs" colorRole="muted">
-                          Choose a date and time to confirm the schedule.
-                        </Typography>
-                      )
-                    ) : (
-                      !scheduledDateValid && (
-                        <Typography variant="bodyXs" colorRole="danger">
-                          Choose a date within the last 30 days or the next year.
-                        </Typography>
-                      )
-                    )}
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        onClick={() => scheduleDelivery({ date: new Date(scheduledDate).toISOString(), notes: deliveryNotes })}
-                        disabled={!scheduledDateValid || isScheduling}
-                        isDisabled={!scheduledDateValid || isScheduling}
-                        colorRole="brand"
-                      >
-                        <ButtonContent iconLeft={IconCalendar} isLoading={isScheduling}>
-                          Confirm Schedule
-                        </ButtonContent>
-                      </Button>
-                      <Button type="button" variant="ghost" onClick={() => setShowScheduleDelivery(false)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
+                  scheduleDeliveryForm
                 ) : showContactAttempt ? (
                   <div className="space-y-3 rounded-lg border border-border-muted bg-surface-secondary/50 p-4 sm:ml-16">
                     <div>
@@ -1133,11 +1157,16 @@ const DistributorOrderDetailPage = () => {
                     </Typography>
                   )}
                 </div>
+                {!showScheduleDelivery && (
+                  <Button type="button" variant="outline" onClick={openReschedule} className="w-full sm:w-auto">
+                    <ButtonContent iconLeft={IconPencil}>Change Date</ButtonContent>
+                  </Button>
+                )}
                 <Button
                   type="button"
                   onClick={() => markInTransit(undefined)}
-                  disabled={isMarkingInTransit}
-                  isDisabled={isMarkingInTransit}
+                  disabled={isMarkingInTransit || showScheduleDelivery}
+                  isDisabled={isMarkingInTransit || showScheduleDelivery}
                   colorRole="brand"
                   className="w-full sm:w-auto"
                 >
@@ -1146,6 +1175,7 @@ const DistributorOrderDetailPage = () => {
                   </ButtonContent>
                 </Button>
               </div>
+              {showScheduleDelivery && <div className="mt-4">{scheduleDeliveryForm}</div>}
             </CardContent>
           </Card>
         )}

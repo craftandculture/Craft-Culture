@@ -30,7 +30,9 @@ const scheduleDeliverySchema = z.object({
  * Schedule delivery for a private client order
  *
  * Sets the delivery date after the distributor has contacted the client.
- * This moves the order to 'delivery_scheduled' status.
+ * This moves the order to 'delivery_scheduled' status. Called again while it
+ * is there, it changes the date: it stays editable until the order is marked
+ * out for delivery.
  */
 const ordersScheduleDelivery = distributorProcedure
   .input(scheduleDeliverySchema)
@@ -93,8 +95,15 @@ const ordersScheduleDelivery = distributorProcedure
       action: 'delivery_scheduled',
       previousStatus: order.status,
       newStatus: 'delivery_scheduled',
-      notes: notes ?? `Delivery scheduled for ${deliveryDate.toLocaleDateString()}`,
-      metadata: { scheduledDate: deliveryDate.toISOString() },
+      notes:
+        notes ??
+        `${order.status === 'delivery_scheduled' ? 'Delivery date changed to' : 'Delivery scheduled for'} ${deliveryDate.toLocaleDateString('en-GB', { timeZone: 'Asia/Dubai' })}`,
+      metadata: {
+        scheduledDate: deliveryDate.toISOString(),
+        ...(order.status === 'delivery_scheduled' && order.scheduledDeliveryDate
+          ? { previousScheduledDate: order.scheduledDeliveryDate.toISOString() }
+          : {}),
+      },
     });
 
     // Notify partner about the scheduled delivery (in-app + email)
