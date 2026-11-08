@@ -14,6 +14,13 @@ const nextConfig: NextConfig = {
   experimental: {
     reactCompiler: true,
     authInterrupts: true,
+    /*
+      The 8 GB build machine ran out of memory collecting page data on an
+      uncached build (8 Nov 2026, twice). Fewer page workers and webpack's
+      memory savings keep a full rebuild inside it.
+    */
+    cpus: 2,
+    webpackMemoryOptimizations: true,
   },
   poweredByHeader: false,
   // The staff-only brief route reads these from disk at request time
