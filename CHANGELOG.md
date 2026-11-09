@@ -1,3 +1,9 @@
+## [2.1.107](https://github.com/craftandculture/Craft-Culture/compare/v2.1.106...v2.1.107) (2026-11-09)
+
+### Features
+
+* **wms:** remove counts and adjustments keyed in by mistake ([b8f550e](https://github.com/craftandculture/Craft-Culture/commit/b8f550ec551d29e0b4948e3c8a6324476ce7e349))
+
 ## [2.1.106](https://github.com/craftandculture/Craft-Culture/compare/v2.1.105...v2.1.106) (2026-11-08)
 
 ### Bug Fixes
