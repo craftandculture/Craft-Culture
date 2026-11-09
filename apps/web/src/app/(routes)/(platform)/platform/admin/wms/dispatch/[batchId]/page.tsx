@@ -339,7 +339,6 @@ const WMSDispatchBatchDetailPage = () => {
                   const zpl = generateDispatchLabelZpl({
                     batchNumber: batch.batchNumber,
                     distributorName: batch.distributorName ?? 'Unknown',
-                    totalCases: batch.totalCases,
                     orderNumbers: batch.orders.map((o) =>
                       o.invoiceNumber
                         ? `${o.invoiceNumber} (${o.orderNumber})`
