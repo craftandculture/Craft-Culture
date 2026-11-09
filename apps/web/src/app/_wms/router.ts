@@ -100,6 +100,7 @@ import adminRecordCorrectionAsTakeOut from './controller/adminRecordCorrectionAs
 import adminRecordCycleCountItem from './controller/adminRecordCycleCountItem';
 import adminReleaseReservation from './controller/adminReleaseReservation';
 import adminRemoveCaseFromPallet from './controller/adminRemoveCaseFromPallet';
+import adminRemoveMistakenMovements from './controller/adminRemoveMistakenMovements';
 import adminRemoveOrderFromBatch from './controller/adminRemoveOrderFromBatch';
 import adminReopenShortPick from './controller/adminReopenShortPick';
 import adminRepack from './controller/adminRepack';
@@ -260,6 +261,8 @@ const stockRouter = createTRPCRouter({
   // Reserved and available back in line with the holds that exist
   repairCounters: adminRepairStockCounters,
   correctMovementRecord: adminCorrectMovementRecord,
+  // Counts, adjustments and hand additions keyed in by mistake, taken out of the ledger
+  removeMistakenMovements: adminRemoveMistakenMovements,
   // Fills blanks a repacked row never inherited — producer, re-export BOE
   backfillDetails: adminBackfillStockDetails,
   correctPackConfig: adminCorrectPackConfig,
