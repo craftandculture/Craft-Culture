@@ -1,3 +1,9 @@
+## [2.1.108](https://github.com/craftandculture/Craft-Culture/compare/v2.1.107...v2.1.108) (2026-11-09)
+
+### Features
+
+* **wms:** dispatch pallet label without case count or QR code ([d5c8582](https://github.com/craftandculture/Craft-Culture/commit/d5c8582e3bb51d182c2077968833c5bd79bf8338))
+
 ## [2.1.107](https://github.com/craftandculture/Craft-Culture/compare/v2.1.106...v2.1.107) (2026-11-09)
 
 ### Features
