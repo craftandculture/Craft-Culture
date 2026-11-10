@@ -1,3 +1,9 @@
+## [2.1.109](https://github.com/craftandculture/Craft-Culture/compare/v2.1.108...v2.1.109) (2026-11-10)
+
+### Bug Fixes
+
+* Distributors can confirm client payment before the invoice is uploaded ([e8c5606](https://github.com/craftandculture/Craft-Culture/commit/e8c5606b77b2a1e7e8ce074f400b27524e44a44d))
+
 ## [2.1.108](https://github.com/craftandculture/Craft-Culture/compare/v2.1.107...v2.1.108) (2026-11-09)
 
 ### Features
