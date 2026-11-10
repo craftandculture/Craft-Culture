@@ -50,6 +50,13 @@ const adminRecordBondPurchase = staffAdminProcedure
       .from(saleMandates)
       .where(and(eq(saleMandates.mandateNumber, input.mandateNumber)));
     if (!mandate) throw new TRPCError({ code: 'NOT_FOUND', message: `${input.mandateNumber} not found` });
+    // A withdrawn offer is no longer the member's price for anything
+    if (mandate.status === 'withdrawn') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `${input.mandateNumber} has been withdrawn, so it no longer sets a price. Use the member's current offer for this wine.`,
+      });
+    }
 
     // Midday in Dubai, as take-outs are dated
     const soldAt = new Date(`${input.soldOn}T12:00:00+04:00`);
@@ -57,13 +64,23 @@ const adminRecordBondPurchase = staffAdminProcedure
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'The purchase date cannot be in the future.' });
     }
 
-    const owedToOwnerUsd = Math.round(mandate.askPerBottleUsd * input.bottles * 100) / 100;
+    /*
+      A price agreed in euros is worked from the euros, unrounded, and the
+      total rounded once, as the member's statement does: pricing from the
+      USD ask, already rounded to the cent, drifted a cent or more from the
+      member's own sheet on a few bottles.
+    */
+    const perBottleUsd =
+      mandate.askPerBottleLocal != null && mandate.askFxRate != null
+        ? mandate.askPerBottleLocal * mandate.askFxRate
+        : mandate.askPerBottleUsd;
+    const owedToOwnerUsd = Math.round(perBottleUsd * input.bottles * 100) / 100;
     const preview = {
       owner: mandate.ownerName,
       mandateNumber: mandate.mandateNumber,
       productName: input.productName ?? mandate.productName,
       bottles: input.bottles,
-      perBottleUsd: mandate.askPerBottleUsd,
+      perBottleUsd,
       owedToOwnerUsd,
       soldAt,
     };
@@ -85,7 +102,7 @@ const adminRecordBondPurchase = staffAdminProcedure
               productName: preview.productName,
               bottles: input.bottles,
               caseConfig: mandate.caseConfig,
-              salePricePerBottleUsd: mandate.askPerBottleUsd,
+              salePricePerBottleUsd: perBottleUsd,
               saleTotalUsd: owedToOwnerUsd,
               askPerBottleUsd: mandate.askPerBottleUsd,
               owedToOwnerUsd,
