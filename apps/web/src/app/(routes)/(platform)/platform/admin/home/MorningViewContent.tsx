@@ -26,6 +26,7 @@ import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import useTRPC from '@/lib/trpc/browser';
+import { formatDateTime } from '@/utils/formatDate';
 
 import HomeAttentionCard from './HomeAttentionCard';
 import HomeRevenueChart from './HomeRevenueChart';
@@ -168,17 +169,18 @@ const getStatusColor = (status: string) => {
   if (green.includes(status)) return 'bg-emerald-500';
   if (red.includes(status)) return 'bg-red-500';
   if (amber.includes(status)) return 'bg-amber-500';
-  return 'bg-emerald-500';
+  // An unknown status is not assumed to be good news
+  return 'bg-text-muted';
 };
 
 /** Agent icon + color config */
 const agentConfig: Record<string, { icon: typeof IconBinoculars; bgColor: string; iconColor: string; label: string }> = {
-  scout: { icon: IconBinoculars, bgColor: 'bg-emerald-100', iconColor: 'text-emerald-600', label: 'Market Scout' },
-  concierge: { icon: IconSparkles, bgColor: 'bg-blue-100', iconColor: 'text-blue-600', label: 'PCO Concierge' },
-  storyteller: { icon: IconPencil, bgColor: 'bg-violet-100', iconColor: 'text-violet-600', label: 'Socials' },
-  buyer: { icon: IconShoppingCart, bgColor: 'bg-amber-100', iconColor: 'text-amber-600', label: 'Purchasing' },
-  pricer: { icon: IconCurrencyDollar, bgColor: 'bg-cyan-100', iconColor: 'text-cyan-600', label: 'Pricing' },
-  advisor: { icon: IconBrain, bgColor: 'bg-indigo-100', iconColor: 'text-indigo-600', label: 'Business' },
+  scout: { icon: IconBinoculars, bgColor: 'bg-emerald-100 dark:bg-emerald-500/20', iconColor: 'text-emerald-600 dark:text-emerald-300', label: 'Market Scout' },
+  concierge: { icon: IconSparkles, bgColor: 'bg-blue-100 dark:bg-blue-500/20', iconColor: 'text-blue-600 dark:text-blue-300', label: 'PCO Concierge' },
+  storyteller: { icon: IconPencil, bgColor: 'bg-violet-100 dark:bg-violet-500/20', iconColor: 'text-violet-600 dark:text-violet-300', label: 'Socials' },
+  buyer: { icon: IconShoppingCart, bgColor: 'bg-amber-100 dark:bg-amber-500/20', iconColor: 'text-amber-600 dark:text-amber-300', label: 'Purchasing' },
+  pricer: { icon: IconCurrencyDollar, bgColor: 'bg-cyan-100 dark:bg-cyan-500/20', iconColor: 'text-cyan-600 dark:text-cyan-300', label: 'Pricing' },
+  advisor: { icon: IconBrain, bgColor: 'bg-indigo-100 dark:bg-indigo-500/20', iconColor: 'text-indigo-600 dark:text-indigo-300', label: 'Business' },
 };
 
 /** Quick action definitions */
@@ -272,8 +274,10 @@ const MorningViewContent = () => {
           <button
             type="button"
             onClick={() => setRedacted((r) => !r)}
-            className="rounded-full border border-border-muted bg-surface-primary p-1.5 text-text-muted shadow-sm transition-colors hover:text-text-primary"
+            className="flex size-9 items-center justify-center rounded-full border border-border-muted bg-surface-primary text-text-muted shadow-sm transition-colors hover:text-text-primary"
             title={redacted ? 'Show values' : 'Hide values'}
+            aria-label="Hide values"
+            aria-pressed={redacted}
           >
             {redacted ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
           </button>
@@ -281,6 +285,7 @@ const MorningViewContent = () => {
             <button
               type="button"
               onClick={() => setCurrency('USD')}
+              aria-pressed={currency === 'USD'}
               className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
                 currency === 'USD'
                   ? 'bg-text-primary text-surface-primary'
@@ -292,6 +297,7 @@ const MorningViewContent = () => {
             <button
               type="button"
               onClick={() => setCurrency('AED')}
+              aria-pressed={currency === 'AED'}
               className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-colors ${
                 currency === 'AED'
                   ? 'bg-text-primary text-surface-primary'
@@ -306,13 +312,13 @@ const MorningViewContent = () => {
 
       {/* ── Sync health warning — invoice sync canary ──────────── */}
       {data?.invoiceSync?.isStale && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
           <IconAlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
           <p>
             <span className="font-semibold">Invoice sync looks stale.</span>{' '}
             Last update from Zoho was{' '}
             {data.invoiceSync.lastSyncedAt
-              ? new Date(data.invoiceSync.lastSyncedAt).toLocaleString('en-GB')
+              ? formatDateTime(data.invoiceSync.lastSyncedAt)
               : 'never'}
             {' '}— the Invoiced &amp; Overdue figures below may be out of date until it catches up.
           </p>
@@ -493,9 +499,7 @@ const MorningViewContent = () => {
                             <span className="ml-1.5 font-semibold">&mdash; {brief.highlight}</span>
                           </p>
                           <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-text-muted">
-                            {brief.summary.length > 150
-                              ? `${brief.summary.slice(0, 150)}...`
-                              : brief.summary}
+                            {brief.summary}
                           </p>
                           {brief.createdAt && (
                             <p className="mt-1.5 flex items-center gap-1 text-[11px] text-text-muted/70">
@@ -546,7 +550,11 @@ const MorningViewContent = () => {
                       }
                       className="group flex items-center gap-3 border-t border-border-muted px-6 py-3.5 transition-colors hover:bg-surface-secondary/50"
                     >
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${getStatusColor(order.status)}`} />
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${getStatusColor(order.status)}`}
+                        aria-hidden="true"
+                      />
+                      <span className="sr-only">Status: {order.status.replace(/_/g, ' ')}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[13px]">
                           <span className="font-semibold">{order.orderNumber}</span>
