@@ -31,8 +31,9 @@ import generateMandateNumber from '../utils/generateMandateNumber';
  * statement valued at today's rate disagreed with their purchase (Ihab Toma,
  * Oct 2026: 1.1203 used against the shipment's 1.168). A stated rate
  * overrides it; a wine with no EUR shipment falls back to today's rate. Bottles already sold on orders are
- * counted, so a wine sold out reads as sold, one part sold as partly sold,
- * and the rest stays offered for C&C to sell (not on any price list).
+ * counted, so a wine sold out reads as sold, and any wine with bottles left
+ * stays offered for C&C to sell, with only the bottles left to sell (not on
+ * any price list).
  *
  * Preview first (`dryRun`), then save. An existing offer for the same wine
  * has its price updated rather than a second one created.
@@ -209,7 +210,12 @@ const adminRecordAgreedPrices = staffAdminProcedure
         (sum, row) => sum + row.quantityCases * (row.caseConfig ?? 1) + (row.openBottles ?? 0),
         0,
       );
-      const status = remaining === 0 ? 'sold' : sold > 0 ? 'partially_sold' : 'offered';
+      /*
+        Never partly sold, even when some bottles have gone: that status is a
+        sellable one, so it put wine agreed off the portal onto the price
+        lists. What has sold is already off the remaining count.
+      */
+      const status = remaining === 0 ? 'sold' : 'offered';
       const lineFx = rateByKey.get(match) ?? fx;
       return {
         lwin18: line.lwin18,
@@ -226,7 +232,7 @@ const adminRecordAgreedPrices = staffAdminProcedure
         eurToUsd: lineFx.rate,
         rateSource: lineFx.source,
         askPerBottleUsd: Math.round(line.eurPerBottle * lineFx.rate * 100) / 100,
-        status: status as 'sold' | 'partially_sold' | 'offered',
+        status: status as 'sold' | 'offered',
         existingOffer: existingFor(line.lwin18)?.number ?? null,
         problem: !rows[0] && !names.some((name) => matchKey(name.lwin18) === match)
           ? 'No wine of this code ever held for this owner'
