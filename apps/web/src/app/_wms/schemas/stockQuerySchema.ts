@@ -56,6 +56,10 @@ export const getMovementHistorySchema = z.object({
       'pallet_add',
       'pallet_remove',
       'pallet_move',
+      'pallet_unseal',
+      'pallet_dissolve',
+      'pallet_dispatch',
+      'dispatch',
     ])
     .optional(),
   lwin18: z.string().optional(),

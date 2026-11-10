@@ -26,7 +26,7 @@ const adminGetProductPricing = adminProcedure
     const activePartners = await db
       .select({
         id: partners.id,
-        companyName: partners.companyName,
+        companyName: partners.businessName,
         marginPercentage: partners.marginPercentage,
       })
       .from(partners)

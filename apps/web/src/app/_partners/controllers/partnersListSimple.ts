@@ -21,7 +21,6 @@ const partnersListSimple = adminProcedure
             'distributor',
             'wine_partner',
             'supplier',
-            'private_client',
             'private_collector',
           ])
           .optional(),

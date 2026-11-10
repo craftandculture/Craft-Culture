@@ -9,6 +9,7 @@ import {
   IconPrinter,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -297,7 +298,7 @@ const ComplianceReportPage = () => {
                                   : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 print:bg-orange-100'
                               }`}
                             >
-                              {documentTypeLabels[doc.type] ?? doc.type} - {doc.expiryDate}
+                              {documentTypeLabels[doc.type] ?? doc.type} - {doc.expiryDate ? format(new Date(doc.expiryDate), 'd MMM yyyy') : ''}
                             </span>
                           ))}
                         </div>
@@ -316,7 +317,7 @@ const ComplianceReportPage = () => {
                               key={doc.id}
                               className="px-2 py-0.5 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/30 print:bg-red-100"
                             >
-                              {documentTypeLabels[doc.type] ?? doc.type} - Expired {doc.expiryDate}
+                              {documentTypeLabels[doc.type] ?? doc.type} - Expired {doc.expiryDate ? format(new Date(doc.expiryDate), 'd MMM yyyy') : ''}
                             </span>
                           ))}
                         </div>
