@@ -25,6 +25,30 @@ import summariseTransfers, { type TransferLine, describeQuantity } from '../util
 /** The last moment a summary run covered, so each transfer is told once */
 const CURSOR_SETTING = 'transfer_emails.cursor';
 
+/**
+ * Owners whose summary failed to send, each with the start of the window they
+ * have not yet been told about, as JSON `{ [ownerId]: iso }`
+ */
+const HELD_SETTING = 'transfer_emails.held';
+
+/** Read the held owners, tolerating a missing or damaged value */
+const parseHeld = (value: string | undefined) => {
+  const held = new Map<string, Date>();
+  if (!value) return held;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (parsed && typeof parsed === 'object') {
+      for (const [ownerId, iso] of Object.entries(parsed)) {
+        const at = typeof iso === 'string' ? new Date(iso) : null;
+        if (at && !Number.isNaN(at.getTime())) held.set(ownerId, at);
+      }
+    }
+  } catch {
+    // A damaged value only loses the retry, never the run
+  }
+  return held;
+};
+
 const WINES_SHOWN = 8;
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -118,6 +142,18 @@ const sendTransferSummaries = async (now: Date = new Date()) => {
   const parsed = cursorRow?.value ? new Date(cursorRow.value) : null;
   const since = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
+  /*
+    The cursor moves on every run, so an owner whose send failed used to lose
+    that day's summary for good. Holding the cursor back instead would resend
+    to every owner who did receive theirs. So a failed owner is held on their
+    own: the window they missed is kept, and the next run reaches back to it
+    for them alone, while everyone else carries on from the cursor.
+  */
+  const [heldRow] = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, HELD_SETTING)).limit(1);
+  const held = mode === 'off' ? new Map<string, Date>() : parseHeld(heldRow?.value);
+  const earliest = [...held.values()].reduce((min, at) => (at < min ? at : min), since);
+  const stillHeld = new Map<string, Date>();
+
   const movements = await db
     .select({
       lwin18: wmsStockMovements.lwin18,
@@ -126,12 +162,13 @@ const sendTransferSummaries = async (now: Date = new Date()) => {
       quantityBottles: wmsStockMovements.quantityBottles,
       fromOwnerId: wmsStockMovements.fromOwnerId,
       toOwnerId: wmsStockMovements.toOwnerId,
+      performedAt: wmsStockMovements.performedAt,
     })
     .from(wmsStockMovements)
     .where(
       and(
         eq(wmsStockMovements.movementType, 'ownership_transfer'),
-        gt(wmsStockMovements.performedAt, since),
+        gt(wmsStockMovements.performedAt, earliest),
         lte(wmsStockMovements.performedAt, now),
       ),
     );
@@ -160,7 +197,10 @@ const sendTransferSummaries = async (now: Date = new Date()) => {
 
     for (const owner of owners) {
       const isCollector = owner.type === 'private_collector';
-      const lines = summariseTransfers(movements, owner.id, { ccIds, isCollector });
+      // A held owner reaches back to the window they missed; everyone else starts at the cursor
+      const ownerSince = held.get(owner.id) ?? since;
+      const ownerMovements = movements.filter((movement) => movement.performedAt > ownerSince);
+      const lines = summariseTransfers(ownerMovements, owner.id, { ccIds, isCollector });
       if (!lines.length) continue;
       result.owners += 1;
 
@@ -225,6 +265,7 @@ const sendTransferSummaries = async (now: Date = new Date()) => {
         }
       } catch (error) {
         result.failed += 1;
+        stillHeld.set(owner.id, ownerSince);
         logger.error('Transfer summary failed', {
           partnerId: owner.id,
           error: error instanceof Error ? error.message : String(error),
@@ -234,6 +275,12 @@ const sendTransferSummaries = async (now: Date = new Date()) => {
   }
 
   await settingsUpdateController({ key: CURSOR_SETTING, value: now.toISOString() });
+  if (heldRow || stillHeld.size) {
+    await settingsUpdateController({
+      key: HELD_SETTING,
+      value: JSON.stringify(Object.fromEntries([...stillHeld].map(([ownerId, at]) => [ownerId, at.toISOString()]))),
+    });
+  }
 
   return result;
 };
