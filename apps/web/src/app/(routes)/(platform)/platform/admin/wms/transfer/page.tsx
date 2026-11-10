@@ -267,7 +267,7 @@ const WMSTransferPage = () => {
       <div className="space-y-6">
         {/* Header with large back button */}
         <div className="flex items-start gap-3">
-          <Link
+          <Link aria-label="Back to WMS"
             href="/platform/admin/wms"
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
           >
@@ -366,7 +366,7 @@ const WMSTransferPage = () => {
                         </Typography>
                       </div>
                     </div>
-                    <button
+                    <button aria-label="Clear selected stock"
                       onClick={() => setSelectedStock(null)}
                       className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-text-muted hover:bg-fill-secondary"
                     >
@@ -379,7 +379,7 @@ const WMSTransferPage = () => {
                     Quantity to transfer
                   </Typography>
                   <div className="flex items-center justify-center gap-4">
-                    <Button
+                    <Button aria-label="Fewer cases"
                       variant="outline"
                       size="lg"
                       onClick={() => adjustQuantity(-1)}
@@ -393,7 +393,7 @@ const WMSTransferPage = () => {
                         of {selectedStock.availableCases}
                       </Typography>
                     </div>
-                    <Button
+                    <Button aria-label="More cases"
                       variant="outline"
                       size="lg"
                       onClick={() => adjustQuantity(1)}
@@ -626,7 +626,7 @@ const WMSTransferPage = () => {
               {/* Destination labels */}
               <div className="flex items-center gap-2">
                 <div className="flex items-center rounded-lg border border-border">
-                  <button
+                  <button aria-label="Fewer destination labels"
                     type="button"
                     className="flex h-12 w-12 items-center justify-center rounded-l-lg hover:bg-fill-secondary"
                     onClick={() => setDestLabelCopies((c) => Math.max(1, c - 1))}
@@ -636,7 +636,7 @@ const WMSTransferPage = () => {
                   <span className="flex h-12 w-10 items-center justify-center text-lg font-semibold">
                     {destLabelCopies}
                   </span>
-                  <button
+                  <button aria-label="More destination labels"
                     type="button"
                     className="flex h-12 w-12 items-center justify-center rounded-r-lg hover:bg-fill-secondary"
                     onClick={() => setDestLabelCopies((c) => c + 1)}
@@ -661,7 +661,7 @@ const WMSTransferPage = () => {
               {lastSuccess.sourceStockId && lastSuccess.sourceRemaining > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="flex items-center rounded-lg border border-border">
-                    <button
+                    <button aria-label="Fewer source labels"
                       type="button"
                       className="flex h-12 w-12 items-center justify-center rounded-l-lg hover:bg-fill-secondary"
                       onClick={() => setSourceLabelCopies((c) => Math.max(1, c - 1))}
@@ -671,7 +671,7 @@ const WMSTransferPage = () => {
                     <span className="flex h-12 w-10 items-center justify-center text-lg font-semibold">
                       {sourceLabelCopies}
                     </span>
-                    <button
+                    <button aria-label="More source labels"
                       type="button"
                       className="flex h-12 w-12 items-center justify-center rounded-r-lg hover:bg-fill-secondary"
                       onClick={() => setSourceLabelCopies((c) => c + 1)}

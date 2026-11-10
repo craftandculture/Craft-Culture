@@ -232,11 +232,11 @@ const WMSPalletDetailPage = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Link href="/platform/admin/wms/pallets">
-            <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/platform/admin/wms/pallets" aria-label="Back to pallets">
               <Icon icon={IconArrowLeft} size="sm" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <Typography variant="headingMd">{pallet.palletCode}</Typography>
@@ -418,7 +418,7 @@ const WMSPalletDetailPage = () => {
                       </Typography>
                     </div>
                     {canAddCases && (
-                      <Button
+                      <Button aria-label="Remove case from pallet"
                         variant="ghost"
                         size="sm"
                         onClick={() =>
@@ -492,7 +492,7 @@ const WMSPalletDetailPage = () => {
             <CardContent className="p-4 border-b border-border-primary">
               <div className="flex items-center justify-between">
                 <Typography variant="headingSm">Move Pallet to Location</Typography>
-                <Button variant="ghost" size="sm" type="button" onClick={() => setShowMoveModal(false)}>
+                <Button aria-label="Close" variant="ghost" size="sm" type="button" onClick={() => setShowMoveModal(false)}>
                   <Icon icon={IconX} size="sm" />
                 </Button>
               </div>
@@ -588,7 +588,7 @@ const WMSPalletDetailPage = () => {
             <CardContent className="p-4 border-b border-border-primary">
               <div className="flex items-center justify-between">
                 <Typography variant="headingSm">Unseal Pallet</Typography>
-                <Button variant="ghost" size="sm" type="button" onClick={() => setShowUnsealModal(false)}>
+                <Button aria-label="Close" variant="ghost" size="sm" type="button" onClick={() => setShowUnsealModal(false)}>
                   <Icon icon={IconX} size="sm" />
                 </Button>
               </div>
@@ -644,7 +644,7 @@ const WMSPalletDetailPage = () => {
             <CardContent className="p-4 border-b border-border-primary">
               <div className="flex items-center justify-between">
                 <Typography variant="headingSm">Dispatch Pallet</Typography>
-                <Button variant="ghost" size="sm" type="button" onClick={() => setShowDispatchModal(false)}>
+                <Button aria-label="Close" variant="ghost" size="sm" type="button" onClick={() => setShowDispatchModal(false)}>
                   <Icon icon={IconX} size="sm" />
                 </Button>
               </div>
@@ -686,7 +686,7 @@ const WMSPalletDetailPage = () => {
             <CardContent className="p-4 border-b border-border-primary">
               <div className="flex items-center justify-between">
                 <Typography variant="headingSm">Dissolve Pallet</Typography>
-                <Button variant="ghost" size="sm" type="button" onClick={() => setShowDissolveModal(false)}>
+                <Button aria-label="Close" variant="ghost" size="sm" type="button" onClick={() => setShowDissolveModal(false)}>
                   <Icon icon={IconX} size="sm" />
                 </Button>
               </div>

@@ -64,11 +64,11 @@ const NewPalletPage = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Link href="/platform/admin/wms/pallets">
-            <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/platform/admin/wms/pallets" aria-label="Back to pallets">
               <Icon icon={IconArrowLeft} size="sm" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div>
             <Typography variant="headingMd">New Pallet</Typography>
             <Typography variant="bodySm" colorRole="muted">

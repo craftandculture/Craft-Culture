@@ -257,13 +257,13 @@ const DispatchWizardPage = () => {
         {/* Header */}
         <div className="flex items-center gap-4">
           {step === 'select-orders' ? (
-            <Link href="/platform/admin/wms/dispatch">
-              <Button variant="ghost" className="h-12 w-12">
+            <Button variant="ghost" className="h-12 w-12" asChild>
+              <Link href="/platform/admin/wms/dispatch" aria-label="Back to dispatch">
                 <Icon icon={IconArrowLeft} size="sm" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           ) : (
-            <Button
+            <Button aria-label="Back"
               variant="ghost"
               className="h-12 w-12"
               onClick={() => {
@@ -283,7 +283,7 @@ const DispatchWizardPage = () => {
             </Typography>
           </div>
           {step === 'select-orders' && (
-            <Button
+            <Button aria-label="Sync from Zoho"
               variant="ghost"
               onClick={() => syncMutation.mutate()}
               disabled={syncMutation.isPending}

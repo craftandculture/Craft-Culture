@@ -535,11 +535,11 @@ const WMSPickListDetailPage = () => {
     <div className="mx-auto max-w-lg px-3 py-4 sm:px-4 md:max-w-2xl">
       {/* Compact Header */}
       <div className="mb-3 flex items-center gap-3">
-        <Link href="/platform/admin/wms/pick">
-          <Button variant="ghost" className="h-10 w-10">
+        <Button variant="ghost" className="h-10 w-10" asChild>
+          <Link href="/platform/admin/wms/pick" aria-label="Back to pick lists">
             <Icon icon={IconArrowLeft} size="sm" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         {data.customerName ? (
           <ClientMark logoUrl={data.customerLogoUrl} name={data.customerName} size="lg" />
         ) : null}
@@ -553,13 +553,13 @@ const WMSPickListDetailPage = () => {
             <Typography variant="headingSm" className="truncate">
               {data.pickListNumber}
             </Typography>
-            <span className="shrink-0 rounded bg-fill-secondary px-1.5 py-0.5 text-[11px] font-medium text-text-muted">
+            <span className="shrink-0 rounded bg-fill-secondary px-1.5 py-0.5 text-xs font-medium text-text-muted">
               {data.invoiceNumber ?? data.orderNumber}
             </span>
             {/* Both references, not one or the other: the office quotes the
                 invoice, the warehouse paperwork quotes the SO. */}
             {data.invoiceNumber && data.orderNumber && (
-              <span className="shrink-0 text-[11px] font-medium text-text-muted/70">
+              <span className="shrink-0 text-xs font-medium text-text-muted/70">
                 {data.orderNumber}
               </span>
             )}
@@ -572,7 +572,7 @@ const WMSPickListDetailPage = () => {
                 style={{ width: `${data.progress.percent}%` }}
               />
             </div>
-            <span className="shrink-0 text-[11px] font-medium text-text-muted">
+            <span className="shrink-0 text-xs font-medium text-text-muted">
               {data.progress.pickedCases}/{data.progress.totalCases}
             </span>
           </div>
@@ -582,6 +582,7 @@ const WMSPickListDetailPage = () => {
           target="_blank"
           rel="noopener noreferrer"
           title="Print picking list"
+          aria-label="Print picking list"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-fill-secondary"
         >
           <Icon icon={IconPrinter} size="sm" />
@@ -592,6 +593,7 @@ const WMSPickListDetailPage = () => {
             className="h-10 w-10 shrink-0 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
+            aria-label="Delete pick list"
           >
             <Icon icon={deleteMutation.isPending ? IconLoader2 : IconTrash} size="sm" />
           </Button>
@@ -827,11 +829,11 @@ const WMSPickListDetailPage = () => {
                   </span>
                   {formatCaseConfig(currentItem) &&
                     (isCrackPick(currentItem) ? (
-                      <span className="rounded bg-amber-500 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                      <span className="rounded bg-amber-500 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
                         Break {formatCaseConfig(currentItem)}
                       </span>
                     ) : (
-                      <span className="rounded bg-fill-secondary px-1.5 py-0.5 text-[11px] font-bold text-text-muted">
+                      <span className="rounded bg-fill-secondary px-1.5 py-0.5 text-xs font-bold text-text-muted">
                         {formatCaseConfig(currentItem)}
                       </span>
                     ))}
@@ -846,7 +848,7 @@ const WMSPickListDetailPage = () => {
                 <Typography variant="bodySm" className="font-semibold leading-tight">
                   {currentItem.productName}
                 </Typography>
-                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 font-mono text-[11px]">
+                <Typography variant="bodyXs" colorRole="muted" className="mt-0.5 font-mono text-xs">
                   {currentItem.lwin18}
                 </Typography>
               </div>
@@ -858,7 +860,7 @@ const WMSPickListDetailPage = () => {
                     <IconAlertTriangle className="h-4 w-4 shrink-0" /> Lookalike in stock — check
                     the label!
                   </p>
-                  <p className="mt-0.5 text-[11px] leading-snug text-red-600 dark:text-red-400">
+                  <p className="mt-0.5 text-xs leading-snug text-red-600 dark:text-red-400">
                     Do not confuse with{' '}
                     {currentLookalikes.map((l, i) => (
                       <span key={l.lwin18}>
@@ -891,13 +893,13 @@ const WMSPickListDetailPage = () => {
               {/* Quantity + Location — side by side */}
               <div className="grid grid-cols-2 gap-px bg-border-primary">
                 <div className="bg-fill-secondary px-4 py-3 text-center">
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                  <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
                     Pick Qty
                   </span>
                   <div className="text-3xl font-bold text-text-primary">
                     {currentItem.quantityBottles ?? currentItem.quantityCases}
                   </div>
-                  <span className="text-[10px] text-text-muted">
+                  <span className="text-xs text-text-muted">
                     {currentItem.quantityBottles != null
                       ? isCrackPick(currentItem)
                         ? `loose bottle${currentItem.quantityBottles === 1 ? '' : 's'} — not a case`
@@ -917,13 +919,13 @@ const WMSPickListDetailPage = () => {
                   </span>
                 </div>
                 <div className="bg-fill-secondary px-4 py-3 text-center">
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
+                  <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
                     Bay
                   </span>
                   <div className="font-mono text-2xl font-bold text-text-primary">
                     {currentItem.suggestedLocationCode ?? '—'}
                   </div>
-                  <span className="text-[10px] text-text-muted">
+                  <span className="text-xs text-text-muted">
                     {currentItem.bayMovedFrom
                       ? `${currentItem.bayMovedFrom} is empty — stock moved here`
                       : 'go to location'}
@@ -950,7 +952,7 @@ const WMSPickListDetailPage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-10"
+                className="h-12"
                 onClick={() => setCurrentItemIndex((prev) => prev - 1)}
                 disabled={currentItemIndex === 0}
               >
@@ -963,7 +965,7 @@ const WMSPickListDetailPage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-10"
+                className="h-12"
                 onClick={() => setCurrentItemIndex((prev) => prev + 1)}
                 disabled={currentItemIndex >= unpickedItems.length - 1}
               >
@@ -982,9 +984,9 @@ const WMSPickListDetailPage = () => {
           <div className="flex items-start gap-3 rounded-lg bg-surface-secondary p-3 dark:bg-surface-secondary">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-primary">Picking</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-text-primary">Picking</span>
                 {formatCaseConfig(pickingLine ?? { caseConfig: null, bottleSize: null }) && (
-                  <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                  <span className="rounded bg-amber-100 px-1 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                     {formatCaseConfig(pickingLine ?? { caseConfig: null, bottleSize: null })}
                   </span>
                 )}
@@ -995,7 +997,7 @@ const WMSPickListDetailPage = () => {
             </div>
             <div className="shrink-0 text-right">
               <div className="text-2xl font-bold text-text-primary">{pickingItem.quantityNeeded}</div>
-              <span className="text-[10px] text-text-muted">
+              <span className="text-xs text-text-muted">
                 {pickingItem.isBottlePick ? 'bottles' : 'cases'}
               </span>
             </div>
@@ -1027,7 +1029,7 @@ const WMSPickListDetailPage = () => {
           {/* GO TO LOCATION — prominent only during location step */}
           {pickingLine?.suggestedLocationCode && scanStep === 'location' && (
             <div className="rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-4 text-center dark:bg-amber-900/20">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
                 Go to Bay
               </span>
               <div className="font-mono text-3xl font-bold text-amber-700 dark:text-amber-300">
@@ -1060,6 +1062,7 @@ const WMSPickListDetailPage = () => {
               <Button
                 variant="outline"
                 className="h-10 w-10 text-lg"
+                aria-label="One fewer"
                 onClick={() => setPickedQuantity((prev) => Math.max(1, prev - 1))}
                 disabled={pickedQuantity <= 1}
               >
@@ -1069,6 +1072,7 @@ const WMSPickListDetailPage = () => {
               <Button
                 variant="outline"
                 className="h-10 w-10 text-lg"
+                aria-label="One more"
                 // Capped at the line: the server refuses more than the line asks for
                 onClick={() =>
                   setPickedQuantity((prev) =>
@@ -1304,7 +1308,7 @@ const WMSPickListDetailPage = () => {
                 >
                   {/* Status indicator */}
                   <div
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                       item.isPicked
                         ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30'
                         : 'bg-fill-secondary text-text-muted'
@@ -1323,7 +1327,7 @@ const WMSPickListDetailPage = () => {
                     </Typography>
                     <div className="flex items-center gap-1.5">
                       <span
-                        className={`text-[10px] ${isCrackPick(item) ? 'font-semibold text-amber-700 dark:text-amber-400' : 'text-text-muted'}`}
+                        className={`text-xs ${isCrackPick(item) ? 'font-semibold text-amber-700 dark:text-amber-400' : 'text-text-muted'}`}
                       >
                         {item.quantityBottles != null
                           ? `${item.quantityBottles} btl${
@@ -1344,13 +1348,13 @@ const WMSPickListDetailPage = () => {
                           </span>
                         ))}
                       {item.suggestedLocationCode && (
-                        <span className="rounded bg-fill-secondary px-1 py-px text-[10px] font-mono font-medium text-text-muted">
+                        <span className="rounded bg-fill-secondary px-1 py-px text-xs font-mono font-medium text-text-muted">
                           {item.suggestedLocationCode}
                         </span>
                       )}
                     </div>
                     {!item.isPicked && item.notes?.startsWith('Remainder of a short pick') && (
-                      <Typography variant="bodyXs" colorRole="muted" className="text-[10px]">
+                      <Typography variant="bodyXs" colorRole="muted" className="text-xs">
                         {item.notes}
                       </Typography>
                     )}
@@ -1364,7 +1368,7 @@ const WMSPickListDetailPage = () => {
                           ? shipShortMutation.mutate({ pickListItemId: item.id })
                           : setConfirmShortId(item.id)
                       }
-                      className="shrink-0 rounded-lg border border-border-primary px-2 py-1 text-[10px] font-medium text-text-muted transition-colors hover:bg-fill-secondary"
+                      className="shrink-0 rounded-lg border border-border-primary px-2 py-1 text-xs font-medium text-text-muted transition-colors hover:bg-fill-secondary"
                     >
                       {confirmShortId === item.id ? 'Tap again: none left' : 'Not here — ship short'}
                     </button>

@@ -208,6 +208,7 @@ const StockItemCard = ({
                 disabled={isPrinting}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-primary text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary disabled:opacity-50"
                 title="Reprint case labels"
+                aria-label="Reprint case labels"
               >
                 {isPrinting ? (
                   <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -221,6 +222,7 @@ const StockItemCard = ({
                 disabled={isPrintingStockLabel}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-300 text-indigo-500 transition-colors hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50"
                 title="Print stock label"
+                aria-label="Print stock label"
               >
                 {isPrintingStockLabel ? (
                   <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -238,7 +240,7 @@ const StockItemCard = ({
         {isEditing && editingItem && (
           <div className="space-y-4">
             <div className="flex items-center justify-center gap-4">
-              <button
+              <button aria-label="One case fewer"
                 type="button"
                 onClick={() => onAdjustQty(-1)}
                 className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100 text-red-600 transition-colors hover:bg-red-200 active:bg-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50"
@@ -254,7 +256,7 @@ const StockItemCard = ({
                 min={0}
               />
 
-              <button
+              <button aria-label="One case more"
                 type="button"
                 onClick={() => onAdjustQty(1)}
                 className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 transition-colors hover:bg-emerald-200 active:bg-emerald-300 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50"
@@ -613,7 +615,7 @@ const StockCheckPage = () => {
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <Link
+          <Link aria-label="Back to stock"
             href="/platform/admin/wms/stock"
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
           >
@@ -816,11 +818,11 @@ const StockCheckPage = () => {
                   <Typography variant="bodySm" colorRole="muted" className="mb-4">
                     This location is empty
                   </Typography>
-                  <Link href={`/platform/admin/wms/transfer?to=${stockData.location.locationCode}`}>
-                    <Button variant="outline" size="md">
+                  <Button variant="outline" size="md" asChild>
+                    <Link href={`/platform/admin/wms/transfer?to=${stockData.location.locationCode}`}>
                       <ButtonContent iconLeft={IconTransfer}>Transfer Stock Here</ButtonContent>
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -1031,7 +1033,7 @@ const StockCheckPage = () => {
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <button
+                            <button aria-label="Print case labels"
                               type="button"
                               onClick={() => handlePrintLabels(loc.stockId)}
                               disabled={printingStockId === loc.stockId}

@@ -1138,7 +1138,7 @@ const WMSReceiveShipmentPage = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-fill-primary p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
-          <Link
+          <Link aria-label="Back to receiving"
             href="/platform/admin/wms/receive"
             className="flex h-12 w-12 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:text-text-primary"
           >
@@ -1238,14 +1238,14 @@ const WMSReceiveShipmentPage = () => {
                 <CardContent className="p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <Typography variant="headingSm">Add Item</Typography>
-                    <button
+                    <button aria-label="Close add item"
                       type="button"
                       onClick={() => {
                         setShowAddItem(false);
                         setAddItemSearch('');
                         setAddItemSearchDebounce('');
                       }}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:bg-fill-secondary"
+                      className="flex h-12 w-12 items-center justify-center rounded-lg text-text-muted hover:bg-fill-secondary"
                     >
                       <IconBan className="h-4 w-4" />
                     </button>
@@ -1257,6 +1257,7 @@ const WMSReceiveShipmentPage = () => {
                     <input
                       type="text"
                       placeholder="Search existing stock..."
+                      aria-label="Search existing stock"
                       value={addItemSearch}
                       onChange={(e) => handleAddItemSearchChange(e.target.value)}
                       className="h-12 w-full rounded-lg border-2 border-border-primary bg-fill-primary pl-10 pr-4 text-base focus:border-text-primary focus:outline-none"
@@ -1288,10 +1289,10 @@ const WMSReceiveShipmentPage = () => {
                   {/* Form fields */}
                   <div className="space-y-3">
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-text-secondary">
+                      <label htmlFor="add-item-product-name" className="mb-1 block text-sm font-medium text-text-secondary">
                         Product Name *
                       </label>
-                      <input
+                      <input id="add-item-product-name"
                         type="text"
                         value={addItemForm.productName}
                         onChange={(e) => setAddItemForm({ ...addItemForm, productName: e.target.value })}
@@ -1301,10 +1302,10 @@ const WMSReceiveShipmentPage = () => {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-text-secondary">
+                        <label htmlFor="add-item-producer" className="mb-1 block text-sm font-medium text-text-secondary">
                           Producer
                         </label>
-                        <input
+                        <input id="add-item-producer"
                           type="text"
                           value={addItemForm.producer}
                           onChange={(e) => setAddItemForm({ ...addItemForm, producer: e.target.value })}
@@ -1312,10 +1313,10 @@ const WMSReceiveShipmentPage = () => {
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-text-secondary">
+                        <label htmlFor="add-item-vintage" className="mb-1 block text-sm font-medium text-text-secondary">
                           Vintage
                         </label>
-                        <input
+                        <input id="add-item-vintage"
                           type="number"
                           inputMode="numeric"
                           value={addItemForm.vintage}
@@ -1327,10 +1328,10 @@ const WMSReceiveShipmentPage = () => {
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-text-secondary">
+                        <label htmlFor="add-item-btls-case" className="mb-1 block text-sm font-medium text-text-secondary">
                           Btls/Case
                         </label>
-                        <input
+                        <input id="add-item-btls-case"
                           type="number"
                           inputMode="numeric"
                           value={addItemForm.bottlesPerCase}
@@ -1339,10 +1340,10 @@ const WMSReceiveShipmentPage = () => {
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-text-secondary">
+                        <label htmlFor="add-item-size-ml" className="mb-1 block text-sm font-medium text-text-secondary">
                           Size (mL)
                         </label>
-                        <input
+                        <input id="add-item-size-ml"
                           type="number"
                           inputMode="numeric"
                           value={addItemForm.bottleSizeMl}
@@ -1351,10 +1352,10 @@ const WMSReceiveShipmentPage = () => {
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-text-secondary">
+                        <label htmlFor="add-item-cases" className="mb-1 block text-sm font-medium text-text-secondary">
                           Cases *
                         </label>
-                        <input
+                        <input id="add-item-cases"
                           type="number"
                           inputMode="numeric"
                           min={1}
@@ -1713,9 +1714,10 @@ const WMSReceiveShipmentPage = () => {
                             </div>
                           </div>
                           {!currentItem.isCommitted && (
-                            <button
+                            <button aria-label="Remove this bay"
+                              type="button"
                               onClick={() => removeLocationAssignment(index)}
-                              className="rounded-lg p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
+                              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
                             >
                               <IconTrash className="h-5 w-5" />
                             </button>
@@ -1818,6 +1820,8 @@ const WMSReceiveShipmentPage = () => {
                           {/* Pallet toggle */}
                           <button
                             type="button"
+                            role="switch"
+                            aria-checked={isPalletMode}
                             onClick={() => setIsPalletMode(!isPalletMode)}
                             className={`flex w-full items-center justify-between rounded-lg border-2 p-3 ${
                               isPalletMode
@@ -1834,6 +1838,7 @@ const WMSReceiveShipmentPage = () => {
                               </Typography>
                             </div>
                             <div
+                              aria-hidden="true"
                               className={`flex h-6 w-11 items-center rounded-full transition-colors ${
                                 isPalletMode ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
                               }`}
@@ -2026,7 +2031,7 @@ const WMSReceiveShipmentPage = () => {
                                   }}
                                   className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-text-primary focus:outline-none"
                                 />
-                                <button
+                                <button aria-label="Reprint labels"
                                   onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? (assignment.isPalletized ? 1 : assignment.cases))}
                                   disabled={isPrinting}
                                   className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:bg-fill-tertiary hover:text-text-primary disabled:opacity-50"
@@ -2109,7 +2114,7 @@ const WMSReceiveShipmentPage = () => {
                               }}
                               className="h-10 w-16 rounded-lg border-2 border-border-primary bg-fill-primary px-1 text-center text-sm focus:border-text-primary focus:outline-none"
                             />
-                            <button
+                            <button aria-label="Reprint labels"
                               onClick={() => handleReprintLabels(assignment, currentItem, reprintQty[index] ?? (assignment.isPalletized ? 1 : assignment.cases))}
                               disabled={isPrinting}
                               className="flex h-10 w-10 items-center justify-center rounded-lg bg-fill-secondary text-text-muted hover:bg-fill-tertiary hover:text-text-primary disabled:opacity-50"

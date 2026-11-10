@@ -113,7 +113,7 @@ const WMSReceivePage = () => {
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <Link
+          <Link aria-label="Back to WMS"
             href="/platform/admin/wms"
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
           >

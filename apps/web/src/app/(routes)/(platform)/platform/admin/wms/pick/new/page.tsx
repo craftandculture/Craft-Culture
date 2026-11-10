@@ -271,7 +271,7 @@ const NewPickListPage = () => {
       <div className="space-y-3">
         {/* Header row — back, title, sync */}
         <div className="flex items-center gap-2">
-          <Link
+          <Link aria-label="Back to pick lists"
             href="/platform/admin/wms/pick"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-fill-secondary active:bg-fill-secondary"
           >
@@ -291,6 +291,7 @@ const NewPickListPage = () => {
             onClick={handleSync}
             disabled={syncMutation.isPending}
             title="Sync from Zoho — re-reads these orders in full, including SKU fixes"
+            aria-label="Sync from Zoho"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-fill-secondary active:bg-fill-secondary disabled:opacity-50"
           >
             {syncMutation.isPending ? (
@@ -522,13 +523,13 @@ const NewPickListPage = () => {
                               </span>
                             )}
                             {unmatchedLines > 0 && (
-                              <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700">
+                              <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-500/15 dark:text-red-300">
                                 <IconAlertTriangle className="h-3 w-3 shrink-0" />
                                 {unmatchedLines} no stock
                               </span>
                             )}
                             {repackLines > 0 && (
-                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-700">
+                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                                 <IconReplace className="h-3 w-3 shrink-0" />
                                 {repackLines} repack
                               </span>
@@ -537,7 +538,7 @@ const NewPickListPage = () => {
                                 invoice may bill something else. */}
                             {order.zohoStatus === 'partially_invoiced' && (
                               <span
-                                className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700"
+                                className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-500/15 dark:text-red-300"
                                 title="Zoho shows this order as partly invoiced. Check that the order lines match the invoice before picking."
                               >
                                 <IconAlertTriangle className="h-3 w-3 shrink-0" />
@@ -577,7 +578,7 @@ const NewPickListPage = () => {
                           on this screen can shift it. Checks Zoho before
                           removing anything.
                         */}
-                        <button
+                        <button aria-label="Not in Zoho? Check and remove"
                           type="button"
                           title="Not in Zoho? Check and remove"
                           onClick={(e) => {
@@ -594,7 +595,7 @@ const NewPickListPage = () => {
                         </button>
 
                         {/* Expand chevron */}
-                        <button
+                        <button aria-label={isExpanded ? 'Hide order lines' : 'Show order lines'}
                           type="button"
                           onClick={(e) => toggleExpand(e, order.id)}
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-muted/60 hover:bg-black/5 hover:text-text-muted"

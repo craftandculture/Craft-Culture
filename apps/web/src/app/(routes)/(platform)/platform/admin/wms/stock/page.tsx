@@ -131,7 +131,7 @@ const WMSStockPage = () => {
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <Link
+          <Link aria-label="Back to WMS"
             href="/platform/admin/wms"
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
           >
@@ -142,11 +142,11 @@ const WMSStockPage = () => {
               Stock
             </Typography>
             <div className="flex flex-wrap gap-2">
-              <Link href="/platform/admin/wms/stock/check">
-                <Button variant="default" size="sm">
+              <Button variant="default" size="sm" asChild>
+                <Link href="/platform/admin/wms/stock/check">
                   <ButtonContent iconLeft={IconClipboardCheck}>Check</ButtonContent>
-                </Button>
-              </Link>
+                </Link>
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -157,16 +157,16 @@ const WMSStockPage = () => {
                   {isSyncing ? 'Syncing...' : 'Sync Zoho'}
                 </ButtonContent>
               </Button>
-              <Link href="/platform/admin/wms/stock/import">
-                <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/platform/admin/wms/stock/import">
                   <ButtonContent iconLeft={IconPackageImport}>Import</ButtonContent>
-                </Button>
-              </Link>
-              <Link href="/platform/admin/stock-explorer">
-                <Button variant="outline" size="sm">
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/platform/admin/stock-explorer">
                   <ButtonContent iconLeft={IconDownload}>Export</ButtonContent>
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -174,7 +174,7 @@ const WMSStockPage = () => {
         {/* Tabs */}
         <div className="flex gap-1 rounded-lg bg-fill-secondary p-1">
           {tabs.map((tab) => (
-            <button
+            <button aria-label={tab.label}
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
@@ -287,7 +287,7 @@ const WMSStockPage = () => {
 
                                 {isExpanded ? (
                                   <div className="flex items-center gap-1">
-                                    <button
+                                    <button aria-label="Fewer labels"
                                       className="flex h-7 w-7 items-center justify-center rounded bg-fill-primary text-text-muted active:bg-fill-secondary"
                                       onClick={() => setPrintQty((q) => Math.max(1, q - 1))}
                                     >
@@ -296,7 +296,7 @@ const WMSStockPage = () => {
                                     <span className="w-6 text-center text-xs font-medium">
                                       {printQty}
                                     </span>
-                                    <button
+                                    <button aria-label="More labels"
                                       className="flex h-7 w-7 items-center justify-center rounded bg-fill-primary text-text-muted active:bg-fill-secondary"
                                       onClick={() =>
                                         setPrintQty((q) => Math.min(loc.quantityCases, q + 1))
@@ -342,7 +342,7 @@ const WMSStockPage = () => {
                                       <IconPrinter className="h-3.5 w-3.5" />
                                       Print
                                     </button>
-                                    <button
+                                    <button aria-label="Cancel printing"
                                       className="flex h-7 w-7 items-center justify-center rounded text-text-muted hover:text-text-primary"
                                       onClick={() => setPrintingLoc(null)}
                                     >
@@ -350,7 +350,7 @@ const WMSStockPage = () => {
                                     </button>
                                   </div>
                                 ) : (
-                                  <button
+                                  <button aria-label="Print labels"
                                     className="flex h-7 w-7 items-center justify-center rounded text-text-muted hover:text-text-primary active:bg-fill-primary"
                                     onClick={() => {
                                       setPrintingLoc(locKey);

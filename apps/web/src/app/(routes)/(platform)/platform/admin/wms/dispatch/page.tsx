@@ -83,7 +83,7 @@ const WMSDispatchBatchesPage = () => {
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <Link
+          <Link aria-label="Back to WMS"
             href="/platform/admin/wms"
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
           >
@@ -94,14 +94,14 @@ const WMSDispatchBatchesPage = () => {
               Dispatch
             </Typography>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => refetch()}>
+              <Button aria-label="Refresh" variant="outline" onClick={() => refetch()}>
                 <Icon icon={IconRefresh} size="sm" />
               </Button>
-              <Link href="/platform/admin/wms/dispatch/new">
-                <Button variant="default">
+              <Button variant="default" asChild>
+                <Link href="/platform/admin/wms/dispatch/new">
                   <ButtonContent iconLeft={IconPlus}>New</ButtonContent>
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>

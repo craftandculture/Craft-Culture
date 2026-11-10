@@ -135,7 +135,7 @@ const WMSHealthPage = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/platform/admin/wms">
+              <Link aria-label="Back to WMS" href="/platform/admin/wms">
                 <Icon icon={IconArrowLeft} size="sm" />
               </Link>
             </Button>

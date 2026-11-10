@@ -219,11 +219,11 @@ const WMSDispatchBatchDetailPage = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Link href="/platform/admin/wms/dispatch">
-            <Button variant="ghost" className="h-12 w-12">
+          <Button variant="ghost" className="h-12 w-12" asChild>
+            <Link href="/platform/admin/wms/dispatch" aria-label="Back to dispatch">
               <Icon icon={IconArrowLeft} size="sm" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <Typography variant="headingMd">{batch.batchNumber}</Typography>
@@ -430,7 +430,7 @@ const WMSDispatchBatchDetailPage = () => {
                         </span>
                       )}
                       {canAddOrders && (
-                        <Button
+                        <Button aria-label="Remove order from batch"
                           variant="ghost"
                           className="h-10 w-10"
                           type="button"
@@ -535,7 +535,7 @@ const WMSDispatchBatchDetailPage = () => {
             <CardContent className="p-4 border-b border-border-primary">
               <div className="flex items-center justify-between">
                 <Typography variant="headingSm">Add Orders to Batch</Typography>
-                <Button variant="ghost" size="sm" type="button" onClick={() => setShowAddOrders(false)}>
+                <Button aria-label="Close" variant="ghost" size="sm" type="button" onClick={() => setShowAddOrders(false)}>
                   <Icon icon={IconX} size="sm" />
                 </Button>
               </div>

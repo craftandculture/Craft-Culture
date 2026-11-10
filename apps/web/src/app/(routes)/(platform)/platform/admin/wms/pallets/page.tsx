@@ -68,7 +68,7 @@ const WMSPalletsPage = () => {
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <Link
+          <Link aria-label="Back to WMS"
             href="/platform/admin/wms"
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
           >
@@ -79,14 +79,14 @@ const WMSPalletsPage = () => {
               Pallets
             </Typography>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <Button aria-label="Refresh" variant="outline" size="sm" onClick={() => refetch()}>
                 <Icon icon={IconRefresh} size="sm" />
               </Button>
-              <Link href="/platform/admin/wms/pallets/new">
-                <Button variant="default" size="sm">
+              <Button variant="default" size="sm" asChild>
+                <Link href="/platform/admin/wms/pallets/new">
                   <ButtonContent iconLeft={IconPlus}>New</ButtonContent>
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>

@@ -89,7 +89,7 @@ const WMSPickListsPage = () => {
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <Link
+          <Link aria-label="Back to WMS"
             href="/platform/admin/wms"
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
           >
@@ -99,18 +99,18 @@ const WMSPickListsPage = () => {
             Pick Lists
           </Typography>
           <div className="flex items-center gap-2">
-            <button
+            <button aria-label="Refresh"
               type="button"
               onClick={() => refetch()}
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fill-secondary text-text-muted transition-colors hover:bg-fill-primary hover:text-text-primary active:bg-fill-secondary"
             >
               <IconRefresh className="h-5 w-5" />
             </button>
-            <Link href="/platform/admin/wms/pick/new">
-              <Button variant="default">
+            <Button variant="default" asChild>
+              <Link href="/platform/admin/wms/pick/new">
                 <ButtonContent iconLeft={IconPlus}>New</ButtonContent>
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
 

@@ -143,7 +143,7 @@ const ScannerTestPage = () => {
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="sm">
-            <Link href="/platform/admin/wms">
+            <Link aria-label="Back to WMS" href="/platform/admin/wms">
               <Icon icon={IconArrowLeft} size="sm" />
             </Link>
           </Button>
@@ -205,7 +205,7 @@ const ScannerTestPage = () => {
                       inputMode="none"
                     />
                     {inputValue && (
-                      <button
+                      <button aria-label="Clear input"
                         type="button"
                         onClick={() => {
                           setInputValue('');
@@ -305,7 +305,7 @@ const ScannerTestPage = () => {
                   <div
                     key={scan.id}
                     className={`flex items-center gap-3 p-3 rounded-lg border ${
-                      scan.isValid ? 'border-border-muted bg-fill-secondary' : 'border-red-300 bg-red-50'
+                      scan.isValid ? 'border-border-muted bg-fill-secondary' : 'border-red-300 bg-red-50 dark:border-red-500/40 dark:bg-red-500/10'
                     }`}
                   >
                     <Icon

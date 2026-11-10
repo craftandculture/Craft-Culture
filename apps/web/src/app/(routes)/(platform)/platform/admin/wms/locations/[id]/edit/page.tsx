@@ -375,7 +375,7 @@ const LocationEditPage = () => {
           </div>
 
           {updateMutation.isError && (
-            <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-300">
               Failed to save changes. Please try again.
             </div>
           )}

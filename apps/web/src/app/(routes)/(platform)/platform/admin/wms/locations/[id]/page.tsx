@@ -58,11 +58,11 @@ const LocationDetailPage = () => {
             <Typography variant="bodySm" colorRole="muted" className="mb-4">
               The requested location could not be found.
             </Typography>
-            <Link href="/platform/admin/wms/locations">
-              <Button variant="outline">
+            <Button variant="outline" asChild>
+              <Link href="/platform/admin/wms/locations">
                 <ButtonContent iconLeft={IconArrowLeft}>Back to Locations</ButtonContent>
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -100,7 +100,7 @@ const LocationDetailPage = () => {
                 size="lg"
               />
               {data.requiresForklift && (
-                <span className="flex items-center gap-1 rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">
+                <span className="flex items-center gap-1 rounded bg-amber-100 px-2 py-1 text-xs text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
                   <IconForklift className="h-3 w-3" />
                   Forklift
                 </span>
@@ -113,11 +113,11 @@ const LocationDetailPage = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href={`/platform/admin/wms/locations/${locationId}/edit`}>
-              <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/platform/admin/wms/locations/${locationId}/edit`}>
                 <ButtonContent iconLeft={IconEdit}>Edit</ButtonContent>
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -263,11 +263,11 @@ const LocationDetailPage = () => {
 
         {/* Back button */}
         <div className="pt-4">
-          <Link href="/platform/admin/wms/stock">
-            <Button variant="outline">
+          <Button variant="outline" asChild>
+            <Link href="/platform/admin/wms/stock">
               <ButtonContent iconLeft={IconArrowLeft}>Back to Stock Overview</ButtonContent>
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
     </div>
