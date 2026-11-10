@@ -166,11 +166,12 @@ const LogisticsDashboardPage = () => {
               onClick={() => syncHillebrand()}
               disabled={isSyncing}
               title="Sync shipments from Hillebrand"
+              aria-label="Sync shipments from Hillebrand"
             >
               <Icon icon={IconCloudDownload} size="sm" className={isSyncing ? 'animate-pulse' : ''} />
               <span className="ml-1 hidden sm:inline">Hillebrand</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching} title="Refresh">
+            <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching} title="Refresh" aria-label="Refresh">
               <Icon icon={IconRefresh} size="sm" className={isFetching ? 'animate-spin' : ''} />
             </Button>
             <Button variant="outline" size="sm" asChild>
@@ -206,7 +207,7 @@ const LogisticsDashboardPage = () => {
 
             <section className="overflow-hidden rounded-xl border border-border-muted bg-surface-primary">
               <div className="flex items-center justify-between gap-3 border-b border-border-muted px-4">
-                <div className="flex gap-4">
+                <div className="flex gap-4" role="tablist" aria-label="Live work">
                   {(
                     [
                       { key: 'shipments', label: 'Shipments', count: shipmentJobs.length },
@@ -218,6 +219,8 @@ const LogisticsDashboardPage = () => {
                       <button
                         key={tab.key}
                         type="button"
+                        role="tab"
+                        aria-selected={active}
                         onClick={() => {
                           setStageTab(tab.key);
                           setTypeFilter('all');
@@ -259,6 +262,7 @@ const LogisticsDashboardPage = () => {
                     <button
                       key={t}
                       type="button"
+                      aria-pressed={active}
                       onClick={() => setTypeFilter(t)}
                       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                         active
@@ -278,8 +282,8 @@ const LogisticsDashboardPage = () => {
                   {stageTab === 'quotes'
                     ? 'No jobs waiting on a quote.'
                     : typeFilter === 'inbound'
-                      ? 'No imports in the last 7 days. Older ones are under View all.'
-                      : 'No live shipments. Finished ones are under View all.'}
+                      ? 'No imports in the last 7 days. Older ones are under All shipments.'
+                      : 'No live shipments. Finished ones are under All shipments.'}
                 </p>
               ) : (
                 <ul className="divide-y divide-text-muted/25 border-t border-text-muted/25">
