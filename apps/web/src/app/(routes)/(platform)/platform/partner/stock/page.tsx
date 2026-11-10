@@ -210,7 +210,7 @@ const PartnerStockPage = () => {
               {data?.partner?.name ? `${data.partner.name} — ` : ''}
               {isCollector
                 ? 'Held in bond at the C&C warehouse'
-                : 'Products stored at C&C bonded warehouse'}
+                : 'Products held in bond at the Craft & Culture warehouse'}
             </Typography>
           </div>
           <div className="flex items-center gap-2">
