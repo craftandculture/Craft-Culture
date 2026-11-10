@@ -15,6 +15,7 @@ import {
 
 import getReleaseDeliveryDetails from './getReleaseDeliveryDetails';
 import buildReleaseDeliveryNotes from '../utils/buildReleaseDeliveryNotes';
+import releaseLineQuantity from '../utils/releaseLineQuantity';
 
 type ReleaseLine = typeof cellarReleaseRequestItems.$inferSelect;
 
@@ -218,8 +219,15 @@ const raiseReleaseOrder = async ({
         vintage: line.vintage ? String(line.vintage) : null,
         lwin: line.lwin18,
         bottleSize: line.bottleSize,
-        caseConfig: line.caseConfig ?? 12,
-        quantity: line.bottles,
+        /*
+          Counted in the pack sold, as every PCO line is: whole cases go out
+          as cases and anything else as single bottles (a pack of one), so
+          one bottle of a 6-pack is not raised as a case of six.
+        */
+        ...releaseLineQuantity({
+          bottles: line.bottles,
+          caseConfig: line.caseConfig,
+        }),
         /*
           The parcel the member chose, carried through so the pick is against
           their bottles rather than any bottles of the same wine.
