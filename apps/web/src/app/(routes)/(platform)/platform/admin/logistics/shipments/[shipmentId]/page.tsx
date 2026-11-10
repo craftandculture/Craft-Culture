@@ -255,7 +255,7 @@ const LEDGER_TINTS = [
   { card: 'border-violet-200 bg-violet-50/60 dark:border-violet-900/40 dark:bg-violet-900/10', accent: 'border-l-violet-400', dot: 'bg-violet-400' },
   { card: 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-900/10', accent: 'border-l-emerald-400', dot: 'bg-emerald-400' },
   { card: 'border-rose-200 bg-rose-50/60 dark:border-rose-900/40 dark:bg-rose-900/10', accent: 'border-l-rose-400', dot: 'bg-rose-400' },
-  { card: 'border-teal-200 bg-teal-50/60 dark:border-teal-900/40 dark:bg-teal-900/10', accent: 'border-l-teal-400', dot: 'bg-teal-400' },
+  { card: 'border-slate-200 bg-slate-50/60 dark:border-slate-700/40 dark:bg-slate-800/20', accent: 'border-l-slate-400', dot: 'bg-slate-400' },
 ] as const;
 
 /**

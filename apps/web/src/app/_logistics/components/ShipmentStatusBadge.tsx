@@ -31,7 +31,7 @@ const statusConfig: Record<ShipmentStatus, { label: string; className: string }>
   },
   cleared: {
     label: 'Cleared',
-    className: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+    className: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
   },
   at_warehouse: {
     label: 'At Warehouse',

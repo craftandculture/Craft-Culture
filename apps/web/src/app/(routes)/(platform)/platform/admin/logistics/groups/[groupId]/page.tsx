@@ -163,9 +163,9 @@ const LEDGER_TINTS = [
     dot: 'bg-rose-400',
   },
   {
-    card: 'border-teal-200 bg-teal-50/60 dark:border-teal-900/40 dark:bg-teal-900/10',
-    accent: 'border-l-teal-400',
-    dot: 'bg-teal-400',
+    card: 'border-slate-200 bg-slate-50/60 dark:border-slate-700/40 dark:bg-slate-800/20',
+    accent: 'border-l-slate-400',
+    dot: 'bg-slate-400',
   },
 ] as const;
 

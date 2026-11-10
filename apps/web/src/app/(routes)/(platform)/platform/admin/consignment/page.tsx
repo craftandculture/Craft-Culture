@@ -25,10 +25,10 @@ const money = (value: number) =>
   })}`;
 
 const STATE_STYLES: Record<string, string> = {
-  offered: 'bg-amber-100 text-amber-800',
-  listed: 'bg-violet-100 text-violet-800',
-  placed: 'bg-teal-100 text-teal-800',
-  partially_sold: 'bg-teal-100 text-teal-800',
+  offered: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
+  listed: 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300',
+  placed: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300',
+  partially_sold: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300',
   sold: 'bg-fill-secondary text-text-muted',
   withdrawn: 'bg-fill-secondary text-text-muted',
 };

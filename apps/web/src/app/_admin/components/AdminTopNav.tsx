@@ -44,6 +44,7 @@ const AdminTopNav = ({ userRole }: AdminTopNavProps) => {
           <Link
             key={item.key}
             href={item.href}
+            aria-current={isActive ? 'page' : undefined}
             className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium transition-colors xl:px-2.5 ${
               isActive
                 ? 'bg-fill-brand/10 text-text-brand'
@@ -55,7 +56,7 @@ const AdminTopNav = ({ userRole }: AdminTopNavProps) => {
             {item.key === 'tasks' && taskCount && taskCount.open > 0 && (
               <span
                 className={`ml-0.5 min-w-[18px] rounded-full px-1.5 text-center text-[11px] font-semibold leading-[18px] ${
-                  taskCount.overdue > 0 ? 'bg-fill-danger text-text-danger-on-fill' : 'bg-fill-brand/15 text-text-brand'
+                  taskCount.overdue > 0 ? 'bg-fill-danger text-text-danger-on-fill' : 'bg-fill-muted text-text-primary'
                 }`}
                 title={taskCount.overdue > 0 ? `${taskCount.overdue} overdue` : `${taskCount.open} open`}
               >

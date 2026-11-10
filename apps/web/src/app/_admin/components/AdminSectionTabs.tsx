@@ -39,9 +39,10 @@ const AdminSectionTabs = ({ userRole, isStaff = false }: AdminSectionTabsProps) 
               <Link
                 key={tab.href}
                 href={tab.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={`whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'border-fill-brand text-text-brand'
+                    ? 'border-text-primary text-text-primary'
                     : 'border-transparent text-text-muted hover:border-border-primary hover:text-text-primary'
                 }`}
               >

@@ -20,8 +20,8 @@ const money = (value: number) =>
   })}`;
 
 const STATE_STYLES: Record<string, string> = {
-  draft: 'bg-amber-100 text-amber-800',
-  approved: 'bg-teal-100 text-teal-800',
+  draft: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
+  approved: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300',
   paid: 'bg-fill-secondary text-text-muted',
 };
 

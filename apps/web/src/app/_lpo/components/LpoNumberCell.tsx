@@ -66,7 +66,7 @@ const LpoNumberCell = ({
           event.currentTarget.blur();
         }
       }}
-      className={`w-full min-w-[4.5rem] rounded border px-1.5 py-0.5 text-right tabular-nums hover:border-border-muted focus:border-text-brand focus:outline-none disabled:opacity-60 ${
+      className={`w-full min-w-[4.5rem] rounded border px-1.5 py-0.5 text-right tabular-nums hover:border-border-muted focus:border-text-primary focus:outline-none disabled:opacity-60 ${
         edited
           ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20'
           : 'border-transparent bg-transparent'
