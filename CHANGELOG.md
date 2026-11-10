@@ -1,3 +1,34 @@
+## [2.1.112](https://github.com/craftandculture/Craft-Culture/compare/v2.1.111...v2.1.112) (2026-11-10)
+
+### Bug Fixes
+
+* A daily stock-transfer summary that fails to send is retried the next day for that owner instead of being lost ([6803206](https://github.com/craftandculture/Craft-Culture/commit/68032069c19f8de94b70dac01e9c2247850ce0e7))
+* A device token in the scanner sign-in address is swapped for the device cookie instead of signing in from the address ([bceea5e](https://github.com/craftandculture/Craft-Culture/commit/bceea5e4dda8d154091d5ba4f3c81c38f72a19ce))
+* A Private Cellar release now raises its order lines in the pack being sent, so one bottle of a 6-pack goes to Zoho and the pick as one bottle rather than a case of six ([a0c169f](https://github.com/craftandculture/Craft-Culture/commit/a0c169f83b356c7f9b30495635e2a2d4753d3714))
+* Admin home buttons are labelled for screen readers, the stale-sync warning reads in dark mode, and unknown order statuses no longer show a green dot ([ee0d8db](https://github.com/craftandculture/Craft-Culture/commit/ee0d8db6d882853cfd9791a1ed96f142b8976eeb))
+* Admin tabs, status badges and ledger cards use the house colours instead of teal, and read correctly in dark mode ([f46b081](https://github.com/craftandculture/Craft-Culture/commit/f46b081605d0e1c401d4aa178fad2fd4a02fc805))
+* Disabled buttons can no longer be pressed with the keyboard ([ef64a77](https://github.com/craftandculture/Craft-Culture/commit/ef64a77efb987469c0822f434a1f9af71df14e3d))
+* Logistics page buttons and tabs are labelled for screen readers, and the empty list points to All shipments ([fb50f74](https://github.com/craftandculture/Craft-Culture/commit/fb50f74188d7a9900e7dfe299f8f5522122c5667))
+* Member statements value each wine at its own cost, so two packs of the same wine bought at different prices no longer swap costs ([358495e](https://github.com/craftandculture/Craft-Culture/commit/358495e4000857b24b9fcf1302d2062c0162d2c0))
+* Order confirmations now open an in-app dialog instead of a browser pop-up, and the order list shows dates as 4 Nov 2026 with a Clear filters button when nothing matches ([d60591e](https://github.com/craftandculture/Craft-Culture/commit/d60591e68fa0499f6860a789028553c405d21bc5))
+* Partner stock page now says products are held in bond at the Craft & Culture warehouse ([7701075](https://github.com/craftandculture/Craft-Culture/commit/7701075861a0a6145b0f679b3d32c99cf7d15437))
+* Partners can no longer attach an existing stored file to their shipment, and a shipment file opens for a partner only if every record holding it is theirs ([76f97d0](https://github.com/craftandculture/Craft-Culture/commit/76f97d052e7ea7b74f3cd34097c09cc52df825a1))
+* Partners no longer see the name and email of the distributor's staff who uploaded an order document ([d90ceb3](https://github.com/craftandculture/Craft-Culture/commit/d90ceb3636761cad36ba1d2a0c58a98897b00225))
+* Prices agreed with a member away from the portal no longer put part-sold wine onto the price lists ([0d86ca7](https://github.com/craftandculture/Craft-Culture/commit/0d86ca76ec9db18ec71facb6a10f9cbb83b150ef))
+* Pricing Manager's Include inbound toggle matches the other filters, small labels are easier to read, and column headers work in dark mode ([eca84e0](https://github.com/craftandculture/Craft-Culture/commit/eca84e036ab8a72da589d0552b99d8c8fdb65e88))
+* Scheduling a delivery with the notes box left blank no longer wipes the order's delivery notes ([80b9c59](https://github.com/craftandculture/Craft-Culture/commit/80b9c5967cb05b079de32fd491d98f42c2d9e108))
+* Settings never returns the scanner PIN hash or other secret keys, and only admins may read settings beyond lead times ([2691c43](https://github.com/craftandculture/Craft-Culture/commit/2691c436c3a03324e0d6db2588f7b2c6bb5b72de))
+* Shipping a member's UK move on a shipment with no client no longer hands the whole shipment to that member, and a shipment already being received is refused ([1bad018](https://github.com/craftandculture/Craft-Culture/commit/1bad018e9ad4736a420cd738c8c4580659efb930))
+* Stock check reprints labels straight away without asking first ([c42af09](https://github.com/craftandculture/Craft-Culture/commit/c42af09b25291d46b19874c57f2a85e4f3848b4f))
+* Stock Explorer's Change owner button can be reached with the keyboard, fields are labelled, and stock status pills read in dark mode ([626cf29](https://github.com/craftandculture/Craft-Culture/commit/626cf29817e0c8292d883981f011ef089e084276))
+* The scanner's Re-sync can now pull its order from Zoho on the warehouse login ([9df2e29](https://github.com/craftandculture/Craft-Culture/commit/9df2e2997f331a488bfc31325386f4a6616de24c))
+* The scanner's Zoho refresh fetches only its own order instead of running the full sync, the sync now includes partly invoiced orders, and the refresh warning shows only when the refresh really failed ([625842f](https://github.com/craftandculture/Craft-Culture/commit/625842f903b1e48a807e4e656a647c90789abcfa))
+* Warehouse PIN sign-in pauses for an hour after 30 wrong PINs from any address, and posts an alert to the warehouse channel ([bd13796](https://github.com/craftandculture/Craft-Culture/commit/bd1379686e6a1ee469f4b35d246d771d6a53e5d5))
+* Warehouse scanner screens label their icon buttons for screen readers, the pick and bay buttons are bigger to tap, and warning pills read in dark mode ([8a13f03](https://github.com/craftandculture/Craft-Culture/commit/8a13f03ac6624a9abbee9019bec1fe4ccf0cbcba))
+* Wine C&C buys from a member in bond is priced from the euro price they agreed, rounded once, and a withdrawn offer can no longer set the price ([bf3da00](https://github.com/craftandculture/Craft-Culture/commit/bf3da00d63a34a2c50c0dd84009cfb74aa5f7a17))
+* WMS home shortcuts are now Alt plus a letter, so Ctrl+C copies again and selecting text no longer jumps to another screen ([0891fa0](https://github.com/craftandculture/Craft-Culture/commit/0891fa0dd4ce6ff0922115fdc45b8c0e6a51573d))
+* Zoho sales orders for a Private Cellar member's own delivery no longer flag the member's wine as needing a price ([7174341](https://github.com/craftandculture/Craft-Culture/commit/7174341fe1c2551b8ae0019f068120ad5e1b0d0c))
+
 ## [2.1.111](https://github.com/craftandculture/Craft-Culture/compare/v2.1.110...v2.1.111) (2026-11-10)
 
 ### Bug Fixes
