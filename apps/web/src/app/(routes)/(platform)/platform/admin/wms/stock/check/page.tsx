@@ -416,9 +416,8 @@ const StockCheckPage = () => {
     },
   });
 
-  // Handle print case labels for a stock item (with confirmation)
+  // Print case labels for a stock item. No confirmation: a reprint is cheap
   const handlePrintLabels = useCallback((stockId: string) => {
-    if (!window.confirm('Print case labels for this item?')) return;
     setPrintingStockId(stockId);
     reprintLabels({ stockId });
   }, [reprintLabels]);
@@ -445,9 +444,8 @@ const StockCheckPage = () => {
     },
   });
 
-  // Handle print stock label for a stock item (with confirmation)
+  // Print the stock label for a stock item. No confirmation: a reprint is cheap
   const handlePrintStockLabel = useCallback((stockId: string) => {
-    if (!window.confirm('Print stock label for this item?')) return;
     setPrintingStockLabelId(stockId);
     printStockLabel({ stockId });
   }, [printStockLabel]);
