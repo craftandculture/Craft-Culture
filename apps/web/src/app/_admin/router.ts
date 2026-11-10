@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 
 import isTeamMember from '@/app/_teamTasks/utils/isTeamMember';
+import { SCANNER_PIN_SETTING } from '@/app/_wms/utils/scannerPin';
 import {
   adminProcedure,
   approvedProcedure,
@@ -53,6 +54,17 @@ const userActivityLogsRouter = createTRPCRouter({
 const PUBLIC_SETTING_KEYS = new Set(['leadTimeMin', 'leadTimeMax']);
 
 /**
+ * Settings that hold secrets, which this endpoint never returns to anyone.
+ *
+ * The scanner PIN is stored as salt and hash, but a hash of a six-digit PIN
+ * can be reversed offline in seconds, so reading it is as good as reading the
+ * PIN. The name pattern catches secrets added later under the usual names.
+ * Code that needs one of these reads it on the server, not through here.
+ */
+const isSecretSettingKey = (key: string) =>
+  key === SCANNER_PIN_SETTING || /(pin|secret|token|key)$/i.test(key);
+
+/**
  * Settings the generic update endpoint may write. Everything else (member
  * email mode, What's New, the UAE arrival rate card, sheet sync state) is
  * owned by a dedicated controller with its own checks and must go through it.
@@ -63,7 +75,14 @@ const settingsRouter = createTRPCRouter({
   get: approvedProcedure
     .input(settingsGetInputSchema)
     .query(async ({ ctx, input }) => {
-      if (!PUBLIC_SETTING_KEYS.has(input.key) && !isTeamMember(ctx.user)) {
+      if (isSecretSettingKey(input.key)) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+      // Beyond the public keys, admins only: a warehouse login has no use for the rest
+      if (
+        !PUBLIC_SETTING_KEYS.has(input.key) &&
+        !(ctx.user.role === 'admin' && isTeamMember(ctx.user))
+      ) {
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
       return await settingsGetController(input);
