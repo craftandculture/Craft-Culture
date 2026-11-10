@@ -238,8 +238,16 @@ const planZohoSalesOrder = async (orderId: string) => {
       A line with no price is the one that must not go quietly. Everything else
       has a number somebody agreed; this would reach a customs document as a
       zero, so it is named on the confirmation and on the order itself.
+
+      Except on an owner delivery: that is a Private Cellar member's own wine
+      coming out to them, so nothing is sold and every goods line is zero by
+      design. Calling those lines "NEEDS A PRICE" asked someone to bill a
+      member for wine they already own.
     */
-    if (!item.pricePerCaseUsd || item.pricePerCaseUsd <= 0) unpriced.push(label);
+    const priceIsDue = order.orderKind !== 'owner_delivery';
+    if (priceIsDue && (!item.pricePerCaseUsd || item.pricePerCaseUsd <= 0)) {
+      unpriced.push(label);
+    }
 
     const vintage = item.vintage ? Number(item.vintage) : null;
     const sizeCl = Math.round(bottleSizeMl / 10);
