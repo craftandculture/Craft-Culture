@@ -24,6 +24,7 @@ import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import bottleName from '@/app/_cellar/utils/bottleName';
 import isRecentlyAdded from '@/app/_cellar/utils/isRecentlyAdded';
+import memberErrorToast from '@/app/_cellar/utils/memberErrorToast';
 import regionTone from '@/app/_cellar/utils/regionTone';
 import FindWineDialog from '@/app/_cellarSourcing/components/FindWineDialog';
 import MemberSourcingPanel from '@/app/_cellarSourcing/components/MemberSourcingPanel';
@@ -217,15 +218,15 @@ const AvailablePage = () => {
 
   const { mutate: placeOrder, isPending: isPlacing } = useMutation(
     api.consignment.member.createPurchase.mutationOptions({
-      onSuccess: (result) => {
-        toast.success(`${result.purchaseNumber} is reserved for you. Here is how to pay.`);
+      onSuccess: () => {
+        toast.success('This wine is reserved for you. Here is how to pay.');
         setBasket(new Map());
         setIsReviewing(false);
         // Straight to where the bank details and reference are
         router.push('/platform/cellar/purchases');
       },
       onError: (error) => {
-        if (!catchActivation(error, 'purchase')) toast.error(error.message);
+        if (!catchActivation(error, 'purchase')) memberErrorToast(error);
       },
     }),
   );
@@ -281,10 +282,11 @@ const AvailablePage = () => {
     wine sold by the bottle has a pack of one, which the trade notation
     rendered as cases of one.
   */
-  const unitCount = (wine: (typeof wines)[number], count: number) =>
-    wine.caseConfig > 1
-      ? `${count} ${count === 1 ? 'case' : 'cases'} of ${wine.caseConfig}`
-      : `${count} ${count === 1 ? 'bottle' : 'bottles'}`;
+  const unitCount = (wine: (typeof wines)[number], count: number) => {
+    const bottles = count * Math.max(wine.caseConfig, 1);
+
+    return `${bottles} ${bottles === 1 ? 'bottle' : 'bottles'}`;
+  };
 
   /* One stepper for the table and the phone cards, so the two cannot drift. */
   const caseControl = (wine: (typeof wines)[number]) => {
@@ -326,7 +328,7 @@ const AvailablePage = () => {
           type="button"
           aria-label={`One fewer ${wine.caseConfig > 1 ? 'case' : 'bottle'} of ${wine.product}`}
           onClick={() => addCases(wine.lwin18, -1, wine.availableCases)}
-          className="flex h-full w-10 items-center justify-center rounded-l-lg hover:bg-white/10 sm:w-9"
+          className="flex h-full w-10 items-center justify-center rounded-l-lg hover:bg-surface-primary/10 sm:w-9"
         >
           <Icon icon={IconMinus} size="xs" />
         </button>
@@ -338,7 +340,7 @@ const AvailablePage = () => {
           aria-label={`One more ${wine.caseConfig > 1 ? 'case' : 'bottle'} of ${wine.product}`}
           disabled={chosen >= wine.availableCases}
           onClick={() => addCases(wine.lwin18, 1, wine.availableCases)}
-          className="flex h-full w-10 items-center justify-center rounded-r-lg hover:bg-white/10 disabled:opacity-30 sm:w-9"
+          className="flex h-full w-10 items-center justify-center rounded-r-lg hover:bg-surface-primary/10 disabled:opacity-30 sm:w-9"
         >
           <Icon icon={IconPlus} size="xs" />
         </button>
@@ -348,7 +350,9 @@ const AvailablePage = () => {
 
   const availability = (wine: (typeof wines)[number]) =>
     wine.caseConfig > 1 && wine.availableCases > 0
-      ? unitCount(wine, wine.availableCases)
+      ? `${unitCount(wine, wine.availableCases)} · ${wine.availableCases} ${
+          wine.availableCases === 1 ? 'case' : 'cases'
+        } of ${wine.caseConfig}`
       : `${wine.availableBottles} ${wine.availableBottles === 1 ? 'bottle' : 'bottles'}`;
 
   const pill =
@@ -596,7 +600,7 @@ const AvailablePage = () => {
                     onClick={() => setRegion(active ? '' : name)}
                     className={`flex h-8 shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-medium whitespace-nowrap transition-colors ${
                       active
-                        ? 'border-neutral-950 bg-neutral-950 text-white dark:border-white dark:bg-white dark:text-neutral-950'
+                        ? 'border-text-primary bg-text-primary text-surface-primary'
                         : 'border-border-muted text-text-secondary hover:text-text-primary hover:border-border-primary bg-transparent'
                     }`}
                   >
@@ -641,7 +645,6 @@ const AvailablePage = () => {
               value={String(shownProducers.size)}
             />
           </div>
-
 
           {/* A phone gets cards: a seven-column table cannot be read at that width */}
           <ul className="space-y-2 sm:hidden">

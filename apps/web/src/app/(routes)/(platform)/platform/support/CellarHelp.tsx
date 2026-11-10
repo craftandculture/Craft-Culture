@@ -96,7 +96,7 @@ const CellarHelp = () => {
         <div className="mb-6">
           <Typography
             variant="bodyXs"
-            className="text-text-brand mb-1.5 block font-semibold uppercase tracking-[0.18em]"
+            className="text-text-muted mb-1.5 block font-semibold uppercase tracking-[0.18em]"
           >
             C&amp;C Private Cellar
           </Typography>

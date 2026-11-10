@@ -19,6 +19,7 @@ import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
 import FirstStepsCard from '@/app/_cellar/components/FirstStepsCard';
 import SaleProceedsPanel from '@/app/_cellar/components/SaleProceedsPanel';
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
+import memberErrorToast from '@/app/_cellar/utils/memberErrorToast';
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -134,11 +135,11 @@ const SellingPage = () => {
 
   const { mutate: withdraw, isPending } = useMutation(
     api.consignment.member.withdrawMandate.mutationOptions({
-      onSuccess: (result) => {
-        toast.success(`${result.mandateNumber} withdrawn. It is back in your cellar.`);
+      onSuccess: () => {
+        toast.success('Your offer has been withdrawn. The wine is back in your cellar.');
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 

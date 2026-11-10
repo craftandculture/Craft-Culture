@@ -7,6 +7,7 @@ import { differenceInDays, format } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import memberErrorToast from '@/app/_cellar/utils/memberErrorToast';
 import StepsTracker from '@/app/_logistics/components/StepsTracker';
 import ContactLinks from '@/app/_onboarding/components/ContactLinks';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
@@ -134,12 +135,12 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false, movesOnly = fals
     void queryClient.invalidateQueries({ queryKey: api.cellar.member.getUkHoldings.queryKey() });
   };
 
-  const onError = (error: { message: string }) => catchActivation(error, 'other') || toast.error(error.message);
+  const onError = (error: { message: string }) => catchActivation(error, 'other') || memberErrorToast(error);
 
   const requestMove = useMutation(
     api.cellar.member.requestUkMove.mutationOptions({
-      onSuccess: (move) => {
-        toast.success(`${move.moveNumber} is with us. We will send you the price shortly.`);
+      onSuccess: () => {
+        toast.success('Your move request is with us. We will send you the price shortly.');
         setIsChoosing(false);
         setSelected(new Set());
         setNote('');
@@ -151,8 +152,8 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false, movesOnly = fals
 
   const acceptMove = useMutation(
     api.cellar.member.acceptUkMove.mutationOptions({
-      onSuccess: (move) => {
-        toast.success(`Thank you. We are arranging ${move.moveNumber}.`);
+      onSuccess: () => {
+        toast.success('Thank you. We are arranging your move.');
         refresh();
       },
       onError,
@@ -161,8 +162,8 @@ const UkHoldingsPanel = ({ data, formatValue, readOnly = false, movesOnly = fals
 
   const withdrawMove = useMutation(
     api.cellar.member.withdrawUkMove.mutationOptions({
-      onSuccess: (move) => {
-        toast.success(`${move.moveNumber} withdrawn. Your wine remains at London City Bond.`);
+      onSuccess: () => {
+        toast.success('Your move request has been withdrawn. Your wine remains at London City Bond.');
         refresh();
       },
       onError,

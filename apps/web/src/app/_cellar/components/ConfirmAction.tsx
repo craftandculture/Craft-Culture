@@ -76,7 +76,7 @@ const ConfirmAction = ({
               className={
                 tone === 'danger'
                   ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-neutral-900 text-white hover:bg-neutral-800'
+                  : 'bg-text-primary text-surface-primary hover:bg-text-primary/90'
               }
             >
               <ButtonContent>{confirmLabel}</ButtonContent>

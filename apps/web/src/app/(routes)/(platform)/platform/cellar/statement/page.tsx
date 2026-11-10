@@ -337,7 +337,7 @@ const StatementPage = () => {
             type="button"
             onClick={downloadCsv}
             disabled={!data}
-            className="bg-text-primary text-background-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold disabled:opacity-50"
+            className="bg-text-primary text-surface-primary inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold disabled:opacity-50"
           >
             <IconDownload size={16} />
             CSV

@@ -65,7 +65,7 @@ const ProgressSteps = ({ step, times }: { step: number; times: (Date | null)[] }
             <span
               className={`flex size-6 flex-shrink-0 items-center justify-center rounded-full ${
                 done
-                  ? 'bg-emerald-600 text-white dark:bg-emerald-400 dark:text-black'
+                  ? 'border border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-300'
                   : current
                     ? 'bg-surface-primary ring-2 ring-emerald-600 shadow-[0_0_0_6px_rgba(16,185,129,0.15)] dark:ring-emerald-400'
                     : 'bg-fill-muted'
@@ -245,7 +245,8 @@ const DeliveriesPanel = ({ requests, section, collapsible = false }: DeliveriesP
                   : stage?.headline}
               </p>
               {isLive && (
-                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white tabular-nums dark:bg-emerald-500">
+                <span className="text-text-muted inline-flex items-center gap-1.5 text-[11px] font-medium tabular-nums">
+                  <span className="size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                   Step {step + 1} of {DELIVERY_STAGES.length}
                 </span>
               )}

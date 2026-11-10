@@ -41,6 +41,7 @@ import UkHoldingsPanel from '@/app/_cellar/components/UkHoldingsPanel';
 import ViewOnlyNotice from '@/app/_cellar/components/ViewOnlyNotice';
 import useCellarCurrency from '@/app/_cellar/hooks/useCellarCurrency';
 import csvCell from '@/app/_cellar/utils/csvCell';
+import memberErrorToast from '@/app/_cellar/utils/memberErrorToast';
 import CellarOverviewPanel from '@/app/_onboarding/components/CellarOverviewPanel';
 import useActivationGate from '@/app/_onboarding/hooks/useActivationGate';
 import WhatsNewBanner from '@/app/_productUpdates/components/WhatsNewBanner';
@@ -255,7 +256,6 @@ const sizeMl = (size: string | null) => {
 const DARK_ACTION =
   'border-transparent bg-text-primary text-surface-primary fill-surface-primary hover:border-transparent hover:bg-text-primary hover:opacity-90 active:bg-text-primary';
 
-
 /**
  * A collector's cellar
  *
@@ -376,9 +376,9 @@ const CellarPage = () => {
 
   const { mutate: submitRelease } = useMutation(
     api.cellar.member.submitRelease.mutationOptions({
-      onSuccess: (result) => {
+      onSuccess: () => {
         toast.success(
-          `Delivery request ${result.requestNumber} sent. We will confirm the costs for your approval.`,
+          'Your delivery request has been sent. We will confirm the costs for your approval.',
         );
         setBasket(new Map());
         setIsBasketOpen(false);
@@ -387,7 +387,7 @@ const CellarPage = () => {
         setMemberNotes('');
         void refetchReleases();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
@@ -401,7 +401,7 @@ const CellarPage = () => {
         */
         if (result.alreadySubmitted) {
           toast.success(
-            `Added to ${result.requestNumber}. We will confirm the cost for the full request.`,
+            'Added to your open delivery request. We will confirm the cost for the full request.',
           );
           setBasket(new Map());
           setMemberNotes('');
@@ -414,76 +414,82 @@ const CellarPage = () => {
         submitRelease({ requestId: result.requestId });
       },
       onError: (error) => {
-        if (!catchActivation(error, 'release')) toast.error(error.message);
+        if (!catchActivation(error, 'release')) memberErrorToast(error);
       },
     }),
   );
 
   const { mutate: amendRelease, isPending: isAmending } = useMutation(
     api.cellar.member.amendRelease.mutationOptions({
-      onSuccess: (result) => {
-        toast.success(`${result.requestNumber} updated.`);
+      onSuccess: () => {
+        toast.success('Your delivery request has been updated.');
         setOpenRequestId(null);
         void refetchReleases();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
   const { mutate: withdrawRelease, isPending: isWithdrawing } = useMutation(
     api.cellar.member.withdrawRelease.mutationOptions({
-      onSuccess: (result) => {
-        toast.success(`${result.requestNumber} withdrawn.`);
+      onSuccess: () => {
+        toast.success('Your delivery request has been withdrawn.');
         setOpenRequestId(null);
         void refetchReleases();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
   const { mutate: acceptRelease, isPending: isAccepting } = useMutation(
     api.cellar.member.acceptRelease.mutationOptions({
-      onSuccess: (result) => {
-        toast.success(`Accepted. We are arranging your delivery (order ${result.orderNumber}).`);
+      onSuccess: () => {
+        toast.success('Accepted. We are arranging your delivery.');
         void refetchReleases();
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
   const requestMove = useMutation(
     api.cellar.member.requestUkMove.mutationOptions({
-      onSuccess: (move) => {
-        toast.success(`${move.moveNumber} is with us. We will send you the price shortly.`);
+      onSuccess: () => {
+        toast.success('Your move request is with us. We will send you the price shortly.');
         setMoveBasket(new Map());
         setMoveNote('');
         void queryClient.invalidateQueries({ queryKey: api.cellar.member.getUkMoves.queryKey() });
         void queryClient.invalidateQueries({ queryKey: api.cellar.member.getUkHoldings.queryKey() });
       },
       onError: (error) => {
-        if (!catchActivation(error, 'other')) toast.error(error.message);
+        if (!catchActivation(error, 'other')) memberErrorToast(error);
       },
-    }),
-  );
-
-  const { mutate: requestReport, isPending: isRequesting } = useMutation(
-    api.wms.partner.requestConditionReport.mutationOptions({
-      onSuccess: (result) => {
-        void refetch();
-        toast.success(
-          `Condition report ${result.requestNumber} requested for ${result.cases} ${
-            result.cases === 1 ? 'case' : 'cases'
-          }. It will be added to your next invoice.`,
-        );
-      },
-      onError: (error) => toast.error(error.message),
     }),
   );
 
   const wines = useMemo(
     () => (data?.products ?? []) as unknown as CellarWine[],
     [data],
+  );
+
+  const { mutate: requestReport, isPending: isRequesting } = useMutation(
+    api.wms.partner.requestConditionReport.mutationOptions({
+      onSuccess: (result, variables) => {
+        void refetch();
+        // The server counts cases; the parcel's wine gives the bottles in each
+        const pack =
+          wines.find((wine) =>
+            wine.locations.some((parcel) => parcel.stockId === variables.stockId),
+          )?.caseConfig ?? 1;
+        const bottles = result.cases * pack;
+        toast.success(
+          `Condition report requested for ${bottles} ${
+            bottles === 1 ? 'bottle' : 'bottles'
+          }. It will be added to your next invoice.`,
+        );
+      },
+      onError: (error) => memberErrorToast(error),
+    }),
   );
 
   /*
@@ -618,7 +624,6 @@ const CellarPage = () => {
     .filter((line) => line.wine);
   const basketBottles = [...basket.values()].reduce((sum, count) => sum + count, 0);
   const basketWines = new Set(basketLines.map((line) => line.wine?.lwin18)).size;
-
 
   const inbound = useMemo(() => data?.inbound ?? [], [data]);
   const { data: overview } = useQuery(api.onboarding.member.overview.queryOptions());
@@ -1139,10 +1144,10 @@ const CellarPage = () => {
       {!isViewer && invoices?.state === 'ok' && invoices.due.length > 0 && (
         <Link
           href="/platform/cellar/invoices"
-          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-gradient-to-b from-amber-50/70 to-transparent px-4 py-3 dark:border-amber-900/50 dark:from-amber-500/10"
+          className="border-border-muted bg-surface-primary mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
         >
           <span className="flex items-center gap-2.5">
-            <IconReceipt size={16} className="text-amber-700 dark:text-amber-300" />
+            <IconReceipt size={16} className="text-text-muted" />
             <span className="text-text-primary text-sm font-semibold">
               {invoices.due
                 .map(
@@ -1274,7 +1279,6 @@ const CellarPage = () => {
       </div>
       )}
 
-
       {/*
         A move from the UK sits above the wine, not below it: once priced it
         waits on the member to accept, and Jon de Jager's sat under 76 wines.
@@ -1330,10 +1334,7 @@ const CellarPage = () => {
               variant="bodyXs"
               className="text-text-primary flex items-center gap-1.5 font-semibold uppercase tracking-wider"
             >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
+              <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               Delivery requests
             </Typography>
             <Typography variant="bodyXs" colorRole="muted">
@@ -1664,18 +1665,6 @@ const CellarPage = () => {
                                         item.caseConfig,
                                       )}
                                     </td>
-                                    {/*
-                                      Its own column. Run on after the format
-                                      the lot read as part of the wine's name,
-                                      and seven of them at seven different
-                                      horizontal positions gave the eye nothing
-                                      to follow — which is the whole use of a
-                                      lot number, checking it against what is on
-                                      the shelf.
-                                    */}
-                                    <td className="text-text-muted hidden whitespace-nowrap px-3 py-1.5 font-mono text-[11px] sm:table-cell">
-                                      {item.lotNumber ?? ''}
-                                    </td>
                                     <td className="whitespace-nowrap px-3 py-2 text-right">
                                       {isEditable ? (
                                         <span className="inline-flex items-center gap-0.5">
@@ -1892,7 +1881,6 @@ const CellarPage = () => {
         </div>
       </div>
 
-
       {/*
         Moving a whole UK cellar was one click per wine: 73 of them for Jon De
         Jager's delivery. Selecting is by what is on screen, so search and the
@@ -2082,12 +2070,14 @@ const CellarPage = () => {
                         <span className="mt-0.5 flex flex-wrap gap-1">
                           {bottlesOf(wine) > 0 && (
                             <span className="rounded-full bg-emerald-50 px-1.5 py-px text-[10px] font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
-                              UAE · {bottlesOf(wine)} btl
+                              UAE · {bottlesOf(wine)}{' '}
+                              {bottlesOf(wine) === 1 ? 'bottle' : 'bottles'}
                             </span>
                           )}
                           {ukBottlesOf(wine) > 0 && (
                             <span className="rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-semibold text-slate-700 dark:bg-slate-500/20 dark:text-slate-200">
-                              UK · {ukBottlesOf(wine)} btl
+                              UK · {ukBottlesOf(wine)}{' '}
+                              {ukBottlesOf(wine) === 1 ? 'bottle' : 'bottles'}
                             </span>
                           )}
                         </span>
@@ -2785,7 +2775,6 @@ const CellarPage = () => {
         </>
       )}
 
-
       {/*
         Keeping the cellar on the home screen and Face ID are offered beneath
         the wine, never before it, and once only. Both live on Your details too.
@@ -2826,7 +2815,6 @@ const CellarPage = () => {
 
       {basket.size > 0 && (
         <div className="border-border-muted bg-surface-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 md:bottom-3 mt-6 overflow-hidden rounded-xl border shadow-xl">
-          <div className="h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-200" />
           <div className="p-3 sm:p-4">
           <div className="flex flex-col gap-3">
             {(() => {
@@ -2978,6 +2966,13 @@ const CellarPage = () => {
             .map((line) => ({ wine, line, cases: moveBasket.get(line.key)! })),
         );
         const cases = lines.reduce((sum, item) => sum + item.cases, 0);
+        const moveBottles = lines.reduce(
+          (sum, item) => sum + item.cases * (item.line.bottlesPerCase ?? 1),
+          0,
+        );
+        const moveAmount = bottleWording
+          ? `${moveBottles} ${moveBottles === 1 ? 'bottle' : 'bottles'}`
+          : `${cases} ${cases === 1 ? 'case' : 'cases'}`;
         const wineCount = new Set(lines.map((item) => item.wine.lwin18)).size;
 
         /* Whole holdings first, then part of the next, so as few rotations as possible are split */
@@ -2996,14 +2991,14 @@ const CellarPage = () => {
 
         return (
           <div className="border-border-muted bg-surface-primary sticky bottom-[calc(env(safe-area-inset-bottom,0px)+60px)] z-20 md:bottom-3 mt-3 overflow-hidden rounded-xl border shadow-xl">
-            <div className="h-1 bg-gradient-to-r from-slate-500 via-slate-400 to-slate-200" />
             <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
               <div className="min-w-0">
                 <Typography variant="bodyXs" className="text-text-primary font-semibold uppercase tracking-wider">
                   Move to the UAE
                 </Typography>
                 <Typography variant="bodySm" className="block font-semibold">
-                  {cases} {cases === 1 ? 'case' : 'cases'} of {wineCount} {wineCount === 1 ? 'wine' : 'wines'} from London City Bond
+                  {moveAmount} of {wineCount} {wineCount === 1 ? 'wine' : 'wines'}
+                  {bottleWording ? ', held in London' : ' from London City Bond'}
                 </Typography>
                 <Typography variant="bodyXs" colorRole="muted" className="block">
                   We send you one all-in price first. Nothing moves until you accept it.
@@ -3020,8 +3015,7 @@ const CellarPage = () => {
                   title="Ask us to bring this wine to the UAE?"
                   description={
                     <p>
-                      We will price the collection from London City Bond and the freight for {cases}{' '}
-                      {cases === 1 ? 'case' : 'cases'} and send you one all-in figure. Your wine stays in bond
+                      We will price the collection from London City Bond and the freight for {moveAmount} and send you one all-in figure. Your wine stays in bond
                       throughout, and nothing moves until you accept the price.
                     </p>
                   }
@@ -3078,16 +3072,25 @@ const CellarPage = () => {
                   const wine = line.wine;
                   const parcel = wine?.locations.find((location) => location.stockId === line.stockId);
                   const held = (parcel?.quantityCases ?? 0) * (wine?.caseConfig ?? 1);
-                  /* A lot number only tells two parcels of the same wine apart; on its own it is warehouse noise */
-                  const showLot =
-                    parcel?.lotNumber &&
+                  /*
+                    Two parcels of the same wine are told apart by where they
+                    came from or when they arrived, never by the warehouse lot.
+                  */
+                  const isSplit =
                     basketLines.filter((other) => other.wine?.lwin18 === wine?.lwin18).length > 1;
+                  const parcelNote = !isSplit || !parcel
+                    ? null
+                    : originOf(parcel)
+                      ? `from ${originOf(parcel)}`
+                      : parcel.receivedAt
+                        ? `received ${format(new Date(parcel.receivedAt), 'MMM yyyy')}`
+                        : null;
                   const detail = [
                     wine?.vintage ?? 'NV',
                     wine?.bottleSize
                       ? `${(wine.caseConfig ?? 1) > 1 ? `${wine.caseConfig}×` : ''}${wine.bottleSize}`
                       : null,
-                    showLot ? `lot ${parcel?.lotNumber}` : null,
+                    parcelNote,
                     /* A whole case is picked sealed, so it is named as one */
                     (wine?.caseConfig ?? 1) > 1 && line.bottles % (wine?.caseConfig ?? 1) === 0
                       ? describeQuantity(line.bottles, wine?.caseConfig ?? null).split(' · ')[0]

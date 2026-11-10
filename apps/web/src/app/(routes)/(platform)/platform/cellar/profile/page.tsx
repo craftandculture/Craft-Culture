@@ -15,6 +15,7 @@ import CellarAccessPanel from '@/app/_cellar/components/CellarAccessPanel';
 import CellarPageHeader from '@/app/_cellar/components/CellarPageHeader';
 import CellarState from '@/app/_cellar/components/CellarState';
 import DeliveryAddressBook from '@/app/_cellar/components/DeliveryAddressBook';
+import memberErrorToast from '@/app/_cellar/utils/memberErrorToast';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -102,7 +103,7 @@ const CellarProfilePage = () => {
           queryKey: api.cellar.member.getAddresses.queryKey(),
         });
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
@@ -114,7 +115,7 @@ const CellarProfilePage = () => {
         void refetch();
       },
       onError: (error) => {
-        toast.error(error.message);
+        memberErrorToast(error);
         setUploading(null);
       },
     }),
@@ -127,7 +128,7 @@ const CellarProfilePage = () => {
         setConfirmRemove(null);
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
@@ -151,7 +152,7 @@ const CellarProfilePage = () => {
       });
 
     reader.onerror = () => {
-      toast.error('That file could not be read');
+      toast.error('That file could not be read.');
       setUploading(null);
     };
 

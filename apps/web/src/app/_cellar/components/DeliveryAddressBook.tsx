@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import ConfirmAction from '@/app/_cellar/components/ConfirmAction';
+import memberErrorToast from '@/app/_cellar/utils/memberErrorToast';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
@@ -63,7 +64,7 @@ const DeliveryAddressBook = ({ onMainChanged }: DeliveryAddressBookProps) => {
         setDraft(null);
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
@@ -73,7 +74,7 @@ const DeliveryAddressBook = ({ onMainChanged }: DeliveryAddressBookProps) => {
         toast.success('Address removed.');
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 

@@ -17,6 +17,7 @@ import CellarState from '@/app/_cellar/components/CellarState';
 import HowToPayPanel from '@/app/_cellar/components/HowToPayPanel';
 import useIsCellarViewer from '@/app/_cellar/hooks/useIsCellarViewer';
 import bottleName from '@/app/_cellar/utils/bottleName';
+import memberErrorToast from '@/app/_cellar/utils/memberErrorToast';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Icon from '@/app/_ui/components/Icon/Icon';
@@ -118,38 +119,41 @@ const PurchasesPage = () => {
 
   const { mutate: cancelPurchase, isPending: isCancelling } = useMutation(
     api.consignment.member.cancelPurchase.mutationOptions({
-      onSuccess: (result) => {
+      onSuccess: () => {
         toast.success(
-          `${result.purchaseNumber} cancelled. The wine is available again.`,
+          'Your purchase has been cancelled. The wine is available again.',
         );
         setConfirmCancelId(null);
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
   const { mutate: markPaid, isPending } = useMutation(
     api.consignment.member.markPurchasePaid.mutationOptions({
-      onSuccess: (result) => {
+      onSuccess: () => {
         toast.success(
-          `Thank you. We will confirm ${result.purchaseNumber} once your payment arrives.`,
+          'Thank you. We will confirm your purchase once your payment arrives.',
         );
         setOpenId(null);
         setReference('');
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
   const purchases = data?.purchases ?? [];
 
-  /* Quantities as a collector says them: "1 case of 6", or "6 bottles" for wine sold by the bottle */
-  const quantity = (item: (typeof purchases)[number]['items'][number]) =>
-    (item.caseConfig ?? 1) > 1
-      ? `${item.cases} ${item.cases === 1 ? 'case' : 'cases'} of ${item.caseConfig}`
-      : `${item.bottles} ${item.bottles === 1 ? 'bottle' : 'bottles'}`;
+  /* Counted in bottles; a sealed case is named after the count, "12 bottles · 2 cases of 6" */
+  const quantity = (item: (typeof purchases)[number]['items'][number]) => {
+    const bottles = `${item.bottles} ${item.bottles === 1 ? 'bottle' : 'bottles'}`;
+
+    return (item.caseConfig ?? 1) > 1
+      ? `${bottles} · ${item.cases} ${item.cases === 1 ? 'case' : 'cases'} of ${item.caseConfig}`
+      : bottles;
+  };
 
   return (
     <div className="w-full pb-8">

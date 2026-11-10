@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import memberErrorToast from '@/app/_cellar/utils/memberErrorToast';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import useTRPC from '@/lib/trpc/browser';
@@ -51,7 +52,7 @@ const CellarAccessPanel = () => {
         setEmail('');
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
@@ -61,7 +62,7 @@ const CellarAccessPanel = () => {
         toast.success('Access updated');
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
@@ -71,14 +72,14 @@ const CellarAccessPanel = () => {
         toast.success(`${result.name} no longer has access`);
         void refetch();
       },
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 
   const { mutate: leave } = useMutation(
     api.cellar.access.leave.mutationOptions({
       onSuccess: () => router.push('/'),
-      onError: (error) => toast.error(error.message),
+      onError: (error) => memberErrorToast(error),
     }),
   );
 

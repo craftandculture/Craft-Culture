@@ -156,7 +156,7 @@ const SellWinesDialog = ({
     if (sent.length > 0) {
       toast.success(
         sent.length === 1
-          ? `${sent[0]} sent. We will come back to you once it is listed.`
+          ? 'Your offer has been sent. We will come back to you once it is listed.'
           : `${sent.length} offers sent. We will come back to you as each is listed.`,
       );
       onOffered();
