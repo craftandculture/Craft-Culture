@@ -2981,6 +2981,17 @@ const runMigrations = async () => {
       )
     `);
 
+    // Every Zoho payment #payments-log has seen, and whether it was posted
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_payment_log" (
+        "zoho_payment_id" text PRIMARY KEY,
+        "direction" text NOT NULL,
+        "posted" boolean DEFAULT false NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+
     /*
       Purchasing: a distributor's replenishment sheet and our answer to each
       line. Kept whole — header and every original cell — because the answer

@@ -7,6 +7,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminApproveSalesOrders from './controller/adminApproveSalesOrders';
+import adminCheckPaymentLog from './controller/adminCheckPaymentLog';
 import adminCreatePickListFromSalesOrder from './controller/adminCreatePickListFromSalesOrder';
 import adminDismissDeletedSalesOrder from './controller/adminDismissDeletedSalesOrder';
 import { adminListDraftHolds, adminRefreshDraftHold, adminReleaseDraftHold } from './controller/adminDraftHolds';
@@ -40,6 +41,8 @@ const zohoSalesOrdersRouter = createTRPCRouter({
   syncInvoices: adminSyncZohoInvoices,
   // Send a test message to #payments-received
   testPaymentAlerts: adminTestPaymentAlerts,
+  // Read Zoho payments and, optionally, post a test line to #payments-log
+  checkPaymentLog: adminCheckPaymentLog,
   getPickedForDispatch: adminGetPickedOrdersForDispatch,
   // Orders picked, then amended in Zoho — what is still owed
   outstanding: adminGetOutstandingOrders,

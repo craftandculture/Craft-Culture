@@ -6307,6 +6307,20 @@ export const zohoPaymentAlerts = pgTable('zoho_payment_alerts', {
   ...timestamps,
 });
 
+/**
+ * Every Zoho payment #payments-log has seen, received or made
+ *
+ * A row means the payment is known; `posted` says whether it has reached
+ * Slack. Payments already in Zoho when the log started are stored as posted
+ * so the channel does not open with the whole history.
+ */
+export const zohoPaymentLog = pgTable('zoho_payment_log', {
+  zohoPaymentId: text('zoho_payment_id').primaryKey(),
+  direction: text('direction').$type<'received' | 'made'>().notNull(),
+  posted: boolean('posted').notNull().default(false),
+  ...timestamps,
+});
+
 export type ZohoInvoice = typeof zohoInvoices.$inferSelect;
 
 // ---------------------------------------------------------------------------
