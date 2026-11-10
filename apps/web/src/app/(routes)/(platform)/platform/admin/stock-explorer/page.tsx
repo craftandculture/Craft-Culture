@@ -57,6 +57,7 @@ import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import StatusPill from '@/app/_ui/components/StatusPill/StatusPill';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import AddToStockPanel from '@/app/_wms/components/AddToStockPanel';
 import PackBadge from '@/app/_wms/components/PackBadge';
@@ -201,58 +202,51 @@ const StatusIndicator = ({
   // Priority: expired > expiring (90 days) > stock level
   if (expiryStatus === 'expired') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+      <StatusPill tone="danger" dot>
         Expired
-      </span>
+      </StatusPill>
     );
   }
   if (expiryStatus === 'warning') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+      <StatusPill tone="warning" dot>
         Expiring
-      </span>
+      </StatusPill>
     );
   }
   if (availableCases === 0 && openBottles > 0) {
     // Not "Out" — there are bottles on the shelf, they just aren't a case.
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+      <StatusPill tone="warning" dot>
         {openBottles} loose
-      </span>
+      </StatusPill>
     );
   }
   if (availableCases === 0) {
     return (
-      <span className="bg-surface-muted text-text-muted inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium">
-        <span className="bg-border-muted h-1.5 w-1.5 rounded-full" />
+      <StatusPill tone="neutral" dot>
         Out
-      </span>
+      </StatusPill>
     );
   }
   if (availableCases === 1) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+      <StatusPill tone="danger" dot>
         Final
-      </span>
+      </StatusPill>
     );
   }
   if (availableCases <= 2) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+      <StatusPill tone="warning" dot>
         Low
-      </span>
+      </StatusPill>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+    <StatusPill tone="success" dot>
       Good
-    </span>
+    </StatusPill>
   );
 };
 
@@ -317,6 +311,7 @@ const PrintCell = ({ maxQty, defaultQty, onPrint }: PrintCellProps) => {
           }}
           className="text-text-muted hover:bg-surface-muted hover:text-text-primary rounded p-1 transition-colors"
           title="Print labels"
+          aria-label="Print labels"
         >
           <IconPrinter className="h-4 w-4" />
         </button>
@@ -410,7 +405,7 @@ const BoeCell = ({
           onChange={(e) => setDraft(e.target.value)}
           onClick={(e) => e.stopPropagation()}
           className="border-border-primary bg-background-primary focus:border-text-primary w-28 rounded border px-1.5 py-0.5 font-mono text-xs focus:outline-none"
-          placeholder="RE BOE"
+          placeholder="RE BOE" aria-label="Re-export BOE number"
           autoFocus
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
@@ -482,7 +477,7 @@ const ImportPriceCell = ({
           onChange={(e) => setDraft(e.target.value)}
           onClick={(e) => e.stopPropagation()}
           className="border-border-primary bg-background-primary focus:border-text-primary w-20 rounded border px-1.5 py-0.5 text-right font-mono text-xs tabular-nums focus:outline-none"
-          placeholder="0.00"
+          placeholder="0.00" aria-label="Amount"
           type="number"
           step="0.01"
           min="0"
@@ -834,7 +829,7 @@ const ProductRow = ({
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="border-border-muted bg-background-primary text-text-primary focus:border-text-primary h-7 w-full rounded border px-2 text-sm focus:outline-none"
-                  placeholder="Product name"
+                  placeholder="Product name" aria-label="Product name"
                   autoFocus
                 />
                 <input
@@ -842,7 +837,7 @@ const ProductRow = ({
                   value={editProducer}
                   onChange={(e) => setEditProducer(e.target.value)}
                   className="border-border-muted bg-background-primary text-text-muted focus:border-text-primary h-7 w-full rounded border px-2 text-xs focus:outline-none"
-                  placeholder="Producer"
+                  placeholder="Producer" aria-label="Producer"
                 />
               </div>
               <button
@@ -1208,7 +1203,9 @@ const ProductRow = ({
                       <th className="px-3 py-1.5 text-left">Storage</th>
                       <th className="px-3 py-1.5 text-right">Qty</th>
                       <th className="px-3 py-1.5 text-right">Avail</th>
-                      <th className="w-[100px] px-3 py-1.5 text-left" />
+                      <th className="w-[100px] px-3 py-1.5 text-left">
+                        <span className="sr-only">Status</span>
+                      </th>
                       <th className="px-3 py-1.5 text-left">Owner</th>
                       <th className="hidden px-3 py-1.5 text-left sm:table-cell">
                         Lot
@@ -1329,8 +1326,9 @@ const ProductRow = ({
                                     setTransferPutOnSale(false);
                                     setAdjustingStockId(null);
                                   }}
-                                  className="text-text-muted/40 hover:bg-surface-muted hover:text-text-primary hidden shrink-0 rounded p-0.5 transition-colors group-hover/owner:inline-flex"
+                                  className="text-text-muted/40 hover:bg-surface-muted hover:text-text-primary inline-flex shrink-0 rounded p-0.5 opacity-0 transition-colors focus-visible:opacity-100 group-hover/owner:opacity-100"
                                   title="Change owner"
+                                  aria-label="Change owner"
                                 >
                                   <IconPencil className="h-3 w-3" />
                                 </button>
@@ -1432,7 +1430,7 @@ const ProductRow = ({
                                     onChange={(e) =>
                                       setAdjustReason(e.target.value)
                                     }
-                                    placeholder="Reason (required)"
+                                    placeholder="Reason (required)" aria-label="Reason"
                                     className="border-border-primary bg-background-primary focus:border-text-primary h-8 min-w-[200px] flex-1 rounded border px-2 text-sm focus:outline-none"
                                   />
                                   <button
@@ -1524,7 +1522,7 @@ const ProductRow = ({
                                     onChange={(e) =>
                                       setPackReason(e.target.value)
                                     }
-                                    placeholder="Reason (required)"
+                                    placeholder="Reason (required)" aria-label="Reason"
                                     className="border-border-primary bg-background-primary focus:border-text-primary h-8 min-w-[200px] flex-1 rounded border px-2 text-sm focus:outline-none"
                                   />
                                   <button
@@ -1653,7 +1651,7 @@ const ProductRow = ({
                                       setTransferNotes(e.target.value)
                                     }
                                     onClick={(e) => e.stopPropagation()}
-                                    placeholder="Notes (optional)"
+                                    placeholder="Notes (optional)" aria-label="Transfer notes"
                                     className="border-border-primary bg-background-primary focus:border-text-primary h-8 min-w-[160px] flex-1 rounded border px-2 text-sm focus:outline-none"
                                   />
                                   {loc.notForSale && (
@@ -3336,7 +3334,7 @@ const StockExplorerPage = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search product, producer, LWIN18..."
+              placeholder="Search product, producer, LWIN18..." aria-label="Search stock"
               className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-text-primary focus:ring-text-primary w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1"
             />
           </div>
@@ -3363,7 +3361,7 @@ const StockExplorerPage = () => {
                 type="number"
                 value={vintageFrom}
                 onChange={(e) => setVintageFrom(e.target.value)}
-                placeholder="From"
+                placeholder="From" aria-label="Vintage from"
                 min={1900}
                 max={2100}
                 className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-text-primary w-20 rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
@@ -3373,7 +3371,7 @@ const StockExplorerPage = () => {
                 type="number"
                 value={vintageTo}
                 onChange={(e) => setVintageTo(e.target.value)}
-                placeholder="To"
+                placeholder="To" aria-label="Vintage to"
                 min={1900}
                 max={2100}
                 className="border-border-primary bg-background-primary text-text-primary placeholder:text-text-muted focus:border-text-primary w-20 rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
@@ -3532,7 +3530,9 @@ const StockExplorerPage = () => {
               <table className={`w-full ${dc.text}`}>
                 <thead className="border-border-muted bg-surface-muted/60 sticky top-0 z-10 border-b">
                   <tr>
-                    <th className={`${dc.td} w-8`} />
+                    <th className={`${dc.td} w-8`}>
+                      <span className="sr-only">Expand</span>
+                    </th>
                     <th
                       className={`${dc.td} text-left ${thBase}`}
                       onClick={() => handleSort('productName')}
