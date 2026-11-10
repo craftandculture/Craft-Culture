@@ -176,15 +176,17 @@ const reconcileZohoSalesOrderItems = async ({
               eq(wmsStockReservations.status, 'active'),
             ),
           )
-          .returning({ id: wmsStockReservations.id });
+          .returning({ id: wmsStockReservations.id, quantityCases: wmsStockReservations.quantityCases });
 
-        if (claimed.length === 0) continue;
+        // The size as claimed: a pick may have shrunk it since it was read
+        const [held] = claimed;
+        if (!held) continue;
 
         await tx
           .update(wmsStock)
           .set({
-            reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${reservation.quantityCases}, 0)`,
-            availableCases: sql`${wmsStock.availableCases} + ${reservation.quantityCases}`,
+            reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${held.quantityCases}, 0)`,
+            availableCases: sql`${wmsStock.availableCases} + ${held.quantityCases}`,
             updatedAt: now,
           })
           .where(eq(wmsStock.id, reservation.stockId));

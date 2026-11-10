@@ -120,6 +120,7 @@ const adminReconcileCycleCount = wmsOperatorProcedure
           toLocationId: adjustment > 0 ? stockRecord.locationId : null,
           // Whose stock the count changed, as a manual count records it
           fromOwnerId: adjustment < 0 ? stockRecord.ownerId : null,
+          toOwnerId: adjustment > 0 ? stockRecord.ownerId : null,
           stockId: stockRecord.id,
           notes: `CYCLE COUNT ${cycleCount.countNumber}: counted ${item.countedQuantity ?? 0} against ${item.expectedQuantity} expected; row ${oldQuantity} → ${newQuantity}`,
           reasonCode: 'cycle_count',

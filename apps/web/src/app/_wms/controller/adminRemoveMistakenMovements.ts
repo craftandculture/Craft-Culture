@@ -111,7 +111,7 @@ const adminRemoveMistakenMovements = staffAdminProcedure
         message: 'A stock row was not found.',
       });
     for (const row of rows) {
-      if (row.quantityCases !== 0 || row.reservedCases !== 0) {
+      if (row.quantityCases !== 0 || row.reservedCases !== 0 || (row.openBottles ?? 0) !== 0) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: `${row.productName} (${row.lwin18}) still holds ${row.quantityCases} case(s); only empty rows can be deleted.`,

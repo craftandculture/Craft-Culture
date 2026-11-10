@@ -203,7 +203,13 @@ const adminResyncPickList = wmsOperatorProcedure
           item.sku ?? resolvedLwin18,
           item.description,
         );
-        const orderedBottles = item.quantity * orderedPack;
+        // A Bottle line's quantity is already bottles. Release reads the unit
+        // the same way; counting every line as cases rebuilt a short-picked
+        // bottle line at the wrong count and let it claim another line's case.
+        const isBottleUnit = /^bottle/i.test((item.unit ?? '').trim());
+        const orderedBottles = isBottleUnit
+          ? item.quantity
+          : item.quantity * orderedPack;
         /*
           Picked bottles are used up by the line they cover. Read without being
           taken off, the six-packs already picked counted against every line of
@@ -216,7 +222,10 @@ const adminResyncPickList = wmsOperatorProcedure
         pickedBottlesByWine.set(key, alreadyPicked - consumed);
         const remainingBottles = orderedBottles - consumed;
         if (remainingBottles <= 0) continue;
-        const remaining = Math.ceil(remainingBottles / orderedPack);
+        // Back in the line's own unit, which is how resolvePickQuantities reads it
+        const remaining = isBottleUnit
+          ? remainingBottles
+          : Math.ceil(remainingBottles / orderedPack);
 
         // Pack-agnostic, in-stock-only match by LWIN7+vintage (safe name
         // fallback) — never pins an empty pack or a lookalike cuvée.

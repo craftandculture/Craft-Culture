@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { wmsPickListItems, wmsPickLists } from '@/database/schema';
+import { wmsPickListItems, wmsPickLists, zohoSalesOrders } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import splitShortPick from '../utils/splitShortPick';
@@ -41,6 +41,25 @@ const adminReopenShortPick = staffAdminProcedure
 
       if (!line?.isPicked || line.pickedQuantity == null) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'That line has not been picked.' });
+      }
+
+      // Only a finished list goes back to work: a cancelled one, or one whose
+      // order has already been dispatched, must not reappear on the scanner.
+      const [list] = await tx
+        .select({ status: wmsPickLists.status, orderId: wmsPickLists.orderId })
+        .from(wmsPickLists)
+        .where(eq(wmsPickLists.id, line.pickListId));
+      const [order] = list?.orderId
+        ? await tx
+            .select({ dispatchBatchId: zohoSalesOrders.dispatchBatchId })
+            .from(zohoSalesOrders)
+            .where(eq(zohoSalesOrders.id, list.orderId))
+        : [];
+      if (list?.status !== 'completed' || order?.dispatchBatchId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Only a completed pick list that has not been dispatched can be reopened.',
+        });
       }
 
       const wanted = line.quantityBottles ?? line.quantityCases;

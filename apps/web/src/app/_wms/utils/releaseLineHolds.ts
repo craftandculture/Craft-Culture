@@ -45,18 +45,20 @@ const releaseLineHolds = async ({
       .update(wmsStockReservations)
       .set({ status: 'released' as const, releasedAt: now, releaseReason: reason, updatedAt: now })
       .where(and(eq(wmsStockReservations.id, hold.id), eq(wmsStockReservations.status, 'active')))
-      .returning({ id: wmsStockReservations.id });
-    if (claimed.length === 0) continue;
+      .returning({ id: wmsStockReservations.id, quantityCases: wmsStockReservations.quantityCases });
+    // The size as claimed: a pick may have shrunk it since it was read
+    const [held] = claimed;
+    if (!held) continue;
 
     await db
       .update(wmsStock)
       .set({
-        reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${hold.quantityCases}, 0)`,
-        availableCases: sql`${wmsStock.availableCases} + ${hold.quantityCases}`,
+        reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${held.quantityCases}, 0)`,
+        availableCases: sql`${wmsStock.availableCases} + ${held.quantityCases}`,
         updatedAt: now,
       })
       .where(eq(wmsStock.id, hold.stockId));
-    casesReleased += hold.quantityCases;
+    casesReleased += held.quantityCases;
   }
 
   return { casesReleased };

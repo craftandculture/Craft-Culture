@@ -75,22 +75,29 @@ const releaseStockReservations = async ({
           eq(wmsStockReservations.status, 'active'),
         ),
       )
-      .returning({ id: wmsStockReservations.id });
+      // The size as claimed, not as first read: a pick that consumed part of
+      // the hold in between leaves it active but smaller, and giving back the
+      // earlier figure offered a picked case for sale.
+      .returning({
+        id: wmsStockReservations.id,
+        quantityCases: wmsStockReservations.quantityCases,
+      });
 
-    if (claimed.length === 0) continue;
+    const [held] = claimed;
+    if (!held) continue;
 
     // Restore stock availability
     await db
       .update(wmsStock)
       .set({
-        reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${reservation.quantityCases}, 0)`,
-        availableCases: sql`${wmsStock.availableCases} + ${reservation.quantityCases}`,
+        reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${held.quantityCases}, 0)`,
+        availableCases: sql`${wmsStock.availableCases} + ${held.quantityCases}`,
         updatedAt: now,
       })
       .where(eq(wmsStock.id, reservation.stockId));
 
     releasedCount++;
-    totalCasesReleased += reservation.quantityCases;
+    totalCasesReleased += held.quantityCases;
   }
 
   return {

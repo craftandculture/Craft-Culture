@@ -28,6 +28,7 @@ import generateBatchNumber from '../utils/generateBatchNumber';
 import generateDeliveryNoteNumber from '../utils/generateDeliveryNoteNumber';
 import generateMovementNumber from '../utils/generateMovementNumber';
 import lwinPackAgnosticPattern from '../utils/lwinPackAgnosticPattern';
+import releaseStockReservations from '../utils/releaseStockReservations';
 import renderDeliveryNotePDF from '../utils/renderDeliveryNotePDF';
 
 /**
@@ -407,14 +408,23 @@ const adminQuickDispatch = wmsOperatorProcedure
                 (isBottleLine ? ' as single bottles (pick it on a pick list to open a case)' : ''),
             );
           }
+
+          return remaining;
         };
 
         // Lines on an open pick list that nobody scanned: only with a yes
         if (confirmUnpicked) {
+          /*
+            The yes covers "nobody scanned it", not "it is not there". A line
+            whose stock cannot be found was still written as fully picked and
+            dispatched with no movement, so the shelf kept showing the cases
+            and the owner's statement never saw them leave.
+          */
+          const shortUnscanned: string[] = [];
           for (const line of unpickedLines) {
             const list = openLists.find((entry) => entry.id === line.pickListId);
             const isBottleLine = line.quantityBottles != null;
-            await drawLine({
+            const short = await drawLine({
               orderId: list?.orderId ?? '',
               orderNumber: list?.pickListNumber ?? '',
               lwin: line.lwin18,
@@ -425,6 +435,12 @@ const adminQuickDispatch = wmsOperatorProcedure
               preferOwnerId: null,
               allowPrefix: false,
             });
+            if (short > 0) {
+              shortUnscanned.push(
+                `${list?.pickListNumber ?? 'pick list'}: ${short} ${isBottleLine ? 'bottle(s)' : 'case(s)'} of ${line.productName}`,
+              );
+              continue;
+            }
             await tx
               .update(wmsPickListItems)
               .set({
@@ -436,6 +452,12 @@ const adminQuickDispatch = wmsOperatorProcedure
                 updatedAt: now,
               })
               .where(eq(wmsPickListItems.id, line.id));
+          }
+          if (shortUnscanned.length > 0) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: `Not found on the shelf, so nothing was dispatched: ${shortUnscanned.join('; ')}. Scan these on the pick list, or correct the stock first.`,
+            });
           }
           for (const list of openLists) {
             await tx
@@ -600,6 +622,29 @@ const adminQuickDispatch = wmsOperatorProcedure
 
         if (batchOrderInserts.length > 0) {
           await tx.insert(wmsDispatchBatchOrders).values(batchOrderInserts);
+        }
+
+        /*
+          Hand back whatever these orders still hold, as completing a pick list
+          does. A hold sits on the bay release expected; when the stock came
+          from another bay it was never converted, and once the order has left
+          nothing else frees it.
+        */
+        for (const row of zohoRows) {
+          await releaseStockReservations({
+            orderId: row.id,
+            orderType: 'zoho',
+            reason: `Quick dispatch ${batchNumber}`,
+            db: tx,
+          });
+        }
+        for (const row of pcoRows) {
+          await releaseStockReservations({
+            orderId: row.id,
+            orderType: 'pco',
+            reason: `Quick dispatch ${batchNumber}`,
+            db: tx,
+          });
         }
 
         const [updatedBatch] = await tx

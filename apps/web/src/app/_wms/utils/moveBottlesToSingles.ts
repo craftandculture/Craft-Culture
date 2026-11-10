@@ -98,6 +98,9 @@ const moveBottlesToSingles = async ({
       quantityCases: bottles,
       quantityBottles: bottles,
       toLocationId: source.locationId,
+      // Still the same owner's bottles; without it every cracked-case
+      // remainder was booked to nobody in the owner's activity.
+      toOwnerId: source.ownerId,
       lotNumber: source.lotNumber,
       shipmentId: source.shipmentId,
       notes: `Loose bottles from a cracked ${source.caseConfig ?? '?'}-pack of ${source.lwin18}`,
