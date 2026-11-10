@@ -39,6 +39,7 @@ import { toast } from 'sonner';
 import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import StatusPill from '@/app/_ui/components/StatusPill/StatusPill';
 import Tooltip from '@/app/_ui/components/Tooltip/Tooltip';
 import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
@@ -74,18 +75,18 @@ type SortOrder = 'asc' | 'desc';
 type OwnerStyle = { badge: string; border: string; dot: string };
 
 const OWNER_PALETTE: OwnerStyle[] = [
-  { badge: 'bg-violet-100 text-violet-700', border: 'border-l-violet-400', dot: 'bg-violet-500' },
-  { badge: 'bg-blue-100 text-blue-700', border: 'border-l-blue-400', dot: 'bg-blue-500' },
-  { badge: 'bg-rose-100 text-rose-700', border: 'border-l-rose-400', dot: 'bg-rose-500' },
-  { badge: 'bg-cyan-100 text-cyan-700', border: 'border-l-cyan-400', dot: 'bg-cyan-500' },
-  { badge: 'bg-fuchsia-100 text-fuchsia-700', border: 'border-l-fuchsia-400', dot: 'bg-fuchsia-500' },
-  { badge: 'bg-indigo-100 text-indigo-700', border: 'border-l-indigo-400', dot: 'bg-indigo-500' },
-  { badge: 'bg-teal-100 text-teal-700', border: 'border-l-teal-400', dot: 'bg-teal-500' },
+  { badge: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300', border: 'border-l-violet-400', dot: 'bg-violet-500' },
+  { badge: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300', border: 'border-l-blue-400', dot: 'bg-blue-500' },
+  { badge: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300', border: 'border-l-rose-400', dot: 'bg-rose-500' },
+  { badge: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300', border: 'border-l-cyan-400', dot: 'bg-cyan-500' },
+  { badge: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/15 dark:text-fuchsia-300', border: 'border-l-fuchsia-400', dot: 'bg-fuchsia-500' },
+  { badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300', border: 'border-l-indigo-400', dot: 'bg-indigo-500' },
+  { badge: 'bg-lime-100 text-lime-800 dark:bg-lime-500/15 dark:text-lime-300', border: 'border-l-lime-500', dot: 'bg-lime-600' },
 ];
 
 // Shown when a single lwin18 is split across more than one owner.
 const MIXED_OWNER_STYLE: OwnerStyle = {
-  badge: 'bg-amber-100 text-amber-800',
+  badge: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
   border: 'border-l-amber-500',
   dot: 'bg-amber-500',
 };
@@ -1054,6 +1055,7 @@ const LondonCell = ({
       onClick={onAsk}
       disabled={asking}
       title="Ask Wine Labs for today's London price (15 to 30 credits)"
+      aria-label="Ask Wine Labs for today's London price"
       className="inline-flex align-middle text-text-muted/50 hover:text-text-primary disabled:opacity-50"
     >
       {asking ? <IconLoader2 size={12} className="animate-spin" /> : <IconRefresh size={12} />}
@@ -1098,7 +1100,7 @@ const LondonCell = ({
       <span className="inline-flex items-center justify-end gap-1.5">
         <span className="font-medium text-text-primary">{money(lead, ccy, 0)}</span>
         {market.lastUsd == null && (
-          <span className="text-[9px] font-semibold uppercase tracking-wider text-text-muted">ask</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">ask</span>
         )}
         {gap != null && (
           <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${tone}`}>
@@ -2394,14 +2396,17 @@ const PricingManagerPage = () => {
         ))}
         <span className="mx-1 h-4 w-px bg-border-muted" />
         <button
+          type="button"
           onClick={() => setIncludeInbound((v) => !v)}
+          aria-pressed={includeInbound}
+          title="Also show stock that is on its way in"
           className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
             includeInbound
-              ? 'border-transparent bg-amber-500 text-white shadow-sm'
-              : 'border-amber-300 bg-amber-50/40 text-amber-700 hover:bg-amber-50'
+              ? 'border-transparent bg-text-primary text-surface-primary shadow-sm'
+              : 'border-border-muted bg-background-primary text-text-secondary hover:border-border-primary hover:text-text-primary'
           }`}
         >
-          {includeInbound ? '✓ Inbound stock' : '+ Inbound stock'}
+          {includeInbound ? '✓ Include inbound' : '+ Include inbound'}
         </button>
         <button
           onClick={() => setIncludeSoldOut((v) => !v)}
@@ -2426,7 +2431,9 @@ const PricingManagerPage = () => {
             >
               {f.label}
               <button
+                type="button"
                 onClick={f.onRemove}
+                aria-label={`Remove filter: ${f.label}`}
                 className="ml-0.5 rounded-full p-0.5 text-text-muted transition-colors hover:bg-surface-muted hover:text-text-primary"
               >
                 <IconX className="h-3 w-3" />
@@ -2700,27 +2707,27 @@ const PricingManagerPage = () => {
                   <th className="px-3 pb-1.5 pt-2.5" colSpan={2} />
                   <th
                     title="Cost build-up per bottle: Import + Logistics + Transfer + Override = Landed"
-                    className="border-l-2 border-slate-300 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500"
+                    className="border-l-2 border-slate-300 bg-slate-100/70 px-3 pb-1.5 pt-2.5 text-center text-slate-500 dark:border-slate-600 dark:bg-slate-500/15 dark:text-slate-300"
                     colSpan={5}
                   >
                     Cost
                   </th>
                   <th
                     title="In-bond (B2B) selling price tier for trade, beside the London in-bond market"
-                    className="border-l-2 border-blue-300 bg-blue-50 px-3 pb-1.5 pt-2.5 text-center text-blue-600"
+                    className="border-l-2 border-blue-300 bg-blue-50 px-3 pb-1.5 pt-2.5 text-center text-blue-600 dark:border-blue-500/50 dark:bg-blue-500/15 dark:text-blue-300"
                     colSpan={2}
                   >
                     In&nbsp;Bond · B2B
                   </th>
                   <th
                     title="Private client (retail) selling price tier"
-                    className="border-l-2 border-violet-300 bg-violet-50 px-3 pb-1.5 pt-2.5 text-center text-violet-600"
+                    className="border-l-2 border-violet-300 bg-violet-50 px-3 pb-1.5 pt-2.5 text-center text-violet-600 dark:border-violet-500/50 dark:bg-violet-500/15 dark:text-violet-300"
                   >
                     Private&nbsp;Client
                   </th>
                   <th
                     title="Margin and cash profit, on the basis chosen below"
-                    className="border-l-2 border-emerald-300 bg-emerald-50 px-3 pb-1.5 pt-2.5 text-center text-emerald-600"
+                    className="border-l-2 border-emerald-300 bg-emerald-50 px-3 pb-1.5 pt-2.5 text-center text-emerald-600 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-300"
                     colSpan={2}
                   >
                     Margin &amp; Profit
@@ -2872,7 +2879,7 @@ const PricingManagerPage = () => {
                         <HeaderInfo text="IB·Landed = (In-Bond − Landed) / In-Bond, the B2B margin over cost (varies per owner). PC·IB = (PC − In-Bond) / PC, the private-client margin. Toggle below." />
                       </span>
                       <div
-                        className="flex overflow-hidden rounded-md border border-emerald-300 text-[9px] font-semibold normal-case tracking-normal"
+                        className="flex overflow-hidden rounded-md border border-emerald-300 text-[11px] font-semibold normal-case tracking-normal"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
@@ -3234,7 +3241,7 @@ const PricingManagerPage = () => {
                                     ? `Mixed ownership: ${product.ownerNames.join(', ')}`
                                     : ownerCue.fullName
                                 }
-                                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold ${ownerCue.style.badge}`}
+                                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold ${ownerCue.style.badge}`}
                               >
                                 <span className={`h-1.5 w-1.5 rounded-full ${ownerCue.style.dot}`} />
                                 {ownerCue.isMixed
@@ -3305,7 +3312,7 @@ const PricingManagerPage = () => {
                                 onClick={() =>
                                   release([product], false)
                                 }
-                                className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+                                className={`rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
                                   blockers.length > 0
                                     ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
                                     : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
@@ -3320,7 +3327,7 @@ const PricingManagerPage = () => {
                                 onClick={() =>
                                   release([product], true)
                                 }
-                                className="rounded bg-red-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-red-700 hover:bg-red-200"
+                                className="rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-red-700 hover:bg-red-200"
                               >
                                 Release
                               </button>
@@ -3351,7 +3358,7 @@ const PricingManagerPage = () => {
                             ].filter(Boolean);
 
                             return why.length > 0 ? (
-                              <span className="pm-why text-[9px] font-medium text-amber-700">
+                              <span className="pm-why text-[11px] font-medium text-amber-700">
                                 {why.join(' · ')}
                               </span>
                             ) : null;
@@ -3607,7 +3614,7 @@ const PricingManagerPage = () => {
                                   </span>
                                 </span>
                                 <span
-                                  className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+                                  className={`rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${
                                     lastSold.tier === 'PC'
                                       ? 'bg-violet-100 text-violet-700'
                                       : 'bg-blue-100 text-blue-700'
@@ -3660,7 +3667,7 @@ const PricingManagerPage = () => {
                                   </span>
                                 ) : null}
                                 {isLoss ? (
-                                  <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Below cost</span>
+                                  <StatusPill tone="danger">Below cost</StatusPill>
                                 ) : null}
                               </span>
                             </span>
