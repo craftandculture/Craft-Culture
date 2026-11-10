@@ -2,6 +2,13 @@
 
 ### Bug Fixes
 
+* The compliance report no longer crashes on expiring documents, and Movements can be filtered by every movement type ([e72ec99](https://github.com/craftandculture/Craft-Culture/commit/e72ec99b5ce5aea18c014ec1f0231955aaed2c83))
+* Warehouse re-sync counts bottle lines in bottles, quick dispatch no longer ships stock it cannot find and frees leftover holds, and released holds give back their true size ([8c3e838](https://github.com/craftandculture/Craft-Culture/commit/8c3e838b6f2aeca0d50087bc9301cc4e96f444e1))
+
+## [2.1.111](https://github.com/craftandculture/Craft-Culture/compare/v2.1.110...v2.1.111) (2026-11-10)
+
+### Bug Fixes
+
 * Warehouse re-sync counts bottle lines in bottles, quick dispatch no longer ships stock it cannot find and frees leftover holds, and released holds give back their true size ([8c3e838](https://github.com/craftandculture/Craft-Culture/commit/8c3e838b6f2aeca0d50087bc9301cc4e96f444e1))
 
 ## [2.1.110](https://github.com/craftandculture/Craft-Culture/compare/v2.1.109...v2.1.110) (2026-11-10)
