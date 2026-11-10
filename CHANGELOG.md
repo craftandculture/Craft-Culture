@@ -1,3 +1,9 @@
+## [2.1.110](https://github.com/craftandculture/Craft-Culture/compare/v2.1.109...v2.1.110) (2026-11-10)
+
+### Features
+
+* post every Zoho payment received and made to [#payments](https://github.com/craftandculture/Craft-Culture/issues/payments)-log ([d329e32](https://github.com/craftandculture/Craft-Culture/commit/d329e3263390a325616bbb27093129b08de5881b))
+
 ## [2.1.109](https://github.com/craftandculture/Craft-Culture/compare/v2.1.108...v2.1.109) (2026-11-10)
 
 ### Bug Fixes
