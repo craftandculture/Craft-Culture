@@ -3,7 +3,11 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
-import { privateClientOrderDocuments, users } from '@/database/schema';
+import {
+  partnerMembers,
+  privateClientOrderDocuments,
+  users,
+} from '@/database/schema';
 import { approvedProcedure } from '@/lib/trpc/procedures';
 import fileHref from '@/utils/fileHref';
 
@@ -70,6 +74,8 @@ const documentsGetMany = approvedProcedure.input(getDocumentsSchema).query(async
         name: users.name,
         email: users.email,
       },
+      // Only used below to decide whether the partner may see the uploader
+      uploaderLegacyPartnerId: users.partnerId,
     })
     .from(privateClientOrderDocuments)
     .leftJoin(users, eq(privateClientOrderDocuments.uploadedBy, users.id))
@@ -81,11 +87,40 @@ const documentsGetMany = approvedProcedure.input(getDocumentsSchema).query(async
     )
     .orderBy(desc(privateClientOrderDocuments.uploadedAt));
 
+  /*
+    A partner never sees the people on the other side of the order. The
+    distributor's documents are visible to them, and naming who uploaded one
+    handed over a distributor colleague's name and email. A partner is shown
+    the uploader only when it is one of their own people: a member of their
+    partner account, or linked to it directly on the user record.
+  */
+  const ownUserIds =
+    party === 'partner' && order.partnerId
+      ? new Set(
+          (
+            await db
+              .select({ userId: partnerMembers.userId })
+              .from(partnerMembers)
+              .where(eq(partnerMembers.partnerId, order.partnerId))
+          ).map((member) => member.userId),
+        )
+      : null;
+
   // A private file opens through /api/files, never by its storage address
-  return documents.map((document) => ({
-    ...document,
-    fileUrl: fileHref(document.fileUrl),
-  }));
+  return documents.map(({ uploaderLegacyPartnerId, ...document }) => {
+    const uploaderIsOwn =
+      !ownUserIds ||
+      (document.uploader !== null &&
+        (ownUserIds.has(document.uploader.id) ||
+          (order.partnerId !== null &&
+            uploaderLegacyPartnerId === order.partnerId)));
+
+    return {
+      ...document,
+      uploader: uploaderIsOwn ? document.uploader : null,
+      fileUrl: fileHref(document.fileUrl),
+    };
+  });
 });
 
 export default documentsGetMany;
