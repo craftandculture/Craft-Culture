@@ -11,6 +11,8 @@ import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
 import discountAmount from '@/lib/zoho/discountAmount';
 import { getSalesOrder, listAllSalesOrdersByStatus } from '@/lib/zoho/salesOrders';
 
+import refreshNamedSalesOrders from './refreshNamedSalesOrders';
+
 /**
  * Bring Zoho's open and invoiced sales orders into the warehouse
  *
@@ -29,11 +31,17 @@ import { getSalesOrder, listAllSalesOrdersByStatus } from '@/lib/zoho/salesOrder
  *   result.message; // 'Synced 2 new, 5 updated from 41 orders'
  *
  * @param options.forceRefreshOrderNumbers - Re-fetch these even when Zoho reports them unchanged
+ * @param options.onlyTheseOrders - Refresh only the named orders and skip the sweep (see refreshNamedSalesOrders)
  * @returns Counts, failures and a one-line summary
  */
 const syncSalesOrdersFromZoho = async ({
   forceRefreshOrderNumbers = [],
-}: { forceRefreshOrderNumbers?: string[] } = {}) => {
+  onlyTheseOrders = false,
+}: { forceRefreshOrderNumbers?: string[]; onlyTheseOrders?: boolean } = {}) => {
+  if (onlyTheseOrders && forceRefreshOrderNumbers.length > 0) {
+    return refreshNamedSalesOrders(forceRefreshOrderNumbers);
+  }
+
   const forceOrderNumbers = new Set(forceRefreshOrderNumbers);
 
   const results = {
@@ -49,14 +57,25 @@ const syncSalesOrdersFromZoho = async ({
   const shortOnSync: string[] = [];
 
   // Fetch all sales orders from Zoho that need fulfillment (paginated)
-  const [openOrders, invoicedOrders] = await Promise.all([
+  const [openOrders, invoicedOrders, partlyInvoicedOrders] = await Promise.all([
     listAllSalesOrdersByStatus('open'),
     listAllSalesOrdersByStatus('invoiced'),
+    /*
+      Partly invoiced orders are pickable (isPickableZohoStatus) but were never
+      listed, so they were never refreshed, and the closed-order step saw them
+      as missing and spent its Zoho checks on them. Caught on its own so that,
+      should Zoho refuse this status filter, the open and invoiced sync still runs.
+    */
+    listAllSalesOrdersByStatus('partially_invoiced').catch((error) => {
+      console.error('Failed to list partially invoiced sales orders', { error });
+      return [];
+    }),
   ]);
 
   const salesOrders = [
     ...openOrders,
     ...invoicedOrders,
+    ...partlyInvoicedOrders,
   ];
 
   results.fetched = salesOrders.length;

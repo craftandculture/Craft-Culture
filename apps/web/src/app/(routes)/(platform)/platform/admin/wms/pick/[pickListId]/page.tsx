@@ -239,17 +239,22 @@ const WMSPickListDetailPage = () => {
    *
    * The forced pull matters: correcting a SKU on the Zoho item master does not
    * bump the sales order's last-modified time, so the routine poll skips it and
-   * a re-sync alone would rebuild from the same stale SKU. If Zoho is
-   * unreachable we still re-sync from stored lines rather than block the pick.
+   * a re-sync alone would rebuild from the same stale SKU. Only this order is
+   * fetched (onlyTheseOrders): the full sync ran past the request timeout and
+   * the warning below then appeared even though Zoho was fine. If the refresh
+   * genuinely fails we still re-sync from stored lines rather than block the pick.
    */
   const handleResync = async () => {
     if (data?.orderNumber) {
-      try {
-        await syncOrderMutation.mutateAsync({
+      const refreshFailed = await syncOrderMutation
+        .mutateAsync({
           forceRefreshOrderNumbers: [data.orderNumber],
-        });
-      } catch {
-        toast.error('Could not reach Zoho — re-syncing from stored lines');
+          onlyTheseOrders: true,
+        })
+        .then((result) => result.errors > 0)
+        .catch(() => true);
+      if (refreshFailed) {
+        toast.error('Zoho refresh failed. Re-syncing from the lines already stored.');
       }
     }
     resyncMutation.mutate({ pickListId });

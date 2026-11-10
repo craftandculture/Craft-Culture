@@ -211,8 +211,10 @@ const ZohoCleanupTab = ({ programmeId }: ZohoCleanupTabProps) => {
         return;
       }
 
+      // Just these orders: the full sweep adds nothing here and is slow
       await trpcClient.zohoSalesOrders.sync.mutate({
         forceRefreshOrderNumbers: orderNumbers,
+        onlyTheseOrders: true,
       });
 
       /*

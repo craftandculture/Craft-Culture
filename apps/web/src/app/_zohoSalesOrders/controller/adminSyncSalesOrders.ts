@@ -22,6 +22,14 @@ const syncSalesOrdersSchema = z
      * limit — a blanket force would mean one detail request per open order.
      */
     forceRefreshOrderNumbers: z.array(z.string()).max(25).optional(),
+    /**
+     * Refresh only the named orders and skip the full sweep and its follow-on
+     * steps. For screens that care about one order (the scanner's re-sync):
+     * the sweep lists every open order and ran past the request timeout.
+     * Left off, a named force still runs the sweep, which is what the New Pick
+     * List button needs so that new orders keep arriving.
+     */
+    onlyTheseOrders: z.boolean().optional(),
   })
   .optional();
 
@@ -37,6 +45,7 @@ const adminSyncSalesOrders = adminProcedure
 
     return syncSalesOrdersFromZoho({
       forceRefreshOrderNumbers: input?.forceRefreshOrderNumbers,
+      onlyTheseOrders: input?.onlyTheseOrders,
     });
   });
 
