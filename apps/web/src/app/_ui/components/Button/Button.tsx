@@ -93,6 +93,7 @@ const Button = ({
   children,
   isDisabled,
   isToggled,
+  disabled,
   ...props
 }: React.PropsWithChildren<
   ButtonProps & React.ButtonHTMLAttributes<HTMLButtonElement>
@@ -102,6 +103,12 @@ const Button = ({
   return (
     <ButtonWrapper
       aria-disabled={isDisabled}
+      /*
+        A real <button> also gets the native attribute so Enter/Space cannot
+        fire onClick while it looks disabled. With asChild the child may be a
+        link or a Radix trigger, so only pass through what the caller set.
+      */
+      disabled={asChild ? disabled : Boolean(disabled || isDisabled) || undefined}
       data-state={isToggled ? 'open' : undefined}
       className={buttonStyles({
         colorRole,

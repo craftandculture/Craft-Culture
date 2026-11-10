@@ -142,6 +142,7 @@ describe('Button', () => {
       expect(button).toHaveClass('opacity-50');
       expect(button).toHaveClass('cursor-not-allowed');
       expect(button).toHaveAttribute('aria-disabled', 'true');
+      expect(button).toBeDisabled();
     });
 
     it('should render toggled state', () => {
