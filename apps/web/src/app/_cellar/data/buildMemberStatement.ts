@@ -394,6 +394,8 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
       mandates.filter((row) => offersPerKey.get(row.lwinKey) === 1).map((row) => [row.lwinKey, askOf(row)]),
     );
     const askFor = (lwin18: string) => askByLwin.get(lwin18) ?? askByKey.get(lwinPakKeyOf(lwin18));
+    // The same rule for cost: the exact code, then the wine key only where it is unambiguous
+    const costFor = (lwin18: string) => costs.get(lwin18) ?? costs.get(lwinPakKeyOf(lwin18));
     const valueOf = (row: (typeof leftRows)[number], bottles: number, isOwnDelivery: boolean) => {
       if (isOwnDelivery) return null;
       // A take-out reason first: a count correction re-recorded as one keeps its type
@@ -401,17 +403,17 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
         const rule = STOCK_OUT_REASONS[row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS];
         if (rule?.settlement === 'price') return row.unitPriceUsd != null ? bottles * row.unitPriceUsd : null;
         if (rule?.settlement === 'cc_landed') {
-          const price = askFor(row.lwin18) ?? costs.get(lwinPakKeyOf(row.lwin18))?.importPerBottle;
+          const price = askFor(row.lwin18) ?? costFor(row.lwin18)?.importPerBottle;
           if (price != null) return bottles * price;
         }
         if (rule?.settlement === 'cc_landed' || rule?.settlement === 'owner_reimbursed') {
-          const landed = costs.get(lwinPakKeyOf(row.lwin18))?.landedPerBottle;
+          const landed = costFor(row.lwin18)?.landedPerBottle;
           return landed != null ? bottles * landed : null;
         }
         return null;
       }
       if (row.movementType === 'count') return null;
-      const price = askFor(row.lwin18) ?? costs.get(lwinPakKeyOf(row.lwin18))?.importPerBottle;
+      const price = askFor(row.lwin18) ?? costFor(row.lwin18)?.importPerBottle;
       return price != null ? bottles * price : null;
     };
 
@@ -758,7 +760,7 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
         const bottles = row.cases * (row.caseConfig ?? 1);
         // The owner's own price where set, otherwise what it cost them
         const ask = askFor(row.lwin18);
-        const perBottle = ask ?? costs.get(lwinPakKeyOf(row.lwin18))?.importPerBottle ?? null;
+        const perBottle = ask ?? costFor(row.lwin18)?.importPerBottle ?? null;
 
         return {
           ...row,
@@ -793,7 +795,7 @@ const buildMemberStatement = async ({ partner, month: monthKey }: { partner: Sta
                 ? 'Price on the take-out'
                 : rule.settlement === 'cc_landed' && askFor(row.lwin18) != null
                   ? 'Member price'
-                  : rule.settlement === 'cc_landed' && costs.get(lwinPakKeyOf(row.lwin18))?.importPerBottle != null
+                  : rule.settlement === 'cc_landed' && costFor(row.lwin18)?.importPerBottle != null
                   ? 'Cost before freight'
                   : rule.settlement === 'cc_landed' || rule.settlement === 'owner_reimbursed'
                   ? 'Landed cost'
