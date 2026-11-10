@@ -260,7 +260,7 @@ const DistributorSupportPage = () => {
                 },
                 {
                   title: 'Upload your invoice',
-                  body: 'Upload the invoice on the order page. It is required before client payment can be confirmed.',
+                  body: 'Upload the invoice on the order page whenever it is issued. If the client pays in advance and is invoiced on delivery, confirm the payment first and upload the invoice after delivery.',
                 },
                 {
                   title: 'Confirm Client Payment',

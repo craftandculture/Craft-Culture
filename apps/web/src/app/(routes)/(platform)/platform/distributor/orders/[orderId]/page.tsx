@@ -545,9 +545,8 @@ const DistributorOrderDetailPage = () => {
               isPending: isConfirmingPayment,
             }
           : null;
-  // The server refuses client payment without the distributor's invoice
-  const invoiceMissing =
-    order.status === 'awaiting_client_payment' && documents !== undefined && !hasDistributorInvoice;
+  // Not a block: a client who pays in advance is invoiced only once the order is delivered
+  const invoiceMissing = order.status !== 'cancelled' && documents !== undefined && !hasDistributorInvoice;
   // Not a block: the server looks the SKU up in the distributor's feed on confirming
   const skuMissing =
     order.status === 'awaiting_client_payment' &&
@@ -739,11 +738,6 @@ const DistributorOrderDetailPage = () => {
                 <Typography variant="bodySm" colorRole="muted" className="mt-1">
                   {nextStep.hint}
                 </Typography>
-                {invoiceMissing && (
-                  <Typography variant="bodyXs" className="mt-1 font-medium text-text-warning">
-                    Upload your invoice first. It is needed before client payment can be confirmed.
-                  </Typography>
-                )}
                 {skuMissing && (
                   <Typography variant="bodyXs" colorRole="muted" className="mt-1">
                     No bundle SKU is recorded yet. It is looked up in your stock feed when you
@@ -756,8 +750,8 @@ const DistributorOrderDetailPage = () => {
                 colorRole="brand"
                 size="lg"
                 className="w-full shrink-0 sm:w-auto"
-                disabled={nextStep.isPending || invoiceMissing}
-                isDisabled={nextStep.isPending || invoiceMissing}
+                disabled={nextStep.isPending}
+                isDisabled={nextStep.isPending}
                 onClick={() =>
                   setPendingConfirm({
                     title: nextStep.label,
@@ -930,8 +924,8 @@ const DistributorOrderDetailPage = () => {
           </Card>
         )}
 
-        {/* Invoice Status - shown when awaiting client payment and no invoice uploaded */}
-        {order.status === 'awaiting_client_payment' && !hasDistributorInvoice && (
+        {/* Invoice upload - open at every stage until the invoice is on the order */}
+        {invoiceMissing && (
           <Card className="border-2 border-fill-warning/50 bg-fill-warning/5">
             <CardContent className="p-6">
               {/* Hidden file input for invoice upload */}
@@ -951,8 +945,9 @@ const DistributorOrderDetailPage = () => {
                     Upload your invoice
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
-                    Needed before you can confirm the client&rsquo;s payment. It is also shared with
-                    the partner for their records. PDF, PNG or JPG, up to 10 MB.
+                    Add it whenever it is issued, before or after delivery. Client payment can be
+                    confirmed without it. It is shared with the partner for their records. PDF, PNG or
+                    JPG, up to 10 MB.
                   </Typography>
                 </div>
                 <Button

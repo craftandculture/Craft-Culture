@@ -5,7 +5,6 @@ import { z } from 'zod';
 import db from '@/database/client';
 import {
   privateClientOrderActivityLogs,
-  privateClientOrderDocuments,
   privateClientOrderStatus,
   privateClientOrders,
 } from '@/database/schema';
@@ -125,31 +124,12 @@ const distributorUpdateStatus = distributorProcedure
       });
     }
 
-    // Check if invoice is required before confirming client payment
     if (status === 'client_paid') {
       // The distributor's bundle SKU must be on the order (City Drinks)
       await assertDistributorSku(orderId);
 
-      const [invoice] = await db
-        .select()
-        .from(privateClientOrderDocuments)
-        .where(
-          and(
-            eq(privateClientOrderDocuments.orderId, orderId),
-            eq(privateClientOrderDocuments.documentType, 'distributor_invoice'),
-          ),
-        )
-        .limit(1);
-
-      if (!invoice) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'You must upload an invoice before confirming client payment',
-        });
-      }
-
-      // Partner acknowledgment is no longer required - payment takes priority over ACK
-      // If partner hasn't acknowledged, we proceed anyway to keep stock moving
+      // No invoice needed here: a client who pays in advance is only invoiced once the
+      // order is delivered, so the distributor uploads it whenever it is issued
     }
 
     // Build update data with timestamp
