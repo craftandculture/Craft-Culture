@@ -85,11 +85,24 @@ const WMSDashboardContent = () => {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger if Ctrl/Cmd is pressed and not in an input
-      if (!(e.ctrlKey || e.metaKey)) return;
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      /*
+        Alt + letter only. Ctrl/Cmd + R, P, C, T, D and S are the browser's own
+        reload, print, copy, new tab, bookmark and save, and taking them broke
+        copying a code off this page.
+      */
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
+      ) {
+        return;
+      }
+      // Someone selecting text is not asking to leave the page
+      if (window.getSelection()?.toString()) return;
 
-      switch (e.key.toLowerCase()) {
+      // e.code, not e.key: on a Mac, Alt + R types "®"
+      switch (e.code.replace(/^Key/, '').toLowerCase()) {
         case 'r':
           e.preventDefault();
           router.push('/platform/admin/wms/receive');
@@ -214,7 +227,7 @@ const WMSDashboardContent = () => {
           </Typography>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>
-              <Link href="/platform/admin/wms/scanner-test">
+              <Link aria-label="Scanner test" href="/platform/admin/wms/scanner-test">
                 <Icon icon={IconBarcode} size="sm" />
               </Link>
             </Button>
@@ -224,7 +237,7 @@ const WMSDashboardContent = () => {
         {/* Keyboard Shortcuts Hint */}
         <div className="hidden sm:block">
           <Typography variant="bodyXs" colorRole="muted" className="text-center">
-            Shortcuts: Ctrl+R (Receive) · Ctrl+P (Pick) · Ctrl+C (Check) · Ctrl+T (Transfer) · Ctrl+D (Dispatch) · Ctrl+S (Stock)
+            Shortcuts: Alt+R (Receive) · Alt+P (Pick) · Alt+C (Check) · Alt+T (Transfer) · Alt+D (Dispatch) · Alt+S (Stock)
           </Typography>
         </div>
 
