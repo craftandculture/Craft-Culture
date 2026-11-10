@@ -8,13 +8,12 @@ import db from '@/database/client';
 import { cellarUkMoveItems, cellarUkMoves, logisticsShipments, partners } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
+import { CLOSED_SHIPMENT_STATUSES } from '../constants/closedShipmentStatuses';
 import putUkMoveOnShipment from '../data/putUkMoveOnShipment';
 import resolveUkMoveLines from '../data/resolveUkMoveLines';
 import generateUkMoveNumber from '../utils/generateUkMoveNumber';
 import notifyUkMoveUpdate from '../utils/notifyUkMoveUpdate';
 
-/** Receiving has started or the shipment is closed: its lines are no longer edited */
-const CLOSED_STATUSES = ['partially_received', 'delivered', 'cancelled'];
 
 /**
  * Add a cellar member's UK wine to an inbound shipment the team already arranged
@@ -66,7 +65,7 @@ const adminAddUkWineToShipment = staffAdminProcedure
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Set the client on this shipment first.' });
     }
 
-    if (CLOSED_STATUSES.includes(shipment.status)) {
+    if (CLOSED_SHIPMENT_STATUSES.includes(shipment.status)) {
       throw new TRPCError({
         code: 'CONFLICT',
         message: 'Receiving has started on this shipment, so its lines can no longer change.',
