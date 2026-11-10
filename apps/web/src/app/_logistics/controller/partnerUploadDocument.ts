@@ -6,7 +6,6 @@ import db from '@/database/client';
 import { logisticsDocuments, logisticsShipments } from '@/database/schema';
 import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { winePartnerProcedure } from '@/lib/trpc/procedures';
-import isVercelBlobUrl from '@/utils/isVercelBlobUrl';
 import logger from '@/utils/logger';
 
 import uploadDocumentSchema from '../schemas/uploadDocumentSchema';
@@ -23,10 +22,11 @@ const ALLOWED_DOCUMENT_TYPES = [
  * Partner upload a document to a logistics shipment
  *
  * Verifies the partner has access to the shipment before allowing upload.
- * Supports both blobUrl (client upload) and file (base64) modes.
+ * Takes the file itself (base64) only: see the blobUrl branch for why an
+ * already-stored address is refused.
  */
 const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).mutation(async ({ input, ctx }) => {
-  const { shipmentId, documentType, documentNumber, issueDate, expiryDate, file, filename, blobUrl, fileType, fileSize } = input;
+  const { shipmentId, documentType, documentNumber, issueDate, expiryDate, file, filename, blobUrl } = input;
   const { user, partner } = ctx;
 
   // Verify shipment exists and belongs to this partner
@@ -48,14 +48,15 @@ const partnerUploadDocument = winePartnerProcedure.input(uploadDocumentSchema).m
     let finalMimeType: string;
 
     if (blobUrl) {
-      // SSRF guard: only accept our own Vercel Blob URLs — this value is fetched
-      // server-side by the extraction job.
-      if (!isVercelBlobUrl(blobUrl)) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid upload URL' });
-      }
-      finalUrl = blobUrl;
-      finalSize = fileSize ?? 0;
-      finalMimeType = fileType;
+      /*
+        Partners send the file itself; the browser upload route that hands out
+        blob addresses is for staff only, so a partner never holds one of
+        their own. Accepting an address here let a partner attach any C&C file
+        whose link they had seen to their own shipment and then open it as
+        theirs.
+      */
+      logger.warn('Partner sent a blob URL to the document upload; refused', { partnerId: partner.id, shipmentId });
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Please upload the file itself.' });
     } else if (file) {
       if (!process.env.BLOB_PRIVATE_READ_WRITE_TOKEN) {
         logger.error('BLOB_PRIVATE_READ_WRITE_TOKEN environment variable is not set');

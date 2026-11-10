@@ -62,20 +62,28 @@ const mayOpen = async (viewer: Viewer, url: string, pathname: string) => {
     );
   }
 
-  // A shipment's documents: staff, or the wine partner the shipment is for
-  const [shipmentDocument] = await db
+  /*
+    A shipment's documents: staff, or the wine partner the shipment is for.
+    Every row holding this file is checked, not just the first: a partner who
+    attached a C&C file's address to their own shipment would otherwise pass
+    on their own row while C&C's row for the same file said no.
+  */
+  const shipmentDocuments = await db
     .select({
       partnerId: logisticsShipments.partnerId,
       uploadedBy: logisticsDocuments.uploadedBy,
     })
     .from(logisticsDocuments)
     .innerJoin(logisticsShipments, eq(logisticsDocuments.shipmentId, logisticsShipments.id))
-    .where(eq(logisticsDocuments.fileUrl, url))
-    .limit(1);
+    .where(eq(logisticsDocuments.fileUrl, url));
 
-  if (shipmentDocument) {
+  if (shipmentDocuments.length > 0) {
     if (isTeamMember(viewer)) return true;
-    if (!shipmentDocument.partnerId) return false;
+
+    // One partner's file only: the same file on two partners' shipments, or on one with no partner, is C&C's
+    const partnerIds = new Set(shipmentDocuments.map((row) => row.partnerId));
+    const [partnerId] = [...partnerIds];
+    if (partnerIds.size !== 1 || !partnerId) return false;
 
     const [membership] = await db
       .select({ partnerId: partnerMembers.partnerId })
@@ -83,22 +91,25 @@ const mayOpen = async (viewer: Viewer, url: string, pathname: string) => {
       .where(
         and(
           eq(partnerMembers.userId, viewer.id),
-          eq(partnerMembers.partnerId, shipmentDocument.partnerId),
+          eq(partnerMembers.partnerId, partnerId),
         ),
       )
       .limit(1);
-    if (viewer.partnerId !== shipmentDocument.partnerId && !membership) return false;
+    if (viewer.partnerId !== partnerId && !membership) return false;
 
     /*
       The same rule as the partner's shipment page: only what their own
       people uploaded. Being the shipment's partner opened every document on
       it, freight and agent invoices included, to anyone holding the link,
-      and we mark freight up.
+      and we mark freight up. Every row must pass, so one C&C upload of the
+      file refuses it.
     */
-    const people = await getPartnerUsers(shipmentDocument.partnerId);
-    return Boolean(
-      shipmentDocument.uploadedBy &&
-        (shipmentDocument.uploadedBy === viewer.id || people.some((person) => person.id === shipmentDocument.uploadedBy)),
+    const people = await getPartnerUsers(partnerId);
+    return shipmentDocuments.every((row) =>
+      Boolean(
+        row.uploadedBy &&
+          (row.uploadedBy === viewer.id || people.some((person) => person.id === row.uploadedBy)),
+      ),
     );
   }
 
