@@ -231,7 +231,7 @@ const WMSPickListDetailPage = () => {
 
   // Forced pull of THIS order from Zoho, run before the re-sync below.
   const syncOrderMutation = useMutation({
-    ...api.zohoSalesOrders.sync.mutationOptions(),
+    ...api.zohoSalesOrders.refreshOrders.mutationOptions(),
   });
 
   /**
@@ -247,10 +247,7 @@ const WMSPickListDetailPage = () => {
   const handleResync = async () => {
     if (data?.orderNumber) {
       const refreshFailed = await syncOrderMutation
-        .mutateAsync({
-          forceRefreshOrderNumbers: [data.orderNumber],
-          onlyTheseOrders: true,
-        })
+        .mutateAsync({ orderNumbers: [data.orderNumber] })
         .then((result) => result.errors > 0)
         .catch(() => true);
       if (refreshFailed) {

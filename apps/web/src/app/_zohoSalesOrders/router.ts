@@ -24,6 +24,7 @@ import adminSyncSalesOrders from './controller/adminSyncSalesOrders';
 import adminSyncZohoInvoices from './controller/adminSyncZohoInvoices';
 import adminTestPaymentAlerts from './controller/adminTestPaymentAlerts';
 import adminWhereIsOrder from './controller/adminWhereIsOrder';
+import wmsRefreshSalesOrders from './controller/wmsRefreshSalesOrders';
 
 const zohoSalesOrdersRouter = createTRPCRouter({
   list: adminListSalesOrders,
@@ -38,6 +39,7 @@ const zohoSalesOrdersRouter = createTRPCRouter({
   releaseDraftHold: adminReleaseDraftHold,
   dismissDeleted: adminDismissDeletedSalesOrder,
   sync: adminSyncSalesOrders,
+  refreshOrders: wmsRefreshSalesOrders,
   syncInvoices: adminSyncZohoInvoices,
   // Send a test message to #payments-received
   testPaymentAlerts: adminTestPaymentAlerts,
