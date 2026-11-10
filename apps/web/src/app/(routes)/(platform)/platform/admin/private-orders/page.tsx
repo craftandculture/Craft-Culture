@@ -29,6 +29,8 @@ import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
 import Checkbox from '@/app/_ui/components/Checkbox/Checkbox';
+import useConfirmDialog from '@/app/_ui/components/ConfirmDialog/useConfirmDialog';
+import EmptyState from '@/app/_ui/components/EmptyState/EmptyState';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Select from '@/app/_ui/components/Select/Select';
@@ -39,6 +41,7 @@ import SelectValue from '@/app/_ui/components/Select/SelectValue';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import type { PrivateClientOrder } from '@/database/schema';
 import useTRPC from '@/lib/trpc/browser';
+import { formatDate } from '@/utils/formatDate';
 import formatPrice from '@/utils/formatPrice';
 
 type OrderStatus = PrivateClientOrder['status'];
@@ -128,6 +131,7 @@ const InvoicingBadge = ({
 
 const AdminPrivateOrdersPage = () => {
   const api = useTRPC();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   // One subscription box, stored as its index in `boxes` ('all' for none)
@@ -286,7 +290,7 @@ const AdminPrivateOrdersPage = () => {
 
   // A status change is never one click: routine steps are confirmed, and a
   // jump outside the normal steps is confirmed as a correction
-  const handleStatusChange = (
+  const handleStatusChange = async (
     order: { id: string; orderNumber: string | null; status: OrderStatus },
     newStatus: OrderStatus,
   ) => {
@@ -296,7 +300,14 @@ const AdminPrivateOrdersPage = () => {
     const question = routine
       ? `Change ${order.orderNumber ?? 'this order'} to "${label}"?`
       : `Moving ${order.orderNumber ?? 'this order'} to "${label}" skips or reverses the normal steps. Make this correction?`;
-    if (!window.confirm(question)) return;
+    if (
+      !(await confirm({
+        title: routine ? 'Change order status?' : 'Make this correction?',
+        description: question,
+        confirmLabel: routine ? 'Change status' : 'Make correction',
+      }))
+    )
+      return;
     setUpdatingId(order.id);
     updateStatus({ orderId: order.id, status: newStatus, override: routine ? undefined : true });
   };
@@ -305,13 +316,26 @@ const AdminPrivateOrdersPage = () => {
     setExpandedId(expandedId === orderId ? null : orderId);
   };
 
-  const formatDate = (date: Date | null | undefined) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+  const hasActiveFilters = Boolean(
+    searchQuery ||
+      statusFilter !== 'all' ||
+      boxFilter !== 'all' ||
+      distributorFilter !== 'all' ||
+      stageFilter ||
+      skuMissingFilter ||
+      idleFilter ||
+      invoiceFilter,
+  );
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setBoxFilter('all');
+    setDistributorFilter('all');
+    setStageFilter(null);
+    setSkuMissingFilter(false);
+    setIdleFilter(false);
+    setInvoiceFilter(null);
   };
 
   return (
@@ -559,16 +583,25 @@ const AdminPrivateOrdersPage = () => {
           </Card>
         ) : orders.length === 0 ? (
           <Card>
-            <CardContent className="p-12 text-center">
-              <Icon icon={IconPackage} size="xl" className="mx-auto mb-4 text-text-muted" />
-              <Typography variant="headingSm" className="mb-2">
-                No Orders Found
-              </Typography>
-              <Typography variant="bodyMd" colorRole="muted">
-                {searchQuery || statusFilter !== 'all' || boxFilter !== 'all' || distributorFilter !== 'all' || stageFilter || skuMissingFilter || idleFilter || invoiceFilter
-                  ? 'No orders match your filters. Try adjusting your search.'
-                  : 'No private client orders have been created yet.'}
-              </Typography>
+            <CardContent className="p-0">
+              {hasActiveFilters ? (
+                <EmptyState
+                  icon={IconPackage}
+                  title="No orders match these filters"
+                  description="Try a different search, or clear the filters to see every order."
+                  action={
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      <ButtonContent>Clear filters</ButtonContent>
+                    </Button>
+                  }
+                />
+              ) : (
+                <EmptyState
+                  icon={IconPackage}
+                  title="No private client orders yet"
+                  description="Orders appear here once a partner creates one."
+                />
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -760,7 +793,7 @@ const AdminPrivateOrdersPage = () => {
                                     <Select
                                       value={order.status}
                                       onValueChange={(v) =>
-                                        handleStatusChange(order, v as OrderStatus)
+                                        void handleStatusChange(order, v as OrderStatus)
                                       }
                                       disabled={isThisUpdating}
                                     >
@@ -955,7 +988,7 @@ const AdminPrivateOrdersPage = () => {
                             </Typography>
                             <Select
                               value={order.status}
-                              onValueChange={(v) => handleStatusChange(order, v as OrderStatus)}
+                              onValueChange={(v) => void handleStatusChange(order, v as OrderStatus)}
                               disabled={isThisUpdating}
                             >
                               <SelectTrigger className="w-full" aria-label={`Change status of ${order.orderNumber}`}>
@@ -1038,10 +1071,16 @@ const AdminPrivateOrdersPage = () => {
                 size="sm"
                 colorRole="brand"
                 disabled={!bulkDistributorId || bulkAssign.isPending}
-                onClick={() => {
+                onClick={async () => {
                   const name = distributors.find((d) => d.id === bulkDistributorId)?.businessName ?? 'this distributor';
                   const n = visibleSelected.length;
-                  if (!window.confirm(`Assign ${name} to ${n} order${n === 1 ? '' : 's'}?`)) return;
+                  if (
+                    !(await confirm({
+                      title: `Assign ${name} to ${n} order${n === 1 ? '' : 's'}?`,
+                      confirmLabel: 'Assign',
+                    }))
+                  )
+                    return;
                   bulkAssign.mutate({
                     orderIds: visibleSelected,
                     distributorId: bulkDistributorId,
@@ -1077,9 +1116,15 @@ const AdminPrivateOrdersPage = () => {
                 size="sm"
                 colorRole="brand"
                 disabled={!bulkStockStatus || bulkStock.isPending}
-                onClick={() => {
+                onClick={async () => {
                   const n = visibleSelected.length;
-                  if (!window.confirm(`Set the stock status of every line on ${n} order${n === 1 ? '' : 's'}?`)) return;
+                  if (
+                    !(await confirm({
+                      title: `Set the stock status of every line on ${n} order${n === 1 ? '' : 's'}?`,
+                      confirmLabel: 'Apply',
+                    }))
+                  )
+                    return;
                   bulkStock.mutate({
                     orderIds: visibleSelected,
                     stockStatus: bulkStockStatus as
@@ -1103,6 +1148,7 @@ const AdminPrivateOrdersPage = () => {
           </div>
         </div>
       )}
+      {confirmDialog}
     </div>
   );
 };

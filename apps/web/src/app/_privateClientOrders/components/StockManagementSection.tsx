@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import useConfirmDialog from '@/app/_ui/components/ConfirmDialog/useConfirmDialog';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Select from '@/app/_ui/components/Select/Select';
@@ -97,6 +98,7 @@ const StockManagementSection = ({
   excludeStatuses = [],
 }: StockManagementSectionProps) => {
   const api = useTRPC();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const queryClient = useQueryClient();
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
@@ -162,7 +164,7 @@ const StockManagementSection = ({
     });
   };
 
-  const handleBulkUpdate = (status: StockStatus) => {
+  const handleBulkUpdate = async (status: StockStatus) => {
     const itemIds = items
       .filter((item) => item.stockStatus !== status)
       .map((item) => item.id);
@@ -174,7 +176,12 @@ const StockManagementSection = ({
 
     // Moves every line at once, so it is asked first
     const label = bulkStatusOptions.find((opt) => opt.value === status)?.label ?? status;
-    if (!window.confirm(`Set ${itemIds.length} line${itemIds.length === 1 ? '' : 's'} to "${label}"?`)) {
+    if (
+      !(await confirm({
+        title: `Set ${itemIds.length} line${itemIds.length === 1 ? '' : 's'} to "${label}"?`,
+        confirmLabel: 'Update lines',
+      }))
+    ) {
       return;
     }
 
@@ -260,7 +267,7 @@ const StockManagementSection = ({
               variant="ghost"
               size="xs"
               shape="pill"
-              onClick={() => handleBulkUpdate(opt.value)}
+              onClick={() => void handleBulkUpdate(opt.value)}
               disabled={isBulkUpdating}
               title={opt.description}
             >
@@ -524,6 +531,7 @@ const StockManagementSection = ({
           </table>
         </div>
       </CardContent>
+      {confirmDialog}
     </Card>
   );
 };

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import useConfirmDialog from '@/app/_ui/components/ConfirmDialog/useConfirmDialog';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
 import Typography from '@/app/_ui/components/Typography/Typography';
@@ -35,6 +36,7 @@ const dateLabel = (value: Date | string | null) =>
  */
 const ManualInvoicingCard = ({ orderId }: ManualInvoicingCardProps) => {
   const api = useTRPC();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -183,13 +185,16 @@ const ManualInvoicingCard = ({ orderId }: ManualInvoicingCardProps) => {
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => {
+                    onClick={async () => {
                       // Removing a recorded invoice puts the line back in the invoicing queue
                       if (
                         invoiced &&
-                        !window.confirm(
-                          `Remove invoice ${item.invoicing?.invoiceNumber ?? ''} from ${item.productName}? The line goes back to Invoice Pending.`,
-                        )
+                        !(await confirm({
+                          title: `Remove invoice ${item.invoicing?.invoiceNumber ?? ''}?`,
+                          description: `${item.productName} goes back to Invoice Pending.`,
+                          confirmLabel: 'Remove invoice',
+                          tone: 'danger',
+                        }))
                       ) {
                         return;
                       }
@@ -274,6 +279,7 @@ const ManualInvoicingCard = ({ orderId }: ManualInvoicingCardProps) => {
           </div>
         )}
       </CardContent>
+      {confirmDialog}
     </Card>
   );
 };

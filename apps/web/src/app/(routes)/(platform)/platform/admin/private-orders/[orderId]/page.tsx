@@ -50,6 +50,7 @@ import MakeJobButton from '@/app/_teamTasks/components/MakeJobButton';
 import Button from '@/app/_ui/components/Button/Button';
 import Card from '@/app/_ui/components/Card/Card';
 import CardContent from '@/app/_ui/components/Card/CardContent';
+import useConfirmDialog from '@/app/_ui/components/ConfirmDialog/useConfirmDialog';
 import Divider from '@/app/_ui/components/Divider/Divider';
 import Icon from '@/app/_ui/components/Icon/Icon';
 import Input from '@/app/_ui/components/Input/Input';
@@ -165,6 +166,7 @@ const AdminPrivateOrderDetailPage = () => {
   const router = useRouter();
   const orderId = params.orderId as string;
   const api = useTRPC();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
   const { printLabels, isPrinting } = usePrintPcoLabels();
@@ -436,14 +438,21 @@ const AdminPrivateOrderDetailPage = () => {
 
   // A status change is never one click: routine steps are confirmed, and a
   // jump outside the normal steps is confirmed as a correction
-  const handleStatusChange = (newStatus: OrderStatus) => {
+  const handleStatusChange = async (newStatus: OrderStatus) => {
     if (!order || newStatus === order.status) return;
     const label = statusOptions.find((opt) => opt.value === newStatus)?.label ?? newStatus;
     const routine = isRoutinePcoTransition(order.status, newStatus);
     const question = routine
       ? `Change this order to "${label}"?`
       : `Moving this order to "${label}" skips or reverses the normal steps. Make this correction?`;
-    if (!window.confirm(question)) return;
+    if (
+      !(await confirm({
+        title: routine ? 'Change order status?' : 'Make this correction?',
+        description: question,
+        confirmLabel: routine ? 'Change status' : 'Make correction',
+      }))
+    )
+      return;
     setIsUpdating(true);
     updateStatus({ orderId, status: newStatus, override: routine ? undefined : true });
   };
@@ -492,8 +501,15 @@ const AdminPrivateOrderDetailPage = () => {
     });
   };
 
-  const handleRemoveItem = (itemId: string) => {
-    if (confirm('Are you sure you want to remove this item?')) {
+  const handleRemoveItem = async (itemId: string) => {
+    if (
+      await confirm({
+        title: 'Remove this line?',
+        description: 'The line is taken off the order.',
+        confirmLabel: 'Remove line',
+        tone: 'danger',
+      })
+    ) {
       removeItem({ itemId });
     }
   };
@@ -542,8 +558,15 @@ const AdminPrivateOrderDetailPage = () => {
   // A member's own wine going to them (a cellar release), not a sale to a client
   const isMemberDelivery = !!order?.cellarRelease || order?.orderKind === 'owner_delivery';
 
-  const handleDeleteOrder = () => {
-    if (confirm(`Are you sure you want to permanently delete order ${order?.orderNumber}? This action cannot be undone.`)) {
+  const handleDeleteOrder = async () => {
+    if (
+      await confirm({
+        title: `Delete order ${order?.orderNumber ?? ''}?`,
+        description: 'The order is deleted permanently. This cannot be undone.',
+        confirmLabel: 'Delete order',
+        tone: 'danger',
+      })
+    ) {
       deleteOrder();
     }
   };
@@ -564,11 +587,16 @@ const AdminPrivateOrderDetailPage = () => {
   /**
    * Open the previous or next order, asking first when this one has unsaved edits
    */
-  const goToOrder = (target: { id: string; orderNumber: string } | null) => {
+  const goToOrder = async (target: { id: string; orderNumber: string } | null) => {
     if (!target) return;
     if (
       hasUnsavedChanges &&
-      !window.confirm(`You have unsaved changes on ${order?.orderNumber}. Leave without saving and open ${target.orderNumber}?`)
+      !(await confirm({
+        title: 'Leave without saving?',
+        description: `You have unsaved changes on ${order?.orderNumber}. Leave without saving and open ${target.orderNumber}?`,
+        confirmLabel: 'Leave without saving',
+        tone: 'danger',
+      }))
     ) {
       return;
     }
@@ -675,7 +703,7 @@ const AdminPrivateOrderDetailPage = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => goToOrder(neighbours.previous)}
+                  onClick={() => void goToOrder(neighbours.previous)}
                   isDisabled={!neighbours.previous}
                   aria-label={neighbours.previous ? `Previous order, ${neighbours.previous.orderNumber}` : 'No previous order'}
                   title={neighbours.previous ? `Previous: ${neighbours.previous.orderNumber}` : undefined}
@@ -688,7 +716,7 @@ const AdminPrivateOrderDetailPage = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => goToOrder(neighbours.next)}
+                  onClick={() => void goToOrder(neighbours.next)}
                   isDisabled={!neighbours.next}
                   aria-label={neighbours.next ? `Next order, ${neighbours.next.orderNumber}` : 'No next order'}
                   title={neighbours.next ? `Next: ${neighbours.next.orderNumber}` : undefined}
@@ -725,7 +753,7 @@ const AdminPrivateOrderDetailPage = () => {
 
             <Select
               value={order.status}
-              onValueChange={(v) => handleStatusChange(v as OrderStatus)}
+              onValueChange={(v) => void handleStatusChange(v as OrderStatus)}
               disabled={isUpdating}
             >
               {/* Wide enough for the longest status, "Awaiting Distributor Verification" */}
@@ -773,7 +801,7 @@ const AdminPrivateOrderDetailPage = () => {
                 variant="outline"
                 colorRole="danger"
                 size="sm"
-                onClick={handleDeleteOrder}
+                onClick={() => void handleDeleteOrder()}
                 disabled={isDeleting}
               >
                 <Icon icon={IconTrash} size="sm" />
@@ -903,9 +931,9 @@ const AdminPrivateOrderDetailPage = () => {
                     </SelectContent>
                   </Select>
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
                       const target = resetTargetOptions.find((opt) => opt.value === resetTarget)?.label ?? resetTarget;
-                      if (window.confirm(`Reset ${order.orderNumber} to "${target}"?`)) {
+                      if (await confirm({ title: `Reset ${order.orderNumber} to "${target}"?`, confirmLabel: 'Reset order' })) {
                         resetVerification({ targetStatus: resetTarget });
                       }
                     }}
@@ -1304,7 +1332,7 @@ const AdminPrivateOrderDetailPage = () => {
                                 <Button
                                   variant="ghost"
                                   size="xs"
-                                  onClick={() => handleRemoveItem(item.id)}
+                                  onClick={() => void handleRemoveItem(item.id)}
                                   disabled={isRemovingItem}
                                   className="h-7 w-7 p-0"
                                   aria-label={`Remove ${item.productName}`}
@@ -1390,7 +1418,7 @@ const AdminPrivateOrderDetailPage = () => {
                               <Button variant="outline" size="sm" onClick={() => handleEditItem(item)}>
                                 <Icon icon={IconEdit} size="xs" /> Edit
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(item.id)} disabled={isRemovingItem}>
+                              <Button variant="ghost" size="sm" onClick={() => void handleRemoveItem(item.id)} disabled={isRemovingItem}>
                                 <Icon icon={IconTrash} size="xs" colorRole="danger" /> Remove
                               </Button>
                             </>
@@ -1557,8 +1585,14 @@ const AdminPrivateOrderDetailPage = () => {
                       <button
                         type="button"
                         disabled={isSavingRates}
-                        onClick={() => {
-                          if (window.confirm(`Put ${order.orderNumber} back on the standard pricing variables?`)) {
+                        onClick={async () => {
+                          if (
+                            await confirm({
+                              title: `Put ${order.orderNumber} back on the standard pricing variables?`,
+                              description: 'The custom rates on this order are replaced and prices recalculated.',
+                              confirmLabel: 'Use standard rates',
+                            })
+                          ) {
                             setRates({ mode: 'standard', orderId });
                           }
                         }}
@@ -1904,8 +1938,14 @@ const AdminPrivateOrderDetailPage = () => {
                           <button
                             type="button"
                             disabled={isSavingNotes}
-                            onClick={() => {
-                              if (window.confirm(`Delete the ${label.toLowerCase()} on ${order.orderNumber}?`)) {
+                            onClick={async () => {
+                              if (
+                                await confirm({
+                                  title: `Delete the ${label.toLowerCase()} on ${order.orderNumber}?`,
+                                  confirmLabel: 'Delete',
+                                  tone: 'danger',
+                                })
+                              ) {
                                 saveNotes({ orderId: order.id, [key]: '' });
                               }
                             }}
@@ -2027,6 +2067,7 @@ const AdminPrivateOrderDetailPage = () => {
           </CardContent>
         </Card>
       </div>
+      {confirmDialog}
     </div>
   );
 };

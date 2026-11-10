@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 
 import LinkZohoCustomerDialog from '@/app/_partners/components/LinkZohoCustomerDialog';
 import Button from '@/app/_ui/components/Button/Button';
+import useConfirmDialog from '@/app/_ui/components/ConfirmDialog/useConfirmDialog';
 import Dialog from '@/app/_ui/components/Dialog/Dialog';
 import DialogContent from '@/app/_ui/components/Dialog/DialogContent';
 import DialogDescription from '@/app/_ui/components/Dialog/DialogDescription';
@@ -56,6 +57,7 @@ const ZohoSalesOrderButton = ({
   hasSalesOrder,
 }: ZohoSalesOrderButtonProps) => {
   const api = useTRPC();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const trpcClient = useTRPCClient();
   const queryClient = useQueryClient();
 
@@ -195,12 +197,16 @@ const ZohoSalesOrderButton = ({
           size="sm"
           title="Unlink this sales order so another can be raised. Nothing is deleted in Zoho."
           aria-label="Unlink Zoho sales order"
-          onClick={() => {
+          onClick={async () => {
             // Easy to press by mistake, and the next press of Create raises a second order
             if (
-              window.confirm(
-                `Unlink ${zohoSalesOrderNumber ?? 'this sales order'} from this order? It stays in Zoho; delete or void it there if you are replacing it.`,
-              )
+              await confirm({
+                title: `Unlink ${zohoSalesOrderNumber ?? 'this sales order'}?`,
+                description:
+                  'It stays in Zoho; delete or void it there if you are replacing it.',
+                confirmLabel: 'Unlink',
+                tone: 'danger',
+              })
             ) {
               unlink({ orderId });
             }
@@ -209,6 +215,7 @@ const ZohoSalesOrderButton = ({
         >
           <Icon icon={IconUnlink} size="sm" />
         </Button>
+        {confirmDialog}
       </div>
     );
   }
@@ -328,6 +335,7 @@ const ZohoSalesOrderButton = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </>
   );
 };
