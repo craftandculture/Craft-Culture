@@ -73,6 +73,13 @@ const ordersScheduleDelivery = distributorProcedure
     const now = new Date();
     const deliveryDate = new Date(scheduledDate);
 
+    /*
+      The form sends an empty string when the notes box is left blank, and
+      `??` keeps an empty string, so rescheduling without typing anything
+      wiped the order's delivery notes. Only typed notes replace them.
+    */
+    const typedNotes = notes?.trim() ? notes : null;
+
     // Update order with scheduled delivery
     const [updatedOrder] = await db
       .update(privateClientOrders)
@@ -81,7 +88,7 @@ const ordersScheduleDelivery = distributorProcedure
         scheduledDeliveryDate: deliveryDate,
         scheduledDeliveryAt: now,
         scheduledDeliveryBy: user.id,
-        deliveryNotes: notes ?? order.deliveryNotes,
+        deliveryNotes: typedNotes ?? order.deliveryNotes,
         updatedAt: now,
       })
       .where(eq(privateClientOrders.id, orderId))
@@ -96,7 +103,7 @@ const ordersScheduleDelivery = distributorProcedure
       previousStatus: order.status,
       newStatus: 'delivery_scheduled',
       notes:
-        notes ??
+        typedNotes ??
         `${order.status === 'delivery_scheduled' ? 'Delivery date changed to' : 'Delivery scheduled for'} ${deliveryDate.toLocaleDateString('en-GB', { timeZone: 'Asia/Dubai' })}`,
       metadata: {
         scheduledDate: deliveryDate.toISOString(),
