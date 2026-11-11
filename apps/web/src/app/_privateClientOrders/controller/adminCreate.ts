@@ -7,7 +7,7 @@ import { orderDetailsFromClient } from '@/app/_privateClientContacts/utils/clien
 import findOrCreateClientForPartner from '@/app/_privateClientContacts/utils/findOrCreateClientForPartner';
 import db from '@/database/client';
 import { privateClientContacts, privateClientOrders } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import nextPcoOrderNumber, { isUniqueViolation } from '../utils/nextPcoOrderNumber';
@@ -20,7 +20,7 @@ const MAX_ORDER_NUMBER_RETRIES = 3;
  *
  * Admins can create orders, optionally on behalf of a partner.
  */
-const adminCreate = wmsOperatorProcedure
+const adminCreate = adminProcedure
   .input(
     z.object({
       partnerId: z.string().uuid({ message: 'Partner is required' }),

@@ -6,7 +6,7 @@ import isUsableLwin18 from '@/app/_lwin/utils/isUsableLwin18';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import db from '@/database/client';
 import { privateClientOrderItems } from '@/database/schema';
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { CLAIM } from '../utils/planZohoSalesOrder';
 import recalculateOrderTotals from '../utils/recalculateOrderTotals';
@@ -45,7 +45,7 @@ const NON_EDITABLE_STATUSES = ['delivered', 'cancelled'];
  *
  * Admins can update items in any order except delivered or cancelled orders.
  */
-const adminUpdateItem = wmsOperatorProcedure
+const adminUpdateItem = adminProcedure
   .input(adminUpdateItemSchema)
   .mutation(async ({ input }) => {
     const { itemId, quantity, pricePerCaseUsd, productName, producer, vintage, notes, lwin } =

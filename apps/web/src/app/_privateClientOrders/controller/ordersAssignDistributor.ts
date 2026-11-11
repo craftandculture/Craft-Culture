@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import assignDistributorToOrder from '../utils/assignDistributorToOrder';
 
@@ -13,7 +13,7 @@ const assignDistributorSchema = z.object({
 /**
  * Assign a distributor to one order (C&C)
  */
-const ordersAssignDistributor = wmsOperatorProcedure
+const ordersAssignDistributor = adminProcedure
   .input(assignDistributorSchema)
   .mutation(({ input, ctx }) => assignDistributorToOrder(input, ctx.user));
 

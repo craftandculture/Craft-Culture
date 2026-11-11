@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import assignDistributorToOrder from '../utils/assignDistributorToOrder';
 import runForEachOrder from '../utils/runForEachOrder';
@@ -13,7 +13,7 @@ import runForEachOrder from '../utils/runForEachOrder';
  * were assigned by hand. Orders that cannot take a distributor are reported,
  * not assigned.
  */
-const adminBulkAssignDistributor = wmsOperatorProcedure
+const adminBulkAssignDistributor = adminProcedure
   .input(
     z.object({
       orderIds: z.array(z.string().uuid()).min(1).max(100),

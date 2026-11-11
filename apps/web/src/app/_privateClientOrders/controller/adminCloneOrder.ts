@@ -1,4 +1,4 @@
-import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
+import { adminProcedure } from '@/lib/trpc/procedures';
 
 import cloneOrderSchema from '../schemas/cloneOrderSchema';
 import cloneOrderForClients from '../utils/cloneOrderForClients';
@@ -6,7 +6,7 @@ import cloneOrderForClients from '../utils/cloneOrderForClients';
 /**
  * Clone any partner's order for a list of that partner's clients (C&C)
  */
-const adminCloneOrder = wmsOperatorProcedure
+const adminCloneOrder = adminProcedure
   .input(cloneOrderSchema)
   .mutation(({ input }) => cloneOrderForClients(input));
 
