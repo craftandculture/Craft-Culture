@@ -15,6 +15,8 @@ import inOurWarehouse from './inOurWarehouse';
  * price list ever showed.
  *
  * - **Available**, so nothing already promised is offered again
+ * - **On the shelf**, so a row whose free count has drifted above an empty
+ *   shelf (a hold given back after its case was picked) is never offered
  * - **Not held for its owner**, so a client's wine in storage never prices
  * - **In our warehouse**, so wine placed with a distributor is not sold twice
  *
@@ -28,6 +30,7 @@ import inOurWarehouse from './inOurWarehouse';
  */
 const onPriceListConditions = () => [
   gt(wmsStock.availableCases, 0),
+  gt(wmsStock.quantityCases, 0),
   eq(wmsStock.notForSale, false),
   inOurWarehouse(),
 ];

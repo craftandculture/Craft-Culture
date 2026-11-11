@@ -104,6 +104,7 @@ import adminRemoveMistakenMovements from './controller/adminRemoveMistakenMoveme
 import adminRemoveOrderFromBatch from './controller/adminRemoveOrderFromBatch';
 import adminReopenShortPick from './controller/adminReopenShortPick';
 import adminRepack from './controller/adminRepack';
+import adminRepairStockAvailability from './controller/adminRepairStockAvailability';
 import adminRepairStockCounters from './controller/adminRepairStockCounters';
 import adminReprintCaseLabels from './controller/adminReprintCaseLabels';
 import adminResendPickListPost from './controller/adminResendPickListPost';
@@ -260,6 +261,8 @@ const stockRouter = createTRPCRouter({
   correctPickSource: adminCorrectPickSource,
   // Reserved and available back in line with the holds that exist
   repairCounters: adminRepairStockCounters,
+  // Available above the shelf less holds, brought down; nothing else written
+  repairAvailability: adminRepairStockAvailability,
   correctMovementRecord: adminCorrectMovementRecord,
   // Counts, adjustments and hand additions keyed in by mistake, taken out of the ledger
   removeMistakenMovements: adminRemoveMistakenMovements,

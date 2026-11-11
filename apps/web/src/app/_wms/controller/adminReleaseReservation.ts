@@ -48,7 +48,8 @@ const adminReleaseReservation = wmsOperatorProcedure
       .update(wmsStock)
       .set({
         reservedCases: sql`${wmsStock.reservedCases} - ${quantityCases}`,
-        availableCases: sql`${wmsStock.availableCases} + ${quantityCases}`,
+        // Never past the shelf less what is still held (see giveBackHeldCases)
+        availableCases: sql`LEAST(${wmsStock.availableCases} + ${quantityCases}, GREATEST(${wmsStock.quantityCases} - (${wmsStock.reservedCases} - ${quantityCases}), 0))`,
         updatedAt: now,
       })
       // Only if still reserved when written: a double tap released twice

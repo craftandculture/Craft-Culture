@@ -1,6 +1,8 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
-import { wmsStock, wmsStockReservations } from '@/database/schema';
+import { wmsStockReservations } from '@/database/schema';
+
+import giveBackHeldCases from './giveBackHeldCases';
 
 /**
  * Release the holds on particular order lines, giving the cases back
@@ -50,14 +52,7 @@ const releaseLineHolds = async ({
     const [held] = claimed;
     if (!held) continue;
 
-    await db
-      .update(wmsStock)
-      .set({
-        reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${held.quantityCases}, 0)`,
-        availableCases: sql`${wmsStock.availableCases} + ${held.quantityCases}`,
-        updatedAt: now,
-      })
-      .where(eq(wmsStock.id, hold.stockId));
+    await giveBackHeldCases({ db, stockId: hold.stockId, cases: held.quantityCases, now });
     casesReleased += held.quantityCases;
   }
 

@@ -65,6 +65,20 @@ const adminPickItem = wmsOperatorProcedure
       list and the stock rows locked. Without it a double tap decremented the
       stock twice and marked the line picked twice.
     */
+    /*
+      The stock must have come off in full. Short means a hold or the free
+      count moved under the pick; rolling back and asking for a retry is right,
+      marking the line picked with the shelf count untouched is not.
+    */
+    const assertWholePick = (taken: number, wanted: number) => {
+      if (taken < wanted) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'This stock changed a moment ago. Try the pick again.',
+        });
+      }
+    };
+
     const outcome = await db.transaction(async (tx) => {
       // Get pick list item
       const [pickListItem] = await tx
@@ -496,6 +510,25 @@ const adminPickItem = wmsOperatorProcedure
       // are not. convertReservationToPick caps the unreserved portion at
       // availableCases, so without this check the line would be marked picked
       // and a movement recorded while the stock was never decremented.
+      /*
+        This order's holds on the row are locked before they are counted, so a
+        release running at the same moment (the Zoho sync, a cancel) either
+        finishes first and the hold is not counted, or waits until this pick
+        has converted it. Unlocked, both used the same hold: the pick took the
+        case and the release put it back on sale.
+      */
+      await tx
+        .select({ id: wmsStockReservations.id })
+        .from(wmsStockReservations)
+        .where(
+          and(
+            eq(wmsStockReservations.stockId, stock.id),
+            eq(wmsStockReservations.orderId, pickList.orderId ?? ''),
+            eq(wmsStockReservations.status, 'active'),
+          ),
+        )
+        .for('update');
+
       const [heldForThisOrder] = await tx
         .select({
           cases: sql<number>`COALESCE(SUM(${wmsStockReservations.quantityCases}), 0)::int`,
@@ -570,12 +603,13 @@ const adminPickItem = wmsOperatorProcedure
           behind bays reading as held with nothing holding them.
         */
         if (casesRemoved > 0) {
-          await convertReservationToPick({
+          const converted = await convertReservationToPick({
             stockId: stock.id,
             orderId: pickList.orderId ?? '',
             quantityCases: casesRemoved,
             db: tx,
           });
+          assertWholePick(converted.totalPicked, casesRemoved);
         }
 
         await tx
@@ -638,12 +672,13 @@ const adminPickItem = wmsOperatorProcedure
           });
         }
 
-        await convertReservationToPick({
+        const converted = await convertReservationToPick({
           stockId: stock.id,
           orderId: pickList.orderId ?? '',
           quantityCases: pickedQuantity,
           db: tx,
         });
+        assertWholePick(converted.totalPicked, pickedQuantity);
 
         casesRemoved = pickedQuantity;
         recordedPickedQuantity = pickedQuantity;

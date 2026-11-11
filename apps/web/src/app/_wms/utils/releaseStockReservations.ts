@@ -1,6 +1,8 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
-import { wmsStock, wmsStockReservations } from '@/database/schema';
+import { wmsStockReservations } from '@/database/schema';
+
+import giveBackHeldCases from './giveBackHeldCases';
 
 interface ReleaseParams {
   orderId: string;
@@ -87,14 +89,7 @@ const releaseStockReservations = async ({
     if (!held) continue;
 
     // Restore stock availability
-    await db
-      .update(wmsStock)
-      .set({
-        reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${held.quantityCases}, 0)`,
-        availableCases: sql`${wmsStock.availableCases} + ${held.quantityCases}`,
-        updatedAt: now,
-      })
-      .where(eq(wmsStock.id, reservation.stockId));
+    await giveBackHeldCases({ db, stockId: reservation.stockId, cases: held.quantityCases, now });
 
     releasedCount++;
     totalCasesReleased += held.quantityCases;

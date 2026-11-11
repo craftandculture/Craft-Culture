@@ -1,12 +1,13 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 import {
-  wmsStock,
   wmsStockReservations,
   zohoSalesOrderItems,
 } from '@/database/schema';
 import discountAmount from '@/lib/zoho/discountAmount';
+
+import giveBackHeldCases from './giveBackHeldCases';
 
 /**
  * Canonicalise a Zoho SKU to the dashed LWIN18 form when it encodes one — even
@@ -182,14 +183,7 @@ const reconcileZohoSalesOrderItems = async ({
         const [held] = claimed;
         if (!held) continue;
 
-        await tx
-          .update(wmsStock)
-          .set({
-            reservedCases: sql`GREATEST(${wmsStock.reservedCases} - ${held.quantityCases}, 0)`,
-            availableCases: sql`${wmsStock.availableCases} + ${held.quantityCases}`,
-            updatedAt: now,
-          })
-          .where(eq(wmsStock.id, reservation.stockId));
+        await giveBackHeldCases({ db: tx, stockId: reservation.stockId, cases: held.quantityCases, now });
       }
     }
 

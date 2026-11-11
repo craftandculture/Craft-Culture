@@ -40,7 +40,14 @@ const convertReservationToPick = async ({
   let remainingToPick = quantityCases;
   let reservedPicked = 0;
 
-  // Find active reservations for this stock + order
+  /*
+    Locked, so a release cannot claim a hold while this pick is converting it.
+    Read unlocked, a release (the Zoho sync, a completed list, a cancel) could
+    mark the hold released and give its case back to available in the same
+    moment this pick took the case off the shelf against it: the hold was
+    used twice, and the row offered a case it no longer had (5 Nov, 27 rows
+    after PL-2026-0166 and PL-2026-0170).
+  */
   const reservations = await db
     .select({
       id: wmsStockReservations.id,
@@ -53,7 +60,8 @@ const convertReservationToPick = async ({
         eq(wmsStockReservations.orderId, orderId),
         eq(wmsStockReservations.status, 'active'),
       ),
-    );
+    )
+    .for('update');
 
   // Convert reservations to picks
   for (const reservation of reservations) {
@@ -63,6 +71,33 @@ const convertReservationToPick = async ({
       remainingToPick,
       reservation.quantityCases,
     );
+    const fullyConsumed = pickFromReservation >= reservation.quantityCases;
+
+    /*
+      The hold is used up (or shrunk) first, and only while it is still active.
+      If it is no longer active, it was given back already and its cases are
+      in available, so this portion is picked as unreserved below instead.
+    */
+    const [converted] = await db
+      .update(wmsStockReservations)
+      .set(
+        fullyConsumed
+          ? { status: 'picked' as const, pickedAt: now, updatedAt: now }
+          : {
+              quantityCases: sql`${wmsStockReservations.quantityCases} - ${pickFromReservation}`,
+              updatedAt: now,
+            },
+      )
+      .where(
+        and(
+          eq(wmsStockReservations.id, reservation.id),
+          eq(wmsStockReservations.status, 'active'),
+          sql`${wmsStockReservations.quantityCases} >= ${pickFromReservation}`,
+        ),
+      )
+      .returning({ id: wmsStockReservations.id });
+
+    if (!converted) continue;
 
     // Decrement quantityCases and reservedCases (availableCases stays same)
     await db
@@ -73,28 +108,6 @@ const convertReservationToPick = async ({
         updatedAt: now,
       })
       .where(eq(wmsStock.id, stockId));
-
-    // Mark reservation as picked
-    if (pickFromReservation >= reservation.quantityCases) {
-      // Fully consumed
-      await db
-        .update(wmsStockReservations)
-        .set({
-          status: 'picked' as const,
-          pickedAt: now,
-          updatedAt: now,
-        })
-        .where(eq(wmsStockReservations.id, reservation.id));
-    } else {
-      // Partially consumed — reduce reservation quantity and keep active
-      await db
-        .update(wmsStockReservations)
-        .set({
-          quantityCases: sql`${wmsStockReservations.quantityCases} - ${pickFromReservation}`,
-          updatedAt: now,
-        })
-        .where(eq(wmsStockReservations.id, reservation.id));
-    }
 
     remainingToPick -= pickFromReservation;
     reservedPicked += pickFromReservation;
