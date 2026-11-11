@@ -12,9 +12,11 @@ import {
 
 import type { CatalogueRow } from './getCatalogueRows';
 import inboundLineKey from '../utils/inboundLineKey';
-import inboundLogisticsPerBottle from '../utils/inboundLogisticsPerBottle';
+import inboundPricingInput from '../utils/inboundPricingInput';
+import inboundPricingSelect from '../utils/inboundPricingSelect';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import lwinPakKey from '../utils/lwinPakKey';
+import priceListPrice from '../utils/priceListPrice';
 import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 export interface CatalogueInboundRow extends CatalogueRow {
@@ -28,8 +30,10 @@ export interface CatalogueInboundFilters {
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const isZeroTransferOwner = (owner: string | null) =>
-  !!owner && /(cru wine|crurated)/i.test(owner);
+
+/** The larger of two values, ignoring nulls, as SQL MAX() does */
+const maxOf = <T extends string | number>(a: T | null, b: T | null) =>
+  a == null ? b : b == null ? a : b > a ? b : a;
 
 /** Shipment statuses that mean "bought, not yet received into wms_stock". */
 
@@ -48,22 +52,15 @@ const HS_CODES: Record<string, readonly string[] | undefined> = {
   RTD: ['22030000', '22060000'],
 };
 
-/** HS-code buckets, mirroring the Pricing Manager's inbound categorisation. */
-const CATEGORY_CASE = sql<string | null>`MAX(CASE
-  WHEN ${logisticsShipmentItems.hsCode} IN ('22042100','22041000') THEN 'Wine'
-  WHEN ${logisticsShipmentItems.hsCode} IN ('22084000','22083000','22082000','22089090','22085000','22087000','22086000') THEN 'Spirits'
-  WHEN ${logisticsShipmentItems.hsCode} IN ('22030000','22060000') THEN 'RTD'
-  ELSE NULL END)`;
-
 /**
  * In-transit ("inbound") catalogue feed — stock bought and on its way to the
  * UAE bonded warehouse but not yet received into wms_stock.
  *
- * Priced with the same model as landed stock (Landed = import + logistics +
- * transfer + override, then ÷(1−InBond%) and ÷(1−PC%)) so an in-transit wine
- * quotes at the same number it will once it lands. Margin rates come from the
- * shipment's own partner — a shipment belongs to the partner whose stock it is
- * — falling back to the global defaults when a shipment has no partner.
+ * Each shipment's line is priced exactly as the Pricing Manager prices its
+ * in-transit row — the same inputs (inboundPricingSelect) and the same function
+ * (pricePricingManagerRow via priceListPrice) — and the wine lists once at the
+ * highest shipment's price. Margin rates come from the shipment's own partner,
+ * falling back to the house defaults when a shipment has no partner.
  *
  * @param filters - Optional category / search narrowing
  * @returns One row per wine in transit, with its earliest ETA
@@ -158,13 +155,23 @@ const getCatalogueInboundRows = async (
       where.push(inArray(logisticsShipmentItems.hsCode, [...hsCodes]));
   }
 
-  // One line per wine+pack+size (the Pricing Manager's grouping), so the same
-  // wine arriving on two shipments collapses to one row with the earliest ETA.
-  const groupKey = sql`COALESCE(${logisticsShipmentItems.lwin}, ${logisticsShipmentItems.productName}) || '-' || COALESCE(${logisticsShipmentItems.bottlesPerCase}::text, '12') || 'x' || COALESCE(${logisticsShipmentItems.bottleSizeMl}::text, '750')`;
+  /*
+    Priced per SHIPMENT, as the Pricing Manager prices it, then one line per
+    wine+pack+size at the highest shipment's price.
 
-  const rows = await db
+    This grouped across shipments and took the highest cost, the highest
+    landed cost and the highest of every margin and override separately, so a
+    wine arriving on two consignments listed at a price neither of them had in
+    the Pricing Manager. It also fell back to a 0% In Bond margin where the
+    Pricing Manager uses 10%, listing unmargined wine at landed cost.
+  */
+  const lineKey = sql`COALESCE(${logisticsShipmentItems.lwin}, ${logisticsShipmentItems.productName}) || '-' || COALESCE(${logisticsShipmentItems.bottlesPerCase}::text, '12') || 'x' || COALESCE(${logisticsShipmentItems.bottleSizeMl}::text, '750')`;
+  const shipmentLineKey = sql`${logisticsShipmentItems.shipmentId}::text || '|' || ${lineKey}`;
+
+  const shipmentRows = await db
     .select({
-      key: sql<string>`${groupKey}`,
+      key: sql<string>`MAX(${lineKey})`,
+      ...inboundPricingSelect,
       lwin: sql<string | null>`MAX(${logisticsShipmentItems.lwin})`,
       product: sql<string>`MAX(${logisticsShipmentItems.productName})`,
       producer: sql<string | null>`MAX(${logisticsShipmentItems.producer})`,
@@ -192,12 +199,6 @@ const getCatalogueInboundRows = async (
             * COALESCE(${logisticsShipmentItems.bottlesPerCase}, 12)
         )`,
       )}::int`,
-      costPerBottle: sql<
-        number | null
-      >`MAX(${logisticsShipmentItems.productCostPerBottle})`,
-      landedPerBottle: sql<
-        number | null
-      >`MAX(${logisticsShipmentItems.landedCostPerBottle})`,
       /*
         Decoded as the eta column is. A bare MIN() comes back from the driver as
         text, and the feed then called toISOString on a string: every in-transit
@@ -214,33 +215,7 @@ const getCatalogueInboundRows = async (
         still partly in transit.
       */
       atWarehouse: sql<boolean>`BOOL_AND(${logisticsShipments.status} = 'at_warehouse')`,
-      category: CATEGORY_CASE,
       owner: sql<string | null>`MAX(${partners.businessName})`,
-      importPrice: sql<
-        number | null
-      >`MAX(${wmsProductPricing.importPricePerBottle})`,
-      logistics: sql<
-        number | null
-      >`MAX(${wmsProductPricing.logisticsPerBottle})`,
-      transfer: sql<
-        number | null
-      >`MAX(${wmsProductPricing.transferPricePerBottle})`,
-      override: sql<
-        number | null
-      >`MAX(${wmsProductPricing.costOverridePerBottle})`,
-      selling: sql<
-        number | null
-      >`MAX(${wmsProductPricing.sellingPricePerBottle})`,
-      // A margin set on the wine beats the owner's default, as on the pricing
-      // screen — otherwise a decided price never reaches a customer.
-      inbondPct: sql<number | null>`COALESCE(
-        MAX(${wmsProductPricing.b2bMarginPct}),
-        MAX(${wmsOwnerPricingSettings.inbondMarginPct})
-      )`,
-      pcPct: sql<number | null>`COALESCE(
-        MAX(${wmsProductPricing.pcMarginPct}),
-        MAX(${wmsOwnerPricingSettings.pcMarginPct})
-      )`,
     })
     .from(logisticsShipmentItems)
     .innerJoin(
@@ -257,7 +232,50 @@ const getCatalogueInboundRows = async (
       eq(wmsOwnerPricingSettings.ownerId, logisticsShipments.partnerId),
     )
     .where(and(...where))
-    .groupBy(groupKey);
+    .groupBy(shipmentLineKey);
+
+  /* One line per wine+pack+size: quantities summed, every shipment priced */
+  type ShipmentRow = (typeof shipmentRows)[number];
+  const byKey = new Map<
+    string,
+    ShipmentRow & {
+      holders: ReturnType<typeof inboundPricingInput<ShipmentRow>>[];
+    }
+  >();
+
+  for (const row of shipmentRows) {
+    const line = byKey.get(row.key);
+
+    if (!line) {
+      byKey.set(row.key, {
+        ...row,
+        cases: Number(row.cases),
+        bottles: Number(row.bottles),
+        holders: [inboundPricingInput(row)],
+      });
+      continue;
+    }
+
+    line.holders.push(inboundPricingInput(row));
+    line.cases += Number(row.cases);
+    line.bottles += Number(row.bottles);
+    line.eta =
+      line.eta == null
+        ? row.eta
+        : row.eta == null || line.eta <= row.eta
+          ? line.eta
+          : row.eta;
+    line.atWarehouse = line.atWarehouse && row.atWarehouse;
+    line.lwin = maxOf(line.lwin, row.lwin);
+    line.product = maxOf(line.product, row.product) ?? line.product;
+    line.producer = maxOf(line.producer, row.producer);
+    line.caseConfig = maxOf(line.caseConfig, row.caseConfig);
+    line.bottleSizeMl = maxOf(line.bottleSizeMl, row.bottleSizeMl);
+    line.category = maxOf(line.category, row.category);
+    line.owner = maxOf(line.owner, row.owner);
+  }
+
+  const rows = [...byKey.values()];
 
   // Region/country from the product master, matched on LWIN7 (the wine), since
   // an inbound line's pack digits need not match its product-master row.
@@ -295,29 +313,8 @@ const getCatalogueInboundRows = async (
   }
 
   return rows.map((r) => {
-    const manualImport =
-      r.importPrice && r.importPrice > 0 ? r.importPrice : null;
-    const importPaid = manualImport ?? r.costPerBottle ?? 0;
-    const allocatedFreight =
-      r.landedPerBottle != null && r.costPerBottle != null
-        ? Math.max(0, round2(r.landedPerBottle - r.costPerBottle))
-        : 0;
-    // The Pricing Manager's rule, not a copy of it — see the helper
-    const logistics = inboundLogisticsPerBottle(r.logistics, allocatedFreight);
-    const transfer = r.transfer ?? (isZeroTransferOwner(r.owner) ? 0 : 2.5);
-    const override = r.override ?? 0;
-    const landed =
-      importPaid > 0 || override !== 0
-        ? importPaid + logistics + transfer + override
-        : 0;
-    const inbondPct = r.inbondPct ?? 0;
-    const ib = landed > 0 ? landed / (1 - inbondPct / 100) : 0;
-    const pc =
-      r.pcPct != null && r.pcPct < 100
-        ? landed > 0
-          ? ib / (1 - r.pcPct / 100)
-          : 0
-        : (r.selling ?? 0);
+    // The Pricing Manager's own price for each shipment, highest kept
+    const { ibPerBottle, pcPerBottle } = priceListPrice(r.holders);
     const cc = r.caseConfig || 1;
     const lwin = r.lwin ?? r.key;
     const region = /^\d{7}/.test(lwin)
@@ -342,10 +339,10 @@ const getCatalogueInboundRows = async (
       stage: r.atWarehouse
         ? ('at_warehouse' as const)
         : ('in_transit' as const),
-      ibPerBottle: round2(ib),
-      ibPerCase: round2(ib * cc),
-      pcPerBottle: round2(pc),
-      pcPerCase: round2(pc * cc),
+      ibPerBottle: round2(ibPerBottle),
+      ibPerCase: round2(ibPerBottle * cc),
+      pcPerBottle: round2(pcPerBottle),
+      pcPerCase: round2(pcPerBottle * cc),
       eta: r.eta,
     };
   });

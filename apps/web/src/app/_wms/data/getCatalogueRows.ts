@@ -1,6 +1,5 @@
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
 
-import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import { SELLABLE_STATUSES } from '@/app/_consignment/utils/mandateStatuses';
 import db from '@/database/client';
 import {
@@ -11,14 +10,14 @@ import {
   wmsStock,
 } from '@/database/schema';
 
-import DEFAULT_INBOND_MARGIN_PCT from '../constants/defaultInbondMarginPct';
-import isCraftCultureOwner from '../utils/isCraftCultureOwner';
 import lotShipmentCost from '../utils/lotShipmentCost';
 import lwinPakKey from '../utils/lwinPakKey';
 import onPriceListConditions from '../utils/onPriceListConditions';
-import ownerPricingJoin, { ownerPriced } from '../utils/ownerPricingJoin';
-import type { OwnerPricedField } from '../utils/ownerPricingJoin';
+import ownerPricingJoin from '../utils/ownerPricingJoin';
 import ownerPricingReady from '../utils/ownerPricingReady';
+import priceListPrice from '../utils/priceListPrice';
+import stockPricingInput from '../utils/stockPricingInput';
+import stockPricingSelect from '../utils/stockPricingSelect';
 import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 export interface CatalogueRow {
@@ -49,19 +48,21 @@ export interface CatalogueFilters {
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const isZeroTransferOwner = (owner: string | null) =>
-  !!owner && /(cru wine|crurated)/i.test(owner);
+
+/** The larger of two values, ignoring nulls, as SQL MAX() does */
+const maxOf = <T extends string | number>(a: T | null, b: T | null) =>
+  a == null ? b : b == null ? a : b > a ? b : a;
 
 /**
  * Single source of truth for the consumer catalogue feed.
  *
- * Groups live WMS stock (only availableCases > 0) with the Pricing Manager's
- * per-owner rates and derives the same In-Bond (B2B/trade) and Private-Client
- * (retail) prices shown on the Pricing Manager screen — so the public portals
- * match it to the cent. Price = Landed ÷ (1 − InBond%), then ÷ (1 − PC%), where
- * Landed = importPaid + logistics + transfer + override. Import is chosen by the
- * Pricing Manager's rule: the lot's own invoice line, then a typed import price,
- * then the nearest line for the wine (lotShipmentCost).
+ * Groups live WMS stock (only availableCases > 0) per wine and owner, exactly
+ * as the Pricing Manager does, prices each holder with the Pricing Manager's
+ * own function (pricePricingManagerRow via priceListPrice) and lists each wine
+ * once at the highest holder's price — so the portals carry the Pricing
+ * Manager's In-Bond (B2B/trade) and Private-Client prices to the cent.
+ * Landed = import + logistics + transfer + override, from the newest lot; In
+ * Bond = Landed ÷ (1 − InBond%); PC = In Bond ÷ (1 − PC%).
  *
  * @param filters - Optional category / owner / search narrowing
  * @returns One row per product (lwin18) with live availability + IB & PC prices
@@ -99,18 +100,6 @@ const getCatalogueRows = async (
     );
   }
 
-  /**
-   * Exact code first, any sibling pack second. A price set specifically on the
-   * single must beat the case price it was cut from — MAX() alone would let the
-   * (usually higher) case price override a deliberate single-bottle rate.
-   */
-  /* Each holder's own figure where a wine several own is priced per owner */
-  const preferExact = (field: OwnerPricedField) =>
-    sql`COALESCE(
-      MAX(CASE WHEN ${wmsProductPricing.lwin18} = ${wmsStock.lwin18} THEN ${ownerPriced(field)} END),
-      MAX(${ownerPriced(field)})
-    )`;
-
   /*
     The highest price a member has asked for this wine, across every mandate
     still live on it. The catalogue prices from the cost model — landed cost and
@@ -129,57 +118,32 @@ const getCatalogueRows = async (
     .groupBy(saleMandates.lwinKey)
     .as('live_mandates');
 
-  const rows = await db
+  /*
+    One group per wine PER OWNER, exactly as the Pricing Manager groups its
+    rows, selecting exactly what it selects (stockPricingSelect).
+
+    This grouped by wine alone and took the highest of every input across all
+    lots and owners, so a wine never carried the Pricing Manager's price unless
+    it had one lot and one owner. Alain's Fourrier Chambolle, bought at $170
+    and $282, listed off the dearer lot and the largest freight of any lot while
+    the Pricing Manager priced the newest; a wine two owners held listed one
+    owner's import with the other's override and margin; and the C&C logistics
+    fallback and the Crurated $0 transfer were tested against whichever owner
+    name sorted last.
+  */
+  const ownerRows = await db
     .select({
       lwin18: wmsStock.lwin18,
+      ownerId: wmsStock.ownerId,
+      ...stockPricingSelect,
       mandateAsk: sql<number | null>`MAX(${liveMandates.ask})`,
       product: sql<string>`MAX(${wmsStock.productName})`,
       producer: sql<string | null>`MAX(${wmsStock.producer})`,
       vintage: sql<number | null>`MAX(${wmsStock.vintage})`,
-      category: sql<string | null>`MAX(${wmsStock.category})`,
       owner: sql<string | null>`MAX(${wmsStock.ownerName})`,
       caseConfig: sql<number>`MAX(${wmsStock.caseConfig})`,
       bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
       availableCases: sql<number>`${sumAcrossPricingRows(wmsStock.availableCases)}::int`,
-      importPrice: sql<number | null>`${preferExact('importPricePerBottle')}`,
-      /*
-        The lot's own cost, as the Pricing Manager reads it. This used to be the
-        latest shipment line for the wine from anyone, so Alain's Fourrier
-        Chambolle 1er VV 2021 (invoiced $282.07) listed at $203.22 off another
-        lot's $170 line, below what it cost. Where several lots share a code the
-        highest wins, so no owner's bottles sell under their own cost.
-      */
-      ownLineCost: sql<number | null>`MAX(CASE WHEN ship.own_line THEN NULLIF(ship.product_cost, 0) END)`,
-      lotCost: sql<number | null>`MAX(NULLIF(ship.product_cost, 0))`,
-      lotFreight: sql<number | null>`MAX(CASE WHEN ship.landed_cost IS NOT NULL AND ship.product_cost IS NOT NULL THEN GREATEST(ship.landed_cost - ship.product_cost, 0) END)`,
-      logistics: sql<number | null>`${preferExact('logisticsPerBottle')}`,
-      transfer: sql<number | null>`${preferExact('transferPricePerBottle')}`,
-      override: sql<number | null>`${preferExact('costOverridePerBottle')}`,
-      selling: sql<number | null>`${preferExact('sellingPricePerBottle')}`,
-      /*
-        A margin set on the wine beats the owner's default, as it does on the
-        pricing screen.
-
-        This read only the owner's rates, so a margin typed against one wine
-        moved its price in the Pricing Manager and nowhere a customer could see
-        — Tignanello 2022 quoted at $174.79 internally and $165.08 on the price
-        list, the difference being the 10% owner default the catalogue kept
-        applying. A price the business has decided on has to be the price that
-        publishes.
-      */
-      /*
-        A spirit's old single margin (sell_margin_pct, only ever set on spirits
-        and RTD) counts as its In Bond margin, as the Pricing Manager shows it.
-      */
-      inbondPct: sql<number | null>`COALESCE(
-        ${preferExact('b2bMarginPct')},
-        ${preferExact('sellMarginPct')},
-        MAX(${wmsOwnerPricingSettings.inbondMarginPct})
-      )`,
-      pcPct: sql<number | null>`COALESCE(
-        ${preferExact('pcMarginPct')},
-        MAX(${wmsOwnerPricingSettings.pcMarginPct})
-      )`,
     })
     .from(wmsStock)
     .leftJoin(
@@ -197,7 +161,40 @@ const getCatalogueRows = async (
       sql`${liveMandates.lwinKey} = ${lwinPakKey(wmsStock.lwin18)}`,
     )
     .where(and(...where))
-    .groupBy(wmsStock.lwin18);
+    .groupBy(wmsStock.lwin18, wmsStock.ownerId);
+
+  /* Then one line per wine: quantities summed, every holder priced */
+  type OwnerRow = (typeof ownerRows)[number];
+  const byLwin = new Map<
+    string,
+    OwnerRow & { holders: ReturnType<typeof stockPricingInput<OwnerRow>>[] }
+  >();
+
+  for (const row of ownerRows) {
+    const line = byLwin.get(row.lwin18);
+
+    if (!line) {
+      byLwin.set(row.lwin18, {
+        ...row,
+        availableCases: Number(row.availableCases),
+        holders: [stockPricingInput(row)],
+      });
+      continue;
+    }
+
+    line.holders.push(stockPricingInput(row));
+    line.availableCases += Number(row.availableCases);
+    line.mandateAsk = maxOf(line.mandateAsk, row.mandateAsk);
+    line.product = maxOf(line.product, row.product) ?? line.product;
+    line.producer = maxOf(line.producer, row.producer);
+    line.vintage = maxOf(line.vintage, row.vintage);
+    line.category = maxOf(line.category, row.category);
+    line.owner = maxOf(line.owner, row.owner);
+    line.caseConfig = maxOf(line.caseConfig, row.caseConfig) ?? line.caseConfig;
+    line.bottleSize = maxOf(line.bottleSize, row.bottleSize);
+  }
+
+  const rows = [...byLwin.values()];
 
   const lwins = rows.map((r) => r.lwin18);
   if (lwins.length === 0) return [];
@@ -233,68 +230,7 @@ const getCatalogueRows = async (
   });
 
   return rows.map((r) => {
-    const manualImport =
-      r.importPrice && r.importPrice > 0 ? r.importPrice : null;
-    // An own invoice line beats a typed import price, as on the Pricing Manager
-    const importPaid =
-      (r.ownLineCost != null ? Number(r.ownLineCost) : null) ??
-      manualImport ??
-      (r.lotCost != null ? Number(r.lotCost) : 0);
-    const systemLogistics =
-      r.lotFreight != null ? Math.max(0, round2(Number(r.lotFreight))) : 0;
-    const logistics =
-      r.logistics ??
-      (systemLogistics > 0
-        ? systemLogistics
-        : isCraftCultureOwner(r.owner) &&
-            (r.category === 'Wine' || r.category == null)
-          ? 22.5
-          : 0);
-    const transfer = r.transfer ?? (isZeroTransferOwner(r.owner) ? 0 : 2.5);
-    const override = r.override ?? 0;
-    const landed =
-      importPaid > 0 || override !== 0
-        ? importPaid + logistics + transfer + override
-        : 0;
-    const inbondPct = r.inbondPct ?? DEFAULT_INBOND_MARGIN_PCT;
-    const ib = landed > 0 ? landed / (1 - inbondPct / 100) : 0;
-    const pc =
-      r.pcPct != null && r.pcPct < 100
-        ? landed > 0
-          ? ib / (1 - r.pcPct / 100)
-          : 0
-        : (r.selling ?? 0);
-    /*
-      A member's ask is a floor, not a replacement. One line per wine is kept
-      deliberately: splitting the row per owner would put the same wine on the
-      price list twice at two prices, let a buyer infer that parcels belong to
-      different people, and silently break the LPO matcher, which keys a Map on
-      lwin18 alone. Taking the higher figure instead means a member is never
-      undersold, and where we hold the same wine ourselves it simply sells for
-      more. An ask too high to sell is what the review step exists to refuse.
-    */
-    const ask = r.mandateAsk ? Number(r.mandateAsk) : 0;
-
-    /*
-      Grossed up at the HIGHER of the two commission rates, on both surfaces.
-
-      The rate depends on who buys, not on which list they bought from — a
-      collector and a trade buyer can take the same bottle off the same in-bond
-      price at 2.5% and 5%. Applying the collector rate to the private-client
-      price treated the surface as if it decided the rate, which would let a
-      trade sale off that list return the member less than they asked for. The
-      member receives their ask in full either way, so the floor has to cover
-      the worst case and the surplus on a collector sale is ours.
-    */
-    const floor =
-      ask > 0
-        ? ask /
-          (1 -
-            Math.max(COMMISSION_RATES.trade, COMMISSION_RATES.collector) / 100)
-        : 0;
-
-    const ibFinal = Math.max(ib, floor);
-    const pcFinal = Math.max(pc, floor);
+    const { ibPerBottle, pcPerBottle } = priceListPrice(r.holders, r.mandateAsk);
 
     const cc = r.caseConfig || 1;
     const region = regionMap.get(lwin7Of(r.lwin18));
@@ -311,10 +247,10 @@ const getCatalogueRows = async (
       bottleSize: r.bottleSize,
       availableCases: r.availableCases,
       availableBottles: r.availableCases * cc,
-      ibPerBottle: round2(ibFinal),
-      ibPerCase: round2(ibFinal * cc),
-      pcPerBottle: round2(pcFinal),
-      pcPerCase: round2(pcFinal * cc),
+      ibPerBottle: round2(ibPerBottle),
+      ibPerCase: round2(ibPerBottle * cc),
+      pcPerBottle: round2(pcPerBottle),
+      pcPerCase: round2(pcPerBottle * cc),
     };
   });
 };

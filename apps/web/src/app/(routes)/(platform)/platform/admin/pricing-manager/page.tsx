@@ -45,7 +45,7 @@ import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import PricingBandsEditor from '@/app/_wms/components/PricingBandsEditor';
-import DEFAULT_INBOND_MARGIN_PCT from '@/app/_wms/constants/defaultInbondMarginPct';
+import PRICE_LIST_RATES from '@/app/_wms/constants/priceListRates';
 import pricePricingManagerRow, {
   type PricingManagerRowInput,
 } from '@/app/_wms/utils/pricePricingManagerRow';
@@ -53,7 +53,6 @@ import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const IN_BOND_MARKUP = DEFAULT_INBOND_MARGIN_PCT / 100;
 const PAGE_SIZES = [50, 100, 200] as const;
 
 type CategoryFilter = 'Wine' | 'Spirits' | 'RTD';
@@ -1203,32 +1202,31 @@ const PricingManagerPage = () => {
   const [bulkB2b, setBulkB2b] = useState('');
   const [bulkPc, setBulkPc] = useState('');
 
-  // Adjustable in-bond (B2B) markup %, applied on landed cost. Persisted.
-  const [inBondMarkupPct, setInBondMarkupPct] = useState<number>(() => {
-    if (typeof window === 'undefined') return IN_BOND_MARKUP * 100;
-    // Read the KEY, not Number() of it. localStorage.getItem returns null when
-    // the key was never written, and Number(null) is 0 — which passed the
-    // `>= 0` guard and set the B2B markup to ZERO. Every wine with no owner
-    // margin of its own (all in-transit stock) then priced at landed cost, and
-    // a quote built from this screen went out at cost.
-    const raw = localStorage.getItem('pm-inbond-markup-pct');
-    if (raw === null || raw.trim() === '') return IN_BOND_MARKUP * 100;
-    const stored = Number(raw);
-    return Number.isFinite(stored) && stored > 0 ? stored : IN_BOND_MARKUP * 100;
-  });
-  useEffect(() => {
-    localStorage.setItem('pm-inbond-markup-pct', String(inBondMarkupPct));
-  }, [inBondMarkupPct]);
+  /*
+    The toolbar In Bond and PC rates for "All owners", starting every visit at
+    the rates the price lists publish with (PRICE_LIST_RATES).
 
-  // Global PC margin % (no owner selected). 0 = unset → show stored prices.
-  const [pcMarginPct, setPcMarginPct] = useState<number>(() => {
-    if (typeof window === 'undefined') return 0;
-    const stored = Number(localStorage.getItem('pm-pc-margin-pct'));
-    return Number.isFinite(stored) && stored >= 0 ? stored : 0;
-  });
+    They were kept in this browser's localStorage, so anyone who had once typed
+    a different blanket rate saw every wine without a margin of its own at a
+    B2B price the price list never carried — while the screen is meant to be
+    the price list's single source of truth. A rate typed here now holds for
+    this visit only; a lasting rate belongs on the owner or the wine, where the
+    price lists read it.
+  */
+  const [inBondMarkupPct, setInBondMarkupPct] = useState<number>(
+    PRICE_LIST_RATES.inBondMarkupPct,
+  );
+  const [pcMarginPct, setPcMarginPct] = useState<number>(
+    PRICE_LIST_RATES.pcMarginPct,
+  );
   useEffect(() => {
-    localStorage.setItem('pm-pc-margin-pct', String(pcMarginPct));
-  }, [pcMarginPct]);
+    try {
+      localStorage.removeItem('pm-inbond-markup-pct');
+      localStorage.removeItem('pm-pc-margin-pct');
+    } catch {
+      // Storage blocked: nothing stale to clear
+    }
+  }, []);
 
   // Which margin the green MARGIN column shows:
   //  • 'ibLanded' — In-Bond (B2B) price vs Landed cost. Varies per owner (their
@@ -1529,20 +1527,21 @@ const PricingManagerPage = () => {
 
       if (!hasCost) continue;
 
-      const landed =
-        (row.importPricePerBottle ?? 0) +
-        (row.systemLogistics ?? 0) +
-        (row.transferPricePerBottle ?? 2.5) +
-        (override ?? 0);
-
-      const inBondPct = row.ownerInbondPct ?? inBondMarkupPct;
-      const inBondPrice = inBondPct < 100 ? landed / (1 - inBondPct / 100) : null;
-      // No PC margin on the owner means no private-client price, not a zero
-      const pcPct = row.ownerPcPct;
-      const pcPrice =
-        pcPct != null && pcPct < 100 && inBondPrice != null
-          ? inBondPrice / (1 - pcPct / 100)
-          : null;
+      /*
+        Priced by the function the rows use, so a margin or transfer rule on
+        a line counts here too; this tile kept its own copy and ignored them.
+      */
+      const priced = pricePricingManagerRow(row as PricingManagerRowInput, {
+        ownerSelected: false,
+        effInbondPct: inBondMarkupPct,
+        effPcPct: null,
+        inBondMarkupPct,
+        pcMarginPct: 0,
+      });
+      const landed = priced.landed ?? 0;
+      const inBondPrice = priced.inBond;
+      // No PC margin means no private-client price, not a zero
+      const pcPrice = priced.computedPc;
 
       cost += landed * rowBottles;
       if (inBondPrice != null) inBond += inBondPrice * rowBottles;
