@@ -18,7 +18,6 @@ import {
   partners,
   privateClientOrderItems,
   privateClientOrders,
-  wmsOwnerPricing,
   wmsOwnerPricingSettings,
   wmsProductPricing,
   wmsStock,
@@ -31,18 +30,21 @@ import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 import inboundLineKey from '../utils/inboundLineKey';
 import inboundLogisticsPerBottle from '../utils/inboundLogisticsPerBottle';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
+import invoicedImportMessage from '../utils/invoicedImportMessage';
 import lotShipmentCost from '../utils/lotShipmentCost';
 import lwinPakKey from '../utils/lwinPakKey';
 import ownerPricingJoin, { ownerPriced } from '../utils/ownerPricingJoin';
 import ownerPricingReady from '../utils/ownerPricingReady';
+import pricingManagerCostParts from '../utils/pricingManagerCostParts';
 import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 /**
  * Get products with stock and pricing data for the Pricing Manager page
  *
- * Returns paginated products with import/selling prices, plus summary stats for
- * KPI cards (total products, avg margin, unpriced count, total values). Falls
- * back to shipment landed cost when no explicit import price exists.
+ * Returns paginated products with import/selling prices, plus the on-hand rows
+ * the KPI tiles are summed from (priced on the page by pricePricingManagerRow,
+ * like the table). Falls back to shipment landed cost when no explicit import
+ * price exists.
  */
 const adminGetPricingProducts = adminProcedure
   .input(getPricingProductsSchema)
@@ -96,7 +98,8 @@ const adminGetPricingProducts = adminProcedure
 
     if (active.has('lossMaking')) {
       // Below cost = EFFECTIVE PC (computed when owner has a PC%, else stored)
-      // at/below landed cost — matches the Below-Cost KPI and the red rows.
+      // at/below landed cost. An SQL approximation of the row model: the
+      // Below Cost tile itself is counted from the priced rows.
       const landedH = sql`(MAX(${ownerPriced('importPricePerBottle')}) + COALESCE(MAX(${ownerPriced('costOverridePerBottle')}), 0) + COALESCE(MAX(${ownerPriced('transferPricePerBottle')}), 2.5))`;
       const effH = sql`(CASE
         WHEN MAX(${wmsOwnerPricingSettings.pcMarginPct}) IS NOT NULL AND MAX(${wmsOwnerPricingSettings.pcMarginPct}) < 100
@@ -181,6 +184,73 @@ const adminGetPricingProducts = adminProcedure
     const sortExpr = sortExpressions[sortBy];
     const orderFn = sortOrder === 'desc' ? desc : asc;
 
+    /*
+      Everything a row is priced from, selected once and used twice: by the
+      table rows and by the rows the KPI tiles are summed from. Two selects
+      would drift, and the tiles would disagree with the table again.
+    */
+    const pricingInputColumns = {
+      // The newest lot's paid and landed cost — see lotShipmentCost
+      lotProductCost: sql<number | null>`(array_agg(ship.product_cost ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
+      lotLandedCost: sql<number | null>`(array_agg(ship.landed_cost ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
+      lotOwnLine: sql<boolean | null>`(array_agg(ship.own_line ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
+      category: sql<string | null>`MAX(${wmsStock.category})`,
+      // 1 when Craft & Culture owns this stock — drives the $22.50 wine
+      // logistics fallback for old C&C imports with no freight profile.
+      isCraftCulture: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' THEN 1 ELSE 0 END)::int`,
+      // 1 for consignment owners (Cru Wine / Crurated) — their transfer fee
+      // default is $0 rather than the $2.50 FZ→mainland default.
+      isZeroTransferOwner: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 1 ELSE 0 END)::int`,
+      importPricePerBottle: sql<
+        number | null
+      >`MAX(${ownerPriced('importPricePerBottle')})`,
+      costOverridePerBottle: sql<
+        number | null
+      >`MAX(${ownerPriced('costOverridePerBottle')})`,
+      // Per-line logistics override ($/btl); null = fall back to owner/global
+      lineLogistics: sql<
+        number | null
+      >`MAX(${ownerPriced('logisticsPerBottle')})`,
+      // Per-SKU FZ→mainland transfer fee ($/btl); null = the $2.50 default
+      transferPricePerBottle: sql<
+        number | null
+      >`MAX(${ownerPriced('transferPricePerBottle')})`,
+      sellingPricePerBottle: sql<
+        number | null
+      >`MAX(${ownerPriced('sellingPricePerBottle')})`,
+      // Bespoke per-line margin % over landed (Spirits/RTD only)
+      sellMarginPct: sql<
+        number | null
+      >`MAX(${ownerPriced('sellMarginPct')})`,
+      /*
+        A margin typed on THIS line, which beats the owner's rate.
+
+        The row already prefers a per-line margin over the owner's — but the
+        landed select never returned one, so typing a margin on a wine wrote
+        it, the row refetched, found nothing, fell back to the owner's rate
+        and snapped straight back to 10%. It read as a cell that could not be
+        edited; it was a cell whose answer was being fetched from somewhere
+        the answer had not been written.
+
+        The in-transit select has always returned these, which is why it
+        worked there and not here.
+      */
+      b2bMarginPct: sql<
+        number | null
+      >`MAX(${ownerPriced('b2bMarginPct')})`,
+      pcMarginPct: sql<number | null>`MAX(${ownerPriced('pcMarginPct')})`,
+      // Owner's own rates (explicit settings; null if the owner hasn't set them)
+      ownerLogistics: sql<
+        number | null
+      >`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
+      ownerInbondPct: sql<
+        number | null
+      >`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
+      ownerPcPct: sql<
+        number | null
+      >`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
+    };
+
     const products = await db
       .select({
         lwin18: wmsStock.lwin18,
@@ -190,17 +260,18 @@ const adminGetPricingProducts = adminProcedure
           at different prices — and one row could only show one of them.
         */
         ownerId: wmsStock.ownerId,
-        // The newest lot's paid and landed cost — see lotShipmentCost
-        lotProductCost: sql<number | null>`(array_agg(ship.product_cost ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
-        lotLandedCost: sql<number | null>`(array_agg(ship.landed_cost ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
-        lotOwnLine: sql<boolean | null>`(array_agg(ship.own_line ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
+        ...pricingInputColumns,
+        /** The shipment the newest lot's invoice line is on, for the locked Import cell */
+        lotShipmentNumber: sql<string | null>`(
+          SELECT ls.shipment_number FROM logistics_shipments ls
+          WHERE ls.id = (array_agg(ship.shipment_id ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]
+        )`,
         productName: sql<string>`MAX(${wmsStock.productName})`,
         producer: sql<string | null>`MAX(${wmsStock.producer})`,
         vintage: sql<number | null>`MAX(${wmsStock.vintage})`,
         caseConfig: sql<number | null>`MAX(${wmsStock.caseConfig})`,
         bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
         totalCases: sql<number>`${sumAcrossPricingRows(wmsStock.quantityCases)}::int`,
-        category: sql<string | null>`MAX(${wmsStock.category})`,
         // Owner(s) holding this SKU — drives the per-row owner badge in the
         // Pricing Manager. Usually one; ownerCount > 1 means the same lwin18 is
         // split across consignors (rare, but worth flagging visually).
@@ -220,60 +291,6 @@ const adminGetPricingProducts = adminProcedure
         )`,
         /** Priced on its own row, apart from the other holders */
         ownPricing: sql<boolean>`BOOL_OR(opp.opp_id IS NOT NULL)`,
-        // 1 when Craft & Culture owns this stock — drives the $22.50 wine
-        // logistics fallback for old C&C imports with no freight profile.
-        isCraftCulture: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' THEN 1 ELSE 0 END)::int`,
-        // 1 for consignment owners (Cru Wine / Crurated) — their transfer fee
-        // default is $0 rather than the $2.50 FZ→mainland default.
-        isZeroTransferOwner: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 1 ELSE 0 END)::int`,
-        importPricePerBottle: sql<
-          number | null
-        >`MAX(${ownerPriced('importPricePerBottle')})`,
-        costOverridePerBottle: sql<
-          number | null
-        >`MAX(${ownerPriced('costOverridePerBottle')})`,
-        // Per-line logistics override ($/btl); null = fall back to owner/global
-        lineLogistics: sql<
-          number | null
-        >`MAX(${ownerPriced('logisticsPerBottle')})`,
-        // Per-SKU FZ→mainland transfer fee ($/btl); null = the $2.50 default
-        transferPricePerBottle: sql<
-          number | null
-        >`MAX(${ownerPriced('transferPricePerBottle')})`,
-        sellingPricePerBottle: sql<
-          number | null
-        >`MAX(${ownerPriced('sellingPricePerBottle')})`,
-        // Bespoke per-line margin % over landed (Spirits/RTD only)
-        sellMarginPct: sql<
-          number | null
-        >`MAX(${ownerPriced('sellMarginPct')})`,
-        /*
-          A margin typed on THIS line, which beats the owner's rate.
-
-          The row already prefers a per-line margin over the owner's — but the
-          landed select never returned one, so typing a margin on a wine wrote
-          it, the row refetched, found nothing, fell back to the owner's rate
-          and snapped straight back to 10%. It read as a cell that could not be
-          edited; it was a cell whose answer was being fetched from somewhere
-          the answer had not been written.
-
-          The in-transit select has always returned these, which is why it
-          worked there and not here.
-        */
-        b2bMarginPct: sql<
-          number | null
-        >`MAX(${ownerPriced('b2bMarginPct')})`,
-        pcMarginPct: sql<number | null>`MAX(${ownerPriced('pcMarginPct')})`,
-        // Owner's own rates (explicit settings; null if the owner hasn't set them)
-        ownerLogistics: sql<
-          number | null
-        >`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
-        ownerInbondPct: sql<
-          number | null
-        >`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
-        ownerPcPct: sql<
-          number | null
-        >`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
       })
       .from(wmsStock)
       .leftJoin(
@@ -422,35 +439,21 @@ const adminGetPricingProducts = adminProcedure
     }
 
     const enrichedProducts = products.map((p) => {
-      const ship = { productCost: p.lotProductCost, landedCost: p.lotLandedCost };
-      const manualImport =
-        p.importPricePerBottle != null && p.importPricePerBottle > 0
-          ? p.importPricePerBottle
-          : null;
-      /*
-        The invoice wins where the stock has its own line on it; a typed import
-        price only fills in where there is none (old stock, repacks). Typed
-        prices live on the shared per-wine row, so letting them win hid every
-        owner's invoice behind one hand-entered figure.
-      */
-      const invoiceCost =
-        p.lotOwnLine && ship.productCost != null && ship.productCost > 0
-          ? ship.productCost
-          : null;
-      const importPaid = invoiceCost ?? manualImport ?? ship?.productCost ?? null;
-      const systemLogistics =
-        ship && ship.landedCost != null && ship.productCost != null
-          ? Math.max(
-              0,
-              Math.round((ship.landedCost - ship.productCost) * 100) / 100,
-            )
-          : 0;
+      const cost = pricingManagerCostParts(p);
+
       return {
         ...p,
         // importPricePerBottle now carries the PAID goods cost (ex-freight)
-        importPricePerBottle: importPaid,
+        importPricePerBottle: cost.importPricePerBottle,
+        /*
+          Set from the stock's own supplier invoice, so a typed import price
+          would be ignored: the cell is shown read-only, with this reason.
+        */
+        importLockedReason: cost.importFromInvoice
+          ? invoicedImportMessage(p.lotShipmentNumber)
+          : null,
         // live group/shipment freight per bottle (read-only; auto-updates)
-        systemLogistics,
+        systemLogistics: cost.systemLogistics,
         // most recent realized sale (Zoho B2B or PCO), null if never sold
         /*
           This owner's own last sale; the wine's only where nobody else holds
@@ -490,7 +493,14 @@ const adminGetPricingProducts = adminProcedure
 
     const totalCount = countResult?.count ?? 0;
 
-    // Summary stats — respect owner + category filter
+    /*
+      The rows the KPI tiles are summed from: every wine on hand for the
+      selected owner and category, with the same pricing inputs and the same
+      cost parts as the table rows. The tiles are priced on the page with
+      pricePricingManagerRow and the toolbar rates the table uses, so a tile
+      is the sum of what the rows show. They used to be priced here in SQL
+      with margin tiers and PC on landed cost, a model the rows never used.
+    */
     const summaryConditions = [gt(wmsStock.quantityCases, 0)];
     if (ownerId) {
       summaryConditions.push(eq(wmsStock.ownerId, ownerId));
@@ -503,124 +513,57 @@ const adminGetPricingProducts = adminProcedure
       summaryConditions.push(eq(wmsStock.category, category));
     }
 
-    // Per-owner landed cost and EFFECTIVE PC (what the table shows): when the
-    // owner has a PC%, PC = landed/(1-inbond%)/(1-pc%) (always > landed, so not
-    // "below cost"); otherwise the stored owner/default price. This keeps the
-    // gap KPIs in step with the displayed rows instead of stale stored prices.
-    // Import falls back to the latest shipment cost when no stored import price
-    // (same as the displayed rows), so stock values aren't understated.
-    // Landed = import (paid goods, ex-freight) + system logistics (live group
-    // freight = shipment landed − product) + FZ→mainland transfer (default
-    // $2.50) + manual override. Replaces the old flat owner logistics rate.
-    // Same rule as the rows: an own invoice line beats a typed import price
-    const importPaidExpr = sql`COALESCE(CASE WHEN ship.own_line THEN NULLIF(ship.product_cost, 0) END, NULLIF(${ownerPriced('importPricePerBottle')}, 0), ship.product_cost, 0)`;
-    const freightExpr = sql`GREATEST(COALESCE(ship.landed_cost, 0) - COALESCE(ship.product_cost, 0), 0)`;
-    // Logistics = per-line override if set; else live freight; else $22.50
-    // fallback for C&C-owned wine with no freight profile (old imports).
-    // Non-C&C / non-wine with no freight = 0.
-    // Logistics = per-line override; else live group freight; else the $22.50
-    // fallback for C&C-owned wine with no freight profile (old imports).
-    //
-    // ZERO IS CORRECT for partner-owned stock: on those consignments the PARTNER
-    // pays the freight, so C&C has no logistics cost to recover and landed is
-    // import + transfer. Do not "fix" this by defaulting to the owner's
-    // logistics rate — that inflates landed cost, and every price built on it,
-    // on exactly the stock C&C ships for free.
-    const logisticsExpr = sql`COALESCE(${ownerPriced('logisticsPerBottle')}, (CASE WHEN ${freightExpr} > 0 THEN ${freightExpr} WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' AND (${wmsStock.category} = 'Wine' OR ${wmsStock.category} IS NULL) THEN 22.5 ELSE 0 END))`;
-    const transferExpr = sql`COALESCE(${ownerPriced('transferPricePerBottle')}, CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 0 ELSE 2.5 END)`;
-    const overrideExpr = sql`COALESCE(${ownerPriced('costOverridePerBottle')}, 0)`;
-    const landedExpr = sql`(CASE WHEN (${importPaidExpr} > 0 OR ${overrideExpr} <> 0) THEN ${importPaidExpr} + ${logisticsExpr} + ${transferExpr} + ${overrideExpr} ELSE 0 END)`;
-    // The margin for each book, most specific source first: a per-line override,
-    // then the band matching this wine's landed cost (the owner's own band
-    // before the house one, and a narrower band before a wider one), then the
-    // owner's flat rate, then 10%. Mirrors resolvePricingMargins, which holds
-    // the same precedence in testable form.
-    const bandPick = (column: 'b2b_margin_pct' | 'pc_margin_pct') => sql`(
-      SELECT b.${sql.raw(column)} FROM wms_pricing_bands b
-       WHERE (b.owner_id = ${wmsStock.ownerId} OR b.owner_id IS NULL)
-         AND ${landedExpr} >= b.min_landed_per_bottle
-         AND (b.max_landed_per_bottle IS NULL OR ${landedExpr} < b.max_landed_per_bottle)
-         AND b.${sql.raw(column)} < 100
-       ORDER BY (b.owner_id IS NULL),
-                COALESCE(b.max_landed_per_bottle - b.min_landed_per_bottle, 1e9)
-       LIMIT 1
-    )`;
+    const summaryRows = input.includeSummary
+      ? (
+          await db
+            .select({
+              lwin18: wmsStock.lwin18,
+              ownerId: wmsStock.ownerId,
+              ...pricingInputColumns,
+              bottles: sql<number>`${sumAcrossPricingRows(sql`${wmsStock.quantityCases} * ${wmsStock.caseConfig}`)}::float`,
+              // The owner's stored PC price, as getOwnerPricing returns it to the table
+              ownerPcPrice: sql<number | null>`(
+                SELECT MAX(op.pc_selling_price_per_bottle) FROM wms_owner_pricing op
+                WHERE op.lwin18 = ${wmsStock.lwin18} AND op.owner_id = ${wmsStock.ownerId}
+              )`,
+            })
+            .from(wmsStock)
+            .leftJoin(
+              wmsProductPricing,
+              sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
+            )
+            .leftJoin(ownerPricingJoin(ownerReady), sql`true`)
+            .leftJoin(
+              wmsOwnerPricingSettings,
+              eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
+            )
+            .leftJoin(lotShipmentCost, sql`true`)
+            .where(and(...summaryConditions))
+            .groupBy(wmsStock.lwin18, wmsStock.ownerId)
+        ).map((r) => {
+          const cost = pricingManagerCostParts(r);
 
-    const b2bMarginExpr = sql`COALESCE(
-      NULLIF(${ownerPriced('b2bMarginPct')}, 100),
-      ${bandPick('b2b_margin_pct')},
-      ${wmsOwnerPricingSettings.inbondMarginPct},
-      10
-    )`;
-    const pcMarginExpr = sql`COALESCE(
-      NULLIF(${ownerPriced('pcMarginPct')}, 100),
-      ${bandPick('pc_margin_pct')},
-      ${wmsOwnerPricingSettings.pcMarginPct},
-      10
-    )`;
-
-    // In-bond (B2B) price = landed / (1 - b2b%). C&C's profit = in-bond - landed.
-    const inBondExpr = sql`(${landedExpr} / (1 - ${b2bMarginExpr} / 100.0))`;
-    // PC = landed / (1 - pc%). A margin over LANDED in its own right: it no
-    // longer compounds on top of the B2B price, so moving one book cannot
-    // silently move the other. A hand-typed PC price still wins.
-    const pcExpr = sql`(CASE
-      WHEN COALESCE(${wmsOwnerPricing.pcSellingPricePerBottle}, 0) > 0
-      THEN ${wmsOwnerPricing.pcSellingPricePerBottle}
-      WHEN ${landedExpr} > 0 THEN ${landedExpr} / (1 - ${pcMarginExpr} / 100.0)
-      ELSE COALESCE(${ownerPriced('sellingPricePerBottle')}, 0)
-    END)`;
-    const bottlesExpr = sql`${wmsStock.quantityCases} * ${wmsStock.caseConfig}`;
-
-    const [summaryResult] = await db
-      .select({
-        totalProducts: sql<number>`COUNT(DISTINCT ${wmsStock.lwin18})::int`,
-        totalImportValue: sql<number>`COALESCE(SUM(${wmsStock.quantityCases} * ${wmsStock.caseConfig} * ${ownerPriced('importPricePerBottle')}), 0)::float`,
-        pricedImportCount: sql<number>`COUNT(DISTINCT CASE WHEN ${ownerPriced('importPricePerBottle')} IS NOT NULL AND ${ownerPriced('importPricePerBottle')} > 0 THEN ${wmsStock.lwin18} END)::int`,
-        pricedSellingCount: sql<number>`COUNT(DISTINCT CASE WHEN ${ownerPriced('sellingPricePerBottle')} IS NOT NULL AND ${ownerPriced('sellingPricePerBottle')} > 0 THEN ${wmsStock.lwin18} END)::int`,
-        // Landed cost value of stock on hand (import/shipment + override + logistics)
-        stockAtCost: sql<number>`COALESCE(SUM(${bottlesExpr} * ${landedExpr}), 0)::float`,
-        // In-bond (B2B) value of stock
-        inBondValue: sql<number>`COALESCE(SUM(CASE WHEN ${landedExpr} > 0 THEN ${bottlesExpr} * ${inBondExpr} END), 0)::float`,
-        // Private-client value of stock (effective PC)
-        pcValue: sql<number>`COALESCE(SUM(CASE WHEN ${pcExpr} > 0 THEN ${bottlesExpr} * ${pcExpr} END), 0)::float`,
-        // C&C profit on stock = in-bond (B2B) price − landed cost
-        potentialGrossProfit: sql<number>`COALESCE(SUM(CASE WHEN ${landedExpr} > 0 THEN ${bottlesExpr} * (${inBondExpr} - ${landedExpr}) END), 0)::float`,
-        // SKUs priced at/below their landed cost
-        belowCostCount: sql<number>`COUNT(DISTINCT CASE WHEN ${pcExpr} > 0 AND ${pcExpr} <= ${landedExpr} THEN ${wmsStock.lwin18} END)::int`,
-      })
-      .from(wmsStock)
-      .leftJoin(
-        wmsProductPricing,
-        sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
-      )
-      .leftJoin(ownerPricingJoin(ownerReady), sql`true`)
-      .leftJoin(
-        wmsOwnerPricingSettings,
-        eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
-      )
-      .leftJoin(
-        wmsOwnerPricing,
-        and(
-          eq(wmsOwnerPricing.lwin18, wmsStock.lwin18),
-          eq(wmsOwnerPricing.ownerId, wmsStock.ownerId),
-        ),
-      )
-      .leftJoin(lotShipmentCost, sql`true`)
-      .where(and(...summaryConditions));
-
-    // Blended margin = C&C's portfolio margin between in-bond and landed:
-    // (in-bond value − landed value) / in-bond value. Value-weighted.
-    const inBondValue = summaryResult?.inBondValue ?? 0;
-    const stockAtCostVal = summaryResult?.stockAtCost ?? 0;
-    const blendedMargin =
-      inBondValue > 0
-        ? Math.round(((inBondValue - stockAtCostVal) / inBondValue) * 1000) / 10
-        : null;
-
-    const unpricedCount =
-      (summaryResult?.pricedImportCount ?? 0) -
-      (summaryResult?.pricedSellingCount ?? 0);
+          return {
+            lwin18: r.lwin18,
+            category: r.category,
+            importPricePerBottle: cost.importPricePerBottle,
+            costOverridePerBottle: r.costOverridePerBottle,
+            systemLogistics: cost.systemLogistics,
+            lineLogistics: r.lineLogistics,
+            isCraftCulture: r.isCraftCulture,
+            transferPricePerBottle: r.transferPricePerBottle,
+            isZeroTransferOwner: r.isZeroTransferOwner,
+            ownerInbondPct: r.ownerInbondPct,
+            ownerPcPct: r.ownerPcPct,
+            b2bMarginPct: r.b2bMarginPct,
+            pcMarginPct: r.pcMarginPct,
+            sellMarginPct: r.sellMarginPct,
+            sellingPricePerBottle: r.sellingPricePerBottle,
+            ownerPcPrice: r.ownerPcPrice,
+            bottles: Number(r.bottles) || 0,
+          };
+        })
+      : [];
 
     // In-transit (inbound shipment) products — returned separately so the
     // on-hand pagination is untouched. Cost comes from the shipment.
@@ -945,19 +888,8 @@ const adminGetPricingProducts = adminProcedure
         offset,
         hasMore: offset + enrichedProducts.length < totalCount,
       },
-      summary: {
-        totalProducts: summaryResult?.totalProducts ?? 0,
-        blendedMargin,
-        unpricedCount: Math.max(0, unpricedCount),
-        totalImportValue:
-          Math.round((summaryResult?.totalImportValue ?? 0) * 100) / 100,
-        stockAtCost: Math.round((summaryResult?.stockAtCost ?? 0) * 100) / 100,
-        inBondValue: Math.round((summaryResult?.inBondValue ?? 0) * 100) / 100,
-        pcValue: Math.round((summaryResult?.pcValue ?? 0) * 100) / 100,
-        potentialGrossProfit:
-          Math.round((summaryResult?.potentialGrossProfit ?? 0) * 100) / 100,
-        belowCostCount: summaryResult?.belowCostCount ?? 0,
-      },
+      /** Priced into the KPI tiles on the page; see summarisePricingManagerRows */
+      summaryRows,
     };
   });
 

@@ -85,6 +85,22 @@ Rows are therefore one per wine **per owner**. Manual import prices, overrides,
 transfers and sell prices still live on the shared `wms_product_pricing` row,
 so editing them changes every owner's row of that wine.
 
+Where the stock's own invoice line sets the cost (`lotInvoiceCost()`), a typed
+import price would be ignored, so the Pricing Manager shows the Import cell
+read-only with the shipment number, and `setImportPrice` refuses a typed price
+for it. Use Override, or correct the invoice in Logistics. In-transit lines
+are not affected: a typed price wins there.
+
+### The KPI tiles are the rows, added up
+
+The Pricing Manager tiles (stock at cost, In-Bond value, PC value, C&C profit,
+blended margin, unpriced, below cost) are summed on the page by
+`summarisePricingManagerRows()`, which prices every on-hand row with
+`pricePricingManagerRow()` and the same rates as the table. They used to be
+priced in SQL with the margin tiers and PC on landed cost, which the rows never
+used. The margin tiers (`wms_pricing_bands`) are now read by nothing in pricing;
+the setting and its data are kept.
+
 ### An in-transit line is its LWIN *or its product name*
 
 Most in-transit stock arrives from a supplier's spreadsheet with no LWIN, so the

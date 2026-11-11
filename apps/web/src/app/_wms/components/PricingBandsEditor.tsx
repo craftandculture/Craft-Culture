@@ -108,6 +108,12 @@ const PricingBandsEditor = ({
           Price = landed ÷ (1 − margin). A per-wine override always wins over a
           tier.
         </p>
+        <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+          Not currently used in pricing. The Pricing Manager, its export and the
+          price lists price every wine from the In Bond and PC margins (on the
+          row, the owner or the toolbar). Tiers saved here are kept but have no
+          effect.
+        </p>
 
         {isLoading ? (
           <p className="py-8 text-center text-sm text-text-muted">Loading…</p>

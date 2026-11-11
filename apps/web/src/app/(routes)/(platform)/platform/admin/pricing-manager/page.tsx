@@ -12,6 +12,7 @@ import {
   IconDownload,
   IconInfoCircle,
   IconLoader2,
+  IconLock,
   IconPencil,
   IconPercentage,
   IconRefresh,
@@ -49,6 +50,7 @@ import DEFAULT_INBOND_MARGIN_PCT from '@/app/_wms/constants/defaultInbondMarginP
 import pricePricingManagerRow, {
   type PricingManagerRowInput,
 } from '@/app/_wms/utils/pricePricingManagerRow';
+import summarisePricingManagerRows from '@/app/_wms/utils/summarisePricingManagerRows';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -313,9 +315,16 @@ const PriceCell = ({
   variant = 'muted',
   tdClassName = '',
   hintFor,
+  readOnlyReason,
 }: {
   value: number | null;
   onSave: (v: number) => void;
+  /**
+   * Set when the figure comes from somewhere a typed price cannot override
+   * (the stock's own supplier invoice): the cell shows it, not an editor, and
+   * this explains why on hover.
+   */
+  readOnlyReason?: string | null;
   highlight?: boolean;
   /** small per-case (or secondary) figure shown under the price */
   sub?: string;
@@ -343,6 +352,29 @@ const PriceCell = ({
       : variant === 'prominent'
         ? 'font-semibold text-text-primary'
         : 'text-text-secondary';
+
+  if (readOnlyReason) {
+    return (
+      <td
+        className={`px-3 py-2.5 text-right tabular-nums ${tdClassName}`}
+        title={readOnlyReason}
+      >
+        <span className={`inline-flex cursor-help items-center gap-1 ${valueColor}`}>
+          {value != null && value > 0 ? (
+            money(value, ccy)
+          ) : (
+            <span className="text-text-muted/40">—</span>
+          )}
+          <IconLock className="h-3 w-3 opacity-40" aria-label={readOnlyReason} />
+        </span>
+        {sub && value != null && value > 0 && (
+          <div className="pm-sub text-[11px] font-medium tabular-nums text-text-muted">
+            {sub}
+          </div>
+        )}
+      </td>
+    );
+  }
 
   if (!editing) {
     return (
@@ -1423,12 +1455,6 @@ const PricingManagerPage = () => {
     });
   };
 
-  // Effective rates: owner settings when an owner is selected, else global defaults
-  const effLogistics = ownerId ? ownerDraft.logistics : logisticsPerBottle;
-  const effInbondPct = ownerId ? ownerDraft.inbondPct : inBondMarkupPct;
-  // PC margin — per-owner when an owner is selected, else the global PC% (0 = unset)
-  const effPcPct = ownerId ? ownerDraft.pcPct : pcMarginPct > 0 ? pcMarginPct : null;
-
   // Apply Margin popover
   const [showMarginPopover, setShowMarginPopover] = useState(false);
   const [marginPercent, setMarginPercent] = useState('20');
@@ -1496,7 +1522,30 @@ const PricingManagerPage = () => {
 
   const products = data?.products ?? [];
   const pagination = data?.pagination;
-  const summary = data?.summary;
+  // Effective rates: owner settings when an owner is selected, else global defaults
+  const effLogistics = ownerId ? ownerDraft.logistics : logisticsPerBottle;
+  const effInbondPct = ownerId ? ownerDraft.inbondPct : inBondMarkupPct;
+  // PC margin — per-owner when an owner is selected, else the global PC% (0 = unset)
+  const effPcPct = ownerId ? ownerDraft.pcPct : pcMarginPct > 0 ? pcMarginPct : null;
+
+  /*
+    The KPI tiles: every wine on hand in this owner and category, priced by
+    the same function and rates as the table rows, then added up. So In-Bond
+    Value is the sum of the In Bond column times bottles, and so on.
+  */
+  const summary = useMemo(
+    () =>
+      data?.summaryRows
+        ? summarisePricingManagerRows(data.summaryRows, {
+            ownerSelected: !!ownerId,
+            effInbondPct,
+            effPcPct,
+            inBondMarkupPct,
+            pcMarginPct,
+          })
+        : undefined,
+    [data?.summaryRows, ownerId, effInbondPct, effPcPct, inBondMarkupPct, pcMarginPct],
+  );
 
   /**
    * What the in-transit rows are worth, priced the same way the table prices
@@ -1742,7 +1791,7 @@ const PricingManagerPage = () => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
       toast.success('Import price updated');
     },
-    onError: () => toast.error('Failed to update import price'),
+    onError: (error) => toast.error(`Import price not saved: ${error.message}`),
   });
 
   const setCostOverrideMut = useMutation({
@@ -1863,6 +1912,7 @@ const PricingManagerPage = () => {
           priceFilters,
           includeInbound,
           includeSoldOut,
+          includeSummary: false,
           sortBy,
           sortOrder,
           limit: pageSize,
@@ -2083,7 +2133,7 @@ const PricingManagerPage = () => {
         <KpiCard
           label="Unpriced"
           value={summary?.unpricedCount?.toString() ?? '—'}
-          subtitle="have import but no sell price"
+          subtitle="no sell price on the row"
           color={summary?.unpricedCount && summary.unpricedCount > 0 ? 'amber' : 'default'}
           icon={<IconAlertTriangle className="h-5 w-5" />}
           onClick={() => togglePriceFilter('unpriced')}
@@ -2175,7 +2225,7 @@ const PricingManagerPage = () => {
           type="button"
           onClick={() => setShowBands(true)}
           className="whitespace-nowrap rounded-lg border border-border-muted px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-fill-secondary"
-          title="Set the margin taken over landed cost, by what the bottle cost"
+          title="Margin tiers by bottle cost. Not currently used in pricing."
         >
           Margin tiers…
         </button>
@@ -3404,12 +3454,19 @@ const PricingManagerPage = () => {
                               ? casePrice(importPrice, caseConfig, currency)
                               : undefined
                           }
+                          readOnlyReason={
+                            isInbound
+                              ? null
+                              : ((product as { importLockedReason?: string | null })
+                                  .importLockedReason ?? null)
+                          }
                           onSave={(v) =>
                             setImportPriceMut.mutate({
                               lwin18: product.lwin18,
                               ownerId: rowOwnerId,
                               importPricePerBottle: v,
                               source: 'manual',
+                              inTransit: isInbound,
                             })
                           }
                         />

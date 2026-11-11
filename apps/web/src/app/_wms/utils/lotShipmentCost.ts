@@ -6,7 +6,7 @@ import { wmsStock } from '@/database/schema';
  * The shipment line a stock row was costed from, as a LATERAL join named `ship`
  *
  * Exposes `ship.product_cost` (paid goods per bottle, ex-freight),
- * `ship.landed_cost` and `ship.own_line` for each `wms_stock` row in the query.
+ * `ship.landed_cost`, `ship.shipment_id` and `ship.own_line` for each `wms_stock` row in the query.
  *
  * A price used to be "the latest shipment line for this wine", matched on LWIN7,
  * vintage and size and nothing else. Two lots of one wine therefore shared one
@@ -43,6 +43,7 @@ import { wmsStock } from '@/database/schema';
 const lotShipmentCost = sql`LATERAL (
   SELECT i.product_cost_per_bottle AS product_cost,
          i.landed_cost_per_bottle AS landed_cost,
+         i.shipment_id AS shipment_id,
          -- true when this is the stock's own invoice line, not a stand-in
          (i.shipment_id = ${wmsStock.shipmentId}
            OR NULLIF(i.supplier_sku, '') = NULLIF(${wmsStock.supplierSku}, '')) IS TRUE AS own_line

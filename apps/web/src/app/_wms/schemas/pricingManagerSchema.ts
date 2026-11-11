@@ -56,6 +56,11 @@ export const getPricingProductsSchema = z.object({
   includeInbound: z.boolean().optional(),
   /** Include sold-out SKUs (0 cases on hand) so the user can see what's moved */
   includeSoldOut: z.boolean().optional(),
+  /**
+   * Also return the rows the KPI tiles are summed from. The export pages
+   * through every row and has no tiles, so it turns this off.
+   */
+  includeSummary: z.boolean().default(true),
   sortBy: z
     .enum(['productName', 'vintage', 'totalCases', 'importPrice', 'sellingPrice', 'margin'])
     .default('productName'),

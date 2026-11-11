@@ -9,6 +9,11 @@ export const setImportPriceSchema = z.object({
   source: z.enum(['manual', 'shipment']).default('manual'),
   shipmentItemId: z.string().uuid().optional(),
   notes: z.string().optional(),
+  /**
+   * Typed on an in-transit line. A typed price wins over the shipment's figure
+   * there, so it is never refused for the stock's invoice.
+   */
+  inTransit: z.boolean().optional(),
 });
 
 /** Schema for auto-populating import price from shipment data */
