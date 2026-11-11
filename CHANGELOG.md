@@ -1,3 +1,15 @@
+## [2.1.117](https://github.com/craftandculture/Craft-Culture/compare/v2.1.116...v2.1.117) (2026-11-11)
+
+### Bug Fixes
+
+* A refused import price save in the Pricing Manager is no longer retried ([64b19b9](https://github.com/craftandculture/Craft-Culture/commit/64b19b9303b854febd3e12bc716394cc5b3f588e))
+* Member updates changed in any way since the AI wrote them never publish themselves, including ones staff touched before today ([bc1a55f](https://github.com/craftandculture/Craft-Culture/commit/bc1a55f6952bec1965750cdb45ed1562d76897f2))
+* Member updates that staff edit or unpublish no longer publish themselves; only untouched drafts do ([372fdd8](https://github.com/craftandculture/Craft-Culture/commit/372fdd84b0a3a8bae833a0ff023d315355fc893a))
+* Prices agreed with a member away from the portal no longer appear as offers to accept and list, and cannot be listed ([517d453](https://github.com/craftandculture/Craft-Culture/commit/517d453c35e4e7617fadfb935cc49881f176e1d7))
+* Pricing Manager tiles now add up the prices shown on the rows, and the Import cell is locked where the supplier invoice sets the cost. ([9a988ba](https://github.com/craftandculture/Craft-Culture/commit/9a988ba6df7aae204a5ccd8a23de7f7b281da361))
+* Staff can now enter an expiry date when uploading a shipment document and set or clear it on documents already uploaded, so the compliance report, dashboard tile and expiry alert have dates to work from. ([e29fe09](https://github.com/craftandculture/Craft-Culture/commit/e29fe09b0c5920d704d461b6314fe9c93560da8f))
+* Staff can now record a bill raised by hand in Zoho against a member payout, so the line shows Raised and cannot be billed twice. ([2c79e1e](https://github.com/craftandculture/Craft-Culture/commit/2c79e1e802c947d00322b6d5cdcdde04471a9b37))
+
 ## [2.1.116](https://github.com/craftandculture/Craft-Culture/compare/v2.1.115...v2.1.116) (2026-11-11)
 
 ### Bug Fixes
