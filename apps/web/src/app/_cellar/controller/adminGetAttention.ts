@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
 
+import notAgreedOffPortal from '@/app/_consignment/utils/notAgreedOffPortal';
 import db from '@/database/client';
 import {
   cellarAllocationInterests,
@@ -245,7 +246,8 @@ const adminGetAttention = staffAdminProcedure.query(async () => {
             since: saleMandates.offeredAt,
           })
           .from(saleMandates)
-          .where(eq(saleMandates.status, 'offered'))
+          // Prices agreed away from the portal are not for listing: nothing to decide
+          .where(and(eq(saleMandates.status, 'offered'), notAgreedOffPortal))
           .orderBy(asc(saleMandates.offeredAt))
       ).map((row) => ({
         id: row.id,

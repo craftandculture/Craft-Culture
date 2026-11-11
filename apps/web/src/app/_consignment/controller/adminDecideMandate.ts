@@ -7,6 +7,8 @@ import db from '@/database/client';
 import { saleMandateLots, saleMandates, wmsStock } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
+import { AGREED_OFF_PORTAL_MESSAGE } from '../constants/agreedOffPortal';
+import isAgreedOffPortal from '../utils/isAgreedOffPortal';
 import notifyMandateUpdate from '../utils/notifyMandateUpdate';
 
 const changedMeanwhile = () =>
@@ -46,6 +48,16 @@ const adminDecideMandate = staffAdminProcedure
 
     if (!mandate) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Offer not found' });
+    }
+
+    /*
+      A price agreed with the member away from the portal is saved as an open
+      offer so its bottles are accounted for, but the member never asked for
+      it to be listed. Nothing to decide here, and sending it back would
+      message the member about an offer they did not make.
+    */
+    if (isAgreedOffPortal(mandate.adminNotes)) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: AGREED_OFF_PORTAL_MESSAGE });
     }
 
     if (mandate.status !== 'offered') {

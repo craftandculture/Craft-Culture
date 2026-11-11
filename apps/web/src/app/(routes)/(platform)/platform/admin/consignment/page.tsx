@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import AdminPageHeader from '@/app/_admin/components/AdminPageHeader';
+import { AGREED_OFF_PORTAL_MESSAGE } from '@/app/_consignment/constants/agreedOffPortal';
 import { COMMISSION_RATES } from '@/app/_consignment/constants/commissionRates';
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -31,6 +32,7 @@ const STATE_STYLES: Record<string, string> = {
   partially_sold: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300',
   sold: 'bg-fill-secondary text-text-muted',
   withdrawn: 'bg-fill-secondary text-text-muted',
+  agreed: 'bg-fill-secondary text-text-primary',
 };
 
 const STATE_LABELS: Record<string, string> = {
@@ -42,6 +44,7 @@ const STATE_LABELS: Record<string, string> = {
   withdrawn: 'Withdrawn',
   draft: 'Sent back',
   expired: 'Expired',
+  agreed: 'Agreed with member',
 };
 
 /**
@@ -139,7 +142,10 @@ const ConsignmentPage = () => {
             {
               label: 'Awaiting review',
               value: String(
-                mandates.filter((mandate) => mandate.status === 'offered').length,
+                mandates.filter(
+                  (mandate) =>
+                    mandate.status === 'offered' && !mandate.agreedOffPortal,
+                ).length,
               ),
               detail: 'need a decision',
             },
@@ -205,7 +211,15 @@ const ConsignmentPage = () => {
       <div className="flex flex-col gap-3">
         {mandates.map((mandate) => {
           const isOpen = openId === mandate.id;
-          const awaiting = mandate.status === 'offered';
+          /*
+            A price agreed with the member away from the portal is an open
+            offer so its bottles are accounted for, but the member never asked
+            for it to be listed. It shows as agreed, with nothing to decide.
+          */
+          const agreed =
+            mandate.status === 'offered' && mandate.agreedOffPortal;
+          const awaiting = mandate.status === 'offered' && !agreed;
+          const state = agreed ? 'agreed' : mandate.status;
 
           /*
             What a buyer would pay. Shown beside the ask so a decision can be
@@ -276,11 +290,11 @@ const ConsignmentPage = () => {
                   </div>
                   <span
                     className={`rounded px-2 py-0.5 text-xs font-medium ${
-                      STATE_STYLES[mandate.status] ??
+                      STATE_STYLES[state] ??
                       'bg-fill-secondary text-text-muted'
                     }`}
                   >
-                    {STATE_LABELS[mandate.status] ?? mandate.status}
+                    {STATE_LABELS[state] ?? mandate.status}
                   </span>
                 </div>
               </button>
@@ -412,7 +426,9 @@ const ConsignmentPage = () => {
                     </>
                   ) : (
                     <Typography variant="bodyXs" colorRole="muted">
-                      {mandate.status === 'listed'
+                      {agreed
+                        ? AGREED_OFF_PORTAL_MESSAGE
+                        : mandate.status === 'listed'
                         ? 'On the lists. Placing this with a distributor is not built yet.'
                         : `This offer is ${STATE_LABELS[mandate.status] ?? mandate.status}.`}
                     </Typography>

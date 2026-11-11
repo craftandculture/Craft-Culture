@@ -18,6 +18,7 @@ import {
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 
+import { AGREED_OFF_PORTAL_NOTE } from '../constants/agreedOffPortal';
 import generateMandateNumber from '../utils/generateMandateNumber';
 
 /**
@@ -303,7 +304,8 @@ const adminRecordAgreedPrices = staffAdminProcedure
                 status: line.status,
                 offeredAt: new Date(),
                 ownerNotes,
-                adminNotes: `Recorded by ${ctx.user.name ?? ctx.user.email} from prices agreed away from the portal`,
+                // The marker the decision queues leave these out by: not for listing
+                adminNotes: `Recorded by ${ctx.user.name ?? ctx.user.email} ${AGREED_OFF_PORTAL_NOTE}`,
                 createdBy: ctx.user.id,
               })
               .returning({ id: saleMandates.id });
