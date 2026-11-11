@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { cellarReleaseRequestItems, cellarUkMoveItems, cellarUkMoves } from '@/database/schema';
+import { cellarReleaseRequestItems, cellarUkMoveItems } from '@/database/schema';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
@@ -295,40 +295,26 @@ interface UkMoveRef {
 }
 
 /** Staff have prepared a move from the UK; the member is asked to confirm it */
-export const queueUkMoveQuoted = safely('queueUkMoveQuoted', async ({ partnerId, moveId, moveNumber }: UkMoveRef) => {
-  // The figure they are confirming; the template has no price slot, so it is in the body
-  const [move] = await db
-    .select({ totalUsd: cellarUkMoves.totalUsd })
-    .from(cellarUkMoves)
-    .where(eq(cellarUkMoves.id, moveId))
-    .limit(1);
-  const total =
-    typeof move?.totalUsd === 'number'
-      ? `US$${move.totalUsd.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-      : null;
-
-  return queueMemberEmail({
+export const queueUkMoveQuoted = safely('queueUkMoveQuoted', async ({ partnerId, moveId, moveNumber }: UkMoveRef) =>
+  // No price in the email: the member sees the figure in the portal (Kevin, 11 Nov)
+  queueMemberEmail({
     kind: 'ukMoveQuoted',
     partnerId,
     entityId: moveId,
     data: {
       subject: 'Your move to the UAE is ready to confirm',
-      preheader: total
-        ? `${total} all in. Please review the wines and confirm your move from the United Kingdom.`
-        : 'Please review the wines and confirm your move from the United Kingdom.',
+      preheader: 'Please review the wines and confirm your move from the United Kingdom.',
       eyebrow: 'Transfer from the UK',
       headline: 'Your move to the UAE is ready to confirm',
-      body: total
-        ? `Your move from our bonded warehouse in the United Kingdom has been prepared. The price is ${total} all in: collection from London City Bond, freight to the UAE and receipt into our bonded warehouse, with duty and VAT remaining suspended. Please review the wines below and confirm, and we will arrange their shipment to your cellar in the UAE.`
-        : 'Your move from our bonded warehouse in the United Kingdom has been prepared. Please review the wines below and confirm, and we will arrange their shipment to your cellar in the UAE.',
+      body: 'Your move from our bonded warehouse in the United Kingdom has been prepared. Please review the wines below and confirm, and we will arrange their shipment to your cellar in the UAE.',
       ...(await ukMoveWines(moveId)),
       ctaLabel: 'Review and confirm',
       ctaUrl: cellarUrl(),
       note: 'No wine will leave the United Kingdom until you have confirmed.',
       reference: `Move ${moveNumber}`,
     },
-  });
-});
+  }),
+);
 
 /** Staff have closed a move from the UK */
 export const queueUkMoveSentBack = safely('queueUkMoveSentBack', async ({ partnerId, moveId, moveNumber, adminNotes }: UkMoveRef & { adminNotes?: string | null }) =>
