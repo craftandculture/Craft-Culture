@@ -872,15 +872,6 @@ const ShipmentDetailPage = () => {
     });
   };
 
-  const formatDate = (date: Date | null | undefined) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
   if (isLoading) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -1596,7 +1587,14 @@ const ShipmentDetailPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-text-muted">ATD</dt>
-                    <dd>{formatDate(shipment.atd)}</dd>
+                    <dd>
+                      <EditableField
+                        type="date"
+                        value={shipment.atd}
+                        disabled={isUpdatingShipment}
+                        onSave={(v) => updateShipment({ id: shipmentId, atd: v instanceof Date ? v : null })}
+                      />
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-text-muted">ETA</dt>
@@ -1611,11 +1609,25 @@ const ShipmentDetailPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-text-muted">ATA</dt>
-                    <dd>{formatDate(shipment.ata)}</dd>
+                    <dd>
+                      <EditableField
+                        type="date"
+                        value={shipment.ata}
+                        disabled={isUpdatingShipment}
+                        onSave={(v) => updateShipment({ id: shipmentId, ata: v instanceof Date ? v : null })}
+                      />
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-text-muted">Delivered</dt>
-                    <dd>{formatDate(shipment.deliveredAt)}</dd>
+                    <dd>
+                      <EditableField
+                        type="date"
+                        value={shipment.deliveredAt}
+                        disabled={isUpdatingShipment}
+                        onSave={(v) => updateShipment({ id: shipmentId, deliveredAt: v instanceof Date ? v : null })}
+                      />
+                    </dd>
                   </div>
                 </dl>
               </CardContent>
