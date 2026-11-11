@@ -1786,7 +1786,8 @@ const PricingManagerPage = () => {
   // Mutations
   const setImportPriceMut = useMutation({
     ...api.wms.admin.stock.pricing.setImportPrice.mutationOptions(),
-    retry: 2,
+    // A refusal (invoiced cost) is final; retry only what may be a dropped connection
+    retry: (count, error) => count < 2 && error.data?.code !== 'PRECONDITION_FAILED',
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: api.wms.admin.stock.pricing.getProducts.queryKey() });
       toast.success('Import price updated');
