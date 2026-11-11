@@ -1,3 +1,9 @@
+## [2.1.120](https://github.com/craftandculture/Craft-Culture/compare/v2.1.119...v2.1.120) (2026-11-11)
+
+### Bug Fixes
+
+* **cellar:** take the price out of the UK move email ([15dc6fe](https://github.com/craftandculture/Craft-Culture/commit/15dc6feb7e78941fb78b48b9620797f02ee1c80d))
+
 ## [2.1.119](https://github.com/craftandculture/Craft-Culture/compare/v2.1.118...v2.1.119) (2026-11-11)
 
 ### Bug Fixes
