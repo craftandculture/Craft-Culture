@@ -249,9 +249,10 @@ const authServerClient = betterAuth({
               name: user.name,
             });
 
-            const isAdmin = serverConfig.adminDomains.some((domain) =>
-              user.email.endsWith(`@${domain}`),
-            ) && !user.email.startsWith('warehouse@');
+            // Named staff only, not the whole domain (see serverConfig.adminEmails)
+            const isAdmin = serverConfig.adminEmails.includes(
+              user.email.trim().toLowerCase(),
+            );
 
             // If name is empty, use the email prefix as the name
             // This prevents database errors when Better Auth doesn't provide a name

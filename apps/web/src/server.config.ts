@@ -14,7 +14,19 @@ const serverConfig = {
   twilioAuthToken: serverEnv.TWILIO_AUTH_TOKEN,
   twilioPhoneNumber: serverEnv.TWILIO_PHONE_NUMBER,
   adminPhoneNumber: serverEnv.ADMIN_PHONE_NUMBER,
-  adminDomains: ['craftculture.xyz'],
+  /**
+   * The only addresses that become staff admins on sign-up.
+   *
+   * Every @craftculture.xyz address used to, so any alias, group or forwarder
+   * on the domain could sign in as staff. A new team member now signs up as a
+   * pending user and is made admin by hand on the Users screen, or added here.
+   */
+  adminEmails: <string[]>[
+    'kevin@craftculture.xyz',
+    'sophie@craftculture.xyz',
+    'jyothi@craftculture.xyz',
+    'laraine@craftculture.xyz',
+  ],
   zohoClientId: serverEnv.ZOHO_CLIENT_ID,
   zohoClientSecret: serverEnv.ZOHO_CLIENT_SECRET,
   zohoRefreshToken: serverEnv.ZOHO_REFRESH_TOKEN,
