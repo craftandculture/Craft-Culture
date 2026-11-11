@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { productUpdates } from '@/database/schema';
@@ -11,8 +11,10 @@ import lintMemberCopy from '../utils/lintMemberCopy';
  *
  * Only an untouched AI draft (createdBy null) qualifies. Any staff save or
  * status change sets createdBy, so anything staff have edited, unpublished or
- * sent back to draft publishes only when a person publishes it. A draft the
- * copy check flags never publishes itself either.
+ * sent back to draft publishes only when a person publishes it. A row changed
+ * at all since it was written (updatedAt past createdAt) is also left alone,
+ * which covers items staff touched before createdBy was set on every change.
+ * A draft the copy check flags never publishes itself either.
  *
  * @returns How many were published
  */
@@ -28,6 +30,7 @@ const autoPublishDrafts = async () => {
         isNull(productUpdates.createdBy),
         gte(productUpdates.createdAt, new Date(`${AUTO_PUBLISH_FROM_DATE}T00:00:00Z`)),
         lte(productUpdates.updatedAt, cutoff),
+        lte(productUpdates.updatedAt, sql`${productUpdates.createdAt} + interval '1 minute'`),
       ),
     );
 
