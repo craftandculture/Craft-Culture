@@ -41,6 +41,9 @@ const PayoutsPage = () => {
     format(new Date(), 'yyyy-MM-dd'),
   );
   const [openId, setOpenId] = useState<string | null>(null);
+  /** The settlement whose bill number is being typed in, and what is typed */
+  const [recordingId, setRecordingId] = useState<string | null>(null);
+  const [billNumber, setBillNumber] = useState('');
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     ...api.consignment.admin.getPayoutRuns.queryOptions(),
@@ -62,8 +65,22 @@ const PayoutsPage = () => {
     api.consignment.admin.approvePayoutRun.mutationOptions({
       onSuccess: (result) => {
         toast.success(
-          `${result.runNumber} approved — ${result.billed} bills raised in Zoho.`,
+          `${result.runNumber} approved. ${result.queued} ${result.queued === 1 ? 'bill' : 'bills'} queued for Zoho. Raise any that do not appear and record them here.`,
         );
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const { mutate: recordBill, isPending: isRecording } = useMutation(
+    api.consignment.admin.recordSettlementBill.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          `${result.billNumber} recorded against ${result.settlementNumber}.`,
+        );
+        setRecordingId(null);
+        setBillNumber('');
         void refetch();
       },
       onError: (error) => toast.error(error.message),
@@ -226,7 +243,80 @@ const PayoutsPage = () => {
                               {money(line.owedToOwner)}
                             </td>
                             <td className="text-text-muted px-3 py-2 text-xs">
-                              {line.zohoBillId ? 'Raised' : '—'}
+                              {line.zohoBillId ? (
+                                <>
+                                  Raised
+                                  {line.zohoBillNumber && (
+                                    <span className="text-text-primary ml-1.5 font-mono">
+                                      {line.zohoBillNumber}
+                                    </span>
+                                  )}
+                                </>
+                              ) : run.status === 'draft' ? (
+                                '—'
+                              ) : recordingId === line.id ? (
+                                /*
+                                  A bill Finance raised by hand in Zoho. It is
+                                  checked against Zoho on save, and once
+                                  recorded the line is never billed again.
+                                */
+                                <form
+                                  className="flex items-center gap-1.5"
+                                  onSubmit={(event) => {
+                                    event.preventDefault();
+                                    if (!billNumber.trim()) return;
+                                    recordBill({
+                                      settlementId: line.id,
+                                      billNumber: billNumber.trim(),
+                                    });
+                                  }}
+                                >
+                                  <Input
+                                    autoFocus
+                                    size="sm"
+                                    placeholder="BILL-…"
+                                    value={billNumber}
+                                    onChange={(event) =>
+                                      setBillNumber(event.target.value)
+                                    }
+                                    className="w-[130px] font-mono"
+                                  />
+                                  <Button
+                                    type="submit"
+                                    size="xs"
+                                    colorRole="brand"
+                                    isDisabled={isRecording || !billNumber.trim()}
+                                  >
+                                    <ButtonContent>Save</ButtonContent>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="xs"
+                                    variant="ghost"
+                                    isDisabled={isRecording}
+                                    onClick={() => {
+                                      setRecordingId(null);
+                                      setBillNumber('');
+                                    }}
+                                  >
+                                    <ButtonContent>Cancel</ButtonContent>
+                                  </Button>
+                                </form>
+                              ) : (
+                                <span className="flex items-center gap-2">
+                                  —
+                                  <Button
+                                    size="xs"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setRecordingId(line.id);
+                                      setBillNumber('');
+                                    }}
+                                  >
+                                    <ButtonContent>Record bill</ButtonContent>
+                                  </Button>
+                                </span>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -241,10 +331,11 @@ const PayoutsPage = () => {
                         colorRole="muted"
                         className="mb-3 block max-w-[68ch]"
                       >
-                        Approving raises a bill in Zoho against each member as a
-                        vendor, which is what the accounts team then pays. The
-                        sales move to settled and cannot be swept into another
-                        run.
+                        Approving queues a bill in Zoho against each member as a
+                        vendor, which is what the accounts team then pays. If a
+                        bill does not appear, raise it in Zoho and record its
+                        number on the line. The sales move to settled and cannot
+                        be swept into another run.
                       </Typography>
                       <Button
                         size="sm"
@@ -253,7 +344,7 @@ const PayoutsPage = () => {
                         onClick={() => approveRun({ runId: run.id })}
                       >
                         <ButtonContent iconLeft={IconCheck}>
-                          Approve &amp; raise bills
+                          Approve &amp; queue bills
                         </ButtonContent>
                       </Button>
                     </>
@@ -263,8 +354,8 @@ const PayoutsPage = () => {
                       {run.approvedAt
                         ? ` ${format(new Date(run.approvedAt), 'd MMM yyyy')}`
                         : ''}
-                      . {run.billed} of {run.settlements.length} bills raised in
-                      Zoho.
+                      . {run.billed} of {run.settlements.length} bills recorded
+                      from Zoho.
                     </Typography>
                   )}
                 </div>

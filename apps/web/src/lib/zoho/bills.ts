@@ -42,11 +42,13 @@ const createBill = async (data: ZohoCreateBillRequest) => {
  * alone, so the caller decides; booking a purchase as a settlement would
  * understate what an owner is still owed wine for.
  *
- * @param options - Vendor, status and paging
+ * @param options - Vendor, bill number, status and paging
  * @returns The bills and the page context
  */
 const listBills = async (options?: {
   vendorId?: string;
+  /** Exact bill number, as Finance typed it in Zoho */
+  billNumber?: string;
   status?: ZohoBill['status'];
   page?: number;
   perPage?: number;
@@ -54,6 +56,7 @@ const listBills = async (options?: {
   const params = new URLSearchParams();
 
   if (options?.vendorId) params.set('vendor_id', options.vendorId);
+  if (options?.billNumber) params.set('bill_number', options.billNumber);
   if (options?.status) params.set('status', options.status);
   if (options?.page) params.set('page', String(options.page));
   if (options?.perPage) params.set('per_page', String(options.perPage));

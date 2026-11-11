@@ -27,6 +27,10 @@ import { zohoCreateBillJob } from '@/trigger/jobs/zoho-sync';
  * The bills are fired and not awaited. A run of forty members would otherwise
  * hold a request open against Zoho's rate limits, and the job is idempotent on
  * `zohoBillId`, so a retry cannot double-bill.
+ *
+ * Queued is not raised: background jobs may be switched off, in which case
+ * Finance raises the bills by hand and records them on the payout screen. A
+ * settlement that already has a bill recorded is never queued.
  */
 const adminApprovePayoutRun = staffAdminProcedure
   .input(z.object({ runId: z.string().uuid() }))
@@ -92,6 +96,7 @@ const adminApprovePayoutRun = staffAdminProcedure
         .returning({
           id: consignmentSettlements.id,
           ownerName: consignmentSettlements.ownerName,
+          zohoBillId: consignmentSettlements.zohoBillId,
         });
 
       if (moved.length === 0) {
@@ -104,7 +109,9 @@ const adminApprovePayoutRun = staffAdminProcedure
       return moved;
     });
 
-    for (const settlement of settlements) {
+    const toQueue = settlements.filter((settlement) => !settlement.zohoBillId);
+
+    for (const settlement of toQueue) {
       tasks
         .trigger(zohoCreateBillJob.id, { settlementId: settlement.id })
         .catch((error) =>
@@ -118,7 +125,7 @@ const adminApprovePayoutRun = staffAdminProcedure
 
     return {
       runNumber: run.runNumber,
-      billed: settlements.length,
+      queued: toQueue.length,
     };
   });
 

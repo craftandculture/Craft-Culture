@@ -6,7 +6,7 @@
  */
 
 import { logger, task } from '@trigger.dev/sdk';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { consignmentSettlements, partners } from '@/database/schema';
 import { createBill } from '@/lib/zoho/bills';
@@ -117,13 +117,31 @@ export const zohoCreateBillJob = task({
       notes: `Consignment settlement ${settlement.settlementNumber}`,
     });
 
-    // Update settlement with Zoho bill details
-    await triggerDb
+    /*
+      Update settlement with Zoho bill details, only if no bill has been
+      recorded by hand in the meantime: a recorded bill is never overwritten.
+    */
+    const [stored] = await triggerDb
       .update(consignmentSettlements)
       .set({
         zohoBillId: bill.bill_id,
       })
-      .where(eq(consignmentSettlements.id, settlement.id));
+      .where(
+        and(
+          eq(consignmentSettlements.id, settlement.id),
+          isNull(consignmentSettlements.zohoBillId),
+        ),
+      )
+      .returning({ id: consignmentSettlements.id });
+
+    if (!stored) {
+      logger.warn('A bill was recorded by hand while this one was raised', {
+        settlementId: settlement.id,
+        billId: bill.bill_id,
+        billNumber: bill.bill_number,
+      });
+      return { success: false, reason: 'recorded_meanwhile', billId: bill.bill_id };
+    }
 
     logger.info('Zoho bill created', {
       settlementId: settlement.id,

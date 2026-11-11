@@ -10,6 +10,7 @@ import adminGetPayoutRuns from './controller/adminGetPayoutRuns';
 import adminGetPurchases from './controller/adminGetPurchases';
 import adminRecordAgreedPrices from './controller/adminRecordAgreedPrices';
 import adminRecordBondPurchase from './controller/adminRecordBondPurchase';
+import adminRecordSettlementBill from './controller/adminRecordSettlementBill';
 import adminRecostPartnerSettlements from './controller/adminRecostPartnerSettlements';
 import adminReversePurchase from './controller/adminReversePurchase';
 import memberBrowseCatalogue from './controller/memberBrowseCatalogue';
@@ -47,6 +48,8 @@ const adminRouter = createTRPCRouter({
   getPayoutRuns: adminGetPayoutRuns,
   createPayoutRun: adminCreatePayoutRun,
   approvePayoutRun: adminApprovePayoutRun,
+  // A bill Finance raised by hand in Zoho, recorded against its settlement
+  recordSettlementBill: adminRecordSettlementBill,
   // Prices agreed with an owner away from the portal, as their offers
   recordAgreedPrices: adminRecordAgreedPrices,
   recordBondPurchase: adminRecordBondPurchase,

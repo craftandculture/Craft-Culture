@@ -4,6 +4,7 @@ import db from '@/database/client';
 import {
   consignmentPayoutRuns,
   consignmentSettlements,
+  zohoBills,
 } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
@@ -48,14 +49,21 @@ const adminGetPayoutRuns = staffAdminProcedure.query(async () => {
 
   const lines = await db
     .select({
+      id: consignmentSettlements.id,
       payoutRunId: consignmentSettlements.payoutRunId,
       settlementNumber: consignmentSettlements.settlementNumber,
       ownerName: consignmentSettlements.ownerName,
       owedToOwner: consignmentSettlements.owedToOwner,
       status: consignmentSettlements.status,
       zohoBillId: consignmentSettlements.zohoBillId,
+      /** From the bills cache; empty until the bill has been synced or recorded */
+      zohoBillNumber: zohoBills.billNumber,
     })
     .from(consignmentSettlements)
+    .leftJoin(
+      zohoBills,
+      eq(zohoBills.zohoBillId, consignmentSettlements.zohoBillId),
+    )
     .where(
       inArray(
         consignmentSettlements.payoutRunId,
