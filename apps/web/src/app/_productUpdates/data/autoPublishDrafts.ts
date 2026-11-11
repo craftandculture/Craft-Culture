@@ -9,9 +9,10 @@ import lintMemberCopy from '../utils/lintMemberCopy';
 /**
  * Publish the AI drafts that have waited their hold and pass the copy check
  *
- * The hold is counted from when the draft was written or last edited, so
- * staff have a day to discard or reword one. A draft the copy check flags
- * never publishes itself; it waits on Member Updates for a person.
+ * Only an untouched AI draft (createdBy null) qualifies. Any staff save or
+ * status change sets createdBy, so anything staff have edited, unpublished or
+ * sent back to draft publishes only when a person publishes it. A draft the
+ * copy check flags never publishes itself either.
  *
  * @returns How many were published
  */

@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
 import { productUpdates } from '@/database/schema';
@@ -13,6 +13,9 @@ import linkLabelFor from '../utils/linkLabelFor';
  *
  * Saving never publishes. An update already live stays live with its new
  * wording, which is how a typo is put right.
+ *
+ * Saving also marks the update as staff-owned (createdBy), so an AI draft
+ * that staff have edited never publishes itself; it waits for a person.
  */
 const adminSave = staffAdminProcedure.input(productUpdateInputSchema).mutation(async ({ input, ctx }) => {
   const values = {
@@ -26,7 +29,7 @@ const adminSave = staffAdminProcedure.input(productUpdateInputSchema).mutation(a
   if (input.id) {
     const [row] = await db
       .update(productUpdates)
-      .set(values)
+      .set({ ...values, createdBy: sql`coalesce(${productUpdates.createdBy}, ${ctx.user.id}::uuid)` })
       .where(eq(productUpdates.id, input.id))
       .returning({ id: productUpdates.id });
 

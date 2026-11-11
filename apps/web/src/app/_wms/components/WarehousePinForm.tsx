@@ -41,7 +41,7 @@ const WarehousePinForm = () => {
         response.status === 429
           ? 'Too many tries. Wait 15 minutes and try again.'
           : response.status === 404
-            ? 'The warehouse login is missing. Ask Kevin.'
+            ? 'The warehouse login is missing. Ask Management.'
             : 'That PIN is not right.',
       );
       setPin('');

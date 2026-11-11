@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import db from '@/database/client';
@@ -13,6 +13,9 @@ import lintMemberCopy from '../utils/lintMemberCopy';
  *
  * Publishing is refused while the copy check finds anything, so wording that
  * breaks the member rules can never reach a member, whatever the screen shows.
+ *
+ * Any status change marks the update as staff-owned (createdBy), so an item
+ * staff unpublish or send back to draft never publishes itself again.
  */
 const adminSetStatus = staffAdminProcedure
   .input(
@@ -21,7 +24,7 @@ const adminSetStatus = staffAdminProcedure
       status: z.enum(['draft', 'published', 'skipped']),
     }),
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     const [row] = await db.select().from(productUpdates).where(eq(productUpdates.id, input.id)).limit(1);
 
     if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'That update no longer exists' });
@@ -37,6 +40,7 @@ const adminSetStatus = staffAdminProcedure
       .update(productUpdates)
       .set({
         status: input.status,
+        createdBy: sql`coalesce(${productUpdates.createdBy}, ${ctx.user.id}::uuid)`,
         publishedAt: input.status === 'published' ? new Date() : null,
         skippedReason: input.status === 'skipped' ? (row.skippedReason ?? 'Set aside by staff') : row.skippedReason,
       })

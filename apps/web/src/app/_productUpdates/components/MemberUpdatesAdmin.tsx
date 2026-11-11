@@ -35,7 +35,7 @@ const TILES: { key: Exclude<Tab, 'preview'>; label: string; tint: string }[] = [
 
 /**
  * When an AI draft will publish itself, or null when it waits for a person:
- * written by hand, part of the launch backlog, or flagged by the copy check
+ * written or touched by staff, part of the launch backlog, or flagged by the copy check
  */
 const publishesAt = (row: Row) => {
   if (row.status !== 'draft' || row.createdBy || row.flags.length > 0) return null;
@@ -152,8 +152,9 @@ const MemberUpdatesAdmin = () => {
         <div>
           <h1 className="text-text-primary text-2xl font-semibold tracking-tight">Member Updates</h1>
           <p className="text-text-muted mt-0.5 max-w-2xl text-sm">
-            What&rsquo;s New for members. The AI drafts an update from each release, and it publishes itself a day
-            later unless you edit or discard it. Drafts the copy check flags wait for you.
+            What&rsquo;s New for members. The AI drafts an update from each release. AI drafts publish themselves
+            after 24 hours unless a member of staff edits, unpublishes or discards them; anything staff touch
+            publishes only when published by hand. Drafts the copy check flags wait for you.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
