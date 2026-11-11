@@ -1,3 +1,9 @@
+## [2.1.119](https://github.com/craftandculture/Craft-Culture/compare/v2.1.118...v2.1.119) (2026-11-11)
+
+### Bug Fixes
+
+* Distributors are no longer told that C&C waits for their payment before releasing stock, and the Manual links open the new Index Manual ([8ab0268](https://github.com/craftandculture/Craft-Culture/commit/8ab02683ba67168b0291bbde9ad1c9827fd82f3e))
+
 ## [2.1.118](https://github.com/craftandculture/Craft-Culture/compare/v2.1.117...v2.1.118) (2026-11-11)
 
 ### Bug Fixes
