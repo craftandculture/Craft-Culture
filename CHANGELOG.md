@@ -1,3 +1,9 @@
+## [2.1.114](https://github.com/craftandculture/Craft-Culture/compare/v2.1.113...v2.1.114) (2026-11-11)
+
+### Bug Fixes
+
+* The five-minute Zoho order sync only reworks orders that changed, so it stays fast as invoiced orders pile up ([f6c71f4](https://github.com/craftandculture/Craft-Culture/commit/f6c71f430acebe16a34a441aede95241780db9bf))
+
 ## [2.1.113](https://github.com/craftandculture/Craft-Culture/compare/v2.1.112...v2.1.113) (2026-11-11)
 
 ### Bug Fixes
