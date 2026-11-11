@@ -310,10 +310,10 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
               </div>
 
               <div className="flex gap-2">
-                <Button variant="primary" size="sm" onClick={editingId ? handleSave : handleAdd}>
+                <Button colorRole="brand" size="sm" onClick={editingId ? handleSave : handleAdd}>
                   <ButtonContent>{editingId ? 'Save' : 'Add'}</ButtonContent>
                 </Button>
-                <Button variant="secondary" size="sm" onClick={resetForm}>
+                <Button variant="outline" size="sm" onClick={resetForm}>
                   <ButtonContent>Cancel</ButtonContent>
                 </Button>
               </div>
@@ -323,7 +323,7 @@ const PrinterSettings = ({ open, onOpenChange }: PrinterSettingsProps) => {
 
         <DialogFooter>
           {!isFormOpen && (
-            <Button variant="secondary" size="sm" onClick={() => { resetForm(); setShowAddForm(true); }}>
+            <Button variant="outline" size="sm" onClick={() => { resetForm(); setShowAddForm(true); }}>
               <ButtonContent iconLeft={IconPlus}>Add Printer</ButtonContent>
             </Button>
           )}

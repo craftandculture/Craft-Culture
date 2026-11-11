@@ -1130,7 +1130,7 @@ const ShipmentDetailPage = () => {
             {showDeleteConfirm ? (
               <div className="flex items-center gap-1">
                 <Button
-                  variant="destructive"
+                  colorRole="danger"
                   size="sm"
                   onClick={() => deleteShipment({ id: shipmentId })}
                   disabled={isDeleting}

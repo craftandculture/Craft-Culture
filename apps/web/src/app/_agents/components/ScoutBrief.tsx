@@ -166,7 +166,7 @@ const ScoutBrief = () => {
               enable competitive analysis.
             </p>
             <Button
-              variant="primary"
+              colorRole="brand"
               size="sm"
               className="mt-4"
               onClick={() => triggerMutation.mutate({ agentId: 'scout' })}

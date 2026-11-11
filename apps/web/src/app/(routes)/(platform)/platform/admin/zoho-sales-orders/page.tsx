@@ -479,7 +479,7 @@ const ZohoSalesOrdersPage = () => {
                         {/* Release to Pick button for invoiced orders */}
                         {order.status === 'synced' && order.zohoStatus === 'invoiced' && (
                           <Button
-                            variant="primary"
+                            colorRole="brand"
                             size="sm"
                             onClick={() => handleReleaseToPick(order.id)}
                             disabled={isReleasing}

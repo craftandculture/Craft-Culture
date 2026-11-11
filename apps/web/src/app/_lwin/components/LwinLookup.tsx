@@ -480,7 +480,7 @@ const LwinLookup = ({
               No wines found for &ldquo;{debouncedQuery}&rdquo;
             </Typography>
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
               onClick={() => {
                 setManualMode(true);

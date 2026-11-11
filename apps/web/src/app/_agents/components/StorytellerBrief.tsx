@@ -87,7 +87,7 @@ const StorytellerBrief = () => {
             based on your inventory and recent sales.
           </Typography>
           <Button
-            variant="primary"
+            colorRole="brand"
             size="sm"
             onClick={() => triggerMutation.mutate({ agentId: 'storyteller' })}
             disabled={triggerMutation.isPending}

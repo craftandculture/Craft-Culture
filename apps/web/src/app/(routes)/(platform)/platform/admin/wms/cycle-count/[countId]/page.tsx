@@ -316,7 +316,7 @@ const CycleCountDetailPage = () => {
           </Link>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <Typography variant="h4" className="font-mono">{data.countNumber}</Typography>
+              <Typography variant="headingSm" className="font-mono">{data.countNumber}</Typography>
               {getStatusBadge(status)}
             </div>
             <div className="flex items-center gap-2 text-text-muted">
@@ -332,15 +332,15 @@ const CycleCountDetailPage = () => {
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-lg bg-fill-secondary p-3 text-center">
             {/* Blind count: the total is not shown while counting */}
-            <Typography variant="h4">{status === 'in_progress' ? 'Hidden' : (data.expectedItems ?? 0)}</Typography>
+            <Typography variant="headingSm">{status === 'in_progress' ? 'Hidden' : (data.expectedItems ?? 0)}</Typography>
             <Typography variant="bodySm" colorRole="muted">Expected</Typography>
           </div>
           <div className="rounded-lg bg-fill-secondary p-3 text-center">
-            <Typography variant="h4">{data.countedItems ?? 0}</Typography>
+            <Typography variant="headingSm">{data.countedItems ?? 0}</Typography>
             <Typography variant="bodySm" colorRole="muted">Counted</Typography>
           </div>
           <div className={`rounded-lg p-3 text-center ${(data.discrepancyCount ?? 0) > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-fill-secondary'}`}>
-            <Typography variant="h4" className={(data.discrepancyCount ?? 0) > 0 ? 'text-red-600' : ''}>
+            <Typography variant="headingSm" className={(data.discrepancyCount ?? 0) > 0 ? 'text-red-600' : ''}>
               {data.discrepancyCount ?? 0}
             </Typography>
             <Typography variant="bodySm" colorRole="muted">Discrepancies</Typography>

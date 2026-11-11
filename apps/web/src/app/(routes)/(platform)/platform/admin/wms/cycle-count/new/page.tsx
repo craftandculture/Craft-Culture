@@ -109,7 +109,7 @@ const NewCycleCountPage = () => {
             </Button>
           </Link>
           <div>
-            <Typography variant="h4">New Cycle Count</Typography>
+            <Typography variant="headingSm">New Cycle Count</Typography>
             <Typography variant="bodySm" colorRole="muted">
               Scan a location to start counting
             </Typography>
@@ -156,7 +156,7 @@ const NewCycleCountPage = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-lg bg-fill-secondary p-3 text-center">
-                  <Typography variant="h4" className="text-text-primary">
+                  <Typography variant="headingSm" className="text-text-primary">
                     {stockSummary.stockCount}
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
@@ -164,7 +164,7 @@ const NewCycleCountPage = () => {
                   </Typography>
                 </div>
                 <div className="rounded-lg bg-fill-secondary p-3 text-center">
-                  <Typography variant="h4" className="text-text-primary">
+                  <Typography variant="headingSm" className="text-text-primary">
                     {stockSummary.totalCases}
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">
@@ -172,7 +172,7 @@ const NewCycleCountPage = () => {
                   </Typography>
                 </div>
                 <div className="rounded-lg bg-fill-secondary p-3 text-center">
-                  <Typography variant="h4" className="text-text-primary">
+                  <Typography variant="headingSm" className="text-text-primary">
                     {stockSummary.totalAvailable}
                   </Typography>
                   <Typography variant="bodySm" colorRole="muted">

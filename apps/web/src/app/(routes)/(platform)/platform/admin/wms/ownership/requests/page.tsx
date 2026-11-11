@@ -388,7 +388,7 @@ const WMSPartnerRequestsPage = () => {
                   Cancel
                 </Button>
                 <Button
-                  variant={resolveModal.action === 'approved' ? 'primary' : 'destructive'}
+                  colorRole={resolveModal.action === 'approved' ? 'brand' : 'danger'}
                   className="flex-1"
                   onClick={confirmResolve}
                   disabled={resolveMutation.isPending}

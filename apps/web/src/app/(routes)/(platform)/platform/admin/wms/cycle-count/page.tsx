@@ -77,7 +77,7 @@ const WMSCycleCountsPage = () => {
               </Button>
             </Link>
             <div>
-              <Typography variant="h4">Cycle Counts</Typography>
+              <Typography variant="headingSm">Cycle Counts</Typography>
               <Typography variant="bodySm" colorRole="muted">
                 Verify physical inventory against system records
               </Typography>

@@ -107,7 +107,7 @@ const BuyerBrief = () => {
             availability to generate purchasing recommendations.
           </Typography>
           <Button
-            variant="primary"
+            colorRole="brand"
             size="sm"
             onClick={() => triggerMutation.mutate({ agentId: 'buyer' })}
             disabled={triggerMutation.isPending}
@@ -376,7 +376,7 @@ const BuyerBrief = () => {
               {actionItems.map((item, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-lg border border-border-muted p-3">
                   <Badge
-                    colorRole={item.priority === 'high' ? 'danger' : item.priority === 'medium' ? 'warning' : 'neutral'}
+                    colorRole={item.priority === 'high' ? 'danger' : item.priority === 'medium' ? 'warning' : 'muted'}
                     size="xs"
                     className="mt-0.5 shrink-0"
                   >

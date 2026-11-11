@@ -113,7 +113,7 @@ const PricerBrief = () => {
             stock velocity to optimize your pricing strategy.
           </Typography>
           <Button
-            variant="primary"
+            colorRole="brand"
             size="sm"
             onClick={() => triggerMutation.mutate({ agentId: 'pricer' })}
             disabled={triggerMutation.isPending}
@@ -414,7 +414,7 @@ const PricerBrief = () => {
                     Our duty-free price + 15% vs competitor duty-paid prices
                   </Typography>
                 </div>
-                <Badge colorRole="neutral" size="xs">
+                <Badge colorRole="muted" size="xs">
                   <IconScale size={12} className="mr-1" />
                   {gaps.length} gaps
                 </Badge>
@@ -455,7 +455,7 @@ const PricerBrief = () => {
               {actionItems.map((item, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-lg border border-border-muted p-3">
                   <Badge
-                    colorRole={item.priority === 'high' ? 'danger' : item.priority === 'medium' ? 'warning' : 'neutral'}
+                    colorRole={item.priority === 'high' ? 'danger' : item.priority === 'medium' ? 'warning' : 'muted'}
                     size="xs"
                     className="mt-0.5 shrink-0"
                   >

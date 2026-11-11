@@ -129,7 +129,7 @@ const AdvisorBrief = () => {
             financial data, and operational metrics into a strategic brief.
           </Typography>
           <Button
-            variant="primary"
+            colorRole="brand"
             size="sm"
             onClick={() => triggerMutation.mutate({ agentId: 'advisor' })}
             disabled={triggerMutation.isPending}

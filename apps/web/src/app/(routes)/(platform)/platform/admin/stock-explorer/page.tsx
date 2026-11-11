@@ -1097,7 +1097,8 @@ const ProductRow = ({
                     </Button>
                   </Link>
                   <Button
-                    variant={showHistory ? 'primary' : 'outline'}
+                    variant={showHistory ? 'default' : 'outline'}
+                    colorRole={showHistory ? 'brand' : undefined}
                     size="xs"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1108,7 +1109,8 @@ const ProductRow = ({
                     History
                   </Button>
                   <Button
-                    variant={adjustingStockId ? 'primary' : 'outline'}
+                    variant={adjustingStockId ? 'default' : 'outline'}
+                    colorRole={adjustingStockId ? 'brand' : undefined}
                     size="xs"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -3776,7 +3778,7 @@ const StockExplorerPage = () => {
                             </Button>
                           ) : (
                             <Link href="/platform/admin/wms/receive">
-                              <Button variant="primary" size="sm">
+                              <Button colorRole="brand" size="sm">
                                 Go to Receiving
                               </Button>
                             </Link>

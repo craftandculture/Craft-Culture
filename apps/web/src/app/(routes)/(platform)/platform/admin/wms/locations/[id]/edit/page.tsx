@@ -167,7 +167,7 @@ const LocationEditPage = () => {
                     />
                     <Typography
                       variant="labelSm"
-                      colorRole={storageMethod === 'shelf' ? 'brand' : 'secondary'}
+                      colorRole={storageMethod === 'shelf' ? 'brand' : 'muted'}
                     >
                       Shelf
                     </Typography>
@@ -191,7 +191,7 @@ const LocationEditPage = () => {
                     />
                     <Typography
                       variant="labelSm"
-                      colorRole={storageMethod === 'pallet' ? 'brand' : 'secondary'}
+                      colorRole={storageMethod === 'pallet' ? 'brand' : 'muted'}
                     >
                       Pallet
                     </Typography>
@@ -223,7 +223,7 @@ const LocationEditPage = () => {
                     </div>
                     <Typography
                       variant="labelSm"
-                      colorRole={storageMethod === 'mixed' ? 'brand' : 'secondary'}
+                      colorRole={storageMethod === 'mixed' ? 'brand' : 'muted'}
                     >
                       Mixed
                     </Typography>

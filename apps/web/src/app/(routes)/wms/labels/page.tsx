@@ -187,7 +187,7 @@ const WMSDeviceLabelsContent = () => {
           <div className="flex items-center gap-3">
             <ZebraPrint />
             <Button
-              variant="primary"
+              colorRole="brand"
               size="lg"
               onClick={handlePrintToZebra}
               disabled={selectedLabels.size === 0 || isPrintingToZebra}

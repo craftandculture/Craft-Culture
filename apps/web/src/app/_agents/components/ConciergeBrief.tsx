@@ -100,7 +100,7 @@ const ConciergeBrief = () => {
             generate personalized outreach suggestions.
           </Typography>
           <Button
-            variant="primary"
+            colorRole="brand"
             size="sm"
             onClick={() => triggerMutation.mutate({ agentId: 'concierge' })}
             disabled={triggerMutation.isPending}
