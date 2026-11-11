@@ -6,6 +6,7 @@
  */
 
 import { zohoFetch } from './client';
+import hasPagedPastCutoff from './hasPagedPastCutoff';
 import type {
   ZohoSalesOrder,
   ZohoSalesOrderResponse,
@@ -92,6 +93,10 @@ const listSalesOrders = async (options?: {
   salesorderNumber?: string;
   referenceNumber?: string;
   lastModifiedTime?: string;
+  /** Zoho's sort_column, e.g. 'last_modified_time' */
+  sortColumn?: 'last_modified_time';
+  /** A = ascending, D = descending */
+  sortOrder?: 'A' | 'D';
   page?: number;
   perPage?: number;
 }) => {
@@ -111,6 +116,12 @@ const listSalesOrders = async (options?: {
   }
   if (options?.lastModifiedTime) {
     params.set('last_modified_time', options.lastModifiedTime);
+  }
+  if (options?.sortColumn) {
+    params.set('sort_column', options.sortColumn);
+  }
+  if (options?.sortOrder) {
+    params.set('sort_order', options.sortOrder);
   }
   if (options?.page) {
     params.set('page', String(options.page));
@@ -210,6 +221,54 @@ const listAllSalesOrdersByStatus = async (status: ZohoSalesOrder['status']) => {
 };
 
 /**
+ * List sales orders with a given status that Zoho modified since a cutoff
+ *
+ * Asks Zoho for the status newest-modified first and stops paging once a page
+ * reaches orders older than the cutoff, so a status whose history only grows
+ * (invoiced) costs a page or two rather than every order ever raised. The
+ * last page may still carry some older orders; they are returned, not
+ * trimmed. Should Zoho ignore the sort, paging carries on to the end, the
+ * same as listAllSalesOrdersByStatus (see hasPagedPastCutoff).
+ *
+ * @example
+ *   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+ *   const recentInvoiced = await listRecentSalesOrdersByStatus('invoiced', since);
+ *
+ * @param status - Zoho sales order status to filter by
+ * @param since - Orders last modified before this are not needed
+ * @returns The status's orders modified since the cutoff, and possibly a few older
+ */
+const listRecentSalesOrdersByStatus = async (
+  status: ZohoSalesOrder['status'],
+  since: Date,
+) => {
+  const allOrders: ZohoSalesOrder[] = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { salesOrders, pageContext } = await listSalesOrders({
+      status,
+      sortColumn: 'last_modified_time',
+      sortOrder: 'D',
+      page,
+      perPage: 200,
+    });
+
+    allOrders.push(...salesOrders);
+    hasMore = pageContext.has_more_page && !hasPagedPastCutoff(salesOrders, since);
+    page++;
+
+    // Safety limit to prevent infinite loops, as listAllSalesOrdersByStatus
+    if (page > 50) {
+      break;
+    }
+  }
+
+  return allOrders;
+};
+
+/**
  * Get sales orders modified after a specific time
  * Used for incremental sync
  *
@@ -243,6 +302,7 @@ export {
   getSalesOrdersModifiedSince,
   listAllSalesOrdersByStatus,
   listOpenSalesOrders,
+  listRecentSalesOrdersByStatus,
   listSalesOrders,
   markSalesOrderAsOpen,
   voidSalesOrder,

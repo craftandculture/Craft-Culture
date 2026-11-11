@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import reconcileZohoSalesOrderItems from '@/app/_wms/utils/reconcileZohoSalesOrderItems';
+import isSalesOrderUnchanged from '@/app/_zohoSalesOrders/utils/isSalesOrderUnchanged';
 import pickInvoiceNumber from '@/app/_zohoSalesOrders/utils/pickInvoiceNumber';
 import { zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
 import { getSalesOrder } from '@/lib/zoho/salesOrders';
@@ -19,6 +20,12 @@ interface SyncExistingParams {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
   force?: boolean;
+  /**
+   * The stored Zoho status and last-modified time, when the caller has
+   * already loaded them (the scheduled sweep loads every listed order in one
+   * query). Omitted, they are read here.
+   */
+  current?: { zohoStatus: string | null; zohoLastModifiedTime: Date | null };
 }
 
 /** Statuses with no pick list yet — the order can be reconciled in full. */
@@ -139,6 +146,8 @@ const linesChanged = async ({
  * @param force - Re-fetch the details even when Zoho reports the order
  *   unchanged. Item-master edits (e.g. fixing a SKU's pack digits) don't bump
  *   the order's last-modified time, so only a forced pass picks them up.
+ * @param current - Optional preloaded { zohoStatus, zohoLastModifiedTime } for
+ *   the order; read from the database when not given
  * @returns The sync outcome, for counting/logging by the caller
  */
 const syncExistingSalesOrder = async ({
@@ -146,6 +155,7 @@ const syncExistingSalesOrder = async ({
   zohoOrder,
   db,
   force = false,
+  current: preloaded,
 }: SyncExistingParams) => {
   const status = existing.status ?? 'synced';
 
@@ -164,14 +174,20 @@ const syncExistingSalesOrder = async ({
   // the getSalesOrder call entirely. This keeps the 2-minute poll to ~0 detail
   // requests when orders are idle (previously every pre-pick order was fetched
   // and reconciled each cycle — heavy on Zoho's rate limit).
-  const [current] = await db
-    .select({
-      zohoLastModifiedTime: zohoSalesOrders.zohoLastModifiedTime,
-      zohoStatus: zohoSalesOrders.zohoStatus,
-    })
-    .from(zohoSalesOrders)
-    .where(eq(zohoSalesOrders.id, existing.id))
-    .limit(1);
+  const current:
+    | { zohoStatus: string | null; zohoLastModifiedTime: Date | null }
+    | undefined =
+    preloaded ??
+    (
+      await db
+        .select({
+          zohoLastModifiedTime: zohoSalesOrders.zohoLastModifiedTime,
+          zohoStatus: zohoSalesOrders.zohoStatus,
+        })
+        .from(zohoSalesOrders)
+        .where(eq(zohoSalesOrders.id, existing.id))
+        .limit(1)
+    )[0];
 
   // A forced pass overrides the short-circuit in both states. Pre-pick it
   // results in a line reconcile; on a released order it fetches the detail so
@@ -180,7 +196,6 @@ const syncExistingSalesOrder = async ({
   // edits (fixing a SKU's pack digits) don't bump the order's last-modified
   // time, so a released pick would otherwise be stranded on the old SKU with no
   // way to refresh it.
-  const forceDetailFetch = force;
 
   // Raising an invoice in Zoho flips the order open -> invoiced without always
   // bumping its last-modified time, and that status is exactly what gates
@@ -189,15 +204,8 @@ const syncExistingSalesOrder = async ({
   // without force, and the new-pick screen only force-refreshes orders already
   // listed as ready. The status is already in the cheap list payload, so
   // comparing it costs nothing and closes that trap.
-  const statusChanged = current?.zohoStatus !== zohoOrder.status;
-
-  const unchanged =
-    !forceDetailFetch &&
-    !statusChanged &&
-    current?.zohoLastModifiedTime instanceof Date &&
-    current.zohoLastModifiedTime.getTime() === zohoModifiedAt.getTime();
-
-  if (unchanged) {
+  // (The rule lives in isSalesOrderUnchanged, shared with the scheduled sweep.)
+  if (isSalesOrderUnchanged({ stored: current, zohoOrder, force })) {
     return { outcome: 'unchanged' as const };
   }
 
