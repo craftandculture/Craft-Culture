@@ -137,12 +137,27 @@ const getCatalogueRows = async (
       ownerId: wmsStock.ownerId,
       ...stockPricingSelect,
       mandateAsk: sql<number | null>`MAX(${liveMandates.ask})`,
-      product: sql<string>`MAX(${wmsStock.productName})`,
-      producer: sql<string | null>`MAX(${wmsStock.producer})`,
+      /*
+        Text describing the whole line is taken across every owner in SQL, so
+        it compares by the database's collation exactly as the one-row-per-wine
+        query did (a JavaScript comparison would order 'Craft & Culture' and
+        'CRURATED' the other way round).
+      */
+      product: sql<string>`MAX(MAX(${wmsStock.productName})) OVER (PARTITION BY ${wmsStock.lwin18})`,
+      producer: sql<
+        string | null
+      >`MAX(MAX(${wmsStock.producer})) OVER (PARTITION BY ${wmsStock.lwin18})`,
+      lineCategory: sql<
+        string | null
+      >`MAX(MAX(${wmsStock.category})) OVER (PARTITION BY ${wmsStock.lwin18})`,
       vintage: sql<number | null>`MAX(${wmsStock.vintage})`,
-      owner: sql<string | null>`MAX(${wmsStock.ownerName})`,
+      owner: sql<
+        string | null
+      >`MAX(MAX(${wmsStock.ownerName})) OVER (PARTITION BY ${wmsStock.lwin18})`,
       caseConfig: sql<number>`MAX(${wmsStock.caseConfig})`,
-      bottleSize: sql<string | null>`MAX(${wmsStock.bottleSize})`,
+      bottleSize: sql<
+        string | null
+      >`MAX(MAX(${wmsStock.bottleSize})) OVER (PARTITION BY ${wmsStock.lwin18})`,
       availableCases: sql<number>`${sumAcrossPricingRows(wmsStock.availableCases)}::int`,
     })
     .from(wmsStock)
@@ -185,13 +200,8 @@ const getCatalogueRows = async (
     line.holders.push(stockPricingInput(row));
     line.availableCases += Number(row.availableCases);
     line.mandateAsk = maxOf(line.mandateAsk, row.mandateAsk);
-    line.product = maxOf(line.product, row.product) ?? line.product;
-    line.producer = maxOf(line.producer, row.producer);
     line.vintage = maxOf(line.vintage, row.vintage);
-    line.category = maxOf(line.category, row.category);
-    line.owner = maxOf(line.owner, row.owner);
     line.caseConfig = maxOf(line.caseConfig, row.caseConfig) ?? line.caseConfig;
-    line.bottleSize = maxOf(line.bottleSize, row.bottleSize);
   }
 
   const rows = [...byLwin.values()];
@@ -241,7 +251,7 @@ const getCatalogueRows = async (
       vintage: r.vintage,
       region: region?.region ?? null,
       country: region?.country ?? null,
-      category: r.category,
+      category: r.lineCategory,
       owner: r.owner,
       caseConfig: cc,
       bottleSize: r.bottleSize,
