@@ -80,6 +80,7 @@ import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocume
 import adminSyncHillebrandInvoices from './controller/adminSyncHillebrandInvoices';
 import adminSyncItemsToZoho from './controller/adminSyncItemsToZoho';
 import adminUpdate from './controller/adminUpdate';
+import adminUpdateDocumentExpiry from './controller/adminUpdateDocumentExpiry';
 import adminUpdateExportJob from './controller/adminUpdateExportJob';
 import adminUpdateForwarder from './controller/adminUpdateForwarder';
 import adminUpdateGroupCostLine from './controller/adminUpdateGroupCostLine';
@@ -132,6 +133,7 @@ const adminRouter = createTRPCRouter({
   // Documents
   uploadDocument: adminUploadDocument,
   deleteDocument: adminDeleteDocument,
+  updateDocumentExpiry: adminUpdateDocumentExpiry,
 
   // Landed cost
   calculateLandedCost: adminCalculateLandedCost,

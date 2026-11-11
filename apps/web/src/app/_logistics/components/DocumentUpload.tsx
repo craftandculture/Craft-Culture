@@ -2,6 +2,7 @@
 
 import {
   IconAlertTriangle,
+  IconCalendarEvent,
   IconCheck,
   IconCloudUpload,
   IconCoins,
@@ -171,6 +172,22 @@ const extractableTypes: DocumentType[] = [
   'packing_list',
 ];
 
+/** A date input's YYYY-MM-DD as midnight UTC, the same day wherever it is read */
+const dateInputToDate = (value: string) => new Date(`${value}T00:00:00.000Z`);
+
+/** A stored date back into a date input's YYYY-MM-DD */
+const dateToInputValue = (date: Date | string | null | undefined) =>
+  date ? new Date(date).toISOString().slice(0, 10) : '';
+
+/** As the rest of Logistics shows dates, e.g. 5 Nov 2026 */
+const formatExpiryDate = (date: Date | string) =>
+  new Date(date).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+
 const LogisticsDocumentUpload = ({
   shipmentId,
   documents = [],
@@ -182,6 +199,11 @@ const LogisticsDocumentUpload = ({
 
   const [selectedType, setSelectedType] = useState<DocumentType>('commercial_invoice');
   const [customTitle, setCustomTitle] = useState('');
+  /** Optional expiry for the next upload, as YYYY-MM-DD; read by the compliance report and expiry alert */
+  const [expiryDate, setExpiryDate] = useState('');
+  /** The document whose expiry is being edited, and the date being entered */
+  const [editingExpiryDocId, setEditingExpiryDocId] = useState<string | null>(null);
+  const [expiryDraft, setExpiryDraft] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -223,10 +245,12 @@ const LogisticsDocumentUpload = ({
         fileType: data.fileType as UploadFileType,
         fileSize: data.fileSize,
         notes: selectedType === 'other' && customTitle.trim() ? customTitle.trim() : undefined,
+        expiryDate: expiryDate ? dateInputToDate(expiryDate) : undefined,
       });
     },
     onSuccess: () => {
       toast.success('Document uploaded successfully');
+      setExpiryDate('');
       void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getOne']] });
       onUploadComplete?.();
     },
@@ -247,6 +271,23 @@ const LogisticsDocumentUpload = ({
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to delete document');
+    },
+  });
+
+  // Set or clear the expiry date on a document already uploaded
+  const expiryMutation = useMutation({
+    mutationFn: async (data: { documentId: string; expiryDate: string | null }) => {
+      return trpcClient.logistics.admin.updateDocumentExpiry.mutate(data);
+    },
+    onSuccess: (_result, variables) => {
+      toast.success(variables.expiryDate ? 'Expiry date saved' : 'Expiry date cleared');
+      setEditingExpiryDocId(null);
+      setExpiryDraft('');
+      void queryClient.invalidateQueries({ queryKey: [['logistics', 'admin', 'getOne']] });
+      onUploadComplete?.();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update the expiry date');
     },
   });
 
@@ -604,6 +645,21 @@ const LogisticsDocumentUpload = ({
           </div>
         </div>
 
+        <div>
+          <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+            Expiry date (optional)
+          </Typography>
+          <input
+            type="date"
+            value={expiryDate}
+            onChange={(e) => setExpiryDate(e.target.value)}
+            className="w-full rounded-md border border-border-primary bg-background-primary px-3 py-2 text-sm focus:border-text-primary focus:outline-none"
+          />
+          <Typography variant="bodyXs" colorRole="muted" className="mt-1">
+            For certificates, permits and other documents that expire. Feeds the compliance report and expiry alerts.
+          </Typography>
+        </div>
+
         {selectedType === 'other' && (
           <div>
             <Typography variant="bodyXs" colorRole="muted" className="mb-1">
@@ -691,7 +747,63 @@ const LogisticsDocumentUpload = ({
                   </div>
                   <Typography variant="bodyXs" colorRole="muted">
                     {formatFileSize(doc.fileSize)}
+                    {doc.expiryDate && (
+                      <span
+                        className={
+                          new Date(doc.expiryDate) < new Date()
+                            ? 'text-text-danger'
+                            : undefined
+                        }
+                      >
+                        {' · '}
+                        {new Date(doc.expiryDate) < new Date() ? 'Expired' : 'Expires'}{' '}
+                        {formatExpiryDate(doc.expiryDate)}
+                      </span>
+                    )}
                   </Typography>
+                  {editingExpiryDocId === doc.id && (
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <input
+                        type="date"
+                        value={expiryDraft}
+                        onChange={(e) => setExpiryDraft(e.target.value)}
+                        aria-label="Expiry date"
+                        className="rounded-md border border-border-primary bg-background-primary px-2 py-1 text-xs focus:border-text-primary focus:outline-none"
+                      />
+                      <Button
+                        variant="default"
+                        colorRole="brand"
+                        size="sm"
+                        onClick={() =>
+                          expiryMutation.mutate({ documentId: doc.id, expiryDate: expiryDraft || null })
+                        }
+                        isDisabled={expiryMutation.isPending || (!expiryDraft && !doc.expiryDate)}
+                      >
+                        <ButtonContent>Save</ButtonContent>
+                      </Button>
+                      {doc.expiryDate && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => expiryMutation.mutate({ documentId: doc.id, expiryDate: null })}
+                          isDisabled={expiryMutation.isPending}
+                        >
+                          <ButtonContent>Clear</ButtonContent>
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingExpiryDocId(null);
+                          setExpiryDraft('');
+                        }}
+                        isDisabled={expiryMutation.isPending}
+                      >
+                        <ButtonContent>Cancel</ButtonContent>
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -714,6 +826,17 @@ const LogisticsDocumentUpload = ({
                       />
                     </Button>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingExpiryDocId(doc.id);
+                      setExpiryDraft(dateToInputValue(doc.expiryDate));
+                    }}
+                    title={doc.expiryDate ? 'Change expiry date' : 'Set expiry date'}
+                  >
+                    <Icon icon={IconCalendarEvent} size="sm" />
+                  </Button>
                   <Button variant="ghost" size="sm" asChild>
                     <a href={fileHref(doc.fileUrl)} target="_blank" rel="noopener noreferrer">
                       <Icon icon={IconFile} size="sm" />
