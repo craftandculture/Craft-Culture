@@ -1,3 +1,9 @@
+## [2.1.116](https://github.com/craftandculture/Craft-Culture/compare/v2.1.115...v2.1.116) (2026-11-11)
+
+### Bug Fixes
+
+* A picked case can no longer reappear on the price lists when a hold is released at the same moment ([0c29862](https://github.com/craftandculture/Craft-Culture/commit/0c2986224de9f880b3b02106933afee1d18a5503))
+
 ## [2.1.115](https://github.com/craftandculture/Craft-Culture/compare/v2.1.114...v2.1.115) (2026-11-11)
 
 ### Bug Fixes
