@@ -118,7 +118,7 @@ const actionConfirmCopy: Record<string, string> = {
   awaiting_distributor_payment:
     'Record that your payment to Craft & Culture is being raised.',
   distributor_paid:
-    'Confirm that your payment to Craft & Culture has been sent. Craft & Culture then releases the stock to you.',
+    'Confirm that your payment to Craft & Culture has been sent.',
   with_distributor:
     'Confirm that the stock for this order has arrived at your warehouse.',
 };

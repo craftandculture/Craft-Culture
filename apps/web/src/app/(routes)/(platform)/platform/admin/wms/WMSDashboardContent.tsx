@@ -577,7 +577,7 @@ const WMSDashboardContent = () => {
                 <Icon icon={IconHeartbeat} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Health</Typography>
               </Link>
-              <a href="https://craftculture.xyz/wms-manual" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg p-3 transition-colors hover:bg-fill-secondary">
+              <a href="https://craftculture.xyz/index-manual#m-warehouse" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg p-3 transition-colors hover:bg-fill-secondary">
                 <Icon icon={IconBook} size="sm" colorRole="muted" />
                 <Typography variant="bodySm">Manual</Typography>
               </a>

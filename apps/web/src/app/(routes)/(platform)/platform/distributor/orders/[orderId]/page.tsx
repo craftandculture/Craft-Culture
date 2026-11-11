@@ -453,7 +453,7 @@ const DistributorOrderDetailPage = () => {
           icon: IconCheck,
           hint: 'Once your payment to Craft & Culture has been sent, confirm it here.',
           confirm:
-            'Confirm that your payment to Craft & Culture has been sent. Craft & Culture then releases the stock to you.',
+            'Confirm that your payment to Craft & Culture has been sent.',
         };
       // scheduling_delivery, delivery_scheduled, out_for_delivery - all handled by delivery UI
       case 'stock_in_transit':

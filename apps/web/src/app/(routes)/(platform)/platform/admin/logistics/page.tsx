@@ -367,7 +367,7 @@ const LogisticsDashboardPage = () => {
                 ))}
                 <li>
                   <a
-                    href="https://craftculture.xyz/logistics-manual"
+                    href="https://craftculture.xyz/index-manual#m-logistics"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-text-primary transition-colors hover:bg-surface-secondary"

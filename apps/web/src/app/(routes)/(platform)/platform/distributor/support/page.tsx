@@ -50,7 +50,7 @@ const faqItems = [
   {
     question: 'When do I pay Craft & Culture?',
     answer:
-      'After the client has paid you. Mark the order Awaiting Distributor Payment while your payment is being raised, then Confirm Payment to C&C once it is sent. C&C releases the stock to you after that payment is received.',
+      'After the client has paid you. Mark the order Awaiting Distributor Payment while your payment is being raised, then Confirm Payment to C&C once it is sent. Dispatch does not wait for this payment.',
   },
   {
     question: 'How long does fulfilment take?',
@@ -268,7 +268,7 @@ const DistributorSupportPage = () => {
                 },
                 {
                   title: 'Pay C&C',
-                  body: 'Mark the order Awaiting Distributor Payment while your payment is raised, then Confirm Payment to C&C when it has been sent. C&C then releases the stock to you.',
+                  body: 'Mark the order Awaiting Distributor Payment while your payment is raised, then Confirm Payment to C&C when it has been sent. C&C dispatches the stock once the order is invoiced, without waiting for this payment.',
                 },
               ].map((step, index) => (
                 <li key={step.title} className="flex gap-3">
