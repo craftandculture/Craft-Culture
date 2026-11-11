@@ -1,3 +1,9 @@
+## [2.1.113](https://github.com/craftandculture/Craft-Culture/compare/v2.1.112...v2.1.113) (2026-11-11)
+
+### Bug Fixes
+
+* Buttons, headings and badges that showed unstyled now use the house styles ([9b4a8fd](https://github.com/craftandculture/Craft-Culture/commit/9b4a8fd4173b49cca7f1696fbfb076caf546a363))
+
 ## [2.1.112](https://github.com/craftandculture/Craft-Culture/compare/v2.1.111...v2.1.112) (2026-11-10)
 
 ### Bug Fixes
