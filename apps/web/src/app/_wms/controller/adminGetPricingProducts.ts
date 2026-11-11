@@ -28,7 +28,8 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getPricingProductsSchema } from '../schemas/pricingManagerSchema';
 import inboundLineKey from '../utils/inboundLineKey';
-import inboundLogisticsPerBottle from '../utils/inboundLogisticsPerBottle';
+import inboundPricingInput from '../utils/inboundPricingInput';
+import inboundPricingSelect from '../utils/inboundPricingSelect';
 import INBOUND_SHIPMENT_STATUSES from '../utils/inboundShipmentStatuses';
 import invoicedImportMessage from '../utils/invoicedImportMessage';
 import lotShipmentCost from '../utils/lotShipmentCost';
@@ -36,6 +37,7 @@ import lwinPakKey from '../utils/lwinPakKey';
 import ownerPricingJoin, { ownerPriced } from '../utils/ownerPricingJoin';
 import ownerPricingReady from '../utils/ownerPricingReady';
 import pricingManagerCostParts from '../utils/pricingManagerCostParts';
+import stockPricingSelect from '../utils/stockPricingSelect';
 import sumAcrossPricingRows from '../utils/sumAcrossPricingRows';
 
 /**
@@ -185,71 +187,11 @@ const adminGetPricingProducts = adminProcedure
     const orderFn = sortOrder === 'desc' ? desc : asc;
 
     /*
-      Everything a row is priced from, selected once and used twice: by the
-      table rows and by the rows the KPI tiles are summed from. Two selects
-      would drift, and the tiles would disagree with the table again.
+      Everything a row is priced from (stockPricingSelect) is selected by the
+      table rows, the rows the KPI tiles are summed from, and the price lists.
+      Separate selects drifted, and the tiles and the lists disagreed with the
+      table.
     */
-    const pricingInputColumns = {
-      // The newest lot's paid and landed cost — see lotShipmentCost
-      lotProductCost: sql<number | null>`(array_agg(ship.product_cost ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
-      lotLandedCost: sql<number | null>`(array_agg(ship.landed_cost ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
-      lotOwnLine: sql<boolean | null>`(array_agg(ship.own_line ORDER BY ${wmsStock.receivedAt} DESC NULLS LAST))[1]`,
-      category: sql<string | null>`MAX(${wmsStock.category})`,
-      // 1 when Craft & Culture owns this stock — drives the $22.50 wine
-      // logistics fallback for old C&C imports with no freight profile.
-      isCraftCulture: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%craft%culture%' THEN 1 ELSE 0 END)::int`,
-      // 1 for consignment owners (Cru Wine / Crurated) — their transfer fee
-      // default is $0 rather than the $2.50 FZ→mainland default.
-      isZeroTransferOwner: sql<number>`MAX(CASE WHEN ${wmsStock.ownerName} ILIKE '%cru wine%' OR ${wmsStock.ownerName} ILIKE '%crurated%' THEN 1 ELSE 0 END)::int`,
-      importPricePerBottle: sql<
-        number | null
-      >`MAX(${ownerPriced('importPricePerBottle')})`,
-      costOverridePerBottle: sql<
-        number | null
-      >`MAX(${ownerPriced('costOverridePerBottle')})`,
-      // Per-line logistics override ($/btl); null = fall back to owner/global
-      lineLogistics: sql<
-        number | null
-      >`MAX(${ownerPriced('logisticsPerBottle')})`,
-      // Per-SKU FZ→mainland transfer fee ($/btl); null = the $2.50 default
-      transferPricePerBottle: sql<
-        number | null
-      >`MAX(${ownerPriced('transferPricePerBottle')})`,
-      sellingPricePerBottle: sql<
-        number | null
-      >`MAX(${ownerPriced('sellingPricePerBottle')})`,
-      // Bespoke per-line margin % over landed (Spirits/RTD only)
-      sellMarginPct: sql<
-        number | null
-      >`MAX(${ownerPriced('sellMarginPct')})`,
-      /*
-        A margin typed on THIS line, which beats the owner's rate.
-
-        The row already prefers a per-line margin over the owner's — but the
-        landed select never returned one, so typing a margin on a wine wrote
-        it, the row refetched, found nothing, fell back to the owner's rate
-        and snapped straight back to 10%. It read as a cell that could not be
-        edited; it was a cell whose answer was being fetched from somewhere
-        the answer had not been written.
-
-        The in-transit select has always returned these, which is why it
-        worked there and not here.
-      */
-      b2bMarginPct: sql<
-        number | null
-      >`MAX(${ownerPriced('b2bMarginPct')})`,
-      pcMarginPct: sql<number | null>`MAX(${ownerPriced('pcMarginPct')})`,
-      // Owner's own rates (explicit settings; null if the owner hasn't set them)
-      ownerLogistics: sql<
-        number | null
-      >`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
-      ownerInbondPct: sql<
-        number | null
-      >`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
-      ownerPcPct: sql<
-        number | null
-      >`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
-    };
 
     const products = await db
       .select({
@@ -260,7 +202,7 @@ const adminGetPricingProducts = adminProcedure
           at different prices — and one row could only show one of them.
         */
         ownerId: wmsStock.ownerId,
-        ...pricingInputColumns,
+        ...stockPricingSelect,
         /** The shipment the newest lot's invoice line is on, for the locked Import cell */
         lotShipmentNumber: sql<string | null>`(
           SELECT ls.shipment_number FROM logistics_shipments ls
@@ -519,7 +461,7 @@ const adminGetPricingProducts = adminProcedure
             .select({
               lwin18: wmsStock.lwin18,
               ownerId: wmsStock.ownerId,
-              ...pricingInputColumns,
+              ...stockPricingSelect,
               bottles: sql<number>`${sumAcrossPricingRows(sql`${wmsStock.quantityCases} * ${wmsStock.caseConfig}`)}::float`,
               // The owner's stored PC price, as getOwnerPricing returns it to the table
               ownerPcPrice: sql<number | null>`(
@@ -585,6 +527,8 @@ const adminGetPricingProducts = adminProcedure
       ownerInbondPct: number | null;
       ownerPcPct: number | null;
       importPricePerBottle: number | null;
+      /** 1 for Cru Wine / Crurated, whose transfer defaults to $0 */
+      isZeroTransferOwner: number;
       sellingPricePerBottle: number | null;
       costOverridePerBottle: number | null;
       lineLogistics: number | null;
@@ -729,36 +673,11 @@ const adminGetPricingProducts = adminProcedure
             number | null
           >`MAX(${logisticsShipmentItems.bottleSizeMl})::int`,
           totalCases: sql<number>`${sumAcrossPricingRows(logisticsShipmentItems.cases)}::int`,
-          // A manually corrected import price wins over the shipment's own
-          // figure — it was being ignored, so an edit saved and the row went on
-          // showing the old cost.
-          costPerBottle: sql<
-            number | null
-          >`COALESCE(NULLIF(MAX(${wmsProductPricing.importPricePerBottle}), 0), MAX(${logisticsShipmentItems.productCostPerBottle}))`,
-          sellingPricePerBottle: sql<
-            number | null
-          >`MAX(${wmsProductPricing.sellingPricePerBottle})`,
-          // Overrides ARE saved against in-transit wine — keyed by LWIN like any
-          // other — but none of them were selected here, so the cell a user had
-          // just edited came back empty and the edit looked lost.
-          costOverridePerBottle: sql<
-            number | null
-          >`MAX(${wmsProductPricing.costOverridePerBottle})`,
-          lineLogistics: sql<
-            number | null
-          >`MAX(${wmsProductPricing.logisticsPerBottle})`,
-          transferPricePerBottle: sql<
-            number | null
-          >`MAX(${wmsProductPricing.transferPricePerBottle})`,
-          sellMarginPct: sql<
-            number | null
-          >`MAX(${wmsProductPricing.sellMarginPct})`,
-          b2bMarginPct: sql<
-            number | null
-          >`MAX(${wmsProductPricing.b2bMarginPct})`,
-          pcMarginPct: sql<
-            number | null
-          >`MAX(${wmsProductPricing.pcMarginPct})`,
+          /*
+            What the line is priced from, shared with the in-transit price
+            list so the two are fed the same figures.
+          */
+          ...inboundPricingSelect,
           /*
             Released for THIS owner, not for anyone who happens to hold the
             wine. The flag used to live on the pricing row, which is keyed on
@@ -779,11 +698,6 @@ const adminGetPricingProducts = adminProcedure
           hsCode: sql<string | null>`MAX(${logisticsShipmentItems.hsCode})`,
           shipmentStatus: sql<string>`MAX(${logisticsShipments.status}::text)`,
 
-          // Freight actually allocated to the shipment line, per bottle. Zero
-          // until the freight invoice is loaded against the consolidation group.
-          allocatedFreight: sql<
-            number | null
-          >`MAX(GREATEST(COALESCE(${logisticsShipmentItems.landedCostPerBottle}, 0) - COALESCE(${logisticsShipmentItems.productCostPerBottle}, 0), 0))`,
           earliestEta: sql<Date | null>`MIN(${logisticsShipments.eta})`,
           shipmentNumber: sql<
             string | null
@@ -795,18 +709,6 @@ const adminGetPricingProducts = adminProcedure
             string | null
           >`MAX(${logisticsShipments.partnerId}::text)`,
           ownerName: sql<string | null>`MAX(${partners.businessName})`,
-          ownerLogistics: sql<
-            number | null
-          >`MAX(${wmsOwnerPricingSettings.logisticsPerBottle})`,
-          ownerInbondPct: sql<
-            number | null
-          >`MAX(${wmsOwnerPricingSettings.inbondMarginPct})`,
-          ownerPcPct: sql<
-            number | null
-          >`MAX(${wmsOwnerPricingSettings.pcMarginPct})`,
-          category: sql<
-            string | null
-          >`MAX(CASE WHEN ${logisticsShipmentItems.hsCode} IN ('22042100','22041000') THEN 'Wine' WHEN ${logisticsShipmentItems.hsCode} IN ('22084000','22083000','22082000','22089090','22085000','22087000','22086000') THEN 'Spirits' WHEN ${logisticsShipmentItems.hsCode} IN ('22030000','22060000') THEN 'RTD' ELSE NULL END)`,
         })
         .from(logisticsShipmentItems)
         .innerJoin(
@@ -846,7 +748,8 @@ const adminGetPricingProducts = adminProcedure
         ownerLogistics: r.ownerLogistics,
         ownerInbondPct: r.ownerInbondPct,
         ownerPcPct: r.ownerPcPct,
-        importPricePerBottle: r.costPerBottle,
+        importPricePerBottle: r.importPricePerBottle,
+        isZeroTransferOwner: r.isZeroTransferOwner,
         sellingPricePerBottle: r.sellingPricePerBottle,
         costOverridePerBottle: r.costOverridePerBottle,
         lineLogistics: r.lineLogistics,
@@ -866,10 +769,7 @@ const adminGetPricingProducts = adminProcedure
           is how a price barely above the buy price reached a price list.
           The estimate gives way to the actuals the moment they arrive.
         */
-        systemLogistics: inboundLogisticsPerBottle(
-          r.lineLogistics,
-          r.allocatedFreight,
-        ),
+        systemLogistics: inboundPricingInput(r).systemLogistics,
         logisticsIsEstimate:
           r.lineLogistics == null &&
           !(r.allocatedFreight && r.allocatedFreight > 0),
