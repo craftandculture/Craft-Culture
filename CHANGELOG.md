@@ -1,3 +1,9 @@
+## [2.1.118](https://github.com/craftandculture/Craft-Culture/compare/v2.1.117...v2.1.118) (2026-11-11)
+
+### Bug Fixes
+
+* Staff can now correct a shipment's departure, arrival and delivery dates on the shipment page, so a transfer can carry the day it actually happened. ([09bcc38](https://github.com/craftandculture/Craft-Culture/commit/09bcc38718c8853e5fc70c6939edff790548453e))
+
 ## [2.1.117](https://github.com/craftandculture/Craft-Culture/compare/v2.1.116...v2.1.117) (2026-11-11)
 
 ### Bug Fixes
