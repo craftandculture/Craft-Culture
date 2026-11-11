@@ -1,3 +1,10 @@
+## [2.1.115](https://github.com/craftandculture/Craft-Culture/compare/v2.1.114...v2.1.115) (2026-11-11)
+
+### Bug Fixes
+
+* Only named staff become admins when they sign up; any other craftculture.xyz address now waits for approval ([fc378aa](https://github.com/craftandculture/Craft-Culture/commit/fc378aa7538043fad85c1cb1235a09159752b736))
+* The warehouse login can no longer change private-client order prices, lines or distributors ([2893ed3](https://github.com/craftandculture/Craft-Culture/commit/2893ed3fdd506dad5d6d5cd393ec51c2116a3dbf))
+
 ## [2.1.114](https://github.com/craftandculture/Craft-Culture/compare/v2.1.113...v2.1.114) (2026-11-11)
 
 ### Bug Fixes
