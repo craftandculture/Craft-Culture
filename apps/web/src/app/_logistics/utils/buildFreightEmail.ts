@@ -171,11 +171,16 @@ const requirementLines = (r: FreightEmailRequest) => {
   ].filter(Boolean);
 };
 
-const signOff = (senderName: string) => [
+/**
+ * Every freight email is signed by the department, never a person: forwarders
+ * and clients deal with C&C Logistics, and replies go to logistics@ where the
+ * whole team sees them
+ */
+const signOff = () => [
   'Kind regards,',
   '',
-  senderName,
-  'Logistics, Craft & Culture',
+  'Logistics Department',
+  'Craft & Culture',
   'logistics@craftculture.xyz',
   'craftculture.xyz',
 ];
@@ -238,7 +243,7 @@ const buildFreightEmail = (input: FreightEmailInput) => {
           '',
           `Please could you send your quote${r.replyBy ? ` by ${day(r.replyBy)}` : ' at your earliest convenience'}, or let us know if you are unable to quote on this occasion.`,
           '',
-          ...signOff(input.senderName),
+          ...signOff(),
         ].join('\n'),
       };
     }
@@ -282,7 +287,7 @@ const buildFreightEmail = (input: FreightEmailInput) => {
           ? `We would be grateful for your quote by ${day(r.replyBy)}.`
           : 'We would be grateful for your quote at your earliest convenience.',
         '',
-        ...signOff(input.senderName),
+        ...signOff(),
       ].join('\n'),
     };
   }
@@ -303,7 +308,7 @@ const buildFreightEmail = (input: FreightEmailInput) => {
           '',
           'On this occasion we have placed the shipment elsewhere. We appreciate your time and look forward to working with you on future consignments.',
           '',
-          ...signOff(input.senderName),
+          ...signOff(),
         ].join('\n'),
       };
     }
@@ -319,7 +324,7 @@ const buildFreightEmail = (input: FreightEmailInput) => {
         '',
         'Please confirm the booking and send the collection details, together with any documents you need from us. Kindly quote both references on all correspondence and on your invoice.',
         '',
-        ...signOff(input.senderName),
+        ...signOff(),
       ].join('\n'),
     };
   }
@@ -376,7 +381,7 @@ const buildFreightEmail = (input: FreightEmailInput) => {
       '',
       `To proceed, please reply to confirm, quoting reference ${r.requestNumber}, and we will arrange collection.`,
       '',
-      ...signOff(input.senderName),
+      ...signOff(),
     ].join('\n'),
   };
 };
