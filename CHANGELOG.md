@@ -1,3 +1,9 @@
+## [2.1.125](https://github.com/craftandculture/Craft-Culture/compare/v2.1.124...v2.1.125) (2026-11-12)
+
+### Bug Fixes
+
+* Spirits and ready-to-drink stock are no longer asked for a wine colour, and Spirit can be chosen for a spirit filed among the wines. ([917ab0d](https://github.com/craftandculture/Craft-Culture/commit/917ab0db88056ec34c9f9fb0fa84983efa3f206b))
+
 ## [2.1.124](https://github.com/craftandculture/Craft-Culture/compare/v2.1.123...v2.1.124) (2026-11-12)
 
 ### Features
