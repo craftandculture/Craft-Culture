@@ -1,3 +1,9 @@
+## [2.1.123](https://github.com/craftandculture/Craft-Culture/compare/v2.1.122...v2.1.123) (2026-11-12)
+
+### Features
+
+* Every wine in Stock Explorer and Pricing Manager now shows its colour (red, white, rosé, sparkling, fortified or orange), read from Liv-ex, and Stock Explorer lists the wines without one so staff can set it once for every vintage and size. ([439229c](https://github.com/craftandculture/Craft-Culture/commit/439229c0271c64f8c3ddfdb74b30a17b190dbbb6))
+
 ## [2.1.122](https://github.com/craftandculture/Craft-Culture/compare/v2.1.121...v2.1.122) (2026-11-12)
 
 ### Features
