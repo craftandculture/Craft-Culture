@@ -1,3 +1,9 @@
+## [2.1.128](https://github.com/craftandculture/Craft-Culture/compare/v2.1.127...v2.1.128) (2026-11-12)
+
+### Bug Fixes
+
+* **logistics:** freight emails are signed by the Logistics Department, not the person sending ([ec1e8a1](https://github.com/craftandculture/Craft-Culture/commit/ec1e8a11bceefb4e0c6d26711aa2962eecf4ee8f))
+
 ## [2.1.127](https://github.com/craftandculture/Craft-Culture/compare/v2.1.126...v2.1.127) (2026-11-12)
 
 ### Features
