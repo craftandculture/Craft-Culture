@@ -1,3 +1,10 @@
+## [2.1.124](https://github.com/craftandculture/Craft-Culture/compare/v2.1.123...v2.1.124) (2026-11-12)
+
+### Features
+
+* A wine can no longer be added to stock without a colour: Add to stock fills it from Liv-ex or asks for it, and receiving asks for it at Find & Count for the few wines Liv-ex has no colour for. Wines with supplier codes instead of an LWIN now join the colour list too. ([44ce6e5](https://github.com/craftandculture/Craft-Culture/commit/44ce6e5e7bd1429fa6b771c3a9555e423a3538f1))
+* **wms:** staff can correct a stock line's vintage from Stock Explorer ([d8d5f1e](https://github.com/craftandculture/Craft-Culture/commit/d8d5f1e55dc2bc552b1af24c1d5426f26af8f304))
+
 ## [2.1.123](https://github.com/craftandculture/Craft-Culture/compare/v2.1.122...v2.1.123) (2026-11-12)
 
 ### Features
