@@ -14,6 +14,7 @@ export interface WineWithoutColour {
 
 interface ColourRow {
   lwin7: string;
+  category: string | null;
   productName: string | null;
   producer: string | null;
   livexName: string | null;
@@ -39,17 +40,17 @@ export const WINE_KEY_PATTERN = /^[A-Za-z0-9]{1,40}$/;
  */
 const getWineColours = async (keys?: string[]) => {
   const wanted = keys ? [...new Set(keys.filter((key) => WINE_KEY_PATTERN.test(key)))] : undefined;
-  if (wanted && wanted.length === 0) return { byLwin7: {}, missing: [] };
+  if (wanted && wanted.length === 0) return { byLwin7: {}, missing: [], notWine: [] };
 
   const rows = await client<ColourRow[]>`
     WITH wines AS (
       ${
         wanted
           ? client`
-              SELECT k.key AS lwin7, st.product_name, st.producer
+              SELECT k.key AS lwin7, st.product_name, st.producer, st.category
               FROM UNNEST(${wanted}::text[]) AS k(key)
               LEFT JOIN LATERAL (
-                SELECT s.product_name, s.producer
+                SELECT s.product_name, s.producer, s.category
                 FROM wms_stock s
                 WHERE SPLIT_PART(s.lwin18, '-', 1) = k.key
                 ORDER BY s.quantity_cases DESC
@@ -60,7 +61,8 @@ const getWineColours = async (keys?: string[]) => {
               SELECT DISTINCT ON (SPLIT_PART(s.lwin18, '-', 1))
                 SPLIT_PART(s.lwin18, '-', 1) AS lwin7,
                 s.product_name,
-                s.producer
+                s.producer,
+                s.category
               FROM wms_stock s
               WHERE (s.quantity_cases > 0 OR COALESCE(s.open_bottles, 0) > 0)
                 AND SPLIT_PART(s.lwin18, '-', 1) ~ '^[A-Za-z0-9]+$'
@@ -70,6 +72,7 @@ const getWineColours = async (keys?: string[]) => {
     )
     SELECT
       w.lwin7,
+      w.category,
       w.product_name AS "productName",
       w.producer,
       lw.display_name AS "livexName",
@@ -85,8 +88,16 @@ const getWineColours = async (keys?: string[]) => {
 
   const byLwin7: Record<string, WineColour> = {};
   const missing: WineWithoutColour[] = [];
+  /** Spirits and ready-to-drink: no wine colour is asked of them */
+  const notWine: string[] = [];
 
   for (const row of rows) {
+    // Stock with no category is wine, as Stock Explorer's Wine tab counts it
+    if (row.category && row.category !== 'Wine') {
+      notWine.push(row.lwin7);
+      continue;
+    }
+
     const set = WINE_COLOURS.find((colour) => colour === row.setColour);
     const colour =
       set ?? colourFromLivex({ colour: row.livexColour, type: row.livexType, subType: row.livexSubType });
@@ -103,7 +114,7 @@ const getWineColours = async (keys?: string[]) => {
     }
   }
 
-  return { byLwin7, missing };
+  return { byLwin7, missing, notWine };
 };
 
 export default getWineColours;

@@ -82,6 +82,8 @@ const AddToStockPanel = ({ template, onClose }: AddToStockPanelProps) => {
     enabled: Boolean(wineKey),
   });
   const knownColour = wineKey ? colourData?.byLwin7[wineKey] : undefined;
+  // Spirits and ready-to-drink already in stock carry no wine colour
+  const isNotWine = Boolean(wineKey && colourData?.notWine.includes(wineKey));
 
   // A colour chosen for one wine does not carry over to the next
   useEffect(() => {
@@ -129,7 +131,7 @@ const AddToStockPanel = ({ template, onClose }: AddToStockPanelProps) => {
     (!name ? 'Choose a wine. ' : '') +
     (!ownerId ? 'Choose the owner. ' : '') +
     (!locationId ? 'Choose the bay. ' : '') +
-    (name && !knownColour && !colour && !isCheckingColour ? 'Choose the colour. ' : '') +
+    (name && !knownColour && !isNotWine && !colour && !isCheckingColour ? 'Choose the colour. ' : '') +
     (bottles <= 0 ? 'Add at least one case or bottle. ' : '') +
     (!reason.trim() ? 'Say why it is being added.' : '');
 
@@ -244,7 +246,7 @@ const AddToStockPanel = ({ template, onClose }: AddToStockPanelProps) => {
         </div>
       )}
 
-      {name && (
+      {name && !isNotWine && (
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="font-medium">Colour</span>
           {knownColour && !changingColour ? (

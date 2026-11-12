@@ -1,5 +1,5 @@
 /** The colours a wine is sold as: what a client asks when they ask "red or white?" */
-export const WINE_COLOURS = ['red', 'white', 'rose', 'sparkling', 'fortified', 'orange'] as const;
+export const WINE_COLOURS = ['red', 'white', 'rose', 'sparkling', 'fortified', 'orange', 'spirit'] as const;
 
 export type WineColour = (typeof WINE_COLOURS)[number];
 
@@ -10,6 +10,8 @@ export const WINE_COLOUR_LABELS: Record<WineColour, string> = {
   sparkling: 'Sparkling',
   fortified: 'Fortified',
   orange: 'Orange',
+  /** For a spirit filed among the wines, such as a cask bottling */
+  spirit: 'Spirit',
 };
 
 const FORTIFIED_SUB_TYPES = /port|sherry|madeira|marsala|fortified|vin doux|banyuls|rivesaltes|maury/i;

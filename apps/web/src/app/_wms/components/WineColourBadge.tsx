@@ -9,6 +9,7 @@ const DOT: Record<WineColour, string> = {
   sparkling: 'bg-[#c9b458] ring-1 ring-inset ring-white/60',
   fortified: 'bg-[#5b2a1a]',
   orange: 'bg-[#d9822b]',
+  spirit: 'bg-[#a8763e]',
 };
 
 export interface WineColourBadgeProps {

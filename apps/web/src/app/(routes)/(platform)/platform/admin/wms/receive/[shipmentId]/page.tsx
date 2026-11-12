@@ -242,7 +242,7 @@ const WMSReceiveShipmentPage = () => {
   });
   const colourNeededFor = (item: ReceivedItem | undefined) => {
     const key = item?.lwin ? wineKeyOf(item.lwin) : '';
-    return key && colourData && !colourData.byLwin7[key] ? key : null;
+    return key && colourData && !colourData.byLwin7[key] && !colourData.notWine.includes(key) ? key : null;
   };
 
   // Finalize receiving mutation (mark shipment as delivered)

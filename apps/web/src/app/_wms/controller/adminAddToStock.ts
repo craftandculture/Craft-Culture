@@ -177,11 +177,11 @@ const adminAddToStock = staffAdminProcedure
     if (input.colour) {
       await saveWineColour(wineKey, input.colour, ctx.user.id);
     } else {
-      const { byLwin7 } = await getWineColours([wineKey]);
-      if (!byLwin7[wineKey]) {
+      const { byLwin7, notWine } = await getWineColours([wineKey]);
+      if (!byLwin7[wineKey] && !notWine.includes(wineKey)) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Choose the wine’s colour: red, white, rosé, sparkling, fortified or orange.',
+          message: 'Choose the wine’s colour: red, white, rosé, sparkling, fortified, orange or spirit.',
         });
       }
     }
