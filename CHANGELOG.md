@@ -1,3 +1,9 @@
+## [2.1.122](https://github.com/craftandculture/Craft-Culture/compare/v2.1.121...v2.1.122) (2026-11-12)
+
+### Features
+
+* bottle orders of the same wine share one held case instead of holding a case each ([cf3e833](https://github.com/craftandculture/Craft-Culture/commit/cf3e833c6368ed7e276c2892d7b9a159a6db764b))
+
 ## [2.1.121](https://github.com/craftandculture/Craft-Culture/compare/v2.1.120...v2.1.121) (2026-11-12)
 
 ### Features
