@@ -18,6 +18,17 @@ const buildLwin18WithConfig = (sourceLwin18: string, newConfig: number) => {
   return `${parts.slice(0, -2).join('-')}-${newConfig.toString().padStart(2, '0')}-${parts[parts.length - 1]}`;
 };
 
+/**
+ * Rebuild an LWIN18 with a different vintage (the second part). The LWIN7,
+ * pack and bottle size stay as they are.
+ */
+const buildLwin18WithVintage = (sourceLwin18: string, vintage: number) => {
+  const parts = sourceLwin18.split('-');
+  if (parts.length < 4) return sourceLwin18;
+  parts[1] = String(vintage).padStart(4, '0');
+  return parts.join('-');
+};
+
 /** Swap any existing "(Nx)" / "(N Pack)" suffix for the corrected pack size. */
 const withPackSuffix = (name: string, config: number) => {
   const base = name.replace(/ \(\d+x\)$/, '').replace(/ \(\d+ Pack\)$/, '');
@@ -50,11 +61,16 @@ const adminCorrectPackConfig = wmsOperatorProcedure
     z.object({
       stockId: z.string().uuid(),
       newCaseConfig: z.number().int().positive('Pack size must be positive'),
+      /**
+       * The vintage, when it was recorded wrongly at receiving. Optional: the
+       * pack alone can be corrected as before.
+       */
+      newVintage: z.number().int().min(1000).max(2100).optional(),
       reason: z.string().min(1, 'Reason is required'),
     }),
   )
   .mutation(async ({ input, ctx }) => {
-    const { stockId, newCaseConfig, reason } = input;
+    const { stockId, newCaseConfig, newVintage, reason } = input;
 
     const [stock] = await db
       .select()
@@ -72,7 +88,14 @@ const adminCorrectPackConfig = wmsOperatorProcedure
     // reads as stock having appeared from nowhere. An unset pack is unknown,
     // not none.
     const oldCaseConfig = stock.caseConfig ?? null;
-    const newLwin18 = buildLwin18WithConfig(stock.lwin18, newCaseConfig);
+    const oldVintage = stock.vintage ?? null;
+    const vintageChanges =
+      newVintage !== undefined && newVintage !== oldVintage;
+    const withPack = buildLwin18WithConfig(stock.lwin18, newCaseConfig);
+    const newLwin18 =
+      newVintage !== undefined
+        ? buildLwin18WithVintage(withPack, newVintage)
+        : withPack;
 
     /*
       Nothing to do only when the pack AND the code already agree.
@@ -83,7 +106,11 @@ const adminCorrectPackConfig = wmsOperatorProcedure
       code was wrong. Returning early on the config alone made that row
       unfixable from here, and the code is what every SKU-keyed lookup reads.
     */
-    if (oldCaseConfig === newCaseConfig && newLwin18 === stock.lwin18) {
+    if (
+      oldCaseConfig === newCaseConfig &&
+      newLwin18 === stock.lwin18 &&
+      !vintageChanges
+    ) {
       return {
         success: true,
         noChange: true,
@@ -91,7 +118,15 @@ const adminCorrectPackConfig = wmsOperatorProcedure
         caseConfig: newCaseConfig,
       };
     }
-    const newProductName = withPackSuffix(stock.productName, newCaseConfig);
+    const packName = withPackSuffix(stock.productName, newCaseConfig);
+    // The vintage is usually written into the name too; keep the two in step
+    const newProductName =
+      vintageChanges && oldVintage !== null
+        ? packName.replace(
+            new RegExp(`\\b${oldVintage}\\b`, 'g'),
+            String(newVintage),
+          )
+        : packName;
     const cases = stock.quantityCases;
     const oldBottles = oldCaseConfig === null ? null : cases * oldCaseConfig;
     const newBottles = cases * newCaseConfig;
@@ -139,6 +174,7 @@ const adminCorrectPackConfig = wmsOperatorProcedure
             lwin18: newLwin18,
             productName: newProductName,
             caseConfig: newCaseConfig,
+            ...(newVintage !== undefined ? { vintage: newVintage } : {}),
             updatedAt: new Date(),
           })
           .where(eq(wmsStock.id, stockId));
@@ -198,8 +234,9 @@ const adminCorrectPackConfig = wmsOperatorProcedure
         quantityCases: 0, // cases unchanged — only the pack size was wrong
         fromLocationId: stock.locationId,
         toLocationId: stock.locationId,
-        notes:
-          oldCaseConfig === newCaseConfig
+        notes: vintageChanges
+          ? `VINTAGE CORRECTION: ${reason} (${stock.lwin18} → ${newLwin18}; vintage ${oldVintage ?? 'unset'} → ${newVintage}; ${cases} cases, pack ${oldCaseConfig ?? 'unset'} → ${newCaseConfig})`
+          : oldCaseConfig === newCaseConfig
             ? // The pack was already right; only the code disagreed with it.
               `CODE CORRECTION: ${reason} (${stock.lwin18} → ${newLwin18}; ${cases} cases of ${newCaseConfig}, ${newBottles} bottles, unchanged)`
             : `PACK CORRECTION: ${reason} (${stock.lwin18} ${oldCaseConfig ?? 'unset'}-pack → ${newLwin18} ${newCaseConfig}-pack; ${cases} cases unchanged, bottles ${oldBottles ?? 'unknown'} → ${newBottles})`,
@@ -219,6 +256,8 @@ const adminCorrectPackConfig = wmsOperatorProcedure
       lwin18: newLwin18,
       productName: newProductName,
       caseConfig: newCaseConfig,
+      vintage: newVintage ?? oldVintage,
+      vintageChanged: vintageChanges,
       cases,
       bottlesBefore: oldBottles,
       bottlesAfter: newBottles,

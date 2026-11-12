@@ -705,6 +705,7 @@ interface ProductRowProps {
     stockId: string,
     newCaseConfig: number,
     reason: string,
+    newVintage?: number,
   ) => void;
   onEditName: (
     lwin18: string,
@@ -778,6 +779,7 @@ const ProductRow = ({
   const [addingMore, setAddingMore] = useState(false);
   const [packConfig, setPackConfig] = useState(0);
   const [packReason, setPackReason] = useState('');
+  const [packVintage, setPackVintage] = useState('');
   const [transferringStockId, setTransferringStockId] = useState<string | null>(
     null,
   );
@@ -799,6 +801,8 @@ const ProductRow = ({
   const codePack = Number(product.lwin18.split('-').at(-2)) || 0;
   const codeDisagrees =
     codePack > 0 && codePack !== (product.caseConfig ?? 0);
+  const packVintageChanged =
+    /^\d{4}$/.test(packVintage) && packVintage !== (product.vintage ?? '');
 
   const editingName = editingLwin18 === product.lwin18;
   const isSaving = editingLwin18 === `saving:${product.lwin18}`;
@@ -1151,7 +1155,7 @@ const ProductRow = ({
                   <Button
                     variant={packStockId ? 'default' : 'outline'}
                     size="xs"
-                    title="Correct the pack size when it was recorded wrongly — keeps the case count, moves the bottle count"
+                    title="Correct the pack size or vintage when it was recorded wrongly — keeps the case count; the code and case labels are reissued"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (packStockId) {
@@ -1160,12 +1164,13 @@ const ProductRow = ({
                       } else if (product.locations[0]) {
                         setPackStockId(product.locations[0].stockId);
                         setPackConfig(product.caseConfig ?? 0);
+                        setPackVintage(product.vintage ?? '');
                         setPackReason('');
                       }
                     }}
                   >
                     <IconPackage className="mr-1 h-3 w-3" />
-                    {packStockId ? 'Cancel' : 'Fix pack'}
+                    {packStockId ? 'Cancel' : 'Fix pack / vintage'}
                   </Button>
                   <Button
                     variant={addingMore ? 'default' : 'outline'}
@@ -1526,6 +1531,29 @@ const ProductRow = ({
                                       </span>
                                     </span>
                                   )}
+                                  <span className="text-text-muted text-xs font-medium">
+                                    Vintage:
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min={1000}
+                                    max={2100}
+                                    value={packVintage}
+                                    onChange={(e) =>
+                                      setPackVintage(e.target.value)
+                                    }
+                                    aria-label="Vintage"
+                                    className="border-border-primary bg-background-primary focus:border-text-primary h-8 w-20 rounded border text-center text-sm font-medium tabular-nums focus:outline-none"
+                                  />
+                                  {packVintageChanged && (
+                                    <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                                      Code becomes{' '}
+                                      {product.lwin18.replace(
+                                        /^(\d{7})-\d{4}-/,
+                                        `$1-${packVintage}-`,
+                                      )}
+                                    </span>
+                                  )}
                                   <input
                                     type="text"
                                     value={packReason}
@@ -1540,7 +1568,10 @@ const ProductRow = ({
                                     disabled={
                                       (packConfig ===
                                         (product.caseConfig ?? 0) &&
-                                        packConfig === codePack) ||
+                                        packConfig === codePack &&
+                                        !packVintageChanged) ||
+                                      (packVintage !== '' &&
+                                        !/^\d{4}$/.test(packVintage)) ||
                                       packConfig < 1 ||
                                       !packReason.trim() ||
                                       isCorrectingPack
@@ -1551,6 +1582,9 @@ const ProductRow = ({
                                         loc.stockId,
                                         packConfig,
                                         packReason.trim(),
+                                        packVintageChanged
+                                          ? Number(packVintage)
+                                          : undefined,
                                       );
                                       setPackStockId(null);
                                       setPackReason('');
@@ -2202,6 +2236,10 @@ const StockExplorerPage = () => {
       });
       if (data.noChange) {
         toast.info('No change needed');
+      } else if ('vintageChanged' in data && data.vintageChanged) {
+        toast.success(
+          `Vintage corrected to ${data.vintage}: now ${data.lwin18}${data.relabelled ? `, ${data.relabelled} case labels reissued` : ''}`,
+        );
       } else {
         toast.success(
           `Pack corrected to ${data.caseConfig}×: ${data.cases} cases, ${data.bottlesBefore ?? 'unknown'} → ${data.bottlesAfter} bottles`,
@@ -2215,8 +2253,13 @@ const StockExplorerPage = () => {
   });
 
   const handleCorrectPack = useCallback(
-    (stockId: string, newCaseConfig: number, reason: string) => {
-      correctPack({ stockId, newCaseConfig, reason });
+    (
+      stockId: string,
+      newCaseConfig: number,
+      reason: string,
+      newVintage?: number,
+    ) => {
+      correctPack({ stockId, newCaseConfig, reason, newVintage });
     },
     [correctPack],
   );
