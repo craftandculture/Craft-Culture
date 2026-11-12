@@ -1,3 +1,10 @@
+## [2.1.121](https://github.com/craftandculture/Craft-Culture/compare/v2.1.120...v2.1.121) (2026-11-12)
+
+### Features
+
+* a PCO line's price can be worked back from what the client pays ([450d389](https://github.com/craftandculture/Craft-Culture/commit/450d389519e8fb408eb04858714f0d4f546e08be))
+* a sales order raised from a PCO states its total bottles ([76bb28e](https://github.com/craftandculture/Craft-Culture/commit/76bb28e33f0414cbbe8c9489cb3fdf86e539ed05))
+
 ## [2.1.120](https://github.com/craftandculture/Craft-Culture/compare/v2.1.119...v2.1.120) (2026-11-11)
 
 ### Bug Fixes
