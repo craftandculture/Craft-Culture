@@ -4516,6 +4516,17 @@ const runMigrations = async () => {
     );
     console.log('✅ Email log ready');
 
+    /*
+      Bottle holds (12 Nov 2026). A hold for a by-the-bottle line records the
+      bottles it is for, so several orders can share one held case of a
+      subscription wine (Clos des Carmes) instead of each holding a case.
+      Null means the hold's cases in full, as every earlier hold.
+    */
+    await client.unsafe(
+      `ALTER TABLE "wms_stock_reservations" ADD COLUMN IF NOT EXISTS "quantity_bottles" integer`,
+    );
+    console.log('✅ Bottle holds ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
