@@ -11,10 +11,14 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import paymentDateFromDay from '../utils/paymentDateFromDay';
+
 const adminMarkPartnerPaidSchema = z.object({
   orderId: z.string().uuid(),
   reference: z.string().optional(),
   notes: z.string().optional(),
+  /** The day C&C paid (YYYY-MM-DD); today when not given */
+  paidOn: z.string().optional(),
 });
 
 /**
@@ -27,7 +31,7 @@ const adminMarkPartnerPaidSchema = z.object({
 const adminMarkPartnerPaid = adminProcedure
   .input(adminMarkPartnerPaidSchema)
   .mutation(async ({ input, ctx }) => {
-    const { orderId, reference, notes } = input;
+    const { orderId, reference, notes, paidOn } = input;
     const { user } = ctx;
 
     // Get order details
@@ -58,13 +62,21 @@ const adminMarkPartnerPaid = adminProcedure
     }
 
     const now = new Date();
+    // The day the money went, which is often not the day it is recorded
+    const paidAt = paidOn ? paymentDateFromDay(paidOn) : now;
+    if (!paidAt) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Pick the day the payment was made (not in the future)',
+      });
+    }
 
     // Update order with partner payment info (NOT changing status). Only if
     // still unpaid, so a double press cannot record the payment twice.
     const [marked] = await db
       .update(privateClientOrders)
       .set({
-        partnerPaidAt: now,
+        partnerPaidAt: paidAt,
         partnerPaymentConfirmedBy: user.id,
         partnerPaymentReference: reference ?? null,
         updatedAt: now,
@@ -88,7 +100,7 @@ const adminMarkPartnerPaid = adminProcedure
       notes: notes ?? 'C&C paid partner for stock',
       metadata: {
         reference,
-        paidAt: now.toISOString(),
+        paidAt: paidAt.toISOString(),
       },
     });
 
@@ -117,7 +129,7 @@ const adminMarkPartnerPaid = adminProcedure
 
     return {
       success: true,
-      partnerPaidAt: now.toISOString(),
+      partnerPaidAt: paidAt.toISOString(),
       reference,
     };
   });

@@ -37,8 +37,12 @@ export interface OrderCompletionCardProps {
   isConfirmingDistributorPayment: boolean;
   partnerPaymentRef: string;
   onPartnerPaymentRefChange: (value: string) => void;
-  onMarkPartnerPaid: () => void;
+  /** Records the payment as made on `paidOn` (YYYY-MM-DD) */
+  onMarkPartnerPaid: (paidOn: string) => void;
   isMarkingPartnerPaid: boolean;
+  /** Moves an already-recorded payment to the day it was really made */
+  onChangePartnerPaidDate: (paidOn: string) => void;
+  isChangingPartnerPaidDate: boolean;
   onViewDeliveryPhoto: () => void;
   formatDate: (date: Date | null | undefined) => string;
 }
@@ -115,10 +119,16 @@ const OrderCompletionCard = ({
   onPartnerPaymentRefChange,
   onMarkPartnerPaid,
   isMarkingPartnerPaid,
+  onChangePartnerPaidDate,
+  isChangingPartnerPaidDate,
   onViewDeliveryPhoto,
   formatDate,
 }: OrderCompletionCardProps) => {
   const [isExpanded, setIsExpanded] = useState(prominent);
+  // The day the money went, which is often not the day it is recorded here
+  const today = new Date().toLocaleDateString('en-CA');
+  const [partnerPaidOn, setPartnerPaidOn] = useState(today);
+  const [changingPaidDate, setChangingPaidDate] = useState(false);
   const pendingTone = prominent ? 'warning' : 'muted';
 
   const outstanding = [
@@ -255,8 +265,65 @@ const OrderCompletionCard = ({
                   : 'Record when C&C has paid the wine partner for the stock'
               }
             >
+              {order.partnerPaidAt && !changingPaidDate && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => {
+                    setPartnerPaidOn(
+                      new Date(order.partnerPaidAt as Date | string)
+                        .toISOString()
+                        .slice(0, 10),
+                    );
+                    setChangingPaidDate(true);
+                  }}
+                >
+                  Change date
+                </Button>
+              )}
+              {order.partnerPaidAt && changingPaidDate && (
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    type="date"
+                    aria-label="Day C&C paid the partner"
+                    value={partnerPaidOn}
+                    max={today}
+                    onChange={(e) => setPartnerPaidOn(e.target.value)}
+                    className="w-full text-xs sm:w-[150px]"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!partnerPaidOn || isChangingPartnerPaidDate}
+                    onClick={() => {
+                      onChangePartnerPaidDate(partnerPaidOn);
+                      setChangingPaidDate(false);
+                    }}
+                  >
+                    {isChangingPartnerPaidDate ? 'Saving...' : 'Save date'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setChangingPaidDate(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
               {!order.partnerPaidAt && (
                 <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    type="date"
+                    aria-label="Day C&C paid the partner"
+                    title="The day the payment was made — today unless you change it"
+                    value={partnerPaidOn}
+                    max={today}
+                    onChange={(e) => setPartnerPaidOn(e.target.value)}
+                    className="w-full text-xs sm:w-[150px]"
+                  />
                   <Input
                     placeholder="Reference (optional)"
                     aria-label="Partner payment reference"
@@ -266,8 +333,8 @@ const OrderCompletionCard = ({
                   />
                   <Button
                     type="button"
-                    onClick={onMarkPartnerPaid}
-                    disabled={isMarkingPartnerPaid}
+                    onClick={() => onMarkPartnerPaid(partnerPaidOn)}
+                    disabled={isMarkingPartnerPaid || !partnerPaidOn}
                     colorRole="brand"
                     size="sm"
                   >
