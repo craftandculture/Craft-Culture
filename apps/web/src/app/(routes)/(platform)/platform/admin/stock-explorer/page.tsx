@@ -64,6 +64,7 @@ import PackBadge from '@/app/_wms/components/PackBadge';
 import ProductMovementHistory from '@/app/_wms/components/ProductMovementHistory';
 import StockForSaleToggle from '@/app/_wms/components/StockForSaleToggle';
 import TakeOutOfStockPanel from '@/app/_wms/components/TakeOutOfStockPanel';
+import WineColourBadge from '@/app/_wms/components/WineColourBadge';
 import useLabelOwner from '@/app/_wms/hooks/useLabelOwner';
 import usePrint from '@/app/_wms/hooks/usePrint';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
@@ -75,6 +76,8 @@ import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
 import generateStockPalletLabelZpl from '@/app/_wms/utils/generateStockPalletLabelZpl';
 import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
+import { WINE_COLOURS, WINE_COLOUR_LABELS } from '@/app/_wms/utils/wineColour';
+import type { WineColour } from '@/app/_wms/utils/wineColour';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import fileHref from '@/utils/fileHref';
 
@@ -730,6 +733,8 @@ interface ProductRowProps {
   lookalikeTwins?: string[];
   /** Show wine names in full, wrapping, rather than clipped to the column */
   fullNames?: boolean;
+  /** Red, white, rosé and so on; unset until Liv-ex or staff give one */
+  colour?: WineColour | null;
 }
 
 const ProductRow = ({
@@ -755,6 +760,7 @@ const ProductRow = ({
   partners,
   lookalikeTwins,
   fullNames,
+  colour,
 }: ProductRowProps) => {
   // Bottles left loose in a bay after a case was cracked. They are stock, but
   // the case count cannot express them — 0 cases, 5 bottles.
@@ -888,6 +894,7 @@ const ProductRow = ({
               >
                 {product.productName}
               </span>
+              <WineColourBadge colour={colour} />
               <PackBadge
                 pack={product.caseConfig}
                 bottleSize={product.bottleSize}
@@ -2392,6 +2399,18 @@ const StockExplorerPage = () => {
     api.wms.admin.stock.findPackMismatches.queryOptions(),
   );
 
+  // Each wine's colour, from Liv-ex or as set by staff, and the wines without
+  // one, which are set from the list below once and then stay set
+  const { data: colourData, refetch: refetchColours } = useQuery(
+    api.wms.admin.stock.colours.queryOptions(),
+  );
+  const [showMissingColours, setShowMissingColours] = useState(false);
+  const { mutate: setWineColour, isPending: isSettingColour } = useMutation({
+    ...api.wms.admin.stock.setColour.mutationOptions(),
+    onSuccess: () => void refetchColours(),
+    onError: (err) => toast.error(`Colour not saved: ${err.message}`),
+  });
+
   /**
    * What a repacked row is missing, counted before anything is written.
    *
@@ -2898,6 +2917,61 @@ const StockExplorerPage = () => {
             checked against the row. When they disagree the pick engine cracks
             the wrong number of cases and the order ships short — which is what
             this whole sweep started from. */}
+        {colourData && colourData.missing.length > 0 && (
+          <div className="rounded-xl border border-border-muted bg-fill-muted/40 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-text-primary">
+                  {colourData.missing.length} wine
+                  {colourData.missing.length === 1 ? ' has' : 's have'} no colour
+                </p>
+                <p className="mt-0.5 text-xs text-text-muted">
+                  Liv-ex does not give one (our own codes, mixed cases). Set it once
+                  and it holds for every vintage and size of the wine.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMissingColours((open) => !open)}
+              >
+                <ButtonContent>{showMissingColours ? 'Hide' : 'Set colours'}</ButtonContent>
+              </Button>
+            </div>
+            {showMissingColours && (
+              <div className="mt-2 max-h-80 space-y-1 overflow-auto">
+                {colourData.missing.map((wine) => (
+                  <div
+                    key={wine.lwin7}
+                    className="flex flex-wrap items-center justify-between gap-2 border-t border-border-muted py-1.5 text-xs first:border-t-0"
+                  >
+                    <div className="min-w-0">
+                      <span className="font-medium">{wine.productName}</span>
+                      <span className="ml-1 font-mono text-text-muted">{wine.lwin7}</span>
+                      {wine.livexName && wine.livexName !== wine.productName ? (
+                        <span className="block text-text-muted">Liv-ex: {wine.livexName}</span>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-none flex-wrap gap-1">
+                      {WINE_COLOURS.map((colour) => (
+                        <button
+                          key={colour}
+                          type="button"
+                          disabled={isSettingColour}
+                          onClick={() => setWineColour({ lwin7: wine.lwin7, colour })}
+                          className="rounded-full border border-border-muted px-2 py-0.5 text-[11px] hover:border-text-muted disabled:opacity-50"
+                        >
+                          {WINE_COLOUR_LABELS[colour]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {packMismatches && packMismatches.length > 0 && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
@@ -3795,6 +3869,7 @@ const StockExplorerPage = () => {
                           key={key}
                           product={product}
                           fullNames={fullNames}
+                          colour={colourData?.byLwin7[product.lwin18.slice(0, 7)]}
                           lookalikeTwins={lookalikeData?.byLwin18[
                             product.lwin18
                           ]?.map((t) => t.productName)}

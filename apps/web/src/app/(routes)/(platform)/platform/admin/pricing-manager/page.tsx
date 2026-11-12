@@ -46,6 +46,7 @@ import TooltipContent from '@/app/_ui/components/Tooltip/TooltipContent';
 import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import PricingBandsEditor from '@/app/_wms/components/PricingBandsEditor';
+import WineColourBadge from '@/app/_wms/components/WineColourBadge';
 import DEFAULT_INBOND_MARGIN_PCT from '@/app/_wms/constants/defaultInbondMarginPct';
 import pricePricingManagerRow, {
   type PricingManagerRowInput,
@@ -1522,6 +1523,16 @@ const PricingManagerPage = () => {
 
   const products = data?.products ?? [];
   const pagination = data?.pagination;
+
+  // Colour for the wines on this page, inbound included
+  const pageLwin7s = useMemo(
+    () => [...new Set((data?.products ?? []).map((p) => p.lwin18.slice(0, 7)))].sort(),
+    [data?.products],
+  );
+  const { data: colourData } = useQuery({
+    ...api.wms.admin.stock.colours.queryOptions({ lwin7s: pageLwin7s }),
+    enabled: pageLwin7s.length > 0,
+  });
   // Effective rates: owner settings when an owner is selected, else global defaults
   const effLogistics = ownerId ? ownerDraft.logistics : logisticsPerBottle;
   const effInbondPct = ownerId ? ownerDraft.inbondPct : inBondMarkupPct;
@@ -3267,6 +3278,7 @@ const PricingManagerPage = () => {
                                 {product.productName}
                               </span>
                             </button>
+                            <WineColourBadge colour={colourData?.byLwin7[product.lwin18.slice(0, 7)]} />
                             {/* Held by others too: an edit here is this owner's alone */}
                             {otherHolders.length > 0 && (
                               <span
@@ -3714,6 +3726,7 @@ const PricingManagerPage = () => {
                             <span className="flex items-start justify-between gap-2">
                               <span className="min-w-0">
                                 <span className="block text-sm font-semibold text-text-primary">{product.productName}</span>
+                                <WineColourBadge colour={colourData?.byLwin7[product.lwin18.slice(0, 7)]} />
                                 <span className="mt-0.5 block text-xs text-text-muted">
                                   {[ownerCue?.isMixed ? 'Mixed owners' : ownerCue?.fullName, `${caseConfig}×${product.bottleSize ?? '75cl'}`, `${product.totalCases} cs`].filter(Boolean).join(' · ')}
                                 </span>

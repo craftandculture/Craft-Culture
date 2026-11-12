@@ -4527,6 +4527,23 @@ const runMigrations = async () => {
     );
     console.log('✅ Bottle holds ready');
 
+    /*
+      Wine colour (12 Nov 2026). Colour comes from Liv-ex by LWIN; this table
+      holds what staff set where Liv-ex has none (our internal codes) or is
+      wrong, one row per wine for every vintage and size.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "product_colours" (
+        "lwin7" text PRIMARY KEY NOT NULL,
+        "colour" text NOT NULL,
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "product_colours" ENABLE ROW LEVEL SECURITY`);
+    console.log('✅ Wine colours ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

@@ -83,6 +83,7 @@ import adminGetStockCommitments from './controller/adminGetStockCommitments';
 import adminGetStockLookalikes from './controller/adminGetStockLookalikes';
 import adminGetStockOverview from './controller/adminGetStockOverview';
 import adminGetStockReservations from './controller/adminGetStockReservations';
+import adminGetWineColours from './controller/adminGetWineColours';
 import adminHealthCheckDb from './controller/adminHealthCheckDb';
 import adminHealthCheckZoho from './controller/adminHealthCheckZoho';
 import adminImportStock from './controller/adminImportStock';
@@ -130,6 +131,7 @@ import adminSetSellingPrice from './controller/adminSetSellingPrice';
 import adminSetSellMargin from './controller/adminSetSellMargin';
 import adminSetStockForSale from './controller/adminSetStockForSale';
 import adminSetTransferPrice from './controller/adminSetTransferPrice';
+import adminSetWineColour from './controller/adminSetWineColour';
 import adminShipShortRemainder from './controller/adminShipShortRemainder';
 import adminStartCycleCount from './controller/adminStartCycleCount';
 import adminSyncStockToZoho from './controller/adminSyncStockToZoho';
@@ -244,6 +246,8 @@ const stockRouter = createTRPCRouter({
   search: adminSearchStock,
   searchRows: adminSearchStockRows,
   lookalikes: adminGetStockLookalikes,
+  colours: adminGetWineColours,
+  setColour: adminSetWineColour,
   getAll: adminGetAllStockRecords,
   reconcile: adminReconcileStock,
   deleteRecord: adminDeleteStockRecord,

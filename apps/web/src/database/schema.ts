@@ -2271,6 +2271,18 @@ export const lwinWines = pgTable(
 
 export type LwinWine = typeof lwinWines.$inferSelect;
 
+/**
+ * A wine's colour as set by staff, one row per wine (LWIN7), covering every
+ * vintage and size. Overrides the Liv-ex colour, and is the only source for
+ * our own internal codes, which Liv-ex does not know.
+ */
+export const productColours = pgTable('product_colours', {
+  lwin7: text('lwin7').primaryKey(),
+  colour: text('colour').notNull(),
+  setBy: uuid('set_by').references(() => users.id, { onDelete: 'set null' }),
+  ...timestamps,
+}).enableRLS();
+
 // ============================================================================
 // SOURCE Module - Purchase Orders (Post-Selection Workflow)
 // ============================================================================
