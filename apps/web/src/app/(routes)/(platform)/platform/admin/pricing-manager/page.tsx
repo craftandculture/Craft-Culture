@@ -47,12 +47,12 @@ import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import PricingBandsEditor from '@/app/_wms/components/PricingBandsEditor';
 import WineColourBadge from '@/app/_wms/components/WineColourBadge';
-import wineKeyOf from '@/app/_wms/utils/wineKeyOf';
 import DEFAULT_INBOND_MARGIN_PCT from '@/app/_wms/constants/defaultInbondMarginPct';
 import pricePricingManagerRow, {
   type PricingManagerRowInput,
 } from '@/app/_wms/utils/pricePricingManagerRow';
 import summarisePricingManagerRows from '@/app/_wms/utils/summarisePricingManagerRows';
+import wineKeyOf from '@/app/_wms/utils/wineKeyOf';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
