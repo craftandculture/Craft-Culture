@@ -14,6 +14,8 @@ import logger from '@/utils/logger';
 
 import findOrCreateForwarder from '../data/findOrCreateForwarder';
 import openJobForRequest from '../data/openJobForRequest';
+import { quoteCreatedMessage } from '../notifications/logisticsSlackMessages';
+import queueLogisticsSlack from '../notifications/queueLogisticsSlack';
 import createQuoteSchema from '../schemas/createQuoteSchema';
 import generateQuoteNumber from '../utils/generateQuoteNumber';
 import isUniqueViolation from '../utils/isUniqueViolation';
@@ -187,6 +189,14 @@ const adminCreateQuote = adminProcedure
         forwarder: forwarder.name,
         createdBy: ctx.user.id,
       });
+
+      // Tell #logistics after the response; Slack never holds up or fails the save
+      queueLogisticsSlack(
+        quoteCreatedMessage(quote, {
+          requestNumber: answering?.requestNumber ?? null,
+          addedBy: ctx.user.name ?? null,
+        }),
+      );
 
       return quote;
     } catch (error) {

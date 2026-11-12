@@ -1,3 +1,21 @@
+## [2.1.128](https://github.com/craftandculture/Craft-Culture/compare/v2.1.127...v2.1.128) (2026-11-12)
+
+### Bug Fixes
+
+* **logistics:** freight emails are signed by the Logistics Department, not the person sending ([ec1e8a1](https://github.com/craftandculture/Craft-Culture/commit/ec1e8a11bceefb4e0c6d26711aa2962eecf4ee8f))
+
+## [2.1.127](https://github.com/craftandculture/Craft-Culture/compare/v2.1.126...v2.1.127) (2026-11-12)
+
+### Features
+
+* **logistics:** new freight quotes post to [#logistics](https://github.com/craftandculture/Craft-Culture/issues/logistics), and logistics@ gets every quote email ([21d3709](https://github.com/craftandculture/Craft-Culture/commit/21d3709c9ffb970be4a4df7f2459573d0c017c37))
+
+## [2.1.126](https://github.com/craftandculture/Craft-Culture/compare/v2.1.125...v2.1.126) (2026-11-12)
+
+### Features
+
+* **pco:** the partner payment can be dated the day it was made ([6f4043f](https://github.com/craftandculture/Craft-Culture/commit/6f4043f1c5730aaf659e26bc08c8cf698cd72f43))
+
 ## [2.1.125](https://github.com/craftandculture/Craft-Culture/compare/v2.1.124...v2.1.125) (2026-11-12)
 
 ### Bug Fixes

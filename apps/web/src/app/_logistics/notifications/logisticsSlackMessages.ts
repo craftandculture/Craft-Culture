@@ -200,3 +200,59 @@ export const weeklySummaryMessage = (w: WeeklySummary) =>
     `• *Freight on imports:* $${number(Math.round(w.freightUsd))}${w.freightPerBottle != null ? ` · $${w.freightPerBottle.toFixed(2)} a bottle` : ''}`,
     `<${LOGISTICS_BOARD_URL}/reports|Open the monthly report>`,
   ].join('\n');
+
+export interface QuoteForSlack {
+  id: string;
+  quoteNumber: string;
+  forwarderName: string;
+  transportMode: string | null;
+  originCity: string | null;
+  originCountry: string | null;
+  destinationCity: string | null;
+  destinationCountry: string | null;
+  totalPrice: number;
+  currency: string;
+  totalUsd: number | null;
+  transitDays: number | null;
+  validUntil: Date | string | null;
+}
+
+const money = (amount: number, currency: string) =>
+  `${currency} ${amount.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+
+/**
+ * Live post when a freight quote is added, so the team sees a price land
+ * without watching the quotes screen
+ *
+ * @example
+ *   quoteCreatedMessage(quote, { requestNumber: 'FRQ-2026-0012', addedBy: 'Jyothi' });
+ *   // 'New freight quote <…|*QTE-2026-0031*> from *Hillebrand* — air · Bordeaux → Dubai ·
+ *   //  EUR 2,400 (≈ USD 2,592) · 5 days transit · valid to 30 Nov · answers FRQ-2026-0012 · added by Jyothi'
+ *
+ * @param quote - The quote as saved
+ * @param context - The request it answers and who added it, where known
+ * @returns Slack mrkdwn text
+ */
+export const quoteCreatedMessage = (
+  quote: QuoteForSlack,
+  context: { requestNumber?: string | null; addedBy?: string | null } = {},
+) => {
+  const from = quote.originCity || quote.originCountry;
+  const to = quote.destinationCity || quote.destinationCountry;
+  const price =
+    quote.currency !== 'USD' && quote.totalUsd != null
+      ? `${money(quote.totalPrice, quote.currency)} (≈ ${money(quote.totalUsd, 'USD')})`
+      : money(quote.totalPrice, quote.currency);
+  const detail = [
+    quote.transportMode && escapeSlackText(quote.transportMode.replace(/_/g, ' ')),
+    from || to ? `${escapeSlackText(from ?? 'Origin')} → ${escapeSlackText(to ?? 'Destination')}` : null,
+    price,
+    quote.transitDays ? `${quote.transitDays} days transit` : null,
+    quote.validUntil ? `valid to ${shortDate(quote.validUntil)}` : null,
+    context.requestNumber ? `answers ${escapeSlackText(context.requestNumber)}` : null,
+    context.addedBy ? `added by ${escapeSlackText(context.addedBy)}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return `New freight quote <${quoteUrl(quote.id)}|*${quote.quoteNumber}*> from *${escapeSlackText(quote.forwarderName)}* — ${detail}`;
+};

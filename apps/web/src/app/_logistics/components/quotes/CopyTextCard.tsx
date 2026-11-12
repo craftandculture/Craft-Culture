@@ -4,6 +4,8 @@ import { IconCheck, IconCopy, IconLoader2, IconMail, IconSend } from '@tabler/ic
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { LOGISTICS_EMAIL } from '@/lib/company';
+
 import { card, pillClass, primaryButton, secondaryButton } from '../exports/exportUi';
 
 export interface CopyTextCardProps {
@@ -37,7 +39,10 @@ const CopyTextCard = ({ title, status, email, onCopied, onUndo, defaultOpen = fa
   const [copied, setCopied] = useState<string | null>(null);
 
   const addresses = [...email.to, ...email.bcc].join(', ');
+  // logistics@ is always copied in, so the shared mailbox holds what was sent
+  const cc = [...email.to, ...email.bcc].some((a) => a.toLowerCase() === LOGISTICS_EMAIL) ? null : LOGISTICS_EMAIL;
   const mailto = `mailto:${encodeURIComponent(email.to.join(','))}?${[
+    cc ? `cc=${encodeURIComponent(cc)}` : null,
     email.bcc.length ? `bcc=${encodeURIComponent(email.bcc.join(','))}` : null,
     `subject=${encodeURIComponent(email.subject)}`,
     `body=${encodeURIComponent(email.body)}`,
@@ -85,6 +90,12 @@ const CopyTextCard = ({ title, status, email, onCopied, onUndo, defaultOpen = fa
               <>
                 <dt className="text-text-muted">{email.to.length ? 'To' : 'Bcc'}</dt>
                 <dd className="break-all text-text-primary">{addresses}</dd>
+              </>
+            )}
+            {cc && (
+              <>
+                <dt className="text-text-muted">Cc</dt>
+                <dd className="break-all text-text-primary">{cc}</dd>
               </>
             )}
             <dt className="text-text-muted">Subject</dt>

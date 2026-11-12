@@ -421,10 +421,11 @@ const AdminPrivateOrderDetailPage = () => {
 
   // Mark partner paid mutation (C&C pays wine partner)
   const { mutate: markPartnerPaid, isPending: isMarkingPartnerPaid } = useMutation({
-    mutationFn: ({ reference }: { reference?: string }) =>
+    mutationFn: ({ reference, paidOn }: { reference?: string; paidOn?: string }) =>
       trpcClient.privateClientOrders.adminMarkPartnerPaid.mutate({
         orderId,
         reference,
+        paidOn,
       }),
     onSuccess: () => {
       toast.success('Partner payment recorded');
@@ -434,6 +435,20 @@ const AdminPrivateOrderDetailPage = () => {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to record payment');
+    },
+  });
+
+  // Move a recorded partner payment to the day it was really made
+  const { mutate: changePartnerPaidDate, isPending: isChangingPartnerPaidDate } = useMutation({
+    mutationFn: (paidOn: string) =>
+      trpcClient.privateClientOrders.adminSetPartnerPaidDate.mutate({ orderId, paidOn }),
+    onSuccess: () => {
+      toast.success('Payment date updated');
+      void refetch();
+      void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update the payment date');
     },
   });
 
@@ -880,8 +895,10 @@ const AdminPrivateOrderDetailPage = () => {
             isConfirmingDistributorPayment={isConfirmingDistributorPayment}
             partnerPaymentRef={partnerPaymentRef}
             onPartnerPaymentRefChange={setPartnerPaymentRef}
-            onMarkPartnerPaid={() => markPartnerPaid({ reference: partnerPaymentRef || undefined })}
+            onMarkPartnerPaid={(paidOn) => markPartnerPaid({ reference: partnerPaymentRef || undefined, paidOn })}
             isMarkingPartnerPaid={isMarkingPartnerPaid}
+            onChangePartnerPaidDate={changePartnerPaidDate}
+            isChangingPartnerPaidDate={isChangingPartnerPaidDate}
             onViewDeliveryPhoto={() => setShowDeliveryPhoto(true)}
             formatDate={formatDate}
           />
@@ -1907,8 +1924,10 @@ const AdminPrivateOrderDetailPage = () => {
             isConfirmingDistributorPayment={isConfirmingDistributorPayment}
             partnerPaymentRef={partnerPaymentRef}
             onPartnerPaymentRefChange={setPartnerPaymentRef}
-            onMarkPartnerPaid={() => markPartnerPaid({ reference: partnerPaymentRef || undefined })}
+            onMarkPartnerPaid={(paidOn) => markPartnerPaid({ reference: partnerPaymentRef || undefined, paidOn })}
             isMarkingPartnerPaid={isMarkingPartnerPaid}
+            onChangePartnerPaidDate={changePartnerPaidDate}
+            isChangingPartnerPaidDate={isChangingPartnerPaidDate}
             onViewDeliveryPhoto={() => setShowDeliveryPhoto(true)}
             formatDate={formatDate}
           />

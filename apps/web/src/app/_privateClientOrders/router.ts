@@ -18,6 +18,7 @@ import adminGetSubscriptionBoxes from './controller/adminGetSubscriptionBoxes';
 import adminGetWmsStockForOrder from './controller/adminGetWmsStockForOrder';
 import adminMarkDeliveredInvoicePending from './controller/adminMarkDeliveredInvoicePending';
 import adminMarkPartnerPaid from './controller/adminMarkPartnerPaid';
+import adminSetPartnerPaidDate from './controller/adminSetPartnerPaidDate';
 import adminMarkPayment from './controller/adminMarkPayment';
 import adminMatchStockLwins from './controller/adminMatchStockLwins';
 import adminPreviewZohoSalesOrder from './controller/adminPreviewZohoSalesOrder';
@@ -154,6 +155,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminAssignDistributor: ordersAssignDistributor,
   adminResetVerification: ordersAdminResetVerification,
   adminMarkPartnerPaid,
+  adminSetPartnerPaidDate,
   // Order emails to partners and distributors: the switch and the outbox
   adminGetOrderEmails,
   adminSetOrderEmailMode,

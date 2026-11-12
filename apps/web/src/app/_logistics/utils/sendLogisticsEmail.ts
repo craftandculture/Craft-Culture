@@ -1,4 +1,6 @@
+import { LOGISTICS_EMAIL } from '@/lib/company';
 import loops from '@/lib/loops/client';
+import logger from '@/utils/logger';
 
 import logisticsEmailTemplateId from './logisticsEmailTemplateId';
 
@@ -8,6 +10,11 @@ import logisticsEmailTemplateId from './logisticsEmailTemplateId';
  * The body goes line by line into the template's repeating block, so the email
  * keeps its lines and lists without any HTML being sent. The template sends
  * from logistics@ and replies go back to it, so the team sees them.
+ *
+ * Loops sends to one address and has no Cc, so every email that goes out is
+ * also sent to logistics@ as a copy, headed with who it went to. The mailbox
+ * then holds what was sent as well as the replies. A failed copy is logged and
+ * never fails the send itself.
  *
  * @example
  *   await sendLogisticsEmail({ to: 'ops@forwarder.com', subject, body });
@@ -47,6 +54,28 @@ const sendLogisticsEmail = async (email: {
         string | number
       >,
     });
+
+    if (email.to.trim().toLowerCase() !== LOGISTICS_EMAIL) {
+      try {
+        await loops.sendTransactionalEmail({
+          transactionalId,
+          email: LOGISTICS_EMAIL,
+          dataVariables: {
+            subject: email.subject,
+            lines: [
+              { text: `Copy for logistics@: this email was sent to ${email.to}` },
+              { text: '\u00a0' },
+              ...dataVariables.lines,
+            ],
+          } as unknown as Record<string, string | number>,
+        });
+      } catch (copyError) {
+        logger.error('Logistics email: copy to logistics@ failed', {
+          to: email.to,
+          error: copyError instanceof Error ? copyError.message : String(copyError),
+        });
+      }
+    }
 
     return { ok: true as const, error: null };
   } catch (error) {
