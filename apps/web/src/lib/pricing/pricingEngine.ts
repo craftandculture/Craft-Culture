@@ -106,6 +106,29 @@ const calculatePCOAdmin = (
 };
 
 /**
+ * The supplier price that gives a client price, the PCO formula run backwards
+ *
+ * For an order where the client's price is agreed first (Filippo's PCO-99):
+ * type what the client pays, incl. VAT, and the line price follows. Each step
+ * of `calculatePCOAdmin` is a fixed multiplier, so the inverse is exact before
+ * rounding.
+ *
+ * @example
+ *   supplierPriceForFinalPrice(1000, DEFAULT_PCO_VARIABLES); // ≈ 711.33
+ */
+const supplierPriceForFinalPrice = (
+  finalPriceUsd: number,
+  variables: PCOPricingVariables = DEFAULT_PCO_VARIABLES,
+) => {
+  const afterDistributor = finalPriceUsd / (1 + variables.vatPercent / 100);
+  const dutyPaidLanded = afterDistributor * (1 - variables.distributorMarginPercent / 100);
+  const landedDutyFree =
+    dutyPaidLanded / (1 + variables.importDutyPercent / 100 + variables.transferCostPercent / 100);
+
+  return landedDutyFree * (1 - variables.ccMarginPercent / 100);
+};
+
+/**
  * Calculate PCO pricing with consolidated partner view
  *
  * Partners see:
@@ -305,6 +328,7 @@ export {
   calculatePocketCellarPartner,
   getLogisticsInfo,
   round2,
+  supplierPriceForFinalPrice,
 };
 
 const pricingEngine = {

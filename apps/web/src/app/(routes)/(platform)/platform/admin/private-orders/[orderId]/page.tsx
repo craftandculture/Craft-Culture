@@ -31,6 +31,7 @@ import OrderClientCard from '@/app/_privateClientContacts/components/OrderClient
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import OrderAttentionPanel from '@/app/_privateClientOrders/components/admin/OrderAttentionPanel';
 import OrderCompletionCard from '@/app/_privateClientOrders/components/admin/OrderCompletionCard';
+import ClientPriceInput from '@/app/_privateClientOrders/components/ClientPriceInput';
 import CloneOrderDialog from '@/app/_privateClientOrders/components/CloneOrderDialog';
 import DistributorSkuCard from '@/app/_privateClientOrders/components/DistributorSkuCard';
 import DocumentUpload from '@/app/_privateClientOrders/components/DocumentUpload';
@@ -1137,6 +1138,10 @@ const AdminPrivateOrderDetailPage = () => {
                             onChange={(e) => setNewItem({ ...newItem, pricePerCaseUsd: parseFloat(e.target.value) || 0 })}
                             className="h-8 w-24 text-right text-sm"
                           />
+                          <ClientPriceInput
+                            rates={order.pricingVariables}
+                            onPrice={(price) => setNewItem({ ...newItem, pricePerCaseUsd: price })}
+                          />
                         </td>
                         <td className="px-2 py-1 text-right text-xs font-medium tabular-nums">
                           {formatCurrencyValue(getAmount(newItem.quantity * newItem.pricePerCaseUsd), currency)}
@@ -1237,6 +1242,10 @@ const AdminPrivateOrderDetailPage = () => {
                                   })
                                 }
                                 className="h-8 w-24 text-right text-sm"
+                              />
+                              <ClientPriceInput
+                                rates={order.pricingVariables}
+                                onPrice={(price) => setEditingItem({ ...editingItem, pricePerCaseUsd: price })}
                               />
                             </td>
                             <td className="px-2 py-1 text-right text-xs font-medium tabular-nums">

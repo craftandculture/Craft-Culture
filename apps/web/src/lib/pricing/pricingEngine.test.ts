@@ -10,6 +10,7 @@ import {
   calculatePocketCellarPartner,
   getLogisticsInfo,
   round2,
+  supplierPriceForFinalPrice,
 } from './pricingEngine';
 
 describe('pricingEngine', () => {
@@ -486,6 +487,22 @@ describe('pricingEngine', () => {
       expect(result.finalPriceUsd).toBe(1000);
       expect(result.landedDutyFree).toBe(1000);
       expect(result.dutyPaidLanded).toBe(1000);
+    });
+  });
+
+  describe('supplierPriceForFinalPrice', () => {
+    it('gives back the supplier price the forward calculation started from', () => {
+      const variables = { ...DEFAULT_PCO_VARIABLES, ccMarginPercent: 3.4 };
+      const forward = calculatePCOAdmin(1234.56, variables);
+
+      expect(supplierPriceForFinalPrice(forward.finalPriceUsd, variables)).toBeCloseTo(1234.56, 1);
+    });
+
+    it('lands on the client price to the cent once rounded', () => {
+      const variables = { ...DEFAULT_PCO_VARIABLES, ccMarginPercent: 2.47 };
+      const supplier = round2(supplierPriceForFinalPrice(5000 / DEFAULT_EXCHANGE_RATES.usdToAed, variables));
+
+      expect(Math.abs(calculatePCOAdmin(supplier, variables).finalPriceAed - 5000)).toBeLessThan(0.05);
     });
   });
 });
