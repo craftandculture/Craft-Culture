@@ -47,6 +47,7 @@ import TooltipProvider from '@/app/_ui/components/Tooltip/TooltipProvider';
 import TooltipTrigger from '@/app/_ui/components/Tooltip/TooltipTrigger';
 import PricingBandsEditor from '@/app/_wms/components/PricingBandsEditor';
 import WineColourBadge from '@/app/_wms/components/WineColourBadge';
+import wineKeyOf from '@/app/_wms/utils/wineKeyOf';
 import DEFAULT_INBOND_MARGIN_PCT from '@/app/_wms/constants/defaultInbondMarginPct';
 import pricePricingManagerRow, {
   type PricingManagerRowInput,
@@ -1526,7 +1527,7 @@ const PricingManagerPage = () => {
 
   // Colour for the wines on this page, inbound included
   const pageLwin7s = useMemo(
-    () => [...new Set((data?.products ?? []).map((p) => p.lwin18.slice(0, 7)))].sort(),
+    () => [...new Set((data?.products ?? []).map((p) => wineKeyOf(p.lwin18)))].sort(),
     [data?.products],
   );
   const { data: colourData } = useQuery({
@@ -3278,7 +3279,7 @@ const PricingManagerPage = () => {
                                 {product.productName}
                               </span>
                             </button>
-                            <WineColourBadge colour={colourData?.byLwin7[product.lwin18.slice(0, 7)]} />
+                            <WineColourBadge colour={colourData?.byLwin7[wineKeyOf(product.lwin18)]} />
                             {/* Held by others too: an edit here is this owner's alone */}
                             {otherHolders.length > 0 && (
                               <span
@@ -3726,7 +3727,7 @@ const PricingManagerPage = () => {
                             <span className="flex items-start justify-between gap-2">
                               <span className="min-w-0">
                                 <span className="block text-sm font-semibold text-text-primary">{product.productName}</span>
-                                <WineColourBadge colour={colourData?.byLwin7[product.lwin18.slice(0, 7)]} />
+                                <WineColourBadge colour={colourData?.byLwin7[wineKeyOf(product.lwin18)]} />
                                 <span className="mt-0.5 block text-xs text-text-muted">
                                   {[ownerCue?.isMixed ? 'Mixed owners' : ownerCue?.fullName, `${caseConfig}×${product.bottleSize ?? '75cl'}`, `${product.totalCases} cs`].filter(Boolean).join(' · ')}
                                 </span>

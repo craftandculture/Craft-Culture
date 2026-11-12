@@ -42,6 +42,8 @@ import downloadZplFile from '@/app/_wms/utils/downloadZplFile';
 import generateLabelZpl from '@/app/_wms/utils/generateLabelZpl';
 import generateLotNumber from '@/app/_wms/utils/generateLotNumber';
 import generateStockPalletLabelZpl from '@/app/_wms/utils/generateStockPalletLabelZpl';
+import { WINE_COLOURS, WINE_COLOUR_LABELS } from '@/app/_wms/utils/wineColour';
+import wineKeyOf from '@/app/_wms/utils/wineKeyOf';
 import useTRPC from '@/lib/trpc/browser';
 
 interface LocationAssignment {
@@ -219,6 +221,29 @@ const WMSReceiveShipmentPage = () => {
 
   // Commit single item mutation (local-first via NUC)
   const commitItemMutation = useMutation(wmsApi.receiveItemMutationOptions());
+
+  /*
+    Every wine carries a colour. Liv-ex gives it for almost every LWIN; for
+    the few it does not, the operator picks it at Find & Count, bottle in hand.
+    Lines with no LWIN get their code on receipt and are set from Stock
+    Explorer instead.
+  */
+  const receiveWineKeys = Array.from(receivedItems.values())
+    .map((item) => (item.lwin ? wineKeyOf(item.lwin) : ''))
+    .filter(Boolean)
+    .sort();
+  const { data: colourData, refetch: refetchColours } = useQuery({
+    ...api.wms.admin.stock.colours.queryOptions({ lwin7s: [...new Set(receiveWineKeys)] }),
+    enabled: receiveWineKeys.length > 0,
+  });
+  const { mutate: setWineColour, isPending: isSettingColour } = useMutation({
+    ...api.wms.admin.stock.setColour.mutationOptions(),
+    onSuccess: () => void refetchColours(),
+  });
+  const colourNeededFor = (item: ReceivedItem | undefined) => {
+    const key = item?.lwin ? wineKeyOf(item.lwin) : '';
+    return key && colourData && !colourData.byLwin7[key] ? key : null;
+  };
 
   // Finalize receiving mutation (mark shipment as delivered)
   const finalizeMutation = useMutation({
@@ -1644,12 +1669,37 @@ const WMSReceiveShipmentPage = () => {
                     />
                   </div>
 
+                  {/* Only for a wine with no colour yet: picked once, kept for every vintage */}
+                  {colourNeededFor(currentItem) && (
+                    <div className="rounded-lg border border-border-secondary p-3">
+                      <Typography variant="bodySm" className="mb-2 font-semibold">
+                        Colour? Check the bottle
+                      </Typography>
+                      <div className="grid grid-cols-3 gap-2">
+                        {WINE_COLOURS.map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            disabled={isSettingColour}
+                            onClick={() => {
+                              const key = colourNeededFor(currentItem);
+                              if (key) setWineColour({ lwin7: key, colour: option });
+                            }}
+                            className="h-12 rounded-lg border-2 border-border-primary bg-fill-secondary text-sm font-semibold disabled:opacity-50"
+                          >
+                            {WINE_COLOUR_LABELS[option]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     variant="default"
                     size="lg"
                     className="h-14 w-full text-lg"
                     onClick={handleVerify}
-                    disabled={currentItem.receivedCases === 0}
+                    disabled={currentItem.receivedCases === 0 || Boolean(colourNeededFor(currentItem))}
                   >
                     <ButtonContent iconLeft={IconCheck}>
                       Verified - {currentItem.receivedCases} Cases Found

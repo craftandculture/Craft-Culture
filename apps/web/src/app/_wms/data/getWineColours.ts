@@ -4,8 +4,9 @@ import colourFromLivex, { WINE_COLOURS } from '../utils/wineColour';
 import type { WineColour } from '../utils/wineColour';
 
 export interface WineWithoutColour {
+  /** The wine's code: its LWIN7, or the leading code of a wine without one */
   lwin7: string;
-  productName: string;
+  productName: string | null;
   producer: string | null;
   /** The Liv-ex name, when Liv-ex knows the wine but gives no colour */
   livexName: string | null;
@@ -13,7 +14,7 @@ export interface WineWithoutColour {
 
 interface ColourRow {
   lwin7: string;
-  productName: string;
+  productName: string | null;
   producer: string | null;
   livexName: string | null;
   livexColour: string | null;
@@ -22,34 +23,50 @@ interface ColourRow {
   setColour: string | null;
 }
 
+/** What a wine's code may look like: digits and letters, no separators */
+export const WINE_KEY_PATTERN = /^[A-Za-z0-9]{1,40}$/;
+
 /**
- * The colour of every wine in stock, or of the wines given, keyed by LWIN7
+ * The colour of every wine in stock, or of the wines given, keyed by the
+ * wine's code (see wineKeyOf)
  *
- * A colour set by staff wins; otherwise it is read from Liv-ex. Wines with
- * neither come back in `missing`, which is the list staff work through. Stock
- * without a seven-digit LWIN (a supplier code in the LWIN column) has no wine
- * to look up, and is left out.
+ * A colour set by staff wins; otherwise it is read from Liv-ex, which knows
+ * only seven-digit LWINs. Wines with neither come back in `missing`, which is
+ * the list staff work through. Wines given by code need not be in stock yet,
+ * so Add to stock can check a wine before its first case is booked.
  *
- * @param lwin7s - Only these wines; omit for every wine held in stock
+ * @param keys - Only these wines; omit for every wine held in stock
  */
-const getWineColours = async (lwin7s?: string[]) => {
-  const wanted = lwin7s?.filter((code) => /^[0-9]{7}$/.test(code));
+const getWineColours = async (keys?: string[]) => {
+  const wanted = keys ? [...new Set(keys.filter((key) => WINE_KEY_PATTERN.test(key)))] : undefined;
   if (wanted && wanted.length === 0) return { byLwin7: {}, missing: [] };
 
   const rows = await client<ColourRow[]>`
     WITH wines AS (
-      SELECT DISTINCT ON (SUBSTRING(s.lwin18 FROM 1 FOR 7))
-        SUBSTRING(s.lwin18 FROM 1 FOR 7) AS lwin7,
-        s.product_name,
-        s.producer
-      FROM wms_stock s
-      WHERE s.lwin18 ~ '^[0-9]{7}'
-        ${
-          wanted
-            ? client`AND SUBSTRING(s.lwin18 FROM 1 FOR 7) = ANY(${wanted}::text[])`
-            : client`AND (s.quantity_cases > 0 OR COALESCE(s.open_bottles, 0) > 0)`
-        }
-      ORDER BY SUBSTRING(s.lwin18 FROM 1 FOR 7), s.quantity_cases DESC
+      ${
+        wanted
+          ? client`
+              SELECT k.key AS lwin7, st.product_name, st.producer
+              FROM UNNEST(${wanted}::text[]) AS k(key)
+              LEFT JOIN LATERAL (
+                SELECT s.product_name, s.producer
+                FROM wms_stock s
+                WHERE SPLIT_PART(s.lwin18, '-', 1) = k.key
+                ORDER BY s.quantity_cases DESC
+                LIMIT 1
+              ) st ON true
+            `
+          : client`
+              SELECT DISTINCT ON (SPLIT_PART(s.lwin18, '-', 1))
+                SPLIT_PART(s.lwin18, '-', 1) AS lwin7,
+                s.product_name,
+                s.producer
+              FROM wms_stock s
+              WHERE (s.quantity_cases > 0 OR COALESCE(s.open_bottles, 0) > 0)
+                AND SPLIT_PART(s.lwin18, '-', 1) ~ '^[A-Za-z0-9]+$'
+              ORDER BY SPLIT_PART(s.lwin18, '-', 1), s.quantity_cases DESC
+            `
+      }
     )
     SELECT
       w.lwin7,

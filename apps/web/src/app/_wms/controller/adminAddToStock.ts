@@ -9,6 +9,10 @@ import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 import generateMovementNumber from '../utils/generateMovementNumber';
 import normalizeLwin18 from '../utils/normalizeLwin18';
+import getWineColours from '../data/getWineColours';
+import saveWineColour from '../data/saveWineColour';
+import { WINE_COLOURS } from '../utils/wineColour';
+import wineKeyOf from '../utils/wineKeyOf';
 
 /**
  * Add wine to stock that never came through receiving
@@ -52,6 +56,8 @@ const adminAddToStock = staffAdminProcedure
         shipmentId: z.string().uuid().optional(),
         lotNumber: z.string().trim().max(60).optional(),
         reExportBoeNumber: z.string().trim().max(60).optional(),
+        /** Required where neither Liv-ex nor staff have given the wine one */
+        colour: z.enum(WINE_COLOURS).optional(),
         reason: z.string().trim().min(1, 'Say why it is being added').max(300),
       })
       .refine((v) => v.cases > 0 || v.looseBottles > 0, { message: 'Add at least one case or bottle.' })
@@ -161,6 +167,24 @@ const adminAddToStock = staffAdminProcedure
     const shipmentId = input.shipmentId ?? sameParcel?.shipmentId ?? null;
     const reExportBoeNumber = input.reExportBoeNumber || sameParcel?.reExportBoeNumber || null;
     const by = ctx.user.name ?? ctx.user.email;
+
+    /*
+      Every wine carries a colour, so "red or white?" is answered from the
+      screen. A colour chosen here is kept for the wine; without one, the wine
+      must already have one from Liv-ex or from staff.
+    */
+    const wineKey = wineKeyOf(codeFor(input.caseConfig));
+    if (input.colour) {
+      await saveWineColour(wineKey, input.colour, ctx.user.id);
+    } else {
+      const { byLwin7 } = await getWineColours([wineKey]);
+      if (!byLwin7[wineKey]) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Choose the wine’s colour: red, white, rosé, sparkling, fortified or orange.',
+        });
+      }
+    }
 
     const parts = [
       input.cases > 0 ? { pack: input.caseConfig, cases: input.cases } : null,

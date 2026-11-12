@@ -76,6 +76,7 @@ import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
 import generateStockPalletLabelZpl from '@/app/_wms/utils/generateStockPalletLabelZpl';
 import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
+import wineKeyOf from '@/app/_wms/utils/wineKeyOf';
 import { WINE_COLOURS, WINE_COLOUR_LABELS } from '@/app/_wms/utils/wineColour';
 import type { WineColour } from '@/app/_wms/utils/wineColour';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
@@ -3869,7 +3870,7 @@ const StockExplorerPage = () => {
                           key={key}
                           product={product}
                           fullNames={fullNames}
-                          colour={colourData?.byLwin7[product.lwin18.slice(0, 7)]}
+                          colour={colourData?.byLwin7[wineKeyOf(product.lwin18)]}
                           lookalikeTwins={lookalikeData?.byLwin18[
                             product.lwin18
                           ]?.map((t) => t.productName)}

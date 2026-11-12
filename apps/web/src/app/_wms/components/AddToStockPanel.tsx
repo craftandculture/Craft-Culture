@@ -6,6 +6,11 @@ import { toast } from 'sonner';
 
 import useTRPC from '@/lib/trpc/browser';
 
+import WineColourBadge from './WineColourBadge';
+import { WINE_COLOURS, WINE_COLOUR_LABELS } from '../utils/wineColour';
+import type { WineColour } from '../utils/wineColour';
+import wineKeyOf from '../utils/wineKeyOf';
+
 export interface AddToStockPanelProps {
   /** Pre-filled from a Stock Explorer row ("Add more"); omitted for a new wine */
   template?: {
@@ -52,6 +57,9 @@ const AddToStockPanel = ({ template, onClose }: AddToStockPanelProps) => {
   const [reExportBoeNumber, setReExportBoeNumber] = useState('');
   const [reason, setReason] = useState('');
   const [confirming, setConfirming] = useState(false);
+  // Chosen here only where the wine has no colour yet, or to correct it
+  const [colour, setColour] = useState<WineColour | null>(null);
+  const [changingColour, setChangingColour] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(search.trim()), 300);
@@ -62,6 +70,24 @@ const AddToStockPanel = ({ template, onClose }: AddToStockPanelProps) => {
     ...api.wms.admin.stock.search.queryOptions({ query: debounced, limit: 10 }),
     enabled: !wine && !manual && debounced.length >= 2,
   });
+  /*
+    The wine's code, where it is known before saving: a chosen stock row, or a
+    typed LWIN. A wine entered by name gets its code on saving, so its colour
+    is always chosen here.
+  */
+  const typedLwin7 = lwin.trim().match(/^(\d{7})/)?.[1];
+  const wineKey = wine ? wineKeyOf(wine.lwin18) : manual ? typedLwin7 : undefined;
+  const { data: colourData, isFetching: isCheckingColour } = useQuery({
+    ...api.wms.admin.stock.colours.queryOptions({ lwin7s: wineKey ? [wineKey] : [] }),
+    enabled: Boolean(wineKey),
+  });
+  const knownColour = wineKey ? colourData?.byLwin7[wineKey] : undefined;
+
+  // A colour chosen for one wine does not carry over to the next
+  useEffect(() => {
+    setColour(null);
+    setChangingColour(false);
+  }, [wineKey]);
   const { data: owners } = useQuery({ ...api.partners.list.queryOptions() });
   const { data: bays } = useQuery({ ...api.wms.admin.locations.getMany.queryOptions({ isActive: true }) });
 
@@ -103,6 +129,7 @@ const AddToStockPanel = ({ template, onClose }: AddToStockPanelProps) => {
     (!name ? 'Choose a wine. ' : '') +
     (!ownerId ? 'Choose the owner. ' : '') +
     (!locationId ? 'Choose the bay. ' : '') +
+    (name && !knownColour && !colour && !isCheckingColour ? 'Choose the colour. ' : '') +
     (bottles <= 0 ? 'Add at least one case or bottle. ' : '') +
     (!reason.trim() ? 'Say why it is being added.' : '');
 
@@ -122,6 +149,7 @@ const AddToStockPanel = ({ template, onClose }: AddToStockPanelProps) => {
       arrivedOn,
       lotNumber: lotNumber.trim() || undefined,
       reExportBoeNumber: reExportBoeNumber.trim() || undefined,
+      colour: colour && colour !== knownColour ? colour : undefined,
       reason: reason.trim(),
     });
 
@@ -212,6 +240,39 @@ const AddToStockPanel = ({ template, onClose }: AddToStockPanelProps) => {
                 Search stock instead
               </button>
             </div>
+          )}
+        </div>
+      )}
+
+      {name && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-medium">Colour</span>
+          {knownColour && !changingColour ? (
+            <>
+              <WineColourBadge colour={colour ?? knownColour} className="text-xs" />
+              <button type="button" onClick={() => setChangingColour(true)} className="text-text-muted underline">
+                Change
+              </button>
+            </>
+          ) : (
+            <>
+              {WINE_COLOURS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setColour(option)}
+                  aria-pressed={colour === option}
+                  className={`rounded-full border px-2.5 py-1 ${
+                    colour === option
+                      ? 'border-text-primary bg-text-primary text-background-primary'
+                      : 'border-border-muted hover:border-text-muted'
+                  }`}
+                >
+                  {WINE_COLOUR_LABELS[option]}
+                </button>
+              ))}
+              {!knownColour && <span className="text-text-muted">Required: check the label if unsure.</span>}
+            </>
           )}
         </div>
       )}

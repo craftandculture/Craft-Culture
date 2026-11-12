@@ -6,7 +6,8 @@ import getWineColours from '../data/getWineColours';
 
 /**
  * Each wine's colour (red, white, rosé, sparkling, fortified, orange), keyed by
- * LWIN7, and the wines still without one
+ * the wine's code (its LWIN7, or the code before the first dash), and the
+ * wines still without one
  *
  * With no input it covers every wine held in stock, which is what Stock
  * Explorer shows and counts. Pricing Manager passes the wines on its page,
