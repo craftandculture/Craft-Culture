@@ -252,7 +252,10 @@ const adminCreateZohoSalesOrder = adminProcedure
           PCO reference goes here. The pricing checks are for staff and go on
           as an internal comment below.
         */
-        notes: `Raised from ${plan.order.orderNumber} for ${plan.order.clientName}.`,
+        notes:
+          `Raised from ${plan.order.orderNumber} for ${plan.order.clientName}.\n` +
+          // Quantities are in cases of mixed packs; the warehouse and the client count bottles (Jeandre)
+          `Total bottles: ${plan.lines.reduce((sum, line) => sum + line.bottles, 0)}`,
       });
 
       if (!order?.salesorder_id) {
