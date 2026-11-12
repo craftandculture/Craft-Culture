@@ -1,6 +1,8 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
-import { wmsStock } from '@/database/schema';
+import { wmsStock, wmsStockReservations } from '@/database/schema';
+
+import { casesToKeepOnRelease } from './planSharedHold';
 
 // The SQL below is planGiveBack's arithmetic; change one, change both
 
@@ -23,7 +25,7 @@ import { wmsStock } from '@/database/schema';
 const giveBackHeldCases = async ({
   db,
   stockId,
-  cases,
+  cases: releasedCases,
   now = new Date(),
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,7 +34,50 @@ const giveBackHeldCases = async ({
   cases: number;
   now?: Date;
 }) => {
+  let cases = releasedCases;
   if (!(cases > 0)) return;
+
+  /*
+    Other bottle orders may be sharing these cases (see planSharedHold). The
+    release is claimed before this runs, so the active holds are the ones left;
+    whatever they still need stays held, moved onto them, and only the rest is
+    given back.
+  */
+  const [row]: { caseConfig: number | null }[] = await db
+    .select({ caseConfig: wmsStock.caseConfig })
+    .from(wmsStock)
+    .where(eq(wmsStock.id, stockId));
+  const pack = row?.caseConfig && row.caseConfig > 0 ? row.caseConfig : null;
+
+  if (pack) {
+    const active: { id: string; quantityCases: number; quantityBottles: number | null }[] = await db
+      .select({
+        id: wmsStockReservations.id,
+        quantityCases: wmsStockReservations.quantityCases,
+        quantityBottles: wmsStockReservations.quantityBottles,
+      })
+      .from(wmsStockReservations)
+      .where(and(eq(wmsStockReservations.stockId, stockId), eq(wmsStockReservations.status, 'active')));
+
+    let keep = casesToKeepOnRelease(active, pack, cases);
+    const short = active
+      .map((h) => ({ id: h.id, short: (h.quantityBottles ?? 0) - h.quantityCases * pack }))
+      .filter((h) => h.short > 0)
+      .sort((a, b) => b.short - a.short);
+
+    for (const h of short) {
+      if (keep <= 0) break;
+      const take = Math.min(keep, Math.ceil(h.short / pack));
+      await db
+        .update(wmsStockReservations)
+        .set({ quantityCases: sql`${wmsStockReservations.quantityCases} + ${take}`, updatedAt: now })
+        .where(eq(wmsStockReservations.id, h.id));
+      keep -= take;
+      cases -= take;
+    }
+
+    if (!(cases > 0)) return;
+  }
 
   await db
     .update(wmsStock)

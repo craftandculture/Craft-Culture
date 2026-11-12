@@ -416,10 +416,11 @@ const adminReleaseToPick = wmsOperatorProcedure
         second time below. Holding it again took the same cases twice off
         "available".
       */
-      const existingHolds: { stockId: string; quantityCases: number }[] = await db
+      const existingHolds: { stockId: string; quantityCases: number; quantityBottles: number | null }[] = await db
         .select({
           stockId: wmsStockReservations.stockId,
           quantityCases: wmsStockReservations.quantityCases,
+          quantityBottles: wmsStockReservations.quantityBottles,
         })
         .from(wmsStockReservations)
         .where(
@@ -429,6 +430,9 @@ const adminReleaseToPick = wmsOperatorProcedure
           ),
         );
       const alreadyHeldCases = existingHolds.reduce((sum, h) => sum + h.quantityCases, 0);
+      // A line sharing another order's held case holds bottles, not cases
+      const sharesHeldCase = existingHolds.some((h) => h.quantityCases === 0 && (h.quantityBottles ?? 0) > 0);
+      const isHeld = alreadyHeldCases > 0 || sharesHeldCase;
 
       const suggestedStock =
         availableStock.find((s) => existingHolds.some((h) => h.stockId === s.stockId)) ??
@@ -483,7 +487,7 @@ const adminReleaseToPick = wmsOperatorProcedure
             ? heldForMembers.length > 0
               ? `UNRESOLVED: the only stock of this wine (${heldForMembers.map((h) => h.locationCode).join(', ')}) is held for its owner, not for sale — do not pick it`
               : 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
-            : alreadyHeldCases === 0 && suggestedStock.availableCases < casesNeeded
+            : !isHeld && suggestedStock.availableCases < casesNeeded
               ? `RESERVED: ${suggestedStock.locationCode} physically holds this wine but it is reserved for another order — confirm before picking`
               : null,
         })
@@ -512,7 +516,7 @@ const adminReleaseToPick = wmsOperatorProcedure
           the same matching the picker will use at the bay.
         */
         const held =
-          alreadyHeldCases > 0
+          isHeld
             ? 0
             : Math.min(casesNeeded, suggestedStock.availableCases);
 
@@ -543,7 +547,7 @@ const adminReleaseToPick = wmsOperatorProcedure
           reservedCases += held;
         }
 
-        if (held + alreadyHeldCases < casesNeeded) {
+        if (!sharesHeldCase && held + alreadyHeldCases < casesNeeded) {
           shortOnRelease.push(
             `${item.name} (${casesNeeded - held - alreadyHeldCases} of ${casesNeeded} cases)`,
           );

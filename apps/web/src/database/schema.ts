@@ -4857,6 +4857,12 @@ export const wmsStockReservations = pgTable(
     lwin18: text('lwin18').notNull(),
     productName: text('product_name').notNull(),
     quantityCases: integer('quantity_cases').notNull(),
+    /*
+      Bottles the hold is for, on a by-the-bottle line. Several orders can
+      share one held case (see planSharedHold); a sharer holds 0 cases. Null
+      means the cases in full, as on every hold before 12 Nov 2026.
+    */
+    quantityBottles: integer('quantity_bottles'),
     status: wmsReservationStatus('status').notNull().default('active'),
     releasedAt: timestamp('released_at', { mode: 'date' }),
     releaseReason: text('release_reason'),

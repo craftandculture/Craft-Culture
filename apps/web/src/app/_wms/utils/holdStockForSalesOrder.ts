@@ -5,6 +5,7 @@ import { wmsStock, wmsStockReservations, zohoSalesOrderItems } from '@/database/
 import inOurWarehouse from './inOurWarehouse';
 import lwinPackAgnosticPattern from './lwinPackAgnosticPattern';
 import normalizeLwin18 from './normalizeLwin18';
+import { spareHeldBottles } from './planSharedHold';
 import rankStockByPack from './rankStockByPack';
 import { readOrderedPackOrNull } from './readOrderedPack';
 
@@ -119,6 +120,44 @@ export const holdLines = async ({
     const orderedPack = isBottleUnit ? 1 : (statedPack ?? firstPack);
     let bottlesLeft = isBottleUnit ? line.quantity : line.quantity * orderedPack;
 
+    /*
+      A by-the-bottle line first shares a case already held for another
+      bottle order of the same wine, and holds no case of its own for those
+      bottles. Only on rows whose pack is known.
+    */
+    if (isBottleUnit) {
+      for (const stock of ranked) {
+        if (bottlesLeft <= 0) break;
+        if (!(stock.caseConfig && stock.caseConfig > 0)) continue;
+
+        const active: { quantityCases: number; quantityBottles: number | null }[] = await db
+          .select({
+            quantityCases: wmsStockReservations.quantityCases,
+            quantityBottles: wmsStockReservations.quantityBottles,
+          })
+          .from(wmsStockReservations)
+          .where(and(eq(wmsStockReservations.stockId, stock.id), eq(wmsStockReservations.status, 'active')));
+        const share = Math.min(spareHeldBottles(active, stock.caseConfig), bottlesLeft);
+        if (share <= 0) continue;
+
+        await db.insert(wmsStockReservations).values({
+          stockId: stock.id,
+          ownerId: stock.ownerId,
+          orderType,
+          orderId,
+          orderItemId: line.id,
+          orderNumber,
+          lwin18: stock.lwin18,
+          productName: stock.productName,
+          quantityCases: 0,
+          quantityBottles: share,
+          status: 'active',
+        });
+
+        bottlesLeft -= share;
+      }
+    }
+
     for (const stock of ranked) {
       if (bottlesLeft <= 0) break;
 
@@ -149,6 +188,8 @@ export const holdLines = async ({
         lwin18: stock.lwin18,
         productName: stock.productName,
         quantityCases: cases,
+        // What the line uses of those cases; the rest can be shared
+        quantityBottles: isBottleUnit ? Math.min(bottlesLeft, cases * pack) : null,
         status: 'active',
       });
 
