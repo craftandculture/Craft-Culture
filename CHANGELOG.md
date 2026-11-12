@@ -1,3 +1,9 @@
+## [2.1.127](https://github.com/craftandculture/Craft-Culture/compare/v2.1.126...v2.1.127) (2026-11-12)
+
+### Features
+
+* **logistics:** new freight quotes post to [#logistics](https://github.com/craftandculture/Craft-Culture/issues/logistics), and logistics@ gets every quote email ([21d3709](https://github.com/craftandculture/Craft-Culture/commit/21d3709c9ffb970be4a4df7f2459573d0c017c37))
+
 ## [2.1.126](https://github.com/craftandculture/Craft-Culture/compare/v2.1.125...v2.1.126) (2026-11-12)
 
 ### Features
