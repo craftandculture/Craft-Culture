@@ -1,0 +1,138 @@
+name: ship-it
+
+# Merges a Claude PR once a repo admin has given it the `ship-it` label and
+# `check` is green on its latest commit. The label is the review: shipping a
+# low-risk claude/* PR becomes one tap instead of a full merge.
+#
+# It never merges:
+#   - a PR whose title says [high-risk], or that carries a `high-risk` label
+#   - a PR from any branch other than claude/*, or from a fork
+#   - a PR that touches workflows, the database schema, migrations or
+#     migrate.mjs (a merge runs migrations against production)
+#   - a draft, or a PR whose label was added by someone without admin access
+#   - a commit the label was not given on: a push after labelling removes
+#     the label, so new code is always looked at before it ships
+#
+# No PR code is checked out or run here. Everything goes through the API,
+# which is what makes pull_request_target (and its secrets) safe to use.
+#
+# The merge uses a personal token, not GITHUB_TOKEN: a merge made with
+# GITHUB_TOKEN does not start other workflows, so the release notes and the
+# Trigger.dev deploy would silently not run.
+
+on:
+  pull_request_target:
+    types: [labeled, synchronize]
+  workflow_run:
+    workflows: [test-and-deploy]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: read
+
+concurrency:
+  group: ship-it-${{ github.event.pull_request.number || github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  # A push after labelling means the labelled code is not the code that would
+  # ship. Drop the label so it has to be given again.
+  relabel-on-push:
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'synchronize' &&
+      contains(github.event.pull_request.labels.*.name, 'ship-it')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove ship-it after new commits
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR" --repo "$REPO" --remove-label ship-it
+          gh pr comment "$PR" --repo "$REPO" --body "New commits were pushed after \`ship-it\` was added, so the label has been removed. Add it again once you have looked at them."
+
+  merge:
+    if: >-
+      (github.event_name == 'pull_request_target' &&
+        github.event.action == 'labeled' &&
+        github.event.label.name == 'ship-it') ||
+      (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.event == 'pull_request' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        startsWith(github.event.workflow_run.head_branch, 'claude/'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge if every guard passes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGE_TOKEN: ${{ secrets.SHIP_IT_TOKEN || secrets.SEMANTIC_RELEASE_AUTH_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_FROM_EVENT: ${{ github.event.pull_request.number }}
+          RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+
+          skip() { echo "Not merging: $1"; exit 0; }
+
+          pr="$PR_FROM_EVENT"
+          if [ -z "$pr" ]; then
+            pr=$(gh pr list --repo "$REPO" --head "$RUN_BRANCH" --state open \
+              --json number -q '.[0].number // empty')
+            [ -n "$pr" ] || skip "no open PR for $RUN_BRANCH"
+          fi
+
+          info=$(gh pr view "$pr" --repo "$REPO" --json \
+            number,title,headRefName,headRefOid,baseRefName,isDraft,isCrossRepository,labels,state)
+          title=$(jq -r .title <<<"$info")
+          head=$(jq -r .headRefName <<<"$info")
+          sha=$(jq -r .headRefOid <<<"$info")
+          echo "PR #$pr: $title ($head @ $sha)"
+
+          [ "$(jq -r .state <<<"$info")" = "OPEN" ] || skip "PR is not open"
+          jq -e '.labels | map(.name) | index("ship-it")' <<<"$info" >/dev/null \
+            || skip "no ship-it label"
+          [[ "$head" == claude/* ]] || skip "branch is not claude/*"
+          [ "$(jq -r .baseRefName <<<"$info")" = "main" ] || skip "base is not main"
+          [ "$(jq -r .isCrossRepository <<<"$info")" = "false" ] || skip "PR is from a fork"
+          [ "$(jq -r .isDraft <<<"$info")" = "false" ] || skip "PR is a draft"
+          if grep -qi 'high-risk' <<<"$title"; then skip "title is marked high-risk"; fi
+          if jq -e '.labels | map(.name | ascii_downcase) | index("high-risk")' <<<"$info" >/dev/null; then
+            skip "PR is labelled high-risk"
+          fi
+
+          # Only an admin's label counts. The newest ship-it label event is
+          # the one in force.
+          labeller=$(gh api "repos/$REPO/issues/$pr/events" --paginate \
+            -q '.[] | select(.event == "labeled" and .label.name == "ship-it") | .actor.login' \
+            | tail -n 1)
+          [ -n "$labeller" ] || skip "could not tell who added ship-it"
+          permission=$(gh api "repos/$REPO/collaborators/$labeller/permission" -q .permission)
+          [ "$permission" = "admin" ] || skip "ship-it was added by $labeller ($permission), not an admin"
+
+          protected=$(gh api "repos/$REPO/pulls/$pr/files" --paginate -q '.[].filename' \
+            | grep -E '^\.github/|^apps/web/src/database/|^apps/web/drizzle\.config\.ts$|migrate\.mjs$' || true)
+          if [ -n "$protected" ]; then
+            echo "$protected"
+            skip "PR touches workflows, schema or migrations"
+          fi
+
+          # `check` (lint, tests, typecheck) and `secrets` must both have
+          # passed on the exact commit being merged.
+          for name in check secrets; do
+            conclusion=$(gh api "repos/$REPO/commits/$sha/check-runs?check_name=$name" \
+              -q '.check_runs | sort_by(.started_at) | last | .conclusion // "pending"')
+            [ "$conclusion" = "success" ] || skip "$name is $conclusion on $sha"
+          done
+
+          [ -n "$MERGE_TOKEN" ] || { echo "::error::Set the SHIP_IT_TOKEN secret to let ship-it merge."; exit 1; }
+
+          # --match-head-commit refuses the merge if anything was pushed
+          # after the checks above read the head.
+          GH_TOKEN="$MERGE_TOKEN" gh pr merge "$pr" --repo "$REPO" --squash \
+            --match-head-commit "$sha"
+          echo "Merged #$pr"
