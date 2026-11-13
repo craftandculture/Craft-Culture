@@ -981,6 +981,15 @@ const DailySalesClient = () => {
             </Typography>
           ) : null}
 
+          {day.dropped.length > 0 ? (
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p>
+                Dropped out of their feed, so their stock cannot be read:{' '}
+                {day.dropped.map((w) => `${w.productName} (${w.bottles} held before)`).join(', ')}. Not counted as sales.
+              </p>
+            </Typography>
+          ) : null}
+
           {day.restocks.length > 0 ? (
             <Typography variant="bodyXs" colorRole="muted" asChild>
               <p>
