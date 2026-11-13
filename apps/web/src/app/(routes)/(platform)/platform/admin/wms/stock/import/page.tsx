@@ -17,7 +17,6 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useCallback, useState } from 'react';
-import * as XLSX from 'xlsx';
 
 import Button from '@/app/_ui/components/Button/Button';
 import ButtonContent from '@/app/_ui/components/Button/ButtonContent';
@@ -120,8 +119,9 @@ const WMSStockImportPage = () => {
 
   const parseExcelFile = useCallback((uploadedFile: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
+        const XLSX = await import('xlsx');
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
         const sheetName = workbook.SheetNames[0];
