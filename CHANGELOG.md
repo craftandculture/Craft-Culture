@@ -1,3 +1,9 @@
+## [2.1.129](https://github.com/craftandculture/Craft-Culture/compare/v2.1.128...v2.1.129) (2026-11-13)
+
+### Bug Fixes
+
+* **distribution:** wines that drop out of City Drinks' feed are no longer counted as sold ([61fb20e](https://github.com/craftandculture/Craft-Culture/commit/61fb20e69afc19684bf0757412c8c1cc10606d42))
+
 ## [2.1.128](https://github.com/craftandculture/Craft-Culture/compare/v2.1.127...v2.1.128) (2026-11-12)
 
 ### Bug Fixes
