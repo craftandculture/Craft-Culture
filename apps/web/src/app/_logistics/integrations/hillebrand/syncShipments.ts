@@ -18,6 +18,7 @@ import {
 import type { HillebrandShipment } from './getShipments';
 import { inboundStatusMessage } from '../../notifications/logisticsSlackMessages';
 import postLogisticsSlack from '../../notifications/postLogisticsSlack';
+import omitEmptyFields from '../../utils/omitEmptyFields';
 import { forwardOnlyStatus } from '../../utils/shipmentStatuses';
 
 /**
@@ -411,9 +412,7 @@ const syncHillebrandShipments = async (): Promise<SyncResult> => {
             not replaced by Hillebrand's estimate. And a missing modality
             would read as sea freight by default, so it is not written either.
           */
-          const reported = Object.fromEntries(
-            Object.entries(tracking).filter(([, value]) => value != null),
-          ) as Partial<typeof tracking>;
+          const reported = omitEmptyFields(tracking);
           if (existing.etaConfirmed) delete reported.eta;
           if (!detailedShipment.mainModality) delete reported.transportMode;
 
