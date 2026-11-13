@@ -15,6 +15,7 @@ const row = (over: Partial<PairRow>): PairRow => ({
   lwin: '110000120190600750',
   heldFrom: 12,
   heldTo: 12,
+  inCloseCount: true,
   soldLast30d: 4,
   soldLast30dFrom: null,
   delivered: 0,
@@ -77,6 +78,21 @@ describe('buildDailySales', () => {
 
     expect(days[0]?.consigned.bottles).toBe(1);
     expect(days[0]?.withdrawals).toEqual([]);
+  });
+
+  it('reports a wine missing from the closing count as dropped, never sold', () => {
+    // 13 Nov 2026: the feed stopped listing a wine of 39 bottles
+    const { days } = buildDailySales([
+      row({ heldFrom: 39, heldTo: 0, inCloseCount: false, soldLast30dFrom: 2, soldLast30d: null }),
+      row({ outletCode: 'CDR2', heldFrom: 5, heldTo: 4, soldLast30dFrom: 1, soldLast30d: 2 }),
+    ]);
+
+    expect(days[0]?.consigned).toEqual({ bottles: 1, value: 100 });
+    expect(days[0]?.lines).toHaveLength(1);
+    expect(days[0]?.withdrawals).toEqual([]);
+    expect(days[0]?.dropped).toEqual([
+      { productName: 'Tignanello 2019', ownerName: 'Crurated', bottles: 39 },
+    ]);
   });
 
   it('keeps consigned and bought apart, consigned first', () => {

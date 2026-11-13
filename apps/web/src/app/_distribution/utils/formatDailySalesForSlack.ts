@@ -122,6 +122,13 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
     );
   }
 
+  if (day.dropped.length > 0) {
+    const bottles = day.dropped.reduce((sum, w) => sum + w.bottles, 0);
+    notes.push(
+      `${day.dropped.length} wine${day.dropped.length === 1 ? '' : 's'} (${bottles} bottle${bottles === 1 ? '' : 's'}) dropped out of City Drinks' feed. Their stock cannot be read, so they are not counted as sales.`,
+    );
+  }
+
   if (day.restocks.length > 0) {
     notes.push(
       `${day.restocks.length} wine${day.restocks.length === 1 ? '' : 's'} rose by more than we delivered (restock not on our invoices).`,

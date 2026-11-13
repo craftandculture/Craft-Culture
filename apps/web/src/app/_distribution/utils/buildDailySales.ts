@@ -21,6 +21,12 @@ export interface PairRow {
   lwin: string | null;
   heldFrom: number;
   heldTo: number;
+  /**
+   * The wine is on the closing count at all. A line missing from it is not a
+   * count of zero: the outlet dropped it from the feed, and that says nothing
+   * about whether a bottle sold.
+   */
+  inCloseCount: boolean;
   /** The outlet's own rolling 30-day sales, at the closing count */
   soldLast30d: number | null;
   /** The same figure at the opening count, so the day's rise can be read */
@@ -62,6 +68,11 @@ export interface DailySalesDay {
    * photography, samples, breakage or a stock correction. Not counted as sold.
    */
   withdrawals: { productName: string; ownerName: string | null; bottles: number }[];
+  /**
+   * Wines on the opening count that are missing from the closing one. The feed
+   * stopped listing them, so nothing about them can be read. Not counted as sold.
+   */
+  dropped: { productName: string; ownerName: string | null; bottles: number }[];
   /** What the outlet held at the close of the window, grouped for the filters */
   stock: StockGroup[];
 }
@@ -169,9 +180,25 @@ const buildDailySales = (rows: PairRow[]) => {
         lines: [],
         restocks: [],
         withdrawals: [],
+        dropped: [],
         stock: [],
       };
       byDay.set(key, day);
+    }
+
+    /*
+      On 13 Nov 2026 City Drinks' feed stopped listing about 80 Crurated wines.
+      Read as a count of zero, every bottle of them became a sale: 598
+      consigned bottles in one day, against 74 on their own 30-day figure.
+      A wine the feed no longer lists is reported as dropped, never as sold.
+    */
+    if (!row.inCloseCount) {
+      const bottles = row.heldFrom + row.delivered;
+
+      if (bottles > 0) {
+        day.dropped.push({ productName: row.productName, ownerName: ownerOf(row), bottles });
+      }
+      continue;
     }
 
     const movement = row.heldFrom + row.delivered - row.heldTo;
@@ -242,6 +269,7 @@ const buildDailySales = (rows: PairRow[]) => {
     );
     day.restocks.sort((a, b) => b.bottles - a.bottles);
     day.withdrawals.sort((a, b) => b.bottles - a.bottles);
+    day.dropped.sort((a, b) => b.bottles - a.bottles);
   }
 
   /*
