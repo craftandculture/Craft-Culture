@@ -1,3 +1,9 @@
+## [2.1.132](https://github.com/craftandculture/Craft-Culture/compare/v2.1.131...v2.1.132) (2026-11-14)
+
+### Features
+
+* **logistics:** UK import drafts now show the UK EORI stamp, so it can be checked before issuing ([582b6e6](https://github.com/craftandculture/Craft-Culture/commit/582b6e65fd3e5c7a2176a48d40620823fe340ae8))
+
 ## [2.1.131](https://github.com/craftandculture/Craft-Culture/compare/v2.1.130...v2.1.131) (2026-11-14)
 
 ### Bug Fixes
