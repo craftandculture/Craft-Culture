@@ -1,3 +1,9 @@
+## [2.1.133](https://github.com/craftandculture/Craft-Culture/compare/v2.1.132...v2.1.133) (2026-11-14)
+
+### Features
+
+* **logistics:** the UK EORI stamp prints larger and in darker ink, so the EORI number is legible ([53f9afb](https://github.com/craftandculture/Craft-Culture/commit/53f9afb59d76e730d9b03add67673a9a76aec4a5))
+
 ## [2.1.132](https://github.com/craftandculture/Craft-Culture/compare/v2.1.131...v2.1.132) (2026-11-14)
 
 ### Features
