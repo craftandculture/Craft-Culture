@@ -1,5 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
+import { UK_EORI, UK_EORI_STAMP_URL } from '../constants';
+import { isUkImport } from '../schemas/exportDocumentSchema';
 import type { ExportDocument } from '../schemas/exportDocumentSchema';
 import deriveBoeTable from '../utils/deriveBoeTable';
 import deriveDocumentTotals from '../utils/deriveDocumentTotals';
@@ -51,6 +53,9 @@ const styles = StyleSheet.create({
   signHint: { fontSize: 7, color: '#bbbbbb', textTransform: 'uppercase' },
   signFields: { width: 180, justifyContent: 'flex-end', gap: 8 },
   signField: { borderBottom: '0.5px solid #999999', paddingBottom: 3, fontSize: 8, color: '#444444' },
+  exportDetails: { flexDirection: 'row', flexWrap: 'wrap', border: `0.5px solid ${RULE}`, borderRadius: 3, paddingVertical: 3, paddingHorizontal: 8, marginBottom: 6 },
+  exportDetail: { width: '25%', flexDirection: 'row', paddingVertical: 1.5, paddingRight: 6 },
+  stamp: { width: 64, height: 64 },
   pageNumber: { position: 'absolute', bottom: 14, right: 34, fontSize: 6.5, color: MUTED },
 });
 
@@ -78,6 +83,7 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
     n: '3%', desc: `${descWidth}%`, hs: '8%', origin: '9%', pack: '7%', qty: '5%', btl: '6%', extra: '7%', unit: '10%', amount: '11%',
   };
   const sizes = totals.bottlesBySize.map(([cl, n]) => `${n}×${cl}cl`).join(' + ');
+  const ukImport = isUkImport(doc);
   const invoiceList = doc.sources.map((s) => s.invoiceNumber).join(', ');
 
   // Lines are stored in print order, so the index is the printed line number
@@ -85,7 +91,7 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
   const parties: [string, ExportDocument['header']['exporter']][] = [
     ['Exporter / Shipper', doc.header.exporter],
     ['Consignee / Importer', doc.header.consignee],
-    ['Collection Address', doc.header.collection],
+    [ukImport ? 'Deliver To' : 'Collection Address', doc.header.collection],
   ];
   const details: [string, string][] = [
     ['Invoice Date', longDate(doc.header.date)],
@@ -104,13 +110,13 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
           <View>
             {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image */}
             <Image style={styles.logo} src="https://wine.craftculture.xyz/images/cc-logo-cropped.png" />
-            <Text style={styles.tagline}>Craft and Culture FZE · Fine Wine Import &amp; Distribution</Text>
+            <Text style={styles.tagline}>{ukImport ? 'Fine Wine Import & Distribution' : 'Craft and Culture FZE · Fine Wine Import & Distribution'}</Text>
           </View>
           <View>
             <Text style={styles.title}>COMMERCIAL INVOICE</Text>
             <Text style={styles.title}>&amp; PACKING LIST</Text>
             {doc.header.number ? (
-              <Text style={styles.number}>{`${doc.header.number} · Combined · ${invoiceList}`}</Text>
+              <Text style={styles.number}>{invoiceList ? `${doc.header.number} · Combined · ${invoiceList}` : doc.header.number}</Text>
             ) : (
               <Text style={styles.draft}>DRAFT — NOT FOR SUBMISSION</Text>
             )}
@@ -125,7 +131,7 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
               {p.addressLines.map((l) => (
                 <Text key={l} style={styles.partyLine}>{l}</Text>
               ))}
-              {p.trn && <Text style={styles.partyLine}>{`TRN: ${p.trn}`}</Text>}
+              {p.trn && <Text style={styles.partyLine}>{`${p.idLabel ?? 'TRN'}: ${p.trn}`}</Text>}
             </View>
           ))}
         </View>
@@ -138,6 +144,17 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
             </View>
           ))}
         </View>
+
+        {doc.header.exportDetails?.length ? (
+          <View style={styles.exportDetails}>
+            {doc.header.exportDetails.map((d) => (
+              <View key={d.label} style={styles.exportDetail}>
+                <Text style={{ width: '42%', fontSize: 6.5, color: MUTED }}>{d.label}</Text>
+                <Text style={{ width: '58%', fontSize: 7, fontFamily: 'Helvetica-Bold' }}>{d.value}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.th} fixed>
           <Text style={[styles.cell, { width: col.n }]}>#</Text>
@@ -226,6 +243,7 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
         ))}
 
         <View style={styles.bottom} wrap={false}>
+          {ukImport ? <View style={{ flex: 1.4 }} /> : (
           <View style={styles.boeBox}>
             <Text style={styles.boeTitle}>Re-Export Bill of Entry References</Text>
             <View style={[styles.boeRow, { backgroundColor: '#e6e6e6' }]}>
@@ -241,6 +259,7 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
               </View>
             ))}
           </View>
+          )}
           <View style={styles.totals}>
             <View style={styles.totalRow}>
               <Text>Subtotal:</Text>
@@ -259,7 +278,9 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
 
         <View wrap={false}>
           <Text style={styles.small}>
-            {`Reference Invoices: ${doc.sources
+            {ukImport
+              ? `Reference Supplier Invoices: ${(doc.header.referenceDocs ?? []).join(' · ') || '—'} · ${totals.declaredCases} cases · ${totals.bottles} bottles (${sizes}).`
+              : `Reference Invoices: ${doc.sources
               .map((s) => (s.pcoNumber ? `${s.invoiceNumber} (${s.pcoNumber})` : s.invoiceNumber))
               .join(', ')} · ${totals.declaredCases} cases · ${totals.bottles} bottles (${sizes}).`}
           </Text>
@@ -268,7 +289,7 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
               doc.lines.some((l) => l.kind === 'mixedCase')
                 ? ' PCO orders are packed in mixed cases of 3 bottles; each case is listed with its contents, item by item, beneath it.'
                 : ''
-            }${cur === 'AED' ? ` All values in AED, converted from USD at the fixed rate of AED ${doc.header.rate} = USD 1.` : ''}${
+            }${ukImport && doc.extraColumns.some((c) => c.key === 'duty') ? ' Duty: IB = in bond (duty suspended), DP = UK duty paid.' : ''}${cur === 'AED' ? ` All values in AED, converted from USD at the fixed rate of AED ${doc.header.rate} = USD 1.` : ''}${
               doc.header.grossWeightEstimated && doc.header.grossWeightKg !== null ? ' Gross weight is estimated.' : ''
             }`}
           </Text>
@@ -282,11 +303,28 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
             </Text>
             <View style={styles.signRow}>
               <View style={{ flex: 1 }}>
-                <View style={styles.signBox}>
-                  <Text style={styles.signHint}>Authorised signature &amp; company stamp</Text>
-                </View>
+                {doc.header.stamp === 'ukEori' ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={[styles.signBox, { flex: 1, height: 40 }]}>
+                      <Text style={styles.signHint}>Authorised signature</Text>
+                    </View>
+                    {/* Stamped only once issued, so a draft cannot pass for the real document */}
+                    {doc.header.number ? (
+                      // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image
+                      <Image style={styles.stamp} src={UK_EORI_STAMP_URL} />
+                    ) : (
+                      <View style={styles.stamp} />
+                    )}
+                  </View>
+                ) : (
+                  <View style={styles.signBox}>
+                    <Text style={styles.signHint}>Authorised signature &amp; company stamp</Text>
+                  </View>
+                )}
                 <Text style={{ fontSize: 7, textAlign: 'center', marginTop: 3, fontFamily: 'Helvetica-Bold' }}>
-                  Authorised Signature &amp; Company Stamp — Craft &amp; Culture FZE
+                  {ukImport
+                    ? `Authorised Signature & Company Stamp — Craft and Culture · UK EORI ${UK_EORI}`
+                    : 'Authorised Signature & Company Stamp — Craft & Culture FZE'}
                 </Text>
               </View>
               <View style={styles.signFields}>

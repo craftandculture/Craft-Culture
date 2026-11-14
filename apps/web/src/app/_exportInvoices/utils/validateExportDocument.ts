@@ -1,6 +1,7 @@
 import hsCodeOptions from '../hsCodeOptions';
 import deriveDocumentTotals from './deriveDocumentTotals';
 import roundMoney from './roundMoney';
+import { isUkImport } from '../schemas/exportDocumentSchema';
 import type { ExportDocument } from '../schemas/exportDocumentSchema';
 
 export interface ExportCheck {
@@ -35,21 +36,40 @@ const validateExportDocument = (
   const totals = deriveDocumentTotals(doc);
   const overridden = doc.lines.filter((l) => l.override);
 
-  // Per-line rounding to the fil can drift from a one-shot conversion
-  const allowance = roundMoney(doc.lines.length * 0.01);
-  const drift = roundMoney(totals.total - totals.expectedTotal);
-  if (Math.abs(drift) > allowance) {
-    const message = `The lines total ${doc.header.currency} ${totals.total.toFixed(2)} but the invoices come to ${doc.header.currency} ${totals.expectedTotal.toFixed(2)} (USD ${totals.invoicesUsd.toFixed(2)} × ${doc.header.rate}).`;
-    checks.push(
-      overridden.length > 0
-        ? {
-            level: 'warning',
-            code: 'total_differs_by_override',
-            message: `${message} The difference comes from lines changed on this document; reissue the invoices in Zoho so the two agree.`,
-            lineIds: overridden.map((l) => l.id),
-          }
-        : { level: 'error', code: 'total_mismatch', message },
-    );
+  const ukImport = isUkImport(doc);
+
+  /*
+    A UK import has no Zoho invoice to agree with. Its lines were read from
+    the supplier's documents, so they are checked against what those
+    documents say they total — a warning, since a statement can carry
+    charges that are not wine.
+  */
+  if (ukImport) {
+    const stated = doc.header.statedTotal;
+    if (stated !== null && stated !== undefined && Math.abs(roundMoney(totals.total - stated)) > Math.max(1, stated * 0.005)) {
+      checks.push({
+        level: 'warning',
+        code: 'total_differs_from_documents',
+        message: `The lines total ${doc.header.currency} ${totals.total.toFixed(2)} but the supplier documents come to ${doc.header.currency} ${stated.toFixed(2)}. Check no wine line was missed or misread.`,
+      });
+    }
+  } else {
+    // Per-line rounding to the fil can drift from a one-shot conversion
+    const allowance = roundMoney(doc.lines.length * 0.01);
+    const drift = roundMoney(totals.total - totals.expectedTotal);
+    if (Math.abs(drift) > allowance) {
+      const message = `The lines total ${doc.header.currency} ${totals.total.toFixed(2)} but the invoices come to ${doc.header.currency} ${totals.expectedTotal.toFixed(2)} (USD ${totals.invoicesUsd.toFixed(2)} × ${doc.header.rate}).`;
+      checks.push(
+        overridden.length > 0
+          ? {
+              level: 'warning',
+              code: 'total_differs_by_override',
+              message: `${message} The difference comes from lines changed on this document; reissue the invoices in Zoho so the two agree.`,
+              lineIds: overridden.map((l) => l.id),
+            }
+          : { level: 'error', code: 'total_mismatch', message },
+      );
+    }
   }
 
   if (doc.header.casesOverride !== null && doc.header.casesOverride !== totals.cases) {
@@ -60,13 +80,24 @@ const validateExportDocument = (
     });
   }
 
-  const noBoe = doc.lines.filter((l) => !l.boe);
+  // A UK import enters the UAE: there is no re-export BOE to give
+  const noBoe = ukImport ? [] : doc.lines.filter((l) => !l.boe);
   if (noBoe.length > 0) {
     checks.push({
       level: 'error',
       code: 'missing_boe',
       message: `${noBoe.length} line${noBoe.length > 1 ? 's have' : ' has'} no re-export BOE.`,
       lineIds: noBoe.map((l) => l.id),
+    });
+  }
+
+  const noDuty = ukImport ? doc.lines.filter((l) => !['IB', 'DP'].includes((l.extra.duty ?? '').trim().toUpperCase())) : [];
+  if (noDuty.length > 0) {
+    checks.push({
+      level: 'warning',
+      code: 'missing_duty_status',
+      message: `${noDuty.length} line${noDuty.length > 1 ? 's have' : ' has'} no duty status. Enter IB (in bond) or DP (duty paid).`,
+      lineIds: noDuty.map((l) => l.id),
     });
   }
 

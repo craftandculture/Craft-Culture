@@ -27,3 +27,26 @@ export const PCO_CASE_BOTTLES = 3;
 export const HS_STILL_WINE = '22042100';
 export const HS_SPARKLING_WINE = '22041000';
 export const HS_SPIRITS = '22083000';
+
+/** C&C's UK EORI, on every UK import and on its stamp */
+export const UK_EORI = 'GB048089787000';
+
+/** The UK EORI company stamp, printed in the signature box of a UK import */
+export const UK_EORI_STAMP_URL = 'https://wine.craftculture.xyz/images/cc-stamp-uk-eori.png';
+
+/**
+ * The UK bonds C&C collects from
+ *
+ * `short` goes in the terms of delivery ("Ex Works (LCB Tilbury)"), `address`
+ * is the collection address customs see.
+ */
+export const UK_BONDS = {
+  lcbTilbury: { name: 'London City Bond, Tilbury', short: 'LCB Tilbury', address: 'London City Bond, Tilbury, Essex, United Kingdom' },
+  lcbBurton: { name: 'London City Bond, Burton Gateway', short: 'LCB Burton', address: 'London City Bond, Burton Gateway, Burton upon Trent, United Kingdom' },
+  bbr: { name: 'Berry Bros. & Rudd, Basingstoke', short: 'BBR Basingstoke', address: 'Hamilton Close, Houndmills, Basingstoke RG21 6YB, United Kingdom' },
+} as const;
+
+export type UkBondKey = keyof typeof UK_BONDS;
+
+/** What a UK import is shipped for, unless the operator says otherwise */
+export const UK_IMPORT_REASON = 'Transfer of own stock — no sale; values stated for customs purposes';
