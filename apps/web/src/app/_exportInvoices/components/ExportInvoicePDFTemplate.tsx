@@ -311,13 +311,9 @@ const ExportInvoicePDFTemplate = ({ document: doc }: ExportInvoicePDFTemplatePro
                     <View style={[styles.signBox, { flex: 1, height: 40 }]}>
                       <Text style={styles.signHint}>Authorised signature</Text>
                     </View>
-                    {/* Stamped only once issued, so a draft cannot pass for the real document */}
-                    {doc.header.number ? (
-                      // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image
-                      <Image style={styles.stamp} src={UK_EORI_STAMP_URL} />
-                    ) : (
-                      <View style={styles.stamp} />
-                    )}
+                    {/* On drafts too, so the stamp can be checked before issuing; the DRAFT marking still shows */}
+                    {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image */}
+                    <Image style={styles.stamp} src={UK_EORI_STAMP_URL} />
                   </View>
                 ) : (
                   <View style={styles.signBox}>

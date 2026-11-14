@@ -164,7 +164,7 @@ const NewUkImportClient = () => {
           <input className={field} value={reason} onChange={(e) => setReason(e.target.value)} />
         </label>
         <p className="text-xs text-text-muted">
-          Shipper: Craft and Culture, UK EORI {UK_EORI}. Importer: Craft and Culture FZE. The issued PDF carries the UK EORI stamp.
+          Shipper: Craft and Culture, UK EORI {UK_EORI}. Importer: Craft and Culture FZE. The PDF carries the UK EORI stamp.
         </p>
       </section>
 

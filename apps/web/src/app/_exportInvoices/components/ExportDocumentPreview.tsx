@@ -373,7 +373,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
               ))}
             </dl>
             <p className="mt-3 text-text-muted">Read from: {(doc.header.referenceDocs ?? []).join(' · ') || '—'}</p>
-            <p className="mt-1 text-text-muted">The issued PDF carries the C&amp;C UK EORI stamp.</p>
+            <p className="mt-1 text-text-muted">The PDF carries the C&amp;C UK EORI stamp.</p>
           </div>
         ) : (
         <div className="rounded-xl border border-border-muted bg-fill-primary p-4">
