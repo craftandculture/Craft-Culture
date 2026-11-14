@@ -20,7 +20,9 @@ const ExportSummaryStrip = ({ document: doc }: ExportSummaryStripProps) => {
   const t = deriveDocumentTotals(doc);
   const h = doc.header;
   const items: { label: string; value: string; missing?: boolean }[] = [
-    { label: 'Invoices', value: String(doc.sources.length) },
+    doc.header.kind === 'ukImport'
+      ? { label: 'Documents', value: String(doc.header.referenceDocs?.length ?? 0) }
+      : { label: 'Invoices', value: String(doc.sources.length) },
     { label: 'Cases', value: String(t.declaredCases) },
     { label: 'Bottles', value: String(t.bottles) },
     { label: 'Pallets', value: h.pallets === null ? 'Enter' : String(h.pallets), missing: h.pallets === null },

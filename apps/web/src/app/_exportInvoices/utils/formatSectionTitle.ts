@@ -17,6 +17,7 @@ const formatSectionTitle = (section: ExportSection) => {
   const refs = section.refs
     .map((r) => (r.pcoNumber ? `${r.invoiceNumber} · ${r.pcoNumber}` : r.invoiceNumber))
     .join(' | ');
+  if (!refs) return section.note ?? '';
   return section.note ? `${refs} — ${section.note}` : refs;
 };
 

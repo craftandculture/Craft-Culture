@@ -5,6 +5,7 @@ import { Fragment, useEffect, useState } from 'react';
 import EditableText from './EditableText';
 import ExportLineEditor from './ExportLineEditor';
 import HsCodeSelect from './HsCodeSelect';
+import { isUkImport } from '../schemas/exportDocumentSchema';
 import type { ExportDocument, ExportLine } from '../schemas/exportDocumentSchema';
 import type { ExportOp } from '../schemas/exportOpSchema';
 import deriveBoeTable from '../utils/deriveBoeTable';
@@ -45,7 +46,9 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
   const totals = deriveDocumentTotals(doc);
   const boes = deriveBoeTable(doc);
   const cur = doc.header.currency;
-  const colCount = (editable ? 12 : 11) + doc.extraColumns.length;
+  // A UK import enters the UAE, so it has no re-export BOE column or table
+  const ukImport = isUkImport(doc);
+  const colCount = (editable ? 12 : 11) - (ukImport ? 1 : 0) + doc.extraColumns.length;
   // Lines are stored in print order, so the index is the printed line number
   const lineNumber = new Map(doc.lines.map((l, i) => [l.id, i + 1]));
 
@@ -139,7 +142,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
               {doc.extraColumns.map((c) => (
                 <th key={c.key} className="w-20 px-2 py-2.5">{c.label}</th>
               ))}
-              <th className="w-32 px-2 py-2.5">BOE</th>
+              {!ukImport && <th className="w-32 px-2 py-2.5">BOE</th>}
               <th className="w-24 px-2 py-2.5 text-right">Unit {cur}</th>
               <th className="w-28 px-3 py-2.5 text-right">Amount {cur}</th>
               {editable && <th className="w-20 px-2 py-2.5" />}
@@ -209,7 +212,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                               />
                             </td>
                           ))}
-                          <td className="px-1 py-1.5">
+                          {!ukImport && <td className="px-1 py-1.5">
                             {sameBoe && !editable ? (
                               <span className="px-1 text-text-muted" title={l.boe ?? ''}>〃</span>
                             ) : (
@@ -221,7 +224,7 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                                 onSave={setBoe(l)}
                               />
                             )}
-                          </td>
+                          </td>}
                           <td className="px-2 py-1.5 text-right tabular-nums">{mixed ? '' : money(l.unitPrice)}</td>
                           <td className="px-3 py-1.5 text-right font-medium tabular-nums">{mixed ? '' : money(l.amount)}</td>
                           {editable && <td className="px-2 py-1.5 text-right">{lineButton(l)}</td>}
@@ -312,9 +315,11 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
                             </label>
                           </>
                         )}
-                        <label className="col-span-2 flex items-center gap-1 text-text-muted">BOE
-                          <EditableText value={l.boe ?? ''} disabled={!editable} placeholder={l.boeCandidates.length ? 'Choose' : 'Missing'} onSave={setBoe(l)} className={`font-mono ${l.boe ? 'text-text-primary' : 'text-text-danger'}`} />
-                        </label>
+                        {!ukImport && (
+                          <label className="col-span-2 flex items-center gap-1 text-text-muted">BOE
+                            <EditableText value={l.boe ?? ''} disabled={!editable} placeholder={l.boeCandidates.length ? 'Choose' : 'Missing'} onSave={setBoe(l)} className={`font-mono ${l.boe ? 'text-text-primary' : 'text-text-danger'}`} />
+                          </label>
+                        )}
                         {doc.extraColumns.map((c) => (
                           <label key={c.key} className="flex items-center gap-1 text-text-muted">{c.label}
                             <EditableText value={l.extra[c.key] ?? ''} disabled={!editable} onSave={(v) => onApply([{ op: 'setColumnValues', key: c.key, values: [{ lineId: l.id, value: v }] }], `Line ${lineNumber.get(l.id)} ${c.label}: ${v}`)} className="text-text-primary" />
@@ -356,6 +361,21 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
       </div>
 
       <div className="grid items-stretch gap-4 md:grid-cols-[3fr_2fr]">
+        {ukImport ? (
+          <div className="rounded-xl border border-border-muted bg-fill-primary p-4 text-xs">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted">Export details</p>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+              {(doc.header.exportDetails ?? []).map((d) => (
+                <Fragment key={d.label}>
+                  <dt className="text-text-muted">{d.label}</dt>
+                  <dd>{d.value}</dd>
+                </Fragment>
+              ))}
+            </dl>
+            <p className="mt-3 text-text-muted">Read from: {(doc.header.referenceDocs ?? []).join(' · ') || '—'}</p>
+            <p className="mt-1 text-text-muted">The issued PDF carries the C&amp;C UK EORI stamp.</p>
+          </div>
+        ) : (
         <div className="rounded-xl border border-border-muted bg-fill-primary p-4">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted">Re-export bills of entry</p>
           <div className="overflow-x-auto">
@@ -375,9 +395,17 @@ const ExportDocumentPreview = ({ document: doc, editable, highlighted, onApply }
             </table>
           </div>
         </div>
+        )}
         <div className="flex flex-col justify-between rounded-xl border border-border-muted bg-fill-primary p-4">
           <div className="space-y-1.5 text-xs text-text-muted">
-            <div className="flex justify-between"><span>Invoices billed (USD)</span><span className="tabular-nums">{money(totals.invoicesUsd)}</span></div>
+            {ukImport ? (
+              <div className="flex justify-between">
+                <span>Supplier documents state</span>
+                <span className="tabular-nums">{doc.header.statedTotal != null ? `${cur} ${money(doc.header.statedTotal)}` : 'No total given'}</span>
+              </div>
+            ) : (
+              <div className="flex justify-between"><span>Invoices billed (USD)</span><span className="tabular-nums">{money(totals.invoicesUsd)}</span></div>
+            )}
             {cur !== 'USD' && (
               <div className="flex justify-between"><span>Fixed rate</span><span className="tabular-nums">× {doc.header.rate}</span></div>
             )}

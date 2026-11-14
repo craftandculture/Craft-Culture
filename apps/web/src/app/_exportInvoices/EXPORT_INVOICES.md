@@ -32,3 +32,12 @@ These are in `houseRules.ts`, which is also given to Claude.
 The regression fixtures in `utils/__fixtures__/` are the real invoices behind EXP-2026-0040 and 0041.
 - **EXP-0040:** must rebuild to 67 lines, 80 cases, 376 bottles, AED 231,391.34. The issued document says .33: it rounded 8,116.225 down; half-up is correct.
 - **EXP-0041:** must rebuild to 36 lines and 83 cases, and to AED 111,921.09 after the operator's pack and Giscours edits.
+
+## UK imports
+Wine C&C ships out of a UK bond (LCB Tilbury, LCB Burton, BBR or another) on its **own UK EORI** (GB048089787000) to C&C FZE at RAK. Before this option, each one was built by hand (the C&C (LCB) invoice of 27 Aug 2026 is the model).
+
+1. **New UK import** on the Export invoices screen: upload the supplier invoices, screenshots or an Excel/CSV list (up to 8 files, 3 MB together), choose the bond, the mode of transport and the GBP→USD rate.
+2. Claude reads every wine line (`controller/adminCreateUkImportDraft.ts`); `utils/buildUkImportDocument.ts` builds the document: lines grouped by country and region, priced per lot in USD, Duty (IB/DP) and ABV columns, an Export Details strip.
+3. The draft opens in the same editor; check every line against the documents, then issue. It takes the next EXP number.
+
+Differences from an export: `header.kind = 'ukImport'`, no Zoho sources and no BOEs (no BOE column or table), the lines are checked against the documents' own total (a warning), a line without IB/DP is a warning, and the issued PDF carries the UK EORI stamp (`public/images/cc-stamp-uk-eori.png`, kept out of LFS). Drafts are never stamped.

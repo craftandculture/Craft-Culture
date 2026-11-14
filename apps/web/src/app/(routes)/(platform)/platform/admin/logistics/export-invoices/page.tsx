@@ -18,9 +18,14 @@ const ExportInvoicesPage = () => {
         description="Commercial invoice & packing list, built from the Zoho invoices going out — checked, then issued."
         crumbs={[{ label: 'Logistics', href: '/platform/admin/logistics' }]}
         actions={
-          <Button colorRole="brand" asChild>
-            <Link href="/platform/admin/logistics/export-invoices/new">+ New export invoice</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/platform/admin/logistics/export-invoices/new-uk-import">+ New UK import</Link>
+            </Button>
+            <Button colorRole="brand" asChild>
+              <Link href="/platform/admin/logistics/export-invoices/new">+ New export invoice</Link>
+            </Button>
+          </div>
         }
       />
       <ExportInvoicesListClient />

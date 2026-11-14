@@ -5,6 +5,8 @@ export const exportPartySchema = z.object({
   name: z.string(),
   addressLines: z.array(z.string()),
   trn: z.string().nullable(),
+  /** What the id in `trn` is, when it is not a UAE TRN — a UK import's exporter shows its EORI */
+  idLabel: z.string().optional(),
 });
 
 /** One Zoho invoice the document draws on */
@@ -108,6 +110,20 @@ export const exportHeaderSchema = z.object({
   grossWeightEstimated: z.boolean(),
   /** Set only when customs want a case count other than the Qty column's */
   casesOverride: z.number().int().nullable(),
+  /**
+   * `ukImport`: C&C's own UK EORI ships wine out of a UK bond (LCB, BBR…) to
+   * C&C FZE. Its lines are read from the supplier's documents, not from Zoho,
+   * so there are no Zoho sources and no BOEs. Absent on every export document.
+   */
+  kind: z.enum(['export', 'ukImport']).optional(),
+  /** Further facts customs want, printed as a strip: EORI, duty status, ports, AWB */
+  exportDetails: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
+  /** The supplier documents a UK import was read from */
+  referenceDocs: z.array(z.string()).optional(),
+  /** What those documents say they total, in the document currency, to check the lines against */
+  statedTotal: z.number().nullable().optional(),
+  /** The company stamp printed in the signature box */
+  stamp: z.enum(['ukEori']).nullable().optional(),
 });
 
 /**
@@ -127,6 +143,9 @@ export const exportDocumentSchema = z.object({
   notes: z.array(z.string()),
   declaration: z.string(),
 });
+
+/** A UK import: shipped by C&C's UK EORI from a UK bond to C&C FZE */
+export const isUkImport = (doc: { header: { kind?: string } }) => doc.header.kind === 'ukImport';
 
 export type ExportParty = z.infer<typeof exportPartySchema>;
 export type ExportSourceRef = z.infer<typeof exportSourceRefSchema>;

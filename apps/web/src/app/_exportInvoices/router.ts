@@ -3,6 +3,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import adminApplyOps from './controller/adminApplyOps';
 import adminCancelIssued from './controller/adminCancelIssued';
 import adminCreateDraft from './controller/adminCreateDraft';
+import adminCreateUkImportDraft from './controller/adminCreateUkImportDraft';
 import adminDeleteDraft from './controller/adminDeleteDraft';
 import adminGetInvoiceLines from './controller/adminGetInvoiceLines';
 import adminGetMany from './controller/adminGetMany';
@@ -22,6 +23,8 @@ const exportInvoicesRouter = createTRPCRouter({
     invoicesForConsignee: adminListInvoicesForConsignee,
     invoiceLines: adminGetInvoiceLines,
     createDraft: adminCreateDraft,
+    // A UK import: read from supplier documents, shipped on C&C's UK EORI
+    createUkImportDraft: adminCreateUkImportDraft,
     // Every edit, typed or requested, is an op applied here and versioned
     applyOps: adminApplyOps,
     // Plain words in, proposed ops out; nothing is saved until accepted
