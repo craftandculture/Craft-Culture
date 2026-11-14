@@ -76,9 +76,9 @@ import { generateBatchLabelsZpl } from '@/app/_wms/utils/generateLabelZpl';
 import type { LabelData } from '@/app/_wms/utils/generateLabelZpl';
 import generateStockPalletLabelZpl from '@/app/_wms/utils/generateStockPalletLabelZpl';
 import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
-import wineKeyOf from '@/app/_wms/utils/wineKeyOf';
 import { WINE_COLOURS, WINE_COLOUR_LABELS } from '@/app/_wms/utils/wineColour';
 import type { WineColour } from '@/app/_wms/utils/wineColour';
+import wineKeyOf from '@/app/_wms/utils/wineKeyOf';
 import useTRPC, { useTRPCClient } from '@/lib/trpc/browser';
 import fileHref from '@/utils/fileHref';
 
