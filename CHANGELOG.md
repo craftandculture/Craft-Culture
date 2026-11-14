@@ -1,3 +1,9 @@
+## [2.1.131](https://github.com/craftandculture/Craft-Culture/compare/v2.1.130...v2.1.131) (2026-11-14)
+
+### Bug Fixes
+
+* **logistics:** UK import invoices read the bottle count, so a case of 6 is no longer shipped as 6 cases ([a715fa2](https://github.com/craftandculture/Craft-Culture/commit/a715fa2f9d0afb799b6e5243444add8d1f00b78d))
+
 ## [2.1.130](https://github.com/craftandculture/Craft-Culture/compare/v2.1.129...v2.1.130) (2026-11-14)
 
 ### Features
