@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   signField: { borderBottom: '0.5px solid #999999', paddingBottom: 3, fontSize: 8, color: '#444444' },
   exportDetails: { flexDirection: 'row', flexWrap: 'wrap', border: `0.5px solid ${RULE}`, borderRadius: 3, paddingVertical: 3, paddingHorizontal: 8, marginBottom: 6 },
   exportDetail: { width: '25%', flexDirection: 'row', paddingVertical: 1.5, paddingRight: 6 },
-  stamp: { width: 64, height: 64 },
+  stamp: { width: 110, height: 110 },
   pageNumber: { position: 'absolute', bottom: 14, right: 34, fontSize: 6.5, color: MUTED },
 });
 
