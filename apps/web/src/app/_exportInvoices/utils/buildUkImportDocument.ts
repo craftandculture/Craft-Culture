@@ -29,10 +29,11 @@ export interface UkImportReadLine {
   description: string;
   country: string;
   region: string | null;
+  /** Bottles per case or lot as stated; 1 for loose bottles */
   packBottles: number;
   bottleSizeCl: number;
-  /** Lots or cases of `packBottles` */
-  cases: number;
+  /** Bottles shipped on this line, as printed — the count documents state most reliably */
+  bottles: number;
   pricePerBottle: number | null;
   lineTotal: number | null;
   currency: 'GBP' | 'USD';
@@ -61,9 +62,13 @@ const title = (s: string) => s.trim().replace(/\s+/g, ' ');
  * GBP at the rate the operator gives, lines grouped by country and region,
  * duty status (IB / DP) and ABV per line, stamped with the UK EORI stamp.
  *
- * Qty is the number of lots of the stated pack, so a 5-bottle lot is one
- * line of 1 × 5x75cl, as it was on that invoice. The unit price is per lot,
- * so Qty × Unit = Amount holds as on every export invoice.
+ * The bottle count is read, never the case count: on 14 Nov a stock list
+ * of "6 bottles, case size 6" came back as 6 cases of 6 (36 bottles) when
+ * the case count was left to the reader. Qty is derived here as bottles ÷
+ * pack; a count the pack does not divide is shipped as loose bottles. A
+ * 5-bottle auction lot stays one line of 1 × 5x75cl, as on that invoice.
+ * The unit price is per case, so Qty × Unit = Amount holds as on every
+ * export invoice.
  *
  * @param docs - The supplier documents read
  * @param lines - Their wine lines
@@ -90,9 +95,10 @@ const buildUkImportDocument = (
     lines
       .filter((l) => groupOf(l) === g)
       .map((l) => {
-        const pack = Math.max(1, Math.round(l.packBottles));
-        const qty = Math.max(0, Math.round(l.cases));
-        const bottles = pack * qty;
+        const bottles = Math.max(0, Math.round(l.bottles));
+        const statedPack = Math.max(1, Math.round(l.packBottles));
+        const pack = bottles % statedPack === 0 ? statedPack : 1;
+        const qty = bottles / pack;
         const perBottle =
           l.pricePerBottle ?? (l.lineTotal !== null && bottles > 0 ? l.lineTotal / bottles : 0);
         const unitPrice = roundMoney(perBottle * pack * fx(l.currency));
@@ -187,9 +193,9 @@ const buildUkImportDocument = (
         { label: 'Collection Address', value: bond.address },
         { label: 'Reason for Export', value: options.reason?.trim() || UK_IMPORT_REASON },
       ],
-      referenceDocs: docs.map((d) =>
-        [d.supplier, d.reference].filter(Boolean).join(' ') + (d.date ? ` (${d.date})` : ''),
-      ),
+      referenceDocs: docs
+        .map((d) => [d.supplier, d.reference].filter(Boolean).join(' ') + (d.date ? ` (${d.date})` : ''))
+        .filter((r) => r.trim()),
       statedTotal,
       stamp: 'ukEori',
     },

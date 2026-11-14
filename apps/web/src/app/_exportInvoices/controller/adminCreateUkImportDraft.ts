@@ -29,8 +29,8 @@ const SPREADSHEET_TYPES = [
 const readSchema = z.object({
   documents: z.array(
     z.object({
-      reference: z.string().describe('Invoice, order or lot reference as printed, e.g. "BI565619" or "#35582"'),
-      supplier: z.string().describe('Who issued the document, e.g. "Dreweatts", "Berry Bros. & Rudd"'),
+      reference: z.string().describe('Invoice, order or lot reference as printed, e.g. "BI565619" or "#35582". If none is printed, the file name.'),
+      supplier: z.string().nullable().describe('Who issued the document, e.g. "Dreweatts", "Berry Bros. & Rudd". Null if not shown.'),
       date: z.string().nullable().describe('Document date as YYYY-MM-DD'),
       currency: z.enum(['GBP', 'USD', 'EUR']),
       goodsTotal: z
@@ -45,9 +45,9 @@ const readSchema = z.object({
       description: z.string().describe('Producer, wine, appellation and vintage exactly as written'),
       country: z.string().describe('Country of origin in English, e.g. "France"'),
       region: z.string().nullable().describe('Region, e.g. "Bordeaux", "Burgundy", "Tuscany"'),
-      packBottles: z.number().describe('Bottles in this lot or case, e.g. 6 for 6x75cl, 5 for a lot of five'),
+      bottles: z.number().describe('Total bottles shipped on this line, as printed. "6 bottles" is 6; "2 x 6x75cl" is 12.'),
+      packBottles: z.number().describe('Bottles per case as stated ("Case Size", "6x75cl", "OWC 12"). 1 for loose bottles. For an auction lot sold as a lot, the bottles in the lot.'),
       bottleSizeCl: z.number().describe('Bottle size in centilitres: 75, 37.5, 150, 300'),
-      cases: z.number().describe('How many lots or cases of packBottles'),
       pricePerBottle: z.number().nullable().describe('Price per bottle in the document currency, including buyer premium for auctions'),
       lineTotal: z.number().nullable().describe('Line total in the document currency, including buyer premium, excluding VAT and delivery'),
       dutyStatus: z.enum(['IB', 'DP']).nullable().describe('IB = in bond / duty suspended, DP = duty paid. Null if the document does not say'),
@@ -63,7 +63,7 @@ Rules:
 2. Every wine line on every page and every file. Count them.
 3. Leave out anything that is not wine or spirits: delivery, carriage, storage, insurance, VAT, fees.
 4. Auction lots: price = hammer plus buyer's premium for the lot. pricePerBottle = that ÷ bottles in the lot.
-5. A lot of five bottles is packBottles 5, cases 1. A lot of two 6x75cl cases is packBottles 6, cases 2.
+5. Read the bottle count exactly as printed; never multiply it by the case size. "6 bottles, case size 6" is bottles 6, packBottles 6. "2 bottles, case size 1" is bottles 2, packBottles 1. An auction lot of five bottles is bottles 5, packBottles 5. Two 6x75cl cases is bottles 12, packBottles 6.
 6. Origin is the country the wine was made in, never the country it is stored in.
 7. Duty status: "in bond", "IB", "duty suspended", "UK bond" = IB; "duty paid", "DP" = DP.`;
 
@@ -152,6 +152,10 @@ const adminCreateUkImportDraft = adminProcedure
       throw new TRPCError({ code: 'BAD_REQUEST', message: `${euro.join(', ')} ${euro.length > 1 ? 'are' : 'is'} in euros. Convert to GBP or USD first.` });
     }
 
+    // Models write "<UNKNOWN>" or "N/A" for a field they could not find
+    const known = (s: string | null) =>
+      s && !/^[<[(]?\s*(unknown|n\/?a|none|null|not stated)\s*[>\])]?$/i.test(s.trim()) ? s.trim() : null;
+
     const currencyOf = new Map(read.documents.map((d) => [d.reference, d.currency === 'USD' ? 'USD' : 'GBP'] as const));
     const bond =
       typeof input.bond === 'string'
@@ -160,8 +164,8 @@ const adminCreateUkImportDraft = adminProcedure
 
     const document = buildUkImportDocument(
       read.documents.map((d) => ({
-        reference: d.reference,
-        supplier: d.supplier,
+        reference: known(d.reference) ?? '',
+        supplier: known(d.supplier) ?? '',
         date: d.date,
         currency: d.currency === 'USD' ? 'USD' : 'GBP',
         statedTotal: d.goodsTotal,

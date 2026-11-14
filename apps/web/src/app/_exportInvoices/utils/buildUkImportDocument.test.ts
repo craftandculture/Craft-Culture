@@ -12,7 +12,7 @@ const line = (over: Partial<UkImportReadLine>): UkImportReadLine => ({
   region: 'Bordeaux',
   packBottles: 6,
   bottleSizeCl: 75,
-  cases: 1,
+  bottles: 6,
   pricePerBottle: null,
   lineTotal: null,
   currency: 'GBP',
@@ -37,7 +37,7 @@ describe('buildUkImportDocument', () => {
   it('ships on the UK EORI to C&C FZE, priced per lot in USD at the GBP rate', () => {
     const doc = buildUkImportDocument(docs, [
       line({ pricePerBottle: 90.94 }), // £90.94 × 1.27 = $115.49 a bottle
-      line({ description: 'Luce della Vite Brunello di Montalcino 2020', country: 'Italy', region: 'Tuscany', packBottles: 3, cases: 20, pricePerBottle: 52.5, dutyStatus: 'IB', abv: '15%' }),
+      line({ description: 'Luce della Vite Brunello di Montalcino 2020', country: 'Italy', region: 'Tuscany', packBottles: 3, bottles: 60, pricePerBottle: 52.5, dutyStatus: 'IB', abv: '15%' }),
     ], options);
 
     expect(doc.header.kind).toBe('ukImport');
@@ -56,8 +56,22 @@ describe('buildUkImportDocument', () => {
   });
 
   it('keeps an odd lot as one line of its own pack', () => {
-    const doc = buildUkImportDocument(docs, [line({ packBottles: 5, cases: 1, lineTotal: 268.66 })], options);
+    const doc = buildUkImportDocument(docs, [line({ packBottles: 5, bottles: 5, lineTotal: 268.66 })], options);
     expect(doc.lines[0]).toMatchObject({ packBottles: 5, qty: 1, amount: 341.2 });
+  });
+
+  // The BBR stock list of 14 Nov: bottles and case size per line, price per bottle in bond
+  it('derives cases from the bottle count, so a case of 6 is one case, not six', () => {
+    const doc = buildUkImportDocument(docs, [
+      line({ description: 'Gevrey-Chambertin, Les Platières, Domaine Guyon 2019', packBottles: 6, bottles: 6, pricePerBottle: 41.66 }),
+      line({ description: 'Volnay, Ronceret, 1er Cru, Domaine Nicolas Rossignol 2010', packBottles: 1, bottles: 2, pricePerBottle: 38 }),
+      line({ description: 'Odd count against a case of 6', packBottles: 6, bottles: 4, pricePerBottle: 10 }),
+    ], options);
+
+    expect(doc.lines[0]).toMatchObject({ packBottles: 6, qty: 1, unitPrice: 317.45, amount: 317.45 });
+    expect(doc.lines[1]).toMatchObject({ packBottles: 1, qty: 2, unitPrice: 48.26, amount: 96.52 });
+    expect(doc.lines[2]).toMatchObject({ packBottles: 1, qty: 4, unitPrice: 12.7, amount: 50.8 });
+    expect(deriveDocumentTotals(doc).bottles).toBe(12);
   });
 
   it('issues without BOEs or Zoho invoices, and warns only on what needs a look', () => {

@@ -1,4 +1,4 @@
-import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
 import { UK_EORI, UK_EORI_STAMP_URL } from '../constants';
 import { isUkImport } from '../schemas/exportDocumentSchema';
@@ -10,6 +10,9 @@ import formatSectionTitle from '../utils/formatSectionTitle';
 export interface ExportInvoicePDFTemplateProps {
   document: ExportDocument;
 }
+
+// Wrap at word breaks only: "Bas-ingstoke" and "pur-poses" on a customs document read as typos
+Font.registerHyphenationCallback((word) => [word]);
 
 const INK = '#1a1a1a';
 const MUTED = '#666666';
