@@ -1,3 +1,9 @@
+## [2.1.130](https://github.com/craftandculture/Craft-Culture/compare/v2.1.129...v2.1.130) (2026-11-14)
+
+### Features
+
+* **logistics:** UK import invoices — upload the supplier documents and get a stamped commercial invoice shipped on C&C's UK EORI ([dde2d35](https://github.com/craftandculture/Craft-Culture/commit/dde2d35eeacfd5c26147dfe1f97019122002dcc2))
+
 ## [2.1.129](https://github.com/craftandculture/Craft-Culture/compare/v2.1.128...v2.1.129) (2026-11-13)
 
 ### Bug Fixes
