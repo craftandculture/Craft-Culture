@@ -1,3 +1,9 @@
+## [2.1.135](https://github.com/craftandculture/Craft-Culture/compare/v2.1.134...v2.1.135) (2026-11-14)
+
+### Bug Fixes
+
+* the UK EORI stamp on import invoices now looks hand-inked, with uneven ink and a slight tilt, so it reads as a real stamp once scanned ([37104cb](https://github.com/craftandculture/Craft-Culture/commit/37104cbb5896b2790c1aacd97ba0615d068a74d7))
+
 ## [2.1.134](https://github.com/craftandculture/Craft-Culture/compare/v2.1.133...v2.1.134) (2026-11-14)
 
 ### Bug Fixes
