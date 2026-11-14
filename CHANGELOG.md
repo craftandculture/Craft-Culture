@@ -1,3 +1,10 @@
+## [2.1.134](https://github.com/craftandculture/Craft-Culture/compare/v2.1.133...v2.1.134) (2026-11-14)
+
+### Bug Fixes
+
+* main's lint check passes again (import order in the private orders router) ([d352f73](https://github.com/craftandculture/Craft-Culture/commit/d352f73026cb51bcb18a1b0edc449db3c9b04121))
+* main's lint check passes again (import order in three files) ([6d89c42](https://github.com/craftandculture/Craft-Culture/commit/6d89c4246442e672aa3c3111a54fd2b1bc652314))
+
 ## [2.1.133](https://github.com/craftandculture/Craft-Culture/compare/v2.1.132...v2.1.133) (2026-11-14)
 
 ### Features
