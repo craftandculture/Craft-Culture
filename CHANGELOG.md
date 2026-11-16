@@ -1,3 +1,9 @@
+## [2.1.136](https://github.com/craftandculture/Craft-Culture/compare/v2.1.135...v2.1.136) (2026-11-16)
+
+### Features
+
+* shipment lines take a second pack size, can be dragged into order, and flag wines that differ from the document ([053d101](https://github.com/craftandculture/Craft-Culture/commit/053d10120164ca95b2c4d4508fd86018fda82e07))
+
 ## [2.1.135](https://github.com/craftandculture/Craft-Culture/compare/v2.1.134...v2.1.135) (2026-11-14)
 
 ### Bug Fixes
