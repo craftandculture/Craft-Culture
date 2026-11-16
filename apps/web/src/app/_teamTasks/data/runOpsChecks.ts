@@ -32,6 +32,8 @@ export interface OpsFinding {
   what: string;
   /** Who gets this part, by email, when it is not the check's owner */
   ownerEmail?: string;
+  /** The record itself in the Index (a path), so a Slack line opens it */
+  url?: string;
 }
 
 /** A check's result: the job it keeps open, and what it found this run */
@@ -137,6 +139,7 @@ const pcoChecks = async (now: Date): Promise<OpsCheckResult[]> => {
       findings: noDistributor.map((r) => ({
         recordKey: r.id,
         what: `${pcoLabel(r)}: assign a distributor`,
+        url: `${PCO_LIST}/${r.id}`,
       })),
     },
     {
@@ -150,6 +153,7 @@ const pcoChecks = async (now: Date): Promise<OpsCheckResult[]> => {
       findings: noSku.map((r) => ({
         recordKey: r.id,
         what: `${pcoLabel(r)}: add the CD SKU`,
+        url: `${PCO_LIST}/${r.id}`,
       })),
     },
     {
@@ -163,6 +167,7 @@ const pcoChecks = async (now: Date): Promise<OpsCheckResult[]> => {
       findings: idle.map((r) => ({
         recordKey: r.id,
         what: `${pcoLabel(r)}: chase (${r.status.replace(/_/g, ' ')})`,
+        url: `${PCO_LIST}/${r.id}`,
       })),
     },
   ];
@@ -316,9 +321,9 @@ const cellarChecks = async (): Promise<OpsCheckResult[]> => {
 const MEMBERS = '/platform/admin/cellar-members';
 
 /** One record for both cellar reviewers, keyed apart so each has a part */
-const forBoth = (recordKey: string, what: string): OpsFinding[] => [
-  { recordKey, what, ownerEmail: SOPHIE },
-  { recordKey: `${recordKey}:laraine`, what, ownerEmail: LARAINE },
+const forBoth = (recordKey: string, what: string, url?: string): OpsFinding[] => [
+  { recordKey, what, ownerEmail: SOPHIE, url },
+  { recordKey: `${recordKey}:laraine`, what, ownerEmail: LARAINE, url },
 ];
 
 const RELEASES_LIST = '/platform/admin/cellar-releases';
@@ -375,6 +380,7 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
         id: cellarReleaseRequests.id,
         requestNumber: cellarReleaseRequests.requestNumber,
         orderNumber: privateClientOrders.orderNumber,
+        orderId: privateClientOrders.id,
         confirmedAt: cellarReleaseRequests.confirmedAt,
         member: partners.businessName,
       })
@@ -403,7 +409,8 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
       title: 'Release requests to review',
       area: 'Private Cellar',
       owners: [SOPHIE, LARAINE, KEVIN],
-      urgent: true,
+      // Posted the moment it happens (emailStaffOfRelease); this job keeps it open and chases it
+      urgent: false,
       linkUrl: RELEASES_LIST,
       complete: true,
       /*
@@ -420,7 +427,7 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
         const what = `${r.requestNumber} · ${r.member}: ${action}${since ? ` (since ${since})` : ''}`;
         // Keyed by status too: a request sent back for changes is new work
         const key = `${r.id}:${r.status}`;
-        return forBoth(key, what);
+        return forBoth(key, what, `${RELEASES_LIST}?open=${r.id}`);
       }),
     },
     {
@@ -428,7 +435,8 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
       title: 'Accepted releases to prepare',
       area: 'Private Cellar',
       owners: [LARAINE, SOPHIE, KEVIN],
-      urgent: true,
+      // Posted the moment it happens (emailStaffOfRelease); this job keeps it open and chases it
+      urgent: false,
       linkUrl: RELEASES_LIST,
       complete: true,
       findings: toPrepare.flatMap((r) =>
@@ -437,6 +445,7 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
           `${r.requestNumber} · ${r.orderNumber} · ${r.member}: member accepted${
             r.confirmedAt ? ` ${shortDay(r.confirmedAt)}` : ''
           }. Raise the sales order and pick list, book the delivery`,
+          `${PCO_LIST}/${r.orderId}`,
         ),
       ),
     },
@@ -451,6 +460,7 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
       findings: waitingOnMember.map((r) => ({
         recordKey: r.id,
         what: `${r.requestNumber} · ${r.member}: quoted ${shortDay(r.quotedAt ?? r.updatedAt)}, no answer yet. Chase the member`,
+        url: `${RELEASES_LIST}?open=${r.id}`,
       })),
     },
   ];
@@ -644,7 +654,7 @@ const intakeChecks = async (now: Date): Promise<OpsCheckResult[]> => {
       urgent: true,
       linkUrl: PCO_LIST,
       complete: true,
-      findings: pcoReview.map((r) => ({ recordKey: r.id, what: `${pcoLabel(r)}: review and approve` })),
+      findings: pcoReview.map((r) => ({ recordKey: r.id, what: `${pcoLabel(r)}: review and approve`, url: `${PCO_LIST}/${r.id}` })),
     },
     {
       key: 'partner_wms_request',

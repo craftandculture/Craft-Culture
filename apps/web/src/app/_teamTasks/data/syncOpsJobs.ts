@@ -99,7 +99,10 @@ const postUrgent = async (
   const link = `${serverConfig.appUrl}/platform/admin/tasks?job=${taskId}`;
   const lines = [
     `Urgent: *<${link}|${escapeSlackText(check.title)}>*`,
-    ...fresh.map((f) => `${slackTag(ownerOf(f))} ${escapeSlackText(f.what)}`),
+    ...fresh.map((f) => {
+      const what = escapeSlackText(f.what);
+      return `${slackTag(ownerOf(f))} ${f.url ? `<${serverConfig.appUrl}${f.url}|${what}>` : what}`;
+    }),
   ];
   return postTasksSlack(lines.join('\n'));
 };

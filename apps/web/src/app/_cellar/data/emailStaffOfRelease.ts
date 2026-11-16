@@ -1,9 +1,13 @@
 import { eq } from 'drizzle-orm';
 
 import logisticsEmailTemplateId from '@/app/_logistics/utils/logisticsEmailTemplateId';
+import getTeam from '@/app/_teamTasks/data/getTeam';
+import postTasksSlack from '@/app/_teamTasks/utils/postTasksSlack';
+import slackTag from '@/app/_teamTasks/utils/slackTag';
 import db from '@/database/client';
 import { cellarReleaseRequestItems, cellarReleaseRequests, partners } from '@/database/schema';
 import loops from '@/lib/loops/client';
+import escapeSlackText from '@/lib/slack/escapeSlackText';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
 
@@ -11,7 +15,7 @@ import logger from '@/utils/logger';
 export const RELEASE_ALERT_EMAILS = ['sophie@craftculture.xyz', 'laraine@craftculture.xyz'];
 
 /**
- * Email the team that a member's release request needs them
+ * Email the team, and tag them in #tasks, when a member's release request needs them
  *
  * The bell in the Index and the #tasks tag are both easy to miss, and a
  * request sat unseen for three days (REL-2026-0012). This puts it in the
@@ -61,7 +65,7 @@ const emailStaffOfRelease = async ({
       .where(eq(cellarReleaseRequestItems.requestId, requestId));
 
     const bottles = items.reduce((sum, item) => sum + (item.bottles ?? 0), 0);
-    const link = `${serverConfig.appUrl}/platform/admin/cellar-releases`;
+    const link = `${serverConfig.appUrl}/platform/admin/cellar-releases?open=${requestId}`;
 
     const subject =
       event === 'accepted'
@@ -97,6 +101,30 @@ const emailStaffOfRelease = async ({
       // A blank line needs a value Loops will not collapse, as in sendLogisticsEmail
       lines: lines.map((text) => ({ text: text.trim() ? text : ' ' })),
     };
+
+    /*
+      The same moment in #tasks, both people tagged, rather than waiting up to
+      fifteen minutes for the ops checks to find it.
+    */
+    try {
+      const team = await getTeam();
+      const tags = RELEASE_ALERT_EMAILS.map((email) =>
+        slackTag(team.find((person) => person.email.toLowerCase() === email)),
+      ).join(' ');
+      await postTasksSlack(
+        [
+          `${tags} *<${link}|${escapeSlackText(subject)}>*`,
+          `${items.length} ${items.length === 1 ? 'wine' : 'wines'} · ${bottles} bottles${
+            request.address ? ` · ${escapeSlackText(request.address)}` : ''
+          }`,
+        ].join('\n'),
+      );
+    } catch (error) {
+      logger.error('Release Slack post failed', {
+        requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     for (const email of RELEASE_ALERT_EMAILS) {
       try {
