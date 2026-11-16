@@ -58,7 +58,7 @@ const SplitPackDialog = ({ item, onClose, onSaved }: SplitPackDialogProps) => {
   const { mutate: split, isPending } = useMutation(
     api.logistics.admin.splitItemPack.mutationOptions({
       onSuccess: () => {
-        toast.success('Pack size added');
+        toast.success('Line duplicated');
         onSaved();
         onClose();
       },
@@ -117,10 +117,10 @@ const SplitPackDialog = ({ item, onClose, onSaved }: SplitPackDialogProps) => {
     <Dialog open={Boolean(item)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add another pack size</DialogTitle>
+          <DialogTitle>Duplicate line</DialogTitle>
           <DialogDescription>
-            {item?.productName}. The new line goes directly under this one, with the same wine, owner, HS
-            code and price per bottle.
+            {item?.productName}. The copy goes directly under this one with the same wine, LWIN, owner, HS code and price
+            per bottle. Set its cases and pack, and adjust this line if the bottles move across.
           </DialogDescription>
         </DialogHeader>
 
@@ -161,7 +161,7 @@ const SplitPackDialog = ({ item, onClose, onSaved }: SplitPackDialogProps) => {
               })
             }
           >
-            {isPending ? 'Saving…' : 'Add pack size'}
+            {isPending ? 'Saving…' : 'Duplicate'}
           </Button>
         </div>
       </DialogContent>

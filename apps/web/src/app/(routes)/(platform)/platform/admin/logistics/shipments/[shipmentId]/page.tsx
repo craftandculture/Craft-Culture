@@ -8,6 +8,7 @@ import {
   IconCheck,
   IconChevronRight,
   IconCloud,
+  IconCopy,
   IconDownload,
   IconFileText,
   IconGripVertical,
@@ -3237,11 +3238,11 @@ const ShipmentDetailPage = () => {
                                       <button
                                         type="button"
                                         onClick={() => setSplitItemId(item.id)}
-                                        aria-label={`Add another pack size of ${item.productName}`}
-                                        title="Add another pack size (e.g. the 1 × 3 of 7x6 + 1x3)"
+                                        aria-label={`Duplicate ${item.productName}`}
+                                        title="Duplicate line, then change the pack (e.g. the 1 × 3 of 7x6 + 1x3)"
                                         className="rounded p-1 text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
                                       >
-                                        <Icon icon={IconPlus} size="sm" />
+                                        <Icon icon={IconCopy} size="sm" />
                                       </button>
                                       <button
                                         type="button"
