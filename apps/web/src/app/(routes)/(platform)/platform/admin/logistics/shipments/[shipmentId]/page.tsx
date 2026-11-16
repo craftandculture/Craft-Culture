@@ -10,6 +10,7 @@ import {
   IconCloud,
   IconDownload,
   IconFileText,
+  IconGripVertical,
   IconLoader2,
   IconLock,
   IconPackage,
@@ -35,6 +36,7 @@ import LogisticsDocumentUpload from '@/app/_logistics/components/DocumentUpload'
 import LogUpdateSheet from '@/app/_logistics/components/LogUpdateSheet';
 import EditableField from '@/app/_logistics/components/shipment/EditableField';
 import InlineConfirm from '@/app/_logistics/components/shipment/InlineConfirm';
+import SplitPackDialog from '@/app/_logistics/components/shipment/SplitPackDialog';
 import ShipmentReconciliation from '@/app/_logistics/components/ShipmentReconciliation';
 import ShipmentStatusBadge from '@/app/_logistics/components/ShipmentStatusBadge';
 import ShipmentStatusStepper from '@/app/_logistics/components/ShipmentStatusStepper';
@@ -42,9 +44,12 @@ import ShipmentTracker from '@/app/_logistics/components/ShipmentTracker';
 import ShipmentTypeBadge from '@/app/_logistics/components/ShipmentTypeBadge';
 import SignaturePad from '@/app/_logistics/components/SignaturePad';
 import buildShipmentItemsCsv from '@/app/_logistics/utils/buildShipmentItemsCsv';
+import findBilledBottleGaps from '@/app/_logistics/utils/findBilledBottleGaps';
+import groupSameWineOrder from '@/app/_logistics/utils/groupSameWineOrder';
 import isValidHsCode from '@/app/_logistics/utils/isValidHsCode';
 import needsDepartureDate from '@/app/_logistics/utils/needsDepartureDate';
 import { SHIPMENT_STATUSES } from '@/app/_logistics/utils/shipmentStatuses';
+import wineGroupKey from '@/app/_logistics/utils/wineGroupKey';
 import {
   readZohoSync,
   zohoLineState,
@@ -286,6 +291,13 @@ const ShipmentDetailPage = () => {
   };
   /** The item row awaiting a delete confirmation */
   const [pendingRemoveItemId, setPendingRemoveItemId] = useState<string | null>(null);
+  /** The line getting a second pack size, e.g. the 1 × 3 of a "7x6 + 1x3" row */
+  const [splitItemId, setSplitItemId] = useState<string | null>(null);
+  /** Drag-to-reorder: the line being dragged and the line it is over */
+  const [dragItemId, setDragItemId] = useState<string | null>(null);
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+  /** Narrowed to the wines whose lines disagree with the document */
+  const [billedGapOnly, setBilledGapOnly] = useState(false);
   /** The cost line awaiting a delete confirmation */
   const [pendingDeleteCostLineId, setPendingDeleteCostLineId] = useState<string | null>(null);
   /** A shipment type chosen but not yet confirmed */
@@ -427,6 +439,19 @@ const ShipmentDetailPage = () => {
       },
       onError: (error) => {
         toast.error(error.message);
+      },
+    }),
+  );
+
+  const { mutate: reorderItems, isPending: isReordering } = useMutation(
+    api.logistics.admin.reorderItems.mutationOptions({
+      onSuccess: () => {
+        toast.success('Order saved');
+        void refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+        void refetch();
       },
     }),
   );
@@ -1907,11 +1932,28 @@ const ShipmentDetailPage = () => {
 
           const detailedCount = items.filter((i) => missingFor(i).length === 0).length;
 
+          /*
+            Each wine checked against what its document billed, across all of
+            its pack sizes at once: "7x6 + 1x3" is one billed row, so either
+            line alone disagrees and the pair is what has to add up.
+          */
+          const billedGaps = findBilledBottleGaps(items);
+          const gapByItem = new Map(
+            [...billedGaps.values()].flatMap((gap) => gap.itemIds.map((id) => [id, gap] as const)),
+          );
+          const packsByWine = new Map<string, typeof items>();
+          for (const i of items) {
+            const key = wineGroupKey(i);
+            packsByWine.set(key, [...(packsByWine.get(key) ?? []), i]);
+          }
+
           /** Narrowed to one gap when its count is clicked, else everything */
           const needle = itemFilter.trim().toLowerCase();
           const shownItems = (detailGap
             ? items.filter((i) => missingFor(i).includes(detailGap))
-            : items
+            : billedGapOnly
+              ? items.filter((i) => gapByItem.has(i.id))
+              : items
           )
             .filter(
               (i) =>
@@ -1925,6 +1967,30 @@ const ShipmentDetailPage = () => {
               const order = compareItems(itemSort.key, a, b);
               return itemSort.dir === 'asc' ? order : -order;
             });
+
+          /*
+            Dragging only means something in document order with every line
+            showing: a filtered or re-sorted table has no single place to
+            drop a line into.
+          */
+          const canDrag =
+            itemSort.key === 'document' && itemSort.dir === 'asc' && !needle && !detailGap && !billedGapOnly;
+          const documentOrder = items
+            .slice()
+            .sort((a, b) => compareItems('document', a, b))
+            .map((i) => i.id);
+          const groupedOrder = groupSameWineOrder(
+            items.slice().sort((a, b) => compareItems('document', a, b)),
+          );
+          const packsApart = groupedOrder.some((id, index) => documentOrder[index] !== id);
+          const dropOn = (targetId: string) => {
+            if (!dragItemId || dragItemId === targetId) return;
+            // Dropped below the line when moving down, above it when moving up
+            const movingDown = documentOrder.indexOf(dragItemId) < documentOrder.indexOf(targetId);
+            const order = documentOrder.filter((id) => id !== dragItemId);
+            order.splice(order.indexOf(targetId) + (movingDown ? 1 : 0), 0, dragItemId);
+            reorderItems({ shipmentId, itemIds: order });
+          };
 
           /** A header sorts by its column; pressing it again turns the order round */
           const sortBy = (key: ItemSortKey) =>
@@ -2734,6 +2800,37 @@ const ShipmentDetailPage = () => {
                           {itemSort.dir === 'asc' ? 'A → Z / low → high' : 'Z → A / high → low'}
                         </button>
                       )}
+                      {packsApart && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setItemSort({ key: 'document', dir: 'asc' });
+                            reorderItems({ shipmentId, itemIds: groupedOrder });
+                          }}
+                          disabled={isReordering}
+                          title="Moves each wine's other pack sizes up under its first line, and keeps everything else in document order"
+                          className="h-9 rounded-lg border border-border-muted px-3 text-xs font-semibold text-text-muted hover:text-text-primary disabled:opacity-50"
+                        >
+                          Group same wine
+                        </button>
+                      )}
+                      {billedGaps.size > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setBilledGapOnly((on) => !on)}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-amber-100 px-3 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          {billedGapOnly
+                            ? 'Show all lines'
+                            : `${billedGaps.size} wine${billedGaps.size === 1 ? '' : 's'} differ from the document`}
+                        </button>
+                      )}
+                      {canDrag && items.length > 1 && (
+                        <span className="hidden text-xs text-text-muted lg:inline">
+                          Drag ⠿ to move a line
+                        </span>
+                      )}
                       {(needle || itemSort.key !== 'document') && (
                         <span className="text-xs text-text-muted">
                           {shownItems.length} of {items.length} lines
@@ -2819,10 +2916,45 @@ const ShipmentDetailPage = () => {
                             return (
                               <tr
                                 key={item.id}
-                                className="border-b border-border-muted/50 transition-colors hover:bg-fill-secondary/50"
+                                draggable={canDrag && !isReordering}
+                                onDragStart={(e) => {
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  setDragItemId(item.id);
+                                }}
+                                onDragOver={(e) => {
+                                  if (!dragItemId) return;
+                                  e.preventDefault();
+                                  if (dragOverItemId !== item.id) setDragOverItemId(item.id);
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  dropOn(item.id);
+                                  setDragItemId(null);
+                                  setDragOverItemId(null);
+                                }}
+                                onDragEnd={() => {
+                                  setDragItemId(null);
+                                  setDragOverItemId(null);
+                                }}
+                                className={`border-b border-border-muted/50 transition-colors hover:bg-fill-secondary/50 ${
+                                  dragItemId === item.id ? 'opacity-40' : ''
+                                } ${
+                                  dragOverItemId === item.id && dragItemId !== item.id
+                                    ? 'bg-fill-secondary shadow-[inset_0_2px_0_0_var(--color-text-primary)]'
+                                    : ''
+                                }`}
                               >
-                                {/* Product — click to edit */}
-                                <td className="py-3 pl-6 pr-4">
+                                {/* Product — click to edit; the grip moves the line */}
+                                <td className="relative py-3 pl-6 pr-4">
+                                  {canDrag && (
+                                    <span
+                                      aria-hidden
+                                      title="Drag to move this line"
+                                      className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab text-text-muted/50 hover:text-text-primary active:cursor-grabbing"
+                                    >
+                                      <Icon icon={IconGripVertical} size="sm" />
+                                    </span>
+                                  )}
                                   <button
                                     onClick={() => openSheet(item)}
                                     className="text-left group"
@@ -2852,6 +2984,29 @@ const ShipmentDetailPage = () => {
                                       </div>
                                     )}
                                   </button>
+                                  {(() => {
+                                    const packs = packsByWine.get(wineGroupKey(item)) ?? [];
+                                    const gap = gapByItem.get(item.id);
+                                    const others = packs.filter((p) => p.id !== item.id);
+
+                                    if (!gap && others.length === 0) return null;
+
+                                    const together = packs.reduce((sum, p) => sum + (p.totalBottles ?? 0), 0);
+
+                                    return (
+                                      <Typography
+                                        variant="bodyXs"
+                                        className={`mt-0.5 ${gap ? 'text-text-warning' : 'text-text-muted'}`}
+                                      >
+                                        {others.length > 0 &&
+                                          `Also ${others
+                                            .map((p) => `${p.cases} × ${p.bottlesPerCase ?? 12}`)
+                                            .join(', ')} · ${together} btl together`}
+                                        {others.length > 0 && gap ? ' · ' : ''}
+                                        {gap && `Document billed ${gap.billed} btl, lines hold ${gap.onLines}`}
+                                      </Typography>
+                                    );
+                                  })()}
                                 </td>
 
                                 {/* LWIN / SKU */}
@@ -3078,14 +3233,25 @@ const ShipmentDetailPage = () => {
                                       onCancel={() => setPendingRemoveItemId(null)}
                                     />
                                   ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => setPendingRemoveItemId(item.id)}
-                                      aria-label={`Remove ${item.productName}`}
-                                      className="rounded p-1 text-text-muted transition-colors hover:bg-fill-danger/10 hover:text-text-danger"
-                                    >
-                                      <Icon icon={IconTrash} size="sm" />
-                                    </button>
+                                    <div className="flex items-center gap-0.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => setSplitItemId(item.id)}
+                                        aria-label={`Add another pack size of ${item.productName}`}
+                                        title="Add another pack size (e.g. the 1 × 3 of 7x6 + 1x3)"
+                                        className="rounded p-1 text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
+                                      >
+                                        <Icon icon={IconPlus} size="sm" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setPendingRemoveItemId(item.id)}
+                                        aria-label={`Remove ${item.productName}`}
+                                        className="rounded p-1 text-text-muted transition-colors hover:bg-fill-danger/10 hover:text-text-danger"
+                                      >
+                                        <Icon icon={IconTrash} size="sm" />
+                                      </button>
+                                    </div>
                                   )}
                                 </td>
                               </tr>
@@ -3188,6 +3354,12 @@ const ShipmentDetailPage = () => {
                   )}
                 </CardContent>
               </Card>
+
+              <SplitPackDialog
+                item={items.find((i) => i.id === splitItemId) ?? null}
+                onClose={() => setSplitItemId(null)}
+                onSaved={() => void refetch()}
+              />
 
               {/* Item Editor Sheet */}
               <Sheet open={!!lwinSheetItem} onOpenChange={(open) => { if (!open) setSheetItemId(null); }}>

@@ -65,6 +65,7 @@ import adminOpenRequestJob from './controller/adminOpenRequestJob';
 import adminParseGroupInvoice from './controller/adminParseGroupInvoice';
 import adminRejectQuote from './controller/adminRejectQuote';
 import adminRemoveItem from './controller/adminRemoveItem';
+import adminReorderItems from './controller/adminReorderItems';
 import adminRepriceFromTotals from './controller/adminRepriceFromTotals';
 import adminSaveBond from './controller/adminSaveBond';
 import adminSearchZohoInvoices from './controller/adminSearchZohoInvoices';
@@ -75,6 +76,7 @@ import adminSetGroupInvoiceVendor from './controller/adminSetGroupInvoiceVendor'
 import adminSetRequestRecipients from './controller/adminSetRequestRecipients';
 import adminSetShipmentFx from './controller/adminSetShipmentFx';
 import adminSetUaeArrivalRateCard from './controller/adminSetUaeArrivalRateCard';
+import adminSplitItemPack from './controller/adminSplitItemPack';
 import adminSyncHillebrand from './controller/adminSyncHillebrand';
 import adminSyncHillebrandDocuments from './controller/adminSyncHillebrandDocuments';
 import adminSyncHillebrandInvoices from './controller/adminSyncHillebrandInvoices';
@@ -125,6 +127,8 @@ const adminRouter = createTRPCRouter({
   setShipmentFx: adminSetShipmentFx,
   updateItem: adminUpdateItem,
   removeItem: adminRemoveItem,
+  splitItemPack: adminSplitItemPack,
+  reorderItems: adminReorderItems,
   syncItemsToZoho: adminSyncItemsToZoho,
   autoAssignHsCodes: adminAutoAssignHsCodes,
   backfillItemDetails: adminBackfillItemDetails,
