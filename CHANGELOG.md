@@ -1,3 +1,9 @@
+## [2.1.147](https://github.com/craftandculture/Craft-Culture/compare/v2.1.146...v2.1.147) (2026-11-16)
+
+### Features
+
+* staff can send themselves a test of the team's release email, marked [Test], without emailing Sophie and Laraine or posting to [#tasks](https://github.com/craftandculture/Craft-Culture/issues/tasks) ([c0a6319](https://github.com/craftandculture/Craft-Culture/commit/c0a6319cd21e7a73f0b1c3aef4e7646a53177f33))
+
 ## [2.1.146](https://github.com/craftandculture/Craft-Culture/compare/v2.1.145...v2.1.146) (2026-11-16)
 
 ### Features
