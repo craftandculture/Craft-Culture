@@ -1,3 +1,9 @@
+## [2.1.149](https://github.com/craftandculture/Craft-Culture/compare/v2.1.148...v2.1.149) (2026-11-16)
+
+### Bug Fixes
+
+* **distribution:** a wine City Drinks replenished outside our invoices still counts its sales, from their own 30-day figure ([0b1138f](https://github.com/craftandculture/Craft-Culture/commit/0b1138f9b50cc817bc3c004129fffc44333bcb3d))
+
 ## [2.1.148](https://github.com/craftandculture/Craft-Culture/compare/v2.1.147...v2.1.148) (2026-11-16)
 
 ### Bug Fixes
