@@ -10,6 +10,7 @@ import {
 import db from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
 import {
+  cellarReleaseRequests,
   partners,
   privateClientOrders,
   wmsPickLists,
@@ -304,6 +305,90 @@ const cellarChecks = async (): Promise<OpsCheckResult[]> => {
   }));
 };
 
+const RELEASES_LIST = '/platform/admin/cellar-releases';
+
+const shortDay = (d: Date | null) =>
+  d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Dubai' }) : null;
+
+/**
+ * Member release requests that are waiting on C&C, and quotes waiting on the member
+ *
+ * REL-2026-0012 sat "Awaiting review" for three days because nothing told
+ * anyone it had arrived: the Releases screen only shows it to whoever opens
+ * it. A request the member has submitted, or sent back for changes, is now a
+ * job with a named owner, tagged in #tasks as soon as it lands. A quote the
+ * member has not answered in three days becomes a chase.
+ */
+const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
+  const columns = {
+    id: cellarReleaseRequests.id,
+    requestNumber: cellarReleaseRequests.requestNumber,
+    status: cellarReleaseRequests.status,
+    submittedAt: cellarReleaseRequests.submittedAt,
+    quotedAt: cellarReleaseRequests.quotedAt,
+    updatedAt: cellarReleaseRequests.updatedAt,
+    member: partners.businessName,
+  };
+
+  const [waitingOnUs, waitingOnMember] = await Promise.all([
+    db
+      .select(columns)
+      .from(cellarReleaseRequests)
+      .innerJoin(partners, eq(partners.id, cellarReleaseRequests.partnerId))
+      .where(inArray(cellarReleaseRequests.status, ['submitted', 'revision_requested'])),
+    db
+      .select(columns)
+      .from(cellarReleaseRequests)
+      .innerJoin(partners, eq(partners.id, cellarReleaseRequests.partnerId))
+      .where(
+        and(
+          eq(cellarReleaseRequests.status, 'under_review'),
+          lt(
+            sql`coalesce(${cellarReleaseRequests.quotedAt}, ${cellarReleaseRequests.updatedAt})`,
+            new Date(now.getTime() - 3 * DAY),
+          ),
+        ),
+      ),
+  ]);
+
+  return [
+    {
+      key: 'cellar_release_review',
+      title: 'Release requests to review',
+      area: 'Private Cellar',
+      owners: [SOPHIE, KEVIN],
+      urgent: true,
+      linkUrl: RELEASES_LIST,
+      complete: true,
+      findings: waitingOnUs.map((r) => {
+        const since = shortDay(r.submittedAt ?? r.updatedAt);
+        const action =
+          r.status === 'revision_requested'
+            ? 'member asked for changes, revise the quote'
+            : 'review and send the quote';
+        return {
+          // Keyed by status too: a request sent back for changes is new work
+          recordKey: `${r.id}:${r.status}`,
+          what: `${r.requestNumber} · ${r.member}: ${action}${since ? ` (since ${since})` : ''}`,
+        };
+      }),
+    },
+    {
+      key: 'cellar_release_member_idle',
+      title: 'Release quotes the member has not answered',
+      area: 'Private Cellar',
+      owners: [SOPHIE, KEVIN],
+      urgent: false,
+      linkUrl: RELEASES_LIST,
+      complete: true,
+      findings: waitingOnMember.map((r) => ({
+        recordKey: r.id,
+        what: `${r.requestNumber} · ${r.member}: quoted ${shortDay(r.quotedAt ?? r.updatedAt)}, no answer yet. Chase the member`,
+      })),
+    },
+  ];
+};
+
 const LOGISTICS: Record<string, { key: string; title: string; action: string }> = {
   overdue: {
     key: 'shipment_overdue',
@@ -368,6 +453,7 @@ const runOpsChecks = async (now = new Date()) => {
     duplicateCheck().then((r) => [r]),
     deliveryTodayCheck().then((r) => [r]),
     cellarChecks(),
+    releaseChecks(now),
     logisticsChecks(now),
   ]);
 
