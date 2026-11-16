@@ -2824,7 +2824,7 @@ const ShipmentDetailPage = () => {
                           <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                           {billedGapOnly
                             ? 'Show all lines'
-                            : `${billedGaps.size} wine${billedGaps.size === 1 ? '' : 's'} differ from the document`}
+                            : `${billedGaps.size} wine${billedGaps.size === 1 ? ' differs' : 's differ'} from the document`}
                         </button>
                       )}
                       {canDrag && items.length > 1 && (
@@ -2989,23 +2989,36 @@ const ShipmentDetailPage = () => {
                                     const packs = packsByWine.get(wineGroupKey(item)) ?? [];
                                     const gap = gapByItem.get(item.id);
                                     const others = packs.filter((p) => p.id !== item.id);
+                                    // The wine's warning is said once, on its first line
+                                    const isFirst = packs[0]?.id === item.id;
+                                    // A line whose cases × pack is not its bottles is the usual culprit
+                                    const packBottles = item.cases * (item.bottlesPerCase ?? 12);
+                                    const selfMismatch =
+                                      item.cases > 0 && item.totalBottles != null && packBottles !== item.totalBottles;
 
-                                    if (!gap && others.length === 0) return null;
-
-                                    const together = packs.reduce((sum, p) => sum + (p.totalBottles ?? 0), 0);
+                                    if (!gap && others.length === 0 && !selfMismatch) return null;
 
                                     return (
-                                      <Typography
-                                        variant="bodyXs"
-                                        className={`mt-0.5 ${gap ? 'text-text-warning' : 'text-text-muted'}`}
-                                      >
-                                        {others.length > 0 &&
-                                          `Also ${others
-                                            .map((p) => `${p.cases} × ${p.bottlesPerCase ?? 12}`)
-                                            .join(', ')} · ${together} btl together`}
-                                        {others.length > 0 && gap ? ' · ' : ''}
-                                        {gap && `Document billed ${gap.billed} btl, lines hold ${gap.onLines}`}
-                                      </Typography>
+                                      <div className="mt-1 flex flex-col gap-0.5">
+                                        {others.length > 0 && (
+                                          <Typography variant="bodyXs" colorRole="muted">
+                                            Also{' '}
+                                            {others.map((p) => `${p.cases} × ${p.bottlesPerCase ?? 12}`).join(', ')}{' '}
+                                            on {others.length === 1 ? 'another line' : 'other lines'}
+                                          </Typography>
+                                        )}
+                                        {selfMismatch && (
+                                          <Typography variant="bodyXs" className="text-text-warning">
+                                            {item.cases} × {item.bottlesPerCase ?? 12} is {packBottles} btl, but this
+                                            line holds {item.totalBottles}
+                                          </Typography>
+                                        )}
+                                        {gap && isFirst && (
+                                          <Typography variant="bodyXs" className="text-text-warning">
+                                            Document billed {gap.billed} btl, lines hold {gap.onLines}
+                                          </Typography>
+                                        )}
+                                      </div>
                                     );
                                   })()}
                                 </td>
@@ -3234,21 +3247,23 @@ const ShipmentDetailPage = () => {
                                       onCancel={() => setPendingRemoveItemId(null)}
                                     />
                                   ) : (
-                                    <div className="flex items-center gap-0.5">
+                                    <div className="flex items-center gap-1">
                                       <button
                                         type="button"
                                         onClick={() => setSplitItemId(item.id)}
                                         aria-label={`Duplicate ${item.productName}`}
                                         title="Duplicate line, then change the pack (e.g. the 1 × 3 of 7x6 + 1x3)"
-                                        className="rounded p-1 text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
+                                        className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-fill-secondary hover:text-text-primary"
                                       >
                                         <Icon icon={IconCopy} size="sm" />
                                       </button>
+                                      <span aria-hidden className="mx-1 h-4 w-px bg-border-muted" />
                                       <button
                                         type="button"
                                         onClick={() => setPendingRemoveItemId(item.id)}
                                         aria-label={`Remove ${item.productName}`}
-                                        className="rounded p-1 text-text-muted transition-colors hover:bg-fill-danger/10 hover:text-text-danger"
+                                        title="Remove line"
+                                        className="rounded-md p-1.5 text-text-muted/60 transition-colors hover:bg-fill-danger/10 hover:text-text-danger"
                                       >
                                         <Icon icon={IconTrash} size="sm" />
                                       </button>
@@ -3358,6 +3373,23 @@ const ShipmentDetailPage = () => {
 
               <SplitPackDialog
                 item={items.find((i) => i.id === splitItemId) ?? null}
+                {...(() => {
+                  const source = items.find((i) => i.id === splitItemId);
+                  if (!source) return {};
+                  const wine = wineGroupKey(source);
+                  const siblings = items.filter((i) => i.id !== source.id && wineGroupKey(i) === wine);
+                  const billedLines = [source, ...siblings].filter(
+                    (i) => i.sourceTotal && i.sourceUnitPrice && i.sourceUnitPrice > 0,
+                  );
+                  return {
+                    otherBottles: siblings.reduce((sum, i) => sum + (i.totalBottles ?? 0), 0),
+                    billedForWine: billedLines.length
+                      ? Math.round(
+                          billedLines.reduce((sum, i) => sum + (i.sourceTotal ?? 0) / (i.sourceUnitPrice ?? 1), 0),
+                        )
+                      : null,
+                  };
+                })()}
                 onClose={() => setSplitItemId(null)}
                 onSaved={() => void refetch()}
               />
