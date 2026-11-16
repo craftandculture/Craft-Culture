@@ -1974,6 +1974,9 @@ const ShipmentDetailPage = () => {
             showing: a filtered or re-sorted table has no single place to
             drop a line into.
           */
+          // Columns with nothing in them are noise until landed cost is run
+          const hasLanded = items.some((i) => i.landedCostPerBottle);
+          const hasMargin = items.some((i) => i.marginPercent != null);
           const canDrag =
             itemSort.key === 'document' && itemSort.dir === 'asc' && !needle && !detailGap && !billedGapOnly;
           const documentOrder = items
@@ -2488,58 +2491,6 @@ const ShipmentDetailPage = () => {
                   <div className="flex items-center justify-between mb-4">
                     <Typography variant="headingSm">Items</Typography>
                     <div className="flex gap-2">
-                      {/*
-                        A mis-imported document is a whole list of wrong lines.
-                        Undoing that one trash icon at a time is the problem the
-                        import had, not a fix for it.
-                      */}
-                      {totalItems > 0 && (
-                        <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorRole="danger"
-                          onClick={() => {
-                            // A browser confirm is suppressible — after a few
-                            // dismissals Chrome offers to stop the page
-                            // showing them, and from then on this button
-                            // deletes the whole shipment on one click. The
-                            // confirmation is in the page instead, where
-                            // nothing can turn it off.
-                            if (confirmClear) {
-                              clearItems({
-                                shipmentId,
-                                expectedCount: totalItems,
-                              });
-                              setConfirmClear(false);
-                              return;
-                            }
-
-                            setConfirmClear(true);
-                          }}
-                          disabled={isClearingItems}
-                        >
-                          <ButtonContent
-                            iconLeft={isClearingItems ? IconLoader2 : IconTrash}
-                          >
-                            {isClearingItems
-                              ? 'Removing...'
-                              : confirmClear
-                                ? `Delete all ${totalItems}? Tap again`
-                                : 'Clear all'}
-                          </ButtonContent>
-                        </Button>
-                        {confirmClear && !isClearingItems && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setConfirmClear(false)}
-                          >
-                            Cancel
-                          </Button>
-                        )}
-                        </>
-                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -2581,6 +2532,61 @@ const ShipmentDetailPage = () => {
                       <Button size="sm" onClick={() => setIsAddingItem(true)}>
                         <ButtonContent iconLeft={IconPlus}>Add Item</ButtonContent>
                       </Button>
+                      {/* Destructive, so last and quiet until armed */}
+                      {totalItems > 0 && <span aria-hidden className="mx-1 h-6 w-px self-center bg-border-muted" />}
+                      {/*
+                        A mis-imported document is a whole list of wrong lines.
+                        Undoing that one trash icon at a time is the problem the
+                        import had, not a fix for it.
+                      */}
+                      {totalItems > 0 && (
+                        <>
+                        <Button
+                          size="sm"
+                          variant={confirmClear ? 'default' : 'ghost'}
+                          colorRole={confirmClear ? 'danger' : 'muted'}
+                          className={confirmClear ? undefined : 'hover:text-text-danger'}
+                          onClick={() => {
+                            // A browser confirm is suppressible — after a few
+                            // dismissals Chrome offers to stop the page
+                            // showing them, and from then on this button
+                            // deletes the whole shipment on one click. The
+                            // confirmation is in the page instead, where
+                            // nothing can turn it off.
+                            if (confirmClear) {
+                              clearItems({
+                                shipmentId,
+                                expectedCount: totalItems,
+                              });
+                              setConfirmClear(false);
+                              return;
+                            }
+
+                            setConfirmClear(true);
+                          }}
+                          disabled={isClearingItems}
+                        >
+                          <ButtonContent
+                            iconLeft={isClearingItems ? IconLoader2 : IconTrash}
+                          >
+                            {isClearingItems
+                              ? 'Removing...'
+                              : confirmClear
+                                ? `Delete all ${totalItems}? Tap again`
+                                : 'Clear all'}
+                          </ButtonContent>
+                        </Button>
+                        {confirmClear && !isClearingItems && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setConfirmClear(false)}
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -2850,40 +2856,46 @@ const ShipmentDetailPage = () => {
                       )}
                     </div>
                     {/* Phones get one card per line below; a tap opens the same editor as the table */}
-                    <div className="-mx-6 hidden overflow-x-auto md:block">
+                    {/*
+                      The table scrolls inside the card so its column titles and
+                      totals stay in view on a 165-line shipment. A sticky header
+                      cannot work against the page's own scroll here: the
+                      horizontal-scroll wrapper is its scroll container.
+                    */}
+                    <div className="-mx-6 hidden max-h-[calc(100vh-11rem)] overflow-auto overscroll-contain md:block">
                       <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border-muted text-left text-xs uppercase tracking-wide text-text-muted">
-                            <th className="pb-3 pl-6 pr-4">
+                        <thead className="sticky top-0 z-10 bg-surface-primary shadow-[inset_0_-1px_0_0_var(--color-border-muted)]">
+                          <tr className="text-left text-xs uppercase tracking-wide text-text-muted">
+                            <th className="py-3 pl-6 pr-4">
                               <button type="button" onClick={() => sortBy('product')} className={headerButton}>
                                 Product{arrow('product')}
                               </button>
                             </th>
-                            <th className="pb-3 pr-4">
+                            <th className="py-3 pr-4">
                               <button type="button" onClick={() => sortBy('lwin')} className={headerButton}>
                                 LWIN / SKU{arrow('lwin')}
                               </button>
                             </th>
-                            <th className="pb-3 pr-4">HS</th>
-                            <th className="pb-3 pr-4 text-center">Pack</th>
-                            <th className="pb-3 pr-4 text-right">
+                            <th className="py-3 pr-4">HS</th>
+                            <th className="py-3 pr-4 text-center">Pack</th>
+                            <th className="py-3 pr-4 text-right">
                               <button type="button" onClick={() => sortBy('cases')} className={headerButton}>
                                 Cases{arrow('cases')}
                               </button>
                             </th>
-                            <th className="pb-3 pr-4 text-right">
+                            <th className="py-3 pr-4 text-right">
                               <button type="button" onClick={() => sortBy('bottles')} className={headerButton}>
                                 Bottles{arrow('bottles')}
                               </button>
                             </th>
-                            <th className="pb-3 pr-4 text-right">
+                            <th className="py-3 pr-4 text-right">
                               <button type="button" onClick={() => sortBy('cost')} className={headerButton}>
                                 Cost/Btl{arrow('cost')}
                               </button>
                             </th>
-                            <th className="pb-3 pr-4 text-right">Landed/Btl</th>
-                            <th className="pb-3 pr-4 text-right">Margin</th>
-                            <th className="pb-3 pr-6"></th>
+                            {hasLanded && <th className="py-3 pr-4 text-right">Landed/Btl</th>}
+                            {hasMargin && <th className="py-3 pr-4 text-right">Margin</th>}
+                            <th className="py-3 pr-6"></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2905,7 +2917,23 @@ const ShipmentDetailPage = () => {
                               </td>
                             </tr>
                           )}
-                          {shownItems.map((item) => {
+                          {shownItems.map((item, rowIndex) => {
+                            /*
+                              Pack sizes of one wine read as one block: a
+                              bracket down their left edge where they sit
+                              together, the wine named in full once, and
+                              "↳" on the lines that follow.
+                            */
+                            const wineKey = wineGroupKey(item);
+                            const winePacks = packsByWine.get(wineKey) ?? [];
+                            const inGroup = winePacks.length > 1;
+                            const prevSame =
+                              inGroup && rowIndex > 0 && wineGroupKey(shownItems[rowIndex - 1]!) === wineKey;
+                            const nextSame =
+                              inGroup &&
+                              rowIndex < shownItems.length - 1 &&
+                              wineGroupKey(shownItems[rowIndex + 1]!) === wineKey;
+                            const groupBottles = winePacks.reduce((sum, p) => sum + (p.totalBottles ?? 0), 0);
                             // Skip vintage in metadata if already in product name
                             const vintageStr = item.vintage ? String(item.vintage) : null;
                             const showVintage = vintageStr && !item.productName.includes(vintageStr);
@@ -2937,7 +2965,7 @@ const ShipmentDetailPage = () => {
                                   setDragItemId(null);
                                   setDragOverItemId(null);
                                 }}
-                                className={`border-b border-border-muted/50 transition-colors hover:bg-fill-secondary/50 ${
+                                className={`border-b ${nextSame ? 'border-transparent' : 'border-border-muted/50'} transition-colors hover:bg-fill-secondary/50 ${
                                   dragItemId === item.id ? 'opacity-40' : ''
                                 } ${
                                   dragOverItemId === item.id && dragItemId !== item.id
@@ -2947,6 +2975,14 @@ const ShipmentDetailPage = () => {
                               >
                                 {/* Product — click to edit; the grip moves the line */}
                                 <td className="relative py-3 pl-6 pr-4">
+                                  {inGroup && (prevSame || nextSame) && (
+                                    <span
+                                      aria-hidden
+                                      className={`absolute left-[1.15rem] w-0.5 rounded-full bg-text-primary/35 ${
+                                        prevSame ? 'top-0' : 'top-3'
+                                      } ${nextSame ? 'bottom-0' : 'bottom-3'}`}
+                                    />
+                                  )}
                                   {canDrag && (
                                     <span
                                       aria-hidden
@@ -2960,10 +2996,30 @@ const ShipmentDetailPage = () => {
                                     onClick={() => openSheet(item)}
                                     className="text-left group"
                                   >
-                                    <Typography variant="bodySm" className="font-medium leading-snug group-hover:text-text-primary transition-colors">
-                                      {item.productName}
-                                    </Typography>
-                                    {metadata && (
+                                    {prevSame ? (
+                                      <Typography
+                                        variant="bodySm"
+                                        colorRole="muted"
+                                        className="leading-snug group-hover:text-text-primary transition-colors"
+                                        title={item.productName}
+                                      >
+                                        ↳ Same wine, {item.bottlesPerCase ?? 12} × {(item.bottleSizeMl ?? 750) / 10}cl
+                                      </Typography>
+                                    ) : (
+                                      <Typography
+                                        variant="bodySm"
+                                        className="line-clamp-2 font-medium leading-snug group-hover:text-text-primary transition-colors"
+                                        title={item.productName}
+                                      >
+                                        {item.productName}
+                                      </Typography>
+                                    )}
+                                    {inGroup && !prevSame && (
+                                      <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-fill-secondary px-2 py-0.5 text-[11px] font-medium text-text-primary">
+                                        {winePacks.length} pack sizes · {groupBottles} btl
+                                      </span>
+                                    )}
+                                    {metadata && !prevSame && (
                                       <Typography variant="bodyXs" colorRole="muted" className="mt-0.5">
                                         {metadata}
                                       </Typography>
@@ -2996,11 +3052,13 @@ const ShipmentDetailPage = () => {
                                     const selfMismatch =
                                       item.cases > 0 && item.totalBottles != null && packBottles !== item.totalBottles;
 
-                                    if (!gap && others.length === 0 && !selfMismatch) return null;
+                                    if (!(gap && isFirst) && !(others.length > 0 && !prevSame && !nextSame) && !selfMismatch) {
+                                      return null;
+                                    }
 
                                     return (
                                       <div className="mt-1 flex flex-col gap-0.5">
-                                        {others.length > 0 && (
+                                        {others.length > 0 && !prevSame && !nextSame && (
                                           <Typography variant="bodyXs" colorRole="muted">
                                             Also{' '}
                                             {others.map((p) => `${p.cases} × ${p.bottlesPerCase ?? 12}`).join(', ')}{' '}
@@ -3037,7 +3095,7 @@ const ShipmentDetailPage = () => {
                                     >
                                       <Badge colorRole="success" size="xs">
                                         <Icon icon={IconCheck} size="sm" className="mr-0.5" />
-                                        <span className="font-mono">{item.lwin}</span>
+                                        <span className="whitespace-nowrap font-mono">{item.lwin}</span>
                                       </Badge>
                                       <Icon
                                         icon={IconPencil}
@@ -3211,14 +3269,17 @@ const ShipmentDetailPage = () => {
                                   </button>
                                 </td>
 
-                                {/* Landed/Btl */}
-                                <td className="py-3 pr-4 text-right tabular-nums">
-                                  {item.landedCostPerBottle
-                                    ? `$${item.landedCostPerBottle.toFixed(2)}`
-                                    : '-'}
-                                </td>
+                                {/* Landed/Btl — shown once anything is costed */}
+                                {hasLanded && (
+                                  <td className="py-3 pr-4 text-right tabular-nums">
+                                    {item.landedCostPerBottle
+                                      ? `$${item.landedCostPerBottle.toFixed(2)}`
+                                      : '-'}
+                                  </td>
+                                )}
 
-                                {/* Margin */}
+                                {/* Margin — shown once anything has one */}
+                                {hasMargin && (
                                 <td className="py-3 pr-4 text-right tabular-nums">
                                   {item.marginPercent !== null && item.marginPercent !== undefined ? (
                                     <span
@@ -3232,6 +3293,7 @@ const ShipmentDetailPage = () => {
                                     '-'
                                   )}
                                 </td>
+                                )}
 
                                 {/* Delete */}
                                 <td className="py-3 pr-6">
@@ -3275,7 +3337,7 @@ const ShipmentDetailPage = () => {
                           })}
                         </tbody>
                         {/* Summary Footer */}
-                        <tfoot>
+                        <tfoot className="sticky bottom-0 z-10 bg-surface-primary shadow-[inset_0_1px_0_0_var(--color-border-muted)]">
                           <tr className="text-xs font-medium text-text-muted">
                             <td className="pb-1 pl-6 pr-4 pt-3">
                               {totalItems} item{totalItems !== 1 ? 's' : ''}
@@ -3296,7 +3358,7 @@ const ShipmentDetailPage = () => {
                                   })}`
                                 : ''}
                             </td>
-                            <td className="pb-1 pr-4 pt-3" colSpan={3}></td>
+                            <td className="pb-1 pr-4 pt-3" colSpan={1 + (hasLanded ? 1 : 0) + (hasMargin ? 1 : 0)}></td>
                           </tr>
                           {casesDiffer || bottlesDiffer || pricedItems < totalItems ? (
                             <tr className="text-xs text-text-warning">
