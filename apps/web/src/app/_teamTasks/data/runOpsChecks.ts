@@ -24,6 +24,8 @@ export interface OpsFinding {
   recordKey: string;
   /** The part's text: the record, then what to do */
   what: string;
+  /** Who gets this part, by email, when it is not the check's owner */
+  ownerEmail?: string;
 }
 
 /** A check's result: the job it keeps open, and what it found this run */
@@ -356,28 +358,35 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
       key: 'cellar_release_review',
       title: 'Release requests to review',
       area: 'Private Cellar',
-      owners: [SOPHIE, KEVIN],
+      owners: [SOPHIE, LARAINE, KEVIN],
       urgent: true,
       linkUrl: RELEASES_LIST,
       complete: true,
-      findings: waitingOnUs.map((r) => {
+      /*
+        Sophie sets the prices; Laraine gets the same part so a request is
+        never left with one person who is out or busy. Sending the quote ticks
+        both.
+      */
+      findings: waitingOnUs.flatMap((r) => {
         const since = shortDay(r.submittedAt ?? r.updatedAt);
         const action =
           r.status === 'revision_requested'
             ? 'member asked for changes, revise the quote'
-            : 'review and send the quote';
-        return {
-          // Keyed by status too: a request sent back for changes is new work
-          recordKey: `${r.id}:${r.status}`,
-          what: `${r.requestNumber} · ${r.member}: ${action}${since ? ` (since ${since})` : ''}`,
-        };
+            : 'set the prices and send the quote';
+        const what = `${r.requestNumber} · ${r.member}: ${action}${since ? ` (since ${since})` : ''}`;
+        // Keyed by status too: a request sent back for changes is new work
+        const key = `${r.id}:${r.status}`;
+        return [
+          { recordKey: key, what, ownerEmail: SOPHIE },
+          { recordKey: `${key}:laraine`, what, ownerEmail: LARAINE },
+        ];
       }),
     },
     {
       key: 'cellar_release_member_idle',
       title: 'Release quotes the member has not answered',
       area: 'Private Cellar',
-      owners: [SOPHIE, KEVIN],
+      owners: [SOPHIE, LARAINE, KEVIN],
       urgent: false,
       linkUrl: RELEASES_LIST,
       complete: true,

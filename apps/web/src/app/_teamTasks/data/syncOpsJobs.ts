@@ -10,7 +10,7 @@ import getTeam from './getTeam';
 import logTaskEvent from './logTaskEvent';
 import resolveArea from './resolveArea';
 import runOpsChecks from './runOpsChecks';
-import type { OpsCheckResult } from './runOpsChecks';
+import type { OpsCheckResult, OpsFinding } from './runOpsChecks';
 import dubaiToday from '../utils/dubaiToday';
 import postTasksSlack from '../utils/postTasksSlack';
 import slackTag from '../utils/slackTag';
@@ -37,7 +37,7 @@ const openJobFor = async (checkKey: string) => {
 const addFindings = async (
   check: OpsCheckResult,
   fresh: OpsCheckResult['findings'],
-  owner: Member,
+  ownerOf: (finding: OpsFinding) => Member,
   existingTaskId: string | null,
 ) => {
   const today = dubaiToday();
@@ -70,7 +70,7 @@ const addFindings = async (
         .insert(teamTaskParts)
         .values({
           taskId,
-          ownerId: owner.id,
+          ownerId: ownerOf(finding).id,
           what: finding.what,
           due: today,
           position: count + i,
@@ -93,13 +93,13 @@ const addFindings = async (
 const postUrgent = async (
   check: OpsCheckResult,
   fresh: OpsCheckResult['findings'],
-  owner: Member,
+  ownerOf: (finding: OpsFinding) => Member,
   taskId: string,
 ) => {
   const link = `${serverConfig.appUrl}/platform/admin/tasks?job=${taskId}`;
   const lines = [
     `Urgent: *<${link}|${escapeSlackText(check.title)}>*`,
-    ...fresh.map((f) => `${slackTag(owner)} ${escapeSlackText(f.what)}`),
+    ...fresh.map((f) => `${slackTag(ownerOf(f))} ${escapeSlackText(f.what)}`),
   ];
   return postTasksSlack(lines.join('\n'));
 };
@@ -186,13 +186,20 @@ const syncOpsJobs = async () => {
       const known = new Set(active.map((i) => i.recordKey));
       const fresh = check.findings.filter((f) => !known.has(f.recordKey));
 
+      /*
+        A finding may name its own owner, so one record can go to two people.
+        Anyone not on the team falls back to the check's owner.
+      */
+      const ownerOf = (finding: OpsFinding) =>
+        (finding.ownerEmail && byEmail.get(finding.ownerEmail.toLowerCase())) || owner;
+
       let taskId = await openJobFor(check.key);
 
       if (fresh.length) {
         const opening = !taskId;
-        taskId = await addFindings(check, fresh, owner, taskId);
+        taskId = await addFindings(check, fresh, ownerOf, taskId);
         if (opening) await logTaskEvent(taskId, null, 'Opened by the ops checks');
-        if (check.urgent) await postUrgent(check, fresh, owner, taskId);
+        if (check.urgent) await postUrgent(check, fresh, ownerOf, taskId);
       }
 
       const cleared = await clearFixed(check);
