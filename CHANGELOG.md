@@ -1,3 +1,9 @@
+## [2.1.148](https://github.com/craftandculture/Craft-Culture/compare/v2.1.147...v2.1.148) (2026-11-16)
+
+### Bug Fixes
+
+* **distribution:** wines back on City Drinks' feed count their sales from their last listing, so bottles sold while the feed left them out are not lost ([84db1e8](https://github.com/craftandculture/Craft-Culture/commit/84db1e85cb96e0fe41d54d61a7da1457baa0a868))
+
 ## [2.1.147](https://github.com/craftandculture/Craft-Culture/compare/v2.1.146...v2.1.147) (2026-11-16)
 
 ### Features
