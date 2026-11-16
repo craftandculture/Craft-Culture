@@ -21,7 +21,12 @@ export const GET = async (request: Request) => {
   }
 
   try {
-    return NextResponse.json(await syncOpsJobs());
+    const result = await syncOpsJobs();
+
+    // A check that throws is left out of the run; say so, or it fails unseen
+    if (result.failed.length) logger.error('Ops checks: some checks failed', { failed: result.failed });
+
+    return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 

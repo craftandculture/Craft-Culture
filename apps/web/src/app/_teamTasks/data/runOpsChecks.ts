@@ -361,7 +361,8 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
           eq(cellarReleaseRequests.status, 'under_review'),
           lt(
             sql`coalesce(${cellarReleaseRequests.quotedAt}, ${cellarReleaseRequests.updatedAt})`,
-            new Date(now.getTime() - 3 * DAY),
+            // A Date beside raw SQL is not encoded and fails at runtime; bind it as text
+            sql`${new Date(now.getTime() - 3 * DAY).toISOString()}::timestamp`,
           ),
         ),
       ),
@@ -499,7 +500,10 @@ const intakeChecks = async (now: Date): Promise<OpsCheckResult[]> => {
         and(
           eq(cellarInvites.status, 'sent'),
           isNull(cellarInvites.acceptedAt),
-          lt(sql`coalesce(${cellarInvites.lastSentAt}, ${cellarInvites.createdAt})`, threeDaysAgo),
+          lt(
+            sql`coalesce(${cellarInvites.lastSentAt}, ${cellarInvites.createdAt})`,
+            sql`${threeDaysAgo.toISOString()}::timestamp`,
+          ),
         ),
       ),
     db
