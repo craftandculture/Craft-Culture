@@ -1,3 +1,9 @@
+## [2.1.140](https://github.com/craftandculture/Craft-Culture/compare/v2.1.139...v2.1.140) (2026-11-16)
+
+### Bug Fixes
+
+* Duplicate line offers every pack from 1 to 12 (plus 15, 18, 24) and opens a loose-bottle line at one case so it can be saved ([d096d0b](https://github.com/craftandculture/Craft-Culture/commit/d096d0b3ce008557bb4f45bca7fd77b1ff133aee))
+
 ## [2.1.139](https://github.com/craftandculture/Craft-Culture/compare/v2.1.138...v2.1.139) (2026-11-16)
 
 ### Bug Fixes
