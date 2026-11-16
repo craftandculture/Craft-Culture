@@ -1,3 +1,9 @@
+## [2.1.145](https://github.com/craftandculture/Craft-Culture/compare/v2.1.144...v2.1.145) (2026-11-16)
+
+### Features
+
+* release requests post to [#tasks](https://github.com/craftandculture/Craft-Culture/issues/tasks) the moment they arrive, and every [#tasks](https://github.com/craftandculture/Craft-Culture/issues/tasks) line opens its own release or order ([13b79ab](https://github.com/craftandculture/Craft-Culture/commit/13b79ab82ed219891d0192237390dc2322d5b642))
+
 ## [2.1.144](https://github.com/craftandculture/Craft-Culture/compare/v2.1.143...v2.1.144) (2026-11-16)
 
 ### Bug Fixes
