@@ -91,6 +91,12 @@ const extractedLogisticsDataSchema = z.object({
           .describe(
             'Number of CASES, only when the document actually states cases (a "Qty" column beside a size like "6x75cl"). If the document never mentions cases, leave this empty rather than inferring one. Where a Quantity heading is split into two sub-columns "cs" and "bt", read ONLY the figure under "cs" — a row with a figure under "bt" and nothing under "cs" has no cases at all and this must be left empty.',
           ),
+        caseMix: z
+          .string()
+          .optional()
+          .describe(
+            'Only when one row packs the wine in more than one case size, the breakdown exactly as printed, e.g. "7x6 + 1x3" or "3x6 + 1x2" (often in a "Bts per cases" column). Leave EMPTY for an ordinary single pack such as "6". When filled, cases is the total number of boxes on the row and bottles the total bottles.',
+          ),
         weight: z.number().optional().describe('Weight in kg'),
         volume: z.number().optional().describe('Volume in m³'),
         unitPrice: z
@@ -178,6 +184,11 @@ EXAMPLE:
 Row: Product="Château Fontenil 2005", Number of cases=3, CASES="wb × 12 bottles", Number of bottles=36
 Verification: 3 × 12 = 36 ✓
 Result: cases=3, bottlesPerCase=12, bottleSize="750ml", quantity=36, productName="Château Fontenil 2005", vintage=2005
+
+MIXED PACKS - one row, more than one case size:
+- A "Bts per cases" or pack cell reading "7x6 + 1x3" means 7 cases of 6 plus 1 case of 3 for that ONE wine.
+- Copy that text exactly into caseMix. Put the total boxes (8) in cases and the total bottles (45) in bottles.
+- Leave caseMix empty when the cell is a single number such as "6".
 
 Also look for document totals like "Total: 80 CASES" or "504 bottles" for verification.
 Extract EVERY line item. Copy product names exactly as written.`;

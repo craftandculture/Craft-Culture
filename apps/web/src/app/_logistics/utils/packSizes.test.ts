@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import findBilledBottleGaps from './findBilledBottleGaps';
 import groupSameWineOrder from './groupSameWineOrder';
+import parseCaseMix from './parseCaseMix';
 import splitLineAmounts from './splitLineAmounts';
 import wineGroupKey from './wineGroupKey';
 import withLwinPack from './withLwinPack';
@@ -133,5 +134,25 @@ describe('splitLineAmounts on a full row', () => {
     expect('id' in add).toBe(false);
     expect('productName' in keep).toBe(false);
     expect(add.sourceTotal).toBe(15);
+  });
+});
+
+describe('parseCaseMix', () => {
+  it('reads a Vinlock mixed-pack cell', () => {
+    expect(parseCaseMix('7x6 + 1x3')).toEqual([
+      { cases: 7, bottlesPerCase: 6 },
+      { cases: 1, bottlesPerCase: 3 },
+    ]);
+    expect(parseCaseMix('3 × 6+1x2')).toEqual([
+      { cases: 3, bottlesPerCase: 6 },
+      { cases: 1, bottlesPerCase: 2 },
+    ]);
+  });
+
+  it('leaves a plain pack and anything unreadable alone', () => {
+    expect(parseCaseMix('6')).toBeNull();
+    expect(parseCaseMix('6x75cl')).toBeNull();
+    expect(parseCaseMix('7x6 + some')).toBeNull();
+    expect(parseCaseMix(undefined)).toBeNull();
   });
 });

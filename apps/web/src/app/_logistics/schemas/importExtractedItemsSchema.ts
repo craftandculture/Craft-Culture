@@ -17,6 +17,8 @@ const extractedItemSchema = z.object({
   hsCode: z.string().optional(),
   quantity: z.number().optional(),
   cases: z.number().optional(),
+  /** A mixed-pack breakdown as printed, e.g. "7x6 + 1x3" — one line per part */
+  caseMix: z.string().optional(),
   /** Bottle count, where the document counts bottles rather than cases */
   bottles: z.number().optional(),
   /** Litres per bottle, and printed litres for the line — the line's own check */

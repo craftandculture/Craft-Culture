@@ -7,9 +7,11 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import importExtractedItemsSchema from '../schemas/importExtractedItemsSchema';
+import parseCaseMix from '../utils/parseCaseMix';
 import priceShipmentInUsd from '../utils/priceShipmentInUsd';
 import toMenuHsCode from '../utils/toMenuHsCode';
 import toValidLwin from '../utils/toValidLwin';
+import withLwinPack from '../utils/withLwinPack';
 
 /**
  * Import extracted line items from a document into a shipment
@@ -327,9 +329,7 @@ const adminImportExtractedItems = adminProcedure
           ? sourceUnitPrice * totalBottles
           : undefined);
 
-      sortOrder += 1;
-
-      newRows.push({
+      const row: typeof logisticsShipmentItems.$inferInsert = {
         shipmentId,
         productName,
         // Only a complete LWIN is kept. The extractor takes whatever sits
@@ -360,8 +360,54 @@ const adminImportExtractedItems = adminProcedure
         declaredValueUsd: sourceCurrency === 'USD' ? sourceTotal : null,
         productCostPerBottle:
           sourceCurrency === 'USD' ? sourceUnitPrice : null,
-        sortOrder,
-      });
+      };
+
+      /*
+        One document row, several kinds of box.
+
+        "7x6 + 1x3" is one wine billed once and packed two ways. Stored as
+        one line it took a single pack and became 7 cases of 3 — the right
+        bottles in boxes that do not exist, so receiving cannot count them.
+        Each part becomes its own line, together and in document order,
+        with its own LWIN pack and its share of the billed total. Only taken
+        when the parts add up to the bottles billed; otherwise the row stays
+        whole for someone to look at.
+      */
+      const mix = parseCaseMix(item.caseMix);
+      const mixBottles = mix?.reduce((sum, part) => sum + part.cases * part.bottlesPerCase, 0);
+
+      if (mix && mixBottles === Math.round(totalBottles)) {
+        const share = (value: number | null | undefined, index: number) => {
+          if (value == null) return value;
+          const before = mix
+            .slice(0, index)
+            .reduce((sum, part) => sum + part.cases * part.bottlesPerCase, 0);
+          const upTo = before + (mix[index]?.cases ?? 0) * (mix[index]?.bottlesPerCase ?? 0);
+          // Cumulative rounding, so the parts add back to the row to the cent
+          const at = (bottles: number) => Math.round(((value * bottles) / mixBottles) * 100) / 100;
+          return Math.round((at(upTo) - at(before)) * 100) / 100;
+        };
+
+        for (const [index, part] of mix.entries()) {
+          sortOrder += 1;
+          newRows.push({
+            ...row,
+            lwin: withLwinPack(row.lwin, part.bottlesPerCase),
+            cases: part.cases,
+            bottlesPerCase: part.bottlesPerCase,
+            totalBottles: part.cases * part.bottlesPerCase,
+            grossWeightKg: share(row.grossWeightKg, index),
+            sourceTotal: share(row.sourceTotal, index),
+            declaredValueUsd: share(row.declaredValueUsd, index),
+            sortOrder,
+          });
+        }
+
+        continue;
+      }
+
+      sortOrder += 1;
+      newRows.push({ ...row, sortOrder });
     }
 
     const createdItems =

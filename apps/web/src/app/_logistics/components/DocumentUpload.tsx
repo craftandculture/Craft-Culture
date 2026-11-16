@@ -48,6 +48,8 @@ interface ExtractedLineItem {
   bottleSize?: string;
   bottlesPerCase?: number;
   cases?: number;
+  /** A mixed-pack breakdown as printed, e.g. "7x6 + 1x3" */
+  caseMix?: string;
   /** What the document actually billed, where it bills bottles */
   bottles?: number;
   productSizeL?: number;
@@ -480,6 +482,7 @@ const LogisticsDocumentUpload = ({
           bottleSize: item.bottleSize,
           bottlesPerCase: item.bottlesPerCase,
           cases: item.cases,
+          caseMix: item.caseMix,
           bottles: item.bottles,
           productSizeL: item.productSizeL,
           totalSizeL: item.totalSizeL,
