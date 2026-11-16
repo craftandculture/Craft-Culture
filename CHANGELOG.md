@@ -1,3 +1,9 @@
+## [2.1.138](https://github.com/craftandculture/Craft-Culture/compare/v2.1.137...v2.1.138) (2026-11-16)
+
+### Bug Fixes
+
+* the shipment line copy button is now called Duplicate line, so operators find it ([9a9c531](https://github.com/craftandculture/Craft-Culture/commit/9a9c5317646192afca76ad0344fbf60ffcfd27ef))
+
 ## [2.1.137](https://github.com/craftandculture/Craft-Culture/compare/v2.1.136...v2.1.137) (2026-11-16)
 
 ### Features
