@@ -7,6 +7,7 @@ import db from '@/database/client';
 import { partners } from '@/database/schema';
 import serverConfig from '@/server.config';
 
+import emailStaffOfRelease from '../data/emailStaffOfRelease';
 import { queueDeliveryQuoted, queueDeliverySentBack } from '../data/queueCellarEmails';
 
 export type ReleaseEvent = 'submitted' | 'quoted' | 'revision' | 'accepted';
@@ -55,6 +56,11 @@ const notifyReleaseUpdate = async ({
   adminNotes,
   amended,
 }: NotifyReleaseUpdateParams) => {
+  /* Work for the team is also emailed, whatever happens to the in-app notice */
+  if (event === 'submitted' || event === 'accepted') {
+    await emailStaffOfRelease({ requestId, event, amended });
+  }
+
   try {
     /* Work for the team goes to C&C staff; everything else to the member. */
     const recipients =
