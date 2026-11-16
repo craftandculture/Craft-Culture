@@ -80,6 +80,15 @@ describe('buildDailySales', () => {
     expect(days[0]?.withdrawals).toEqual([]);
   });
 
+  it('counts their own sales on a wine replenished outside our invoices', () => {
+    // Held 10, topped up by 12 we never invoiced, sold 6 by their own figure: holds 16
+    const { days } = buildDailySales([row({ heldFrom: 10, heldTo: 16, soldLast30dFrom: 20, soldLast30d: 26 })]);
+
+    expect(days[0]?.consigned.bottles).toBe(6);
+    expect(days[0]?.restocks).toEqual([{ productName: 'Tignanello 2019', bottles: 12 }]);
+    expect(days[0]?.withdrawals).toEqual([]);
+  });
+
   it('counts a wine back on the feed from its last listing, not from zero', () => {
     // Off the feed 13-15 Nov; the query reads its opening from the 12 Nov count
     const { days } = buildDailySales([

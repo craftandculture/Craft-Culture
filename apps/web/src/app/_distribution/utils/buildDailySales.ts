@@ -216,25 +216,30 @@ const buildDailySales = (rows: PairRow[]) => {
 
     const movement = row.heldFrom + row.delivered - row.heldTo;
 
-    if (movement < 0) {
-      day.restocks.push({ productName: row.productName, bottles: -movement });
-      continue;
-    }
-
-    if (movement === 0) continue;
-
     /*
-      A falling count is not proof of a sale: a bottle taken for photography or
-      a sample leaves it too. The outlet's own rolling 30-day figure rises only
-      for a sale, so a bottle is counted sold only as far as that figure rose.
-      When it fell, a sale from 30 days ago dropped out of the window and the
-      day's rise cannot be read, so the count alone decides, as before.
+      The outlet's own rolling 30-day figure rises only for a sale, so where it
+      can be read it is the sale. The count is a second opinion:
+
+      - It fell by more than the figure rose: a bottle taken for photography,
+        a sample or a correction. Listed as a withdrawal, not a sale.
+      - It fell by less, or rose: they were replenished from somewhere our
+        invoices do not show. Listed as a restock, and the sales still count.
+        Until 16 Nov 2026 a replenished wine counted no sales at all; Crurated
+        lines topped up over 12–16 Nov hid most of that week's sales.
+
+      When the figure fell, a sale from 30 days ago dropped out of the window
+      and the day's rise cannot be read, so the count alone decides.
     */
     const rose =
       row.soldLast30d !== null && row.soldLast30dFrom !== null
         ? row.soldLast30d - row.soldLast30dFrom
         : null;
-    const sold = rose === null || rose < 0 ? movement : Math.min(movement, rose);
+    const readable = rose !== null && rose >= 0;
+    const sold = readable ? rose : Math.max(0, movement);
+
+    if (movement < sold) {
+      day.restocks.push({ productName: row.productName, bottles: sold - movement });
+    }
 
     if (movement > sold) {
       day.withdrawals.push({
