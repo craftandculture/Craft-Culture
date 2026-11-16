@@ -1,3 +1,10 @@
+## [2.1.142](https://github.com/craftandculture/Craft-Culture/compare/v2.1.141...v2.1.142) (2026-11-16)
+
+### Features
+
+* a member's release request now becomes a Team Tasks job with a named owner, tagged in [#tasks](https://github.com/craftandculture/Craft-Culture/issues/tasks) within 15 minutes ([de5fdd5](https://github.com/craftandculture/Craft-Culture/commit/de5fdd5d9d62f52ff697a03a61235f0893a80b33))
+* release requests to review are given to both Sophie and Laraine, each tagged in [#tasks](https://github.com/craftandculture/Craft-Culture/issues/tasks) ([1fbd48b](https://github.com/craftandculture/Craft-Culture/commit/1fbd48bb537677741bf0bbf7b73f767f248c6ac4))
+
 ## [2.1.141](https://github.com/craftandculture/Craft-Culture/compare/v2.1.140...v2.1.141) (2026-11-16)
 
 ### Features
