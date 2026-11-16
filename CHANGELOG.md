@@ -1,3 +1,9 @@
+## [2.1.137](https://github.com/craftandculture/Craft-Culture/compare/v2.1.136...v2.1.137) (2026-11-16)
+
+### Features
+
+* a packing-list row like "7x6 + 1x3" imports as one line per pack size ([c0eef39](https://github.com/craftandculture/Craft-Culture/commit/c0eef39f388790a142a5092cdba374267226dd7f))
+
 ## [2.1.136](https://github.com/craftandculture/Craft-Culture/compare/v2.1.135...v2.1.136) (2026-11-16)
 
 ### Features
