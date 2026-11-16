@@ -1,3 +1,9 @@
+## [2.1.146](https://github.com/craftandculture/Craft-Culture/compare/v2.1.145...v2.1.146) (2026-11-16)
+
+### Features
+
+* the team's release email reads like the Releases screen: one line per wine, delivery in its own block, a link straight to the request ([ed801a7](https://github.com/craftandculture/Craft-Culture/commit/ed801a7c82f7c9d10b5496aae2d3ed09ec976946))
+
 ## [2.1.145](https://github.com/craftandculture/Craft-Culture/compare/v2.1.144...v2.1.145) (2026-11-16)
 
 ### Features
