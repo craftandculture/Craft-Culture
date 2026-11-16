@@ -1,3 +1,9 @@
+## [2.1.141](https://github.com/craftandculture/Craft-Culture/compare/v2.1.140...v2.1.141) (2026-11-16)
+
+### Features
+
+* a shipment's item table keeps its column titles and totals in view and shows a wine's pack sizes as one block ([baa4d81](https://github.com/craftandculture/Craft-Culture/commit/baa4d819f93638a932076f4d7868eb56f520f1c5))
+
 ## [2.1.140](https://github.com/craftandculture/Craft-Culture/compare/v2.1.139...v2.1.140) (2026-11-16)
 
 ### Bug Fixes
