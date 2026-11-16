@@ -990,6 +990,18 @@ const DailySalesClient = () => {
             </Typography>
           ) : null}
 
+          {day.resumed.sold > 0 ? (
+            <Typography variant="bodyXs" colorRole="muted" asChild>
+              <p>
+                Includes {day.resumed.sold} bottles of {day.resumed.wines} wines sold while their feed left them out
+                {day.resumed.since
+                  ? `, counted from their last listing on ${new Date(day.resumed.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Dubai' })}`
+                  : ''}
+                .
+              </p>
+            </Typography>
+          ) : null}
+
           {day.restocks.length > 0 ? (
             <Typography variant="bodyXs" colorRole="muted" asChild>
               <p>

@@ -22,6 +22,8 @@ interface MovementRow {
   code: string;
   heldFrom: number;
   heldTo: number;
+  /** Listed on the closing count at all; a wine the feed left out is not a count of zero */
+  inCloseCount: boolean;
   delivered: number;
   soldLast30d: number | null;
   ownerCount: number;
@@ -153,6 +155,7 @@ const adminDeriveSold = adminProcedure
              p.outlet_code AS "outletCode", p.code,
              COALESCE(p.held_from, 0) AS "heldFrom",
              COALESCE(p.held_to, 0) AS "heldTo",
+             (p.held_to IS NOT NULL) AS "inCloseCount",
              COALESCE(d.bottles, 0) AS "delivered",
              p.sold_last_30d AS "soldLast30d",
              o.owner_count AS "ownerCount"
@@ -168,6 +171,15 @@ const adminDeriveSold = adminProcedure
 
     for (const row of rows) {
       const sold = row.heldFrom + row.delivered - row.heldTo;
+
+      if (!row.inCloseCount) {
+        if (row.heldFrom + row.delivered > 0) {
+          impossible.push(
+            `${row.productName} — not on the closing count (the feed left it out), so nothing is derived; choose a closing count that lists it`,
+          );
+        }
+        continue;
+      }
 
       if (sold < 0) {
         impossible.push(

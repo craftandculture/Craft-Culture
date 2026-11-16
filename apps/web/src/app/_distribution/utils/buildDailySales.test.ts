@@ -80,6 +80,18 @@ describe('buildDailySales', () => {
     expect(days[0]?.withdrawals).toEqual([]);
   });
 
+  it('counts a wine back on the feed from its last listing, not from zero', () => {
+    // Off the feed 13-15 Nov; the query reads its opening from the 12 Nov count
+    const { days } = buildDailySales([
+      row({ heldFrom: 39, heldTo: 33, soldLast30dFrom: 10, soldLast30d: 16, resumedFrom: '2026-11-12 03:00:00' }),
+      row({ outletCode: 'CDR2', heldFrom: 5, heldTo: 4, soldLast30dFrom: 1, soldLast30d: 2 }),
+    ]);
+
+    expect(days[0]?.consigned.bottles).toBe(7);
+    expect(days[0]?.restocks).toEqual([]);
+    expect(days[0]?.resumed).toEqual({ wines: 1, sold: 6, since: '2026-11-12 03:00:00' });
+  });
+
   it('reports a wine missing from the closing count as dropped, never sold', () => {
     // 13 Nov 2026: the feed stopped listing a wine of 39 bottles
     const { days } = buildDailySales([

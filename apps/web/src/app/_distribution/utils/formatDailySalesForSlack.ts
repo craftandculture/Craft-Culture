@@ -8,6 +8,9 @@ const PAGE_URL = 'https://wine.craftculture.xyz/platform/admin/daily-sales';
 const money = (value: number, currency: string | null) =>
   `${currency ? `${currency} ` : ''}${new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(value)}`;
 
+const sinceDay = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Dubai' });
+
 /**
  * The morning sales message for #cd-sales
  *
@@ -126,6 +129,13 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
     const bottles = day.dropped.reduce((sum, w) => sum + w.bottles, 0);
     notes.push(
       `${day.dropped.length} wine${day.dropped.length === 1 ? '' : 's'} (${bottles} bottle${bottles === 1 ? '' : 's'}) dropped out of City Drinks' feed. Their stock cannot be read, so they are not counted as sales.`,
+    );
+  }
+
+  if (day.resumed.sold > 0) {
+    const { wines, sold, since } = day.resumed;
+    notes.push(
+      `Includes ${sold} bottle${sold === 1 ? '' : 's'} of ${wines} wine${wines === 1 ? '' : 's'} sold while City Drinks' feed left them out${since ? ` (counted from their last listing on ${sinceDay(since)})` : ''}.`,
     );
   }
 

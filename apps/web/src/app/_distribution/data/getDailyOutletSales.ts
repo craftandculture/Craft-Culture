@@ -180,11 +180,12 @@ const getDailyOutletSales = async (
            COALESCE(c.regime, o.regime) AS regime,
            COALESCE(c.code, o.code) AS code,
            COALESCE(c.lwin, o.lwin) AS lwin,
-           COALESCE(o.held, 0) AS "heldFrom",
+           COALESCE(o.held, ls.held, 0) AS "heldFrom",
            COALESCE(c.held, 0) AS "heldTo",
            (c.outlet_code IS NOT NULL) AS "inCloseCount",
+           TO_CHAR(ls.taken_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "resumedFrom",
            c.sold_last_30d AS "soldLast30d",
-           o.sold_last_30d AS "soldLast30dFrom",
+           COALESCE(o.sold_last_30d, ls.sold_last_30d) AS "soldLast30dFrom",
            COALESCE(d.bottles, 0) AS delivered,
            pr.bottle_price AS "bottlePrice",
            pr.currency,
@@ -192,11 +193,34 @@ const getDailyOutletSales = async (
     FROM pairs p
     LEFT JOIN pos o ON o.taken_at = p.opened_at AND o.outlet_code = p.outlet_code
     LEFT JOIN pos c ON c.taken_at = p.closed_at AND c.outlet_code = p.outlet_code
+    /*
+      A wine back on the feed after days off it opens from its last count, not
+      from nothing. Between 13 and 16 Nov 2026 City Drinks' feed left out about
+      240 Crurated and other wines; read from zero, the day they came back was
+      one large restock and every bottle sold while they were missing was lost.
+      Three weeks at most, so a wine delisted for months and listed again is
+      not read as one window.
+    */
+    LEFT JOIN LATERAL (
+      SELECT s.taken_at,
+             SUM(s.bottles_on_hand)::float8 AS held,
+             MAX(s.sold_last_30d)::float8 AS sold_last_30d
+      FROM cons_snapshots s
+      WHERE o.outlet_code IS NULL
+        AND c.outlet_code IS NOT NULL
+        AND s.outlet_id = ${outletId}
+        AND s.taken_at < p.opened_at
+        AND s.taken_at >= p.opened_at - INTERVAL '21 days'
+        AND UPPER(REGEXP_REPLACE(s.outlet_code, '[^A-Za-z0-9]', '', 'g')) = p.outlet_code
+      GROUP BY s.taken_at
+      ORDER BY s.taken_at DESC
+      LIMIT 1
+    ) ls ON true
     LEFT JOIN LATERAL (
       SELECT SUM(x.bottles)::float8 AS bottles
       FROM outs x
       WHERE x.code = COALESCE(c.code, o.code)
-        AND x.doc_date > p.opened_at::date
+        AND x.doc_date > COALESCE(ls.taken_at, p.opened_at)::date
         AND x.doc_date <= p.closed_at::date
     ) d ON true
     LEFT JOIN price_of pr ON pr.code = COALESCE(c.code, o.code)

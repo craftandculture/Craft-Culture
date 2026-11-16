@@ -27,6 +27,12 @@ export interface PairRow {
    * about whether a bottle sold.
    */
   inCloseCount: boolean;
+  /**
+   * The wine was missing from the opening count and is back on the closing
+   * one: the count it last appeared on, which `heldFrom` and
+   * `soldLast30dFrom` were read from instead. Null for an ordinary day.
+   */
+  resumedFrom?: string | null;
   /** The outlet's own rolling 30-day sales, at the closing count */
   soldLast30d: number | null;
   /** The same figure at the opening count, so the day's rise can be read */
@@ -73,6 +79,12 @@ export interface DailySalesDay {
    * stopped listing them, so nothing about them can be read. Not counted as sold.
    */
   dropped: { productName: string; ownerName: string | null; bottles: number }[];
+  /**
+   * Wines back on the feed after days off it. Their sales are counted from
+   * the last count that listed them, so this day also carries the bottles
+   * sold while the feed left them out. `since` is that last count.
+   */
+  resumed: { wines: number; sold: number; since: string | null };
   /** What the outlet held at the close of the window, grouped for the filters */
   stock: StockGroup[];
 }
@@ -181,6 +193,7 @@ const buildDailySales = (rows: PairRow[]) => {
         restocks: [],
         withdrawals: [],
         dropped: [],
+        resumed: { wines: 0, sold: 0, since: null },
         stock: [],
       };
       byDay.set(key, day);
@@ -232,6 +245,13 @@ const buildDailySales = (rows: PairRow[]) => {
     }
 
     if (sold === 0) continue;
+
+    if (row.resumedFrom) {
+      const since = String(row.resumedFrom);
+      day.resumed.wines += 1;
+      day.resumed.sold += sold;
+      if (!day.resumed.since || since < day.resumed.since) day.resumed.since = since;
+    }
 
     const regime = row.regime === 'consigned' ? 'consigned' : 'bought';
     const value = row.bottlePrice !== null ? sold * row.bottlePrice : null;
