@@ -36,7 +36,8 @@ export interface SplitPackDialogProps {
   onSaved: () => void;
 }
 
-const PACKS = [1, 2, 3, 4, 6, 12, 24];
+/** Every pack up to 12, then the larger formats suppliers use */
+const PACKS = [...Array.from({ length: 12 }, (_, i) => i + 1), 15, 18, 24];
 
 /**
  * Add a second pack size to a shipment line
@@ -55,7 +56,11 @@ const SplitPackDialog = ({ item, billedForWine, otherBottles, onClose, onSaved }
   useEffect(() => {
     if (!item) return;
     const pack = item.bottlesPerCase ?? 12;
-    setKeepCases(String(item.cases));
+    /*
+      A line billed as loose bottles holds 0 cases, and 0 cannot be saved, so
+      the dialog opened already refusing. It starts at one case instead.
+    */
+    setKeepCases(String(Math.max(1, item.cases)));
     setKeepPack(String(pack));
     setAddCases('1');
     setAddPack(String(pack === 3 ? 6 : 3));
