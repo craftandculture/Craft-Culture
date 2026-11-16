@@ -1,3 +1,9 @@
+## [2.1.144](https://github.com/craftandculture/Craft-Culture/compare/v2.1.143...v2.1.144) (2026-11-16)
+
+### Bug Fixes
+
+* the new release and intake checks run again, and a failing check is now logged ([56b71ce](https://github.com/craftandculture/Craft-Culture/commit/56b71ce7083d4ee76261d16a791dd192a717a2d6))
+
 ## [2.1.143](https://github.com/craftandculture/Craft-Culture/compare/v2.1.142...v2.1.143) (2026-11-16)
 
 ### Features
