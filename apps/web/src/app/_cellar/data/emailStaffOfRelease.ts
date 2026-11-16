@@ -43,10 +43,13 @@ const emailStaffOfRelease = async ({
   requestId,
   event,
   amended,
+  testTo,
 }: {
   requestId: string;
   event: 'submitted' | 'accepted';
   amended?: boolean;
+  /** Send only to these addresses, and post nothing to Slack: for a test */
+  testTo?: string;
 }) => {
   try {
     const [request] = await db
@@ -106,7 +109,7 @@ const emailStaffOfRelease = async ({
 
     const transactionalId = logisticsEmailTemplateId();
     const dataVariables = {
-      subject,
+      subject: testTo ? `[Test] ${subject}` : subject,
       // A blank line needs a value Loops will not collapse, as in sendLogisticsEmail
       lines: lines.map((text) => ({ text: text.trim() ? text : ' ' })),
     };
@@ -115,7 +118,7 @@ const emailStaffOfRelease = async ({
       The same moment in #tasks, both people tagged, rather than waiting up to
       fifteen minutes for the ops checks to find it.
     */
-    try {
+    if (!testTo) try {
       const team = await getTeam();
       const tags = RELEASE_ALERT_EMAILS.map((email) =>
         slackTag(team.find((person) => person.email.toLowerCase() === email)),
@@ -135,7 +138,7 @@ const emailStaffOfRelease = async ({
       });
     }
 
-    for (const email of RELEASE_ALERT_EMAILS) {
+    for (const email of testTo ? [testTo] : RELEASE_ALERT_EMAILS) {
       try {
         // The Loops API takes arrays of objects for repeating blocks; this SDK version types only flat values
         await loops.sendTransactionalEmail({

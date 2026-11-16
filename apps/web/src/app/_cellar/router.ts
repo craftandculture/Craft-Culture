@@ -33,6 +33,7 @@ import adminSetMemberEmailMode from './controller/adminSetMemberEmailMode';
 import adminSetPaymentDetails from './controller/adminSetPaymentDetails';
 import adminSetReleaseRates from './controller/adminSetReleaseRates';
 import adminShipUkMove from './controller/adminShipUkMove';
+import adminTestReleaseEmail from './controller/adminTestReleaseEmail';
 import claimCellarAccess from './controller/claimCellarAccess';
 import leaveCellarAccess from './controller/leaveCellarAccess';
 import memberAcceptRelease from './controller/memberAcceptRelease';
@@ -97,6 +98,7 @@ const adminRouter = createTRPCRouter({
   getAttention: adminGetAttention,
   getReleases: adminGetReleases,
   quoteRelease: adminQuoteRelease,
+  testReleaseEmail: adminTestReleaseEmail,
   amendReleaseItems: adminAmendReleaseItems,
   confirmRelease: adminConfirmRelease,
   linkReleaseOrder: adminLinkReleaseOrder,
