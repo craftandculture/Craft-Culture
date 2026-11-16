@@ -1,3 +1,11 @@
+## [2.1.143](https://github.com/craftandculture/Craft-Culture/compare/v2.1.142...v2.1.143) (2026-11-16)
+
+### Features
+
+* every new private order and each step it takes is posted to [#private](https://github.com/craftandculture/Craft-Culture/issues/private)-orders ([7d24f0c](https://github.com/craftandculture/Craft-Culture/commit/7d24f0c41faaf8776f02f46c08a4d3343671337b))
+* everything members, applicants and partners send in now opens a Team Tasks job with a named owner ([32951c7](https://github.com/craftandculture/Craft-Culture/commit/32951c7b4c7ef91df040974eca8ea44892713eef))
+* Sophie and Laraine are emailed when a member requests, changes or accepts a release ([3045944](https://github.com/craftandculture/Craft-Culture/commit/3045944976dbb4ff1fce465b168c594f4911931a))
+
 ## [2.1.142](https://github.com/craftandculture/Craft-Culture/compare/v2.1.141...v2.1.142) (2026-11-16)
 
 ### Features
