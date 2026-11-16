@@ -5,11 +5,20 @@ import getTeam from '@/app/_teamTasks/data/getTeam';
 import postTasksSlack from '@/app/_teamTasks/utils/postTasksSlack';
 import slackTag from '@/app/_teamTasks/utils/slackTag';
 import db from '@/database/client';
-import { cellarReleaseRequestItems, cellarReleaseRequests, partners } from '@/database/schema';
+import {
+  cellarReleaseDeliveryDetails,
+  cellarReleaseRequestItems,
+  cellarReleaseRequests,
+  partners,
+  privateClientOrders,
+} from '@/database/schema';
 import loops from '@/lib/loops/client';
 import escapeSlackText from '@/lib/slack/escapeSlackText';
 import serverConfig from '@/server.config';
 import logger from '@/utils/logger';
+
+import describePreferredDelivery from '../utils/describePreferredDelivery';
+import formatReleaseStaffEmail from '../utils/formatReleaseStaffEmail';
 
 /** Who is emailed when a member's release needs the team: Sophie prices it, Laraine backs her up */
 export const RELEASE_ALERT_EMAILS = ['sophie@craftculture.xyz', 'laraine@craftculture.xyz'];
@@ -45,10 +54,20 @@ const emailStaffOfRelease = async ({
         number: cellarReleaseRequests.requestNumber,
         address: cellarReleaseRequests.deliveryAddress,
         memberNotes: cellarReleaseRequests.memberNotes,
+        submittedAt: cellarReleaseRequests.submittedAt,
         member: partners.businessName,
+        orderNumber: privateClientOrders.orderNumber,
+        addressLabel: cellarReleaseDeliveryDetails.addressLabel,
+        instructions: cellarReleaseDeliveryDetails.deliveryInstructions,
+        preferredDate: cellarReleaseDeliveryDetails.preferredDate,
+        preferredWindow: cellarReleaseDeliveryDetails.preferredWindow,
+        isGift: cellarReleaseDeliveryDetails.isGift,
+        recipientName: cellarReleaseDeliveryDetails.recipientName,
       })
       .from(cellarReleaseRequests)
       .innerJoin(partners, eq(partners.id, cellarReleaseRequests.partnerId))
+      .leftJoin(privateClientOrders, eq(privateClientOrders.id, cellarReleaseRequests.privateClientOrderId))
+      .leftJoin(cellarReleaseDeliveryDetails, eq(cellarReleaseDeliveryDetails.requestId, cellarReleaseRequests.id))
       .where(eq(cellarReleaseRequests.id, requestId))
       .limit(1);
 
@@ -58,6 +77,7 @@ const emailStaffOfRelease = async ({
       .select({
         name: cellarReleaseRequestItems.productName,
         vintage: cellarReleaseRequestItems.vintage,
+        bottleSize: cellarReleaseRequestItems.bottleSize,
         caseConfig: cellarReleaseRequestItems.caseConfig,
         bottles: cellarReleaseRequestItems.bottles,
       })
@@ -67,33 +87,22 @@ const emailStaffOfRelease = async ({
     const bottles = items.reduce((sum, item) => sum + (item.bottles ?? 0), 0);
     const link = `${serverConfig.appUrl}/platform/admin/cellar-releases?open=${requestId}`;
 
-    const subject =
-      event === 'accepted'
-        ? `Release accepted: ${request.number} · ${request.member}. Prepare the delivery`
-        : amended
-          ? `Release changed: ${request.number} · ${request.member}. Re-check before quoting`
-          : `New release request: ${request.number} · ${request.member}. Please price it`;
-
-    const lines = [
-      event === 'accepted'
-        ? `${request.member} has accepted the delivery quote on ${request.number}. The order is raised: please raise the sales order and pick list, and book the delivery.`
-        : amended
-          ? `${request.member} has added wine to ${request.number}. Re-check it before the quote goes out.`
-          : `${request.member} has asked for wine to be released from bond on ${request.number}. Please set the prices and send the quote.`,
-      '',
-      `${items.length} ${items.length === 1 ? 'wine' : 'wines'} · ${bottles} bottles`,
-      ...items.map(
-        (item) =>
-          `• ${item.name}${item.vintage ? ` ${item.vintage}` : ' NV'} · ${item.bottles ?? 0} btl${
-            item.caseConfig ? ` (${item.caseConfig}-pack)` : ''
-          }`,
-      ),
-      '',
-      request.address ? `Deliver to: ${request.address}` : 'No delivery address given',
-      ...(request.memberNotes?.trim() ? [`Member's note: ${request.memberNotes.trim()}`] : []),
-      '',
-      `Open it in the Index: ${link}`,
-    ];
+    const { subject, lines } = formatReleaseStaffEmail({
+      event,
+      amended,
+      requestNumber: request.number,
+      member: request.member,
+      items,
+      address: request.address,
+      addressLabel: request.addressLabel,
+      preferred: describePreferredDelivery(request.preferredDate, request.preferredWindow),
+      instructions: request.instructions,
+      gift: request.isGift ? { recipientName: request.recipientName } : null,
+      memberNotes: request.memberNotes,
+      orderNumber: request.orderNumber,
+      link,
+      submittedAt: request.submittedAt,
+    });
 
     const transactionalId = logisticsEmailTemplateId();
     const dataVariables = {
