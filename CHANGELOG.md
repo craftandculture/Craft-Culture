@@ -1,3 +1,9 @@
+## [2.1.139](https://github.com/craftandculture/Craft-Culture/compare/v2.1.138...v2.1.139) (2026-11-16)
+
+### Bug Fixes
+
+* the Duplicate line dialog is laid out properly and the shipment table names the line that is wrong ([f7bd9ed](https://github.com/craftandculture/Craft-Culture/commit/f7bd9edd0d734fa707e11e2e4726f9482116694f))
+
 ## [2.1.138](https://github.com/craftandculture/Craft-Culture/compare/v2.1.137...v2.1.138) (2026-11-16)
 
 ### Bug Fixes
