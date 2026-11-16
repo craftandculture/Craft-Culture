@@ -10,9 +10,15 @@ import {
 import db from '@/database/client';
 import type { PrivateClientOrder } from '@/database/schema';
 import {
+  cellarApplications,
+  cellarInvites,
   cellarReleaseRequests,
+  cellarSourcingRequests,
+  cellarUkMoves,
   partners,
   privateClientOrders,
+  quotes,
+  wmsPartnerRequests,
   wmsPickLists,
   zohoSalesOrders,
 } from '@/database/schema';
@@ -307,6 +313,14 @@ const cellarChecks = async (): Promise<OpsCheckResult[]> => {
   }));
 };
 
+const MEMBERS = '/platform/admin/cellar-members';
+
+/** One record for both cellar reviewers, keyed apart so each has a part */
+const forBoth = (recordKey: string, what: string): OpsFinding[] => [
+  { recordKey, what, ownerEmail: SOPHIE },
+  { recordKey: `${recordKey}:laraine`, what, ownerEmail: LARAINE },
+];
+
 const RELEASES_LIST = '/platform/admin/cellar-releases';
 
 const shortDay = (d: Date | null) =>
@@ -332,7 +346,7 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
     member: partners.businessName,
   };
 
-  const [waitingOnUs, waitingOnMember] = await Promise.all([
+  const [waitingOnUs, waitingOnMember, toPrepare] = await Promise.all([
     db
       .select(columns)
       .from(cellarReleaseRequests)
@@ -349,6 +363,35 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
             sql`coalesce(${cellarReleaseRequests.quotedAt}, ${cellarReleaseRequests.updatedAt})`,
             new Date(now.getTime() - 3 * DAY),
           ),
+        ),
+      ),
+    /*
+      Accepted by the member, so the order exists, but nothing has been
+      picked for it yet: the sales order, pick and delivery are ours to start.
+    */
+    db
+      .select({
+        id: cellarReleaseRequests.id,
+        requestNumber: cellarReleaseRequests.requestNumber,
+        orderNumber: privateClientOrders.orderNumber,
+        confirmedAt: cellarReleaseRequests.confirmedAt,
+        member: partners.businessName,
+      })
+      .from(cellarReleaseRequests)
+      .innerJoin(partners, eq(partners.id, cellarReleaseRequests.partnerId))
+      .innerJoin(privateClientOrders, eq(privateClientOrders.id, cellarReleaseRequests.privateClientOrderId))
+      .where(
+        and(
+          eq(cellarReleaseRequests.status, 'confirmed'),
+          notInArray(privateClientOrders.status, ['delivered', 'cancelled']),
+          sql`NOT EXISTS (
+            SELECT 1 FROM ${wmsPickLists}
+            WHERE ${wmsPickLists.orderId} = ${privateClientOrders.id}
+               OR ${wmsPickLists.orderId} IN (
+                 SELECT ${zohoSalesOrders.id} FROM ${zohoSalesOrders}
+                 WHERE ${zohoSalesOrders.privateClientOrderId} = ${privateClientOrders.id}
+               )
+          )`,
         ),
       ),
   ]);
@@ -376,11 +419,25 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
         const what = `${r.requestNumber} · ${r.member}: ${action}${since ? ` (since ${since})` : ''}`;
         // Keyed by status too: a request sent back for changes is new work
         const key = `${r.id}:${r.status}`;
-        return [
-          { recordKey: key, what, ownerEmail: SOPHIE },
-          { recordKey: `${key}:laraine`, what, ownerEmail: LARAINE },
-        ];
+        return forBoth(key, what);
       }),
+    },
+    {
+      key: 'cellar_release_accepted',
+      title: 'Accepted releases to prepare',
+      area: 'Private Cellar',
+      owners: [LARAINE, SOPHIE, KEVIN],
+      urgent: true,
+      linkUrl: RELEASES_LIST,
+      complete: true,
+      findings: toPrepare.flatMap((r) =>
+        forBoth(
+          r.id,
+          `${r.requestNumber} · ${r.orderNumber} · ${r.member}: member accepted${
+            r.confirmedAt ? ` ${shortDay(r.confirmedAt)}` : ''
+          }. Raise the sales order and pick list, book the delivery`,
+        ),
+      ),
     },
     {
       key: 'cellar_release_member_idle',
@@ -393,6 +450,209 @@ const releaseChecks = async (now: Date): Promise<OpsCheckResult[]> => {
       findings: waitingOnMember.map((r) => ({
         recordKey: r.id,
         what: `${r.requestNumber} · ${r.member}: quoted ${shortDay(r.quotedAt ?? r.updatedAt)}, no answer yet. Chase the member`,
+      })),
+    },
+  ];
+};
+
+/**
+ * Everything a member, applicant or partner sends in that waits on the team,
+ * and anything of ours that has stalled on their side
+ *
+ * Each of these lived only on its own screen, so it waited until someone
+ * happened to open that screen: an application sat unseen, an invited member
+ * stopped half-way through joining and nobody followed up. Waiting on us is
+ * urgent and tagged in #tasks; waiting on them is a chase in the day's report.
+ */
+const intakeChecks = async (now: Date): Promise<OpsCheckResult[]> => {
+  const twoDaysAgo = new Date(now.getTime() - 2 * DAY);
+  const threeDaysAgo = new Date(now.getTime() - 3 * DAY);
+
+  const [
+    applied,
+    filling,
+    invites,
+    sourcing,
+    ukNew,
+    ukQuoted,
+    buyRequests,
+    pcoReview,
+    partnerRequests,
+  ] = await Promise.all([
+    db
+      .select({ id: cellarApplications.id, name: cellarApplications.fullName, at: cellarApplications.submittedAt })
+      .from(cellarApplications)
+      .where(eq(cellarApplications.status, 'submitted')),
+    db
+      .select({
+        id: cellarApplications.id,
+        name: cellarApplications.fullName,
+        phone: cellarApplications.phone,
+        at: cellarApplications.updatedAt,
+      })
+      .from(cellarApplications)
+      .where(and(eq(cellarApplications.status, 'draft'), lt(cellarApplications.updatedAt, twoDaysAgo))),
+    db
+      .select({ id: cellarInvites.id, name: cellarInvites.name, email: cellarInvites.email, at: cellarInvites.lastSentAt })
+      .from(cellarInvites)
+      .where(
+        and(
+          eq(cellarInvites.status, 'sent'),
+          isNull(cellarInvites.acceptedAt),
+          lt(sql`coalesce(${cellarInvites.lastSentAt}, ${cellarInvites.createdAt})`, threeDaysAgo),
+        ),
+      ),
+    db
+      .select({
+        id: cellarSourcingRequests.id,
+        number: cellarSourcingRequests.requestNumber,
+        wine: cellarSourcingRequests.wineName,
+        member: partners.businessName,
+      })
+      .from(cellarSourcingRequests)
+      .innerJoin(partners, eq(partners.id, cellarSourcingRequests.partnerId))
+      .where(eq(cellarSourcingRequests.status, 'requested')),
+    db
+      .select({ id: cellarUkMoves.id, number: cellarUkMoves.moveNumber, member: partners.businessName })
+      .from(cellarUkMoves)
+      .innerJoin(partners, eq(partners.id, cellarUkMoves.partnerId))
+      .where(eq(cellarUkMoves.status, 'submitted')),
+    db
+      .select({
+        id: cellarUkMoves.id,
+        number: cellarUkMoves.moveNumber,
+        member: partners.businessName,
+        at: cellarUkMoves.quotedAt,
+      })
+      .from(cellarUkMoves)
+      .innerJoin(partners, eq(partners.id, cellarUkMoves.partnerId))
+      .where(and(eq(cellarUkMoves.status, 'quoted'), lt(cellarUkMoves.quotedAt, threeDaysAgo))),
+    db
+      .select({ id: quotes.id, name: quotes.name, client: quotes.clientName, status: quotes.status })
+      .from(quotes)
+      .where(inArray(quotes.status, ['buy_request_submitted', 'under_cc_review', 'po_submitted'])),
+    db
+      .select({
+        id: privateClientOrders.id,
+        orderNumber: privateClientOrders.orderNumber,
+        clientName: privateClientOrders.clientName,
+        status: privateClientOrders.status,
+      })
+      .from(privateClientOrders)
+      .where(inArray(privateClientOrders.status, ['submitted', 'under_cc_review'])),
+    db
+      .select({
+        id: wmsPartnerRequests.id,
+        number: wmsPartnerRequests.requestNumber,
+        type: wmsPartnerRequests.requestType,
+        product: wmsPartnerRequests.productName,
+        partner: partners.businessName,
+      })
+      .from(wmsPartnerRequests)
+      .innerJoin(partners, eq(partners.id, wmsPartnerRequests.partnerId))
+      .where(eq(wmsPartnerRequests.status, 'pending')),
+  ]);
+
+  const cellar = { area: 'Private Cellar' as const, owners: [SOPHIE, LARAINE, KEVIN], complete: true };
+
+  return [
+    {
+      ...cellar,
+      key: 'cellar_application_review',
+      title: 'Cellar applications to review',
+      urgent: true,
+      linkUrl: `${MEMBERS}?tab=applications`,
+      findings: applied.flatMap((r) =>
+        forBoth(r.id, `${r.name ?? 'Applicant'}: review the application, approve or decline (since ${shortDay(r.at)})`),
+      ),
+    },
+    {
+      ...cellar,
+      key: 'cellar_application_stalled',
+      title: 'Cellar applications not finished',
+      urgent: false,
+      linkUrl: `${MEMBERS}?tab=applications`,
+      findings: filling.flatMap((r) =>
+        forBoth(
+          r.id,
+          `${r.name ?? 'Applicant'}${r.phone ? ` (${r.phone})` : ''}: started joining, no progress since ${shortDay(r.at)}. Call or WhatsApp to help them finish`,
+        ),
+      ),
+    },
+    {
+      ...cellar,
+      key: 'cellar_invite_unanswered',
+      title: 'Cellar invites not taken up',
+      urgent: false,
+      linkUrl: `${MEMBERS}?tab=invites`,
+      findings: invites.flatMap((r) =>
+        forBoth(r.id, `${r.name ?? r.email}: invited ${shortDay(r.at) ?? ''}, has not started. Follow up or resend`),
+      ),
+    },
+    {
+      ...cellar,
+      key: 'cellar_sourcing_new',
+      title: 'Member sourcing requests to pick up',
+      urgent: true,
+      linkUrl: `${MEMBERS}?tab=requests`,
+      findings: sourcing.flatMap((r) => forBoth(r.id, `${r.number} · ${r.member}: ${r.wine}. Start the search`)),
+    },
+    {
+      ...cellar,
+      key: 'cellar_uk_move_new',
+      title: 'UK move requests to quote',
+      urgent: true,
+      linkUrl: `${MEMBERS}?tab=uk-moves`,
+      findings: ukNew.flatMap((r) => forBoth(r.id, `${r.number} · ${r.member}: price the move and send the quote`)),
+    },
+    {
+      ...cellar,
+      key: 'cellar_uk_move_idle',
+      title: 'UK move quotes the member has not answered',
+      urgent: false,
+      linkUrl: `${MEMBERS}?tab=uk-moves`,
+      findings: ukQuoted.map((r) => ({
+        recordKey: r.id,
+        what: `${r.number} · ${r.member}: quoted ${shortDay(r.at)}, no answer yet. Chase the member`,
+      })),
+    },
+    {
+      key: 'partner_quote_review',
+      title: 'Partner buy requests and POs to confirm',
+      area: 'Orders',
+      owners: [LARAINE, KEVIN],
+      urgent: true,
+      linkUrl: '/platform/admin/quote-approvals',
+      complete: true,
+      findings: buyRequests.map((r) => ({
+        // Keyed by status: a PO after an approved buy request is new work
+        recordKey: `${r.id}:${r.status}`,
+        what: `${r.name ?? 'Quote'}${r.client ? ` · ${r.client}` : ''}: ${
+          r.status === 'po_submitted' ? 'PO received, confirm it' : 'buy request, review and confirm'
+        }`,
+      })),
+    },
+    {
+      key: 'pco_review',
+      title: 'PCOs waiting for C&C review',
+      area: 'Orders',
+      owners: [LARAINE, KEVIN],
+      urgent: true,
+      linkUrl: PCO_LIST,
+      complete: true,
+      findings: pcoReview.map((r) => ({ recordKey: r.id, what: `${pcoLabel(r)}: review and approve` })),
+    },
+    {
+      key: 'partner_wms_request',
+      title: 'Partner warehouse requests',
+      area: 'Warehouse',
+      owners: [WAREHOUSE, KEVIN],
+      urgent: true,
+      linkUrl: '/platform/admin/wms',
+      complete: true,
+      findings: partnerRequests.map((r) => ({
+        recordKey: r.id,
+        what: `${r.number} · ${r.partner}: ${String(r.type).replace(/_/g, ' ')}${r.product ? ` for ${r.product}` : ''}`,
       })),
     },
   ];
@@ -463,6 +723,7 @@ const runOpsChecks = async (now = new Date()) => {
     deliveryTodayCheck().then((r) => [r]),
     cellarChecks(),
     releaseChecks(now),
+    intakeChecks(now),
     logisticsChecks(now),
   ]);
 
