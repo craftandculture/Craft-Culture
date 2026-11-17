@@ -1,9 +1,9 @@
-import { and, desc, gte, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 
 import getShipmentEmailMode from '@/app/_logistics/data/getShipmentEmailMode';
 import getTransferSummaryMode from '@/app/_wms/data/getTransferSummaryMode';
 import db from '@/database/client';
-import { orderEmailOutbox } from '@/database/schema';
+import { logisticsShipmentActivityLogs, logisticsShipments, orderEmailOutbox, partners } from '@/database/schema';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 
 
@@ -44,13 +44,32 @@ const adminGetOrderEmails = staffAdminProcedure.query(async () => {
     .orderBy(desc(orderEmailOutbox.createdAt))
     .limit(200);
 
+  const shipmentRows = await db
+    .select({
+      id: logisticsShipmentActivityLogs.id,
+      shipmentId: logisticsShipmentActivityLogs.shipmentId,
+      shipmentNumber: logisticsShipments.shipmentNumber,
+      partnerName: partners.businessName,
+      milestone: sql<string | null>`${logisticsShipmentActivityLogs.metadata}->>'milestone'`,
+      mode: sql<string | null>`${logisticsShipmentActivityLogs.metadata}->>'mode'`,
+      sentTo: sql<string | null>`${logisticsShipmentActivityLogs.metadata}->>'to'`,
+      sentAt: logisticsShipmentActivityLogs.createdAt,
+    })
+    .from(logisticsShipmentActivityLogs)
+    .innerJoin(logisticsShipments, eq(logisticsShipments.id, logisticsShipmentActivityLogs.shipmentId))
+    // Only the shipment's own partner is ever told
+    .leftJoin(partners, eq(partners.id, logisticsShipments.partnerId))
+    .where(eq(logisticsShipmentActivityLogs.action, 'partner_notified'))
+    .orderBy(desc(logisticsShipmentActivityLogs.createdAt))
+    .limit(200);
+
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const [sent] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(orderEmailOutbox)
     .where(and(inArray(orderEmailOutbox.status, ['sent', 'shadowed']), gte(orderEmailOutbox.sentAt, since)));
 
-  return { modes: { partner, distributor, shipments, transfers }, shadowInbox: ORDER_EMAIL_SHADOW_INBOX, sentLast30Days: Number(sent?.count ?? 0), rows };
+  return { modes: { partner, distributor, shipments, transfers }, shadowInbox: ORDER_EMAIL_SHADOW_INBOX, sentLast30Days: Number(sent?.count ?? 0), rows, shipmentRows };
 });
 
 export default adminGetOrderEmails;

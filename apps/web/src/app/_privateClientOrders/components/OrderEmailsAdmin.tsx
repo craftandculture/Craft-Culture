@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -73,6 +74,14 @@ const STATUS: Record<string, { label: string; tint: string }> = {
   merged: { label: 'Combined or no longer needed', tint: 'bg-fill-muted text-text-muted' },
   suppressed: { label: 'Not sent (off)', tint: 'bg-fill-muted text-text-muted' },
   failed: { label: 'Failed', tint: 'bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-300' },
+};
+
+/** What each shipment email told the partner */
+const MILESTONE: Record<string, string> = {
+  departed: 'departed for the UAE',
+  arrived: 'arrived in the UAE',
+  landed: 'reached our warehouse',
+  received: 'is in stock',
 };
 
 const smallButton = 'border-border-muted hover:bg-fill-muted rounded-lg border px-3 py-1.5 text-xs font-semibold';
@@ -225,6 +234,49 @@ const OrderEmailsAdmin = () => {
           })}
         </ul>
       )}
+
+      <section className="mt-8">
+        <h2 className="text-text-primary text-lg font-semibold tracking-tight">Shipment updates</h2>
+        <p className="text-text-muted mt-0.5 mb-3 max-w-2xl text-sm">
+          Emails to wine partners as their inbound shipment departs, arrives, reaches our warehouse and goes into stock.
+          They are sent at the moment the shipment changes, so none wait here.
+        </p>
+        {!data ? (
+          <p className="text-text-muted border-border-muted rounded-xl border border-dashed px-4 py-10 text-center text-sm">
+            Loading shipment updates…
+          </p>
+        ) : data.shipmentRows.length === 0 ? (
+          <p className="text-text-muted border-border-muted rounded-xl border border-dashed px-4 py-10 text-center text-sm">
+            No shipment updates sent yet.
+          </p>
+        ) : (
+          <ul className="border-border-muted divide-border-muted divide-y rounded-xl border">
+            {data.shipmentRows.map((row) => {
+              const status = row.mode === 'shadow' ? STATUS.shadowed! : STATUS.sent!;
+              return (
+                <li key={row.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-text-primary truncate text-sm font-semibold">
+                      <Link href={`/platform/admin/logistics/shipments/${row.shipmentId}`} className="hover:underline">
+                        Shipment {row.shipmentNumber}
+                      </Link>{' '}
+                      {MILESTONE[row.milestone ?? ''] ?? 'updated'}
+                    </p>
+                    <p className="text-text-muted truncate text-xs">
+                      For {row.partnerName ?? 'Wine partner'}
+                      {row.sentTo ? ` (${row.sentTo})` : ''} · Wine partner
+                    </p>
+                  </div>
+                  <span className="text-text-muted text-xs tabular-nums sm:w-28 sm:text-right">{when(row.sentAt)}</span>
+                  <span className={`w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${status.tint}`}>
+                    {status.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <Dialog open={confirm !== null} onOpenChange={(open) => !open && setConfirm(null)}>
         <DialogContent>
