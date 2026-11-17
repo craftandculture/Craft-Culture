@@ -91,7 +91,8 @@ const notifyPartnerOfShipment = async (shipmentId: string, milestone: ShipmentMi
             eq(logisticsShipmentItems.shipmentId, shipmentId),
             or(isNull(logisticsShipmentItems.overrideOwnerId), eq(logisticsShipmentItems.overrideOwnerId, partner.id)),
           ),
-        ),
+        )
+        .orderBy(asc(logisticsShipmentItems.sortOrder), asc(logisticsShipmentItems.createdAt)),
       db
         .select({ status: logisticsShipmentActivityLogs.newStatus, at: logisticsShipmentActivityLogs.createdAt })
         .from(logisticsShipmentActivityLogs)
@@ -123,6 +124,13 @@ const notifyPartnerOfShipment = async (shipmentId: string, milestone: ShipmentMi
           bottlesPerCase: item.bottlesPerCase ?? 12,
           bottleSizeMl: item.bottleSizeMl ?? 750,
         })),
+        originCity: shipment.originCity,
+        originCountry: shipment.originCountry,
+        destinationCity: shipment.destinationCity,
+        carrierName: shipment.carrierName,
+        awbNumber: shipment.awbNumber,
+        blNumber: shipment.blNumber,
+        containerNumber: shipment.containerNumber,
       },
       {
         shipmentUrl: `${serverConfig.appUrl}/platform/partner/logistics/${shipmentId}`,

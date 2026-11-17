@@ -15,11 +15,43 @@ export interface ShipmentEmailInput {
   landedAt: Date | null;
   receivedAt: Date | null;
   wines: { name: string; vintage: number | null; cases: number; bottlesPerCase: number; bottleSizeMl: number }[];
+  /** Where it comes from and goes to, and the references the partner can track it by */
+  originCity?: string | null;
+  originCountry?: string | null;
+  destinationCity?: string | null;
+  carrierName?: string | null;
+  awbNumber?: string | null;
+  blNumber?: string | null;
+  containerNumber?: string | null;
 }
 
 const WINES_SHOWN = 8;
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+
+/** A place as keyed, except one keyed in capitals ('FRANCE' reads 'France'; 'Ras al Khaimah' is left alone) */
+const place = (value: string | null | undefined) => {
+  const text = value?.trim();
+  if (!text) return null;
+  if (text !== text.toUpperCase()) return text;
+  return text.toLowerCase().replace(/(^|[\s-])\p{L}/gu, (c) => c.toUpperCase());
+};
+
+/** The shipment facts shown under Details, leaving out any not known */
+const shipmentRows = (shipment: ShipmentEmailInput, by: string) => {
+  const from = [place(shipment.originCity), place(shipment.originCountry)].filter(Boolean).join(', ');
+  const to = place(shipment.destinationCity);
+  const mode = by ? by.replace('by ', '').replace(/^./, (c) => c.toUpperCase()) : '';
+  const rows = [
+    { label: 'Shipment', value: shipment.shipmentNumber },
+    { label: 'Route', value: from && to ? `${from} to ${to}` : from || to || '' },
+    { label: 'Transport', value: [mode, shipment.carrierName?.trim()].filter(Boolean).join(' · ') },
+    { label: 'Air waybill', value: shipment.awbNumber?.trim() ?? '' },
+    { label: 'Bill of lading', value: shipment.blNumber?.trim() ?? '' },
+    { label: 'Container', value: shipment.containerNumber?.trim() ?? '' },
+  ];
+  return rows.filter((row) => row.value);
+};
 
 const how = (mode: string | null) =>
   mode === 'air' ? 'by air' : mode === 'road' ? 'by road' : mode?.startsWith('sea') ? 'by sea' : '';
@@ -53,6 +85,8 @@ const buildShipmentPartnerEmail = (
 ) => {
   const n = shipment.shipmentNumber;
   const cases = shipment.wines.reduce((sum, wine) => sum + wine.cases, 0);
+  // A wine in two pack sizes is two lines but one wine
+  const wineCount = new Set(shipment.wines.map((wine) => `${wine.name.trim().toLowerCase()}|${wine.vintage ?? ''}`)).size;
   const bottles = shipment.wines.reduce((sum, wine) => sum + wine.cases * wine.bottlesPerCase, 0);
   const eta = shipment.eta && shipment.eta.getTime() > now.getTime() ? formatGulfDate(shipment.eta, 'long') : null;
   const by = how(shipment.transportMode);
@@ -88,9 +122,9 @@ const buildShipmentPartnerEmail = (
       subject: `Shipment ${n} is in stock`,
       eyebrow: 'Stock received',
       headline: 'Your wine is in stock',
-      body: `${plural(shipment.wines.length, 'wine', 'wines')} from shipment ${n}, ${plural(cases, 'case', 'cases')} in all, ${
-        shipment.wines.length === 1 ? 'has' : 'have'
-      } been checked in and racked in our bonded warehouse and ${shipment.wines.length === 1 ? 'is' : 'are'} now available in your stock.`,
+      body: `${plural(wineCount, 'wine', 'wines')} from shipment ${n}, ${plural(cases, 'case', 'cases')} in all, ${
+        wineCount === 1 ? 'has' : 'have'
+      } been checked in and racked in our bonded warehouse and ${wineCount === 1 ? 'is' : 'are'} now available in your stock.`,
       ctaLabel: 'View your stock',
       ctaUrl: links.stockUrl,
     },
@@ -126,7 +160,7 @@ const buildShipmentPartnerEmail = (
       secondary: [] as { label: string; url: string }[],
       steps,
       winesTitle: shipment.wines.length
-        ? [{ title: `On this shipment · ${plural(shipment.wines.length, 'wine', 'wines')} · ${plural(bottles, 'bottle', 'bottles')}` }]
+        ? [{ title: `On this shipment · ${plural(wineCount, 'wine', 'wines')} · ${plural(bottles, 'bottle', 'bottles')}` }]
         : [],
       wines: shown.map((wine) => ({
         name: wine.vintage ? `${wine.vintage} ${wine.name}` : wine.name,
@@ -134,9 +168,13 @@ const buildShipmentPartnerEmail = (
         quantity: plural(wine.cases, 'case', 'cases'),
       })),
       winesMore: rest.length
-        ? [{ text: `And ${plural(rest.length, 'more wine', 'more wines')}, ${plural(restCases, 'case', 'cases')}. The full list is on the shipment.` }]
+        ? [
+            {
+              text: `Plus ${plural(rest.length, 'further line', 'further lines')} (${plural(restCases, 'case', 'cases')}) not shown here. The full list is on the shipment.`,
+            },
+          ]
         : [],
-      rows: [] as { label: string; value: string }[],
+      rows: shipmentRows(shipment, by),
     },
   };
 };
