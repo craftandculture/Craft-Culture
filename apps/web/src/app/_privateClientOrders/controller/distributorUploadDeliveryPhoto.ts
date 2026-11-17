@@ -23,6 +23,8 @@ import {
 import { putPrivateFile } from '@/lib/blob/privateFiles';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import isCellarMemberPartner from '../data/isCellarMemberPartner';
+
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB (keeps under Vercel body limit after base64)
 
 const uploadDeliveryPhotoSchema = z.object({
@@ -127,10 +129,12 @@ const distributorUploadDeliveryPhoto = distributorProcedure
 
     // Notify partner
     if (order.partnerId) {
-      const partnerMembersList = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.partnerId));
+      const partnerMembersList = (await isCellarMemberPartner(order.partnerId))
+        ? []
+        : await db
+            .select({ userId: partnerMembers.userId })
+            .from(partnerMembers)
+            .where(eq(partnerMembers.partnerId, order.partnerId));
 
       const orderRef = order.orderNumber ?? orderId;
 

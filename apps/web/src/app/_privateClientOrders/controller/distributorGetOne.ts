@@ -133,6 +133,17 @@ const distributorGetOne = distributorProcedure
             }
         : null,
       distributor,
+      /*
+        The client already owns the wine: the order's totals are what is
+        charged over it, and the wine's value is shown beside them so the
+        distributor can see the whole chain. Null on an ordinary sale.
+      */
+      ownedGoodsValueUsd:
+        orderResult.order.orderKind === 'owner_delivery'
+          ? Math.round(
+              items.reduce((sum, item) => sum + (Number(item.totalUsd) || 0), 0) * 100,
+            ) / 100
+          : null,
       // Without the partner's own prices, which would show C&C's margin
       items: distributorItemView(items, orderResult.order),
       activityLogs: activityLogs.map((row) =>

@@ -24,6 +24,7 @@ import adminPreviewZohoSalesOrder from './controller/adminPreviewZohoSalesOrder'
 import adminRecordManualInvoice from './controller/adminRecordManualInvoice';
 import adminRemoveItem from './controller/adminRemoveItem';
 import adminResetItemInvoicing from './controller/adminResetItemInvoicing';
+import adminSetClientOwnsWine from './controller/adminSetClientOwnsWine';
 import adminSetDistributorSku from './controller/adminSetDistributorSku';
 import adminSetOrderEmailMode from './controller/adminSetOrderEmailMode';
 import adminSetPartnerPaidDate from './controller/adminSetPartnerPaidDate';
@@ -142,6 +143,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminBulkAssignDistributor,
   adminBulkUpdateStockStatus,
   adminMatchStockLwins,
+  adminSetClientOwnsWine,
   adminSetPricing,
   adminUpdateItem,
   adminUpdateNotes,

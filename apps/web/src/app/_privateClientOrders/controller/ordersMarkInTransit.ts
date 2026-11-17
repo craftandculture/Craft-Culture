@@ -11,6 +11,7 @@ import {
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import isCellarMemberPartner from '../data/isCellarMemberPartner';
 import checkStockReadiness from '../utils/checkStockReadiness';
 import distributorOrderView from '../utils/distributorOrderView';
 
@@ -96,10 +97,12 @@ const ordersMarkInTransit = distributorProcedure
 
     // Notify partner
     if (order.partnerId) {
-      const partnerMembersList = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.partnerId));
+      const partnerMembersList = (await isCellarMemberPartner(order.partnerId))
+        ? []
+        : await db
+            .select({ userId: partnerMembers.userId })
+            .from(partnerMembers)
+            .where(eq(partnerMembers.partnerId, order.partnerId));
 
       for (const member of partnerMembersList) {
         await createNotification({

@@ -1,8 +1,14 @@
 import db from '@/database/client';
 import type { PCOPricingVariables } from '@/lib/pricing/types';
 
+import getCellarMemberPCOVariables from './getCellarMemberPCOVariables';
+
 /**
  * Get partner-level pricing overrides if they exist and are within the effective date range
+ *
+ * A Private Cellar member's pricing is their cellar rate card (their own, or
+ * the house tariff), never a row in the bespoke table: the Rates section of
+ * their cellar is the one place it is set.
  *
  * @param partnerId - The partner UUID to look up
  * @returns The partner's pricing variables or null if none exist / not in date range
@@ -10,6 +16,10 @@ import type { PCOPricingVariables } from '@/lib/pricing/types';
 const getPartnerPricingOverrides = async (
   partnerId: string,
 ): Promise<Partial<PCOPricingVariables> | null> => {
+  const member = await getCellarMemberPCOVariables(partnerId);
+
+  if (member) return member.variables;
+
   const override = await db.query.partnerPricingOverrides.findFirst({
     where: { partnerId },
   });

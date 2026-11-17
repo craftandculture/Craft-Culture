@@ -90,8 +90,11 @@ const PartnerBespokePricingTable = () => {
   });
 
   // Get partners that don't already have overrides
+  // Members are listed from their cellar rates, so they are never added here
   const availablePartners =
-    partners?.filter((p) => !overrides?.some((o) => o.partnerId === p.id)) ?? [];
+    partners?.filter(
+      (p) => p.type !== 'private_collector' && !overrides?.some((o) => o.partnerId === p.id),
+    ) ?? [];
 
   const handleAddNew = async () => {
     if (!newForm.partnerId) {
@@ -333,6 +336,7 @@ const PartnerBespokePricingTable = () => {
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Partner</th>
                 <th className="px-3 py-2 text-right font-medium">C&C %</th>
+                <th className="px-3 py-2 text-right font-medium">Handling $/btl</th>
                 <th className="px-3 py-2 text-right font-medium">Duty %</th>
                 <th className="px-3 py-2 text-right font-medium">Transfer %</th>
                 <th className="px-3 py-2 text-right font-medium">Dist %</th>
@@ -349,10 +353,20 @@ const PartnerBespokePricingTable = () => {
                       <Badge colorRole="muted" size="sm">
                         {override.partnerType}
                       </Badge>
+                      {override.source !== 'manual' && (
+                        <Badge colorRole="muted" size="sm">
+                          {override.source === 'cellar_bespoke' ? 'Own cellar rates' : 'House tariff'}
+                        </Badge>
+                      )}
                     </div>
                   </td>
                   <td className="px-3 py-2 text-right">
                     {formatValue(override.ccMarginPercent, '%')}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {override.handlingPerBottleUsd != null
+                      ? `$${override.handlingPerBottleUsd.toFixed(2)}`
+                      : '—'}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {formatValue(override.importDutyPercent, '%')}
@@ -367,14 +381,20 @@ const PartnerBespokePricingTable = () => {
                     {formatValue(override.vatPercent, '%')}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(override.partnerId, override.partnerName)}
-                      isDisabled={isDeleting}
-                    >
-                      <Icon icon={IconTrash} size="sm" className="text-text-muted hover:text-status-error" />
-                    </Button>
+                    {override.source === 'manual' ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(override.partnerId, override.partnerName)}
+                        isDisabled={isDeleting}
+                      >
+                        <Icon icon={IconTrash} size="sm" className="text-text-muted hover:text-status-error" />
+                      </Button>
+                    ) : (
+                      <span className="text-text-muted text-xs" title="Set in the Rates section of the member's cellar">
+                        Cellar rates
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -11,6 +11,7 @@ import {
 } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import isCellarMemberPartner from '../data/isCellarMemberPartner';
 import paymentDateFromDay from '../utils/paymentDateFromDay';
 
 const adminMarkPartnerPaidSchema = z.object({
@@ -106,10 +107,12 @@ const adminMarkPartnerPaid = adminProcedure
 
     // Notify partner members
     if (order.partnerId) {
-      const partnerMembersList = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.partnerId));
+      const partnerMembersList = (await isCellarMemberPartner(order.partnerId))
+        ? []
+        : await db
+            .select({ userId: partnerMembers.userId })
+            .from(partnerMembers)
+            .where(eq(partnerMembers.partnerId, order.partnerId));
 
       const orderRef = order.orderNumber ?? orderId;
 

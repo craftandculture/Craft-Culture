@@ -1468,6 +1468,36 @@ const DistributorOrderDetailPage = () => {
               <Typography variant="labelSm" colorRole="muted" className="mb-2">
                 Summary ({currency})
               </Typography>
+              {/*
+                The client already owns this wine. Its value is on the sales
+                order for the import and tax documents, but the client is
+                charged only what sits on top of it, and the distributor pays
+                C&C only C&C's part.
+              */}
+              {order.ownedGoodsValueUsd != null && order.ownedGoodsValueUsd > 0 && (
+                <div className="mb-3 flex flex-col gap-1 rounded-lg border border-border-muted p-2 text-sm tabular-nums">
+                  <span className="w-fit rounded-full bg-fill-muted px-2 py-0.5 text-[11px] font-semibold">
+                    Client owns the wine
+                  </span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-text-muted">Wine value (on the sales order, not charged)</span>
+                    <span>{formatPrice(getAmount(order.ownedGoodsValueUsd), currency)}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 font-semibold">
+                    <span>Charge the client</span>
+                    <span>{formatPrice(getAmount(order.totalUsd), currency)}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 font-semibold">
+                    <span>Pay back to C&amp;C</span>
+                    <span>
+                      {formatPrice(
+                        getAmount((Number(order.subtotalUsd) || 0) + (Number(order.logisticsUsd) || 0)),
+                        currency,
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="space-y-1 text-sm tabular-nums">
                 <div className="flex justify-between gap-2">
                   <span className="text-text-muted">Your cost: landed duty free (incl. transfer)</span>

@@ -44,6 +44,7 @@ import StockManagementSection from '@/app/_privateClientOrders/components/StockM
 import SubscriptionBoxPicker from '@/app/_privateClientOrders/components/SubscriptionBoxPicker';
 import ZohoSalesOrderButton from '@/app/_privateClientOrders/components/ZohoSalesOrderButton';
 import describePcoLine from '@/app/_privateClientOrders/utils/describePcoLine';
+import pcoLineBottles from '@/app/_privateClientOrders/utils/pcoLineBottles';
 import { pcoListNeighbours } from '@/app/_privateClientOrders/utils/pcoListOrder';
 import isRoutinePcoTransition from '@/app/_privateClientOrders/utils/pcoStatusTransitions';
 import summarisePcoQuantities from '@/app/_privateClientOrders/utils/summarisePcoQuantities';
@@ -62,6 +63,7 @@ import SelectContent from '@/app/_ui/components/Select/SelectContent';
 import SelectItem from '@/app/_ui/components/Select/SelectItem';
 import SelectTrigger from '@/app/_ui/components/Select/SelectTrigger';
 import SelectValue from '@/app/_ui/components/Select/SelectValue';
+import Switch from '@/app/_ui/components/Switch/Switch';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import usePrintPcoLabels from '@/app/_wms/hooks/usePrintPcoLabels';
 import PrinterProvider from '@/app/_wms/providers/PrinterProvider';
@@ -264,6 +266,20 @@ const AdminPrivateOrderDetailPage = () => {
         void refetch();
       },
       onError: (error) => toast.error(error.message || 'Failed to save rates'),
+    }),
+  );
+
+  const { mutate: setClientOwnsWine, isPending: isSettingOwnership } = useMutation(
+    api.privateClientOrders.adminSetClientOwnsWine.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          result.orderKind === 'owner_delivery'
+            ? 'Marked as the client owning the wine. Totals recalculated.'
+            : 'Marked as a sale. Totals recalculated.',
+        );
+        void refetch();
+      },
+      onError: (error) => toast.error(error.message || 'Failed to change who owns the wine'),
     }),
   );
 
@@ -1541,6 +1557,43 @@ const AdminPrivateOrderDetailPage = () => {
                   </button>
                 )}
               </div>
+              {/*
+                Who owns the wine. When the client does (a Private Cellar
+                member's own wine, or wine a client already bought), the lines
+                keep the wine's price so the value chain is built off it, and
+                the client is charged only what sits on top of it.
+              */}
+              {(order.orderKind === 'client_sale' || order.orderKind === 'owner_delivery') && (
+                <div className="mb-2 flex items-start justify-between gap-3 rounded-lg border border-border-muted p-2">
+                  <div className="flex min-w-0 flex-col">
+                    <label htmlFor="pco-client-owns-wine" className="text-xs font-medium">
+                      Client owns the wine
+                    </label>
+                    <span className="text-text-muted text-[11px]">
+                      {order.cellarRelease
+                        ? "A Private Cellar delivery: the member's own wine."
+                        : order.orderKind === 'owner_delivery'
+                          ? 'The client pays only duty, margins, handling and VAT, not the wine.'
+                          : 'Off: the client pays for the wine as well.'}
+                    </span>
+                  </div>
+                  <Switch
+                    id="pco-client-owns-wine"
+                    checked={order.orderKind === 'owner_delivery'}
+                    disabled={isSettingOwnership || !!order.cellarRelease}
+                    onCheckedChange={(checked) =>
+                      setClientOwnsWine({ orderId, clientOwnsWine: checked })
+                    }
+                  />
+                </div>
+              )}
+              {order.cellarRateSource && !rateDraft && (
+                <p className="text-text-muted mb-2 text-[11px]">
+                  Priced at this member&rsquo;s{' '}
+                  {order.cellarRateSource === 'bespoke' ? 'own Private Cellar rates' : 'house tariff'}
+                  {' '}from the Rates section of their cellar.
+                </p>
+              )}
               {order.hasPricingOverride && !rateDraft && (
                 <p className="mb-2 w-fit rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
                   Custom rates for this order
@@ -1636,18 +1689,29 @@ const AdminPrivateOrderDetailPage = () => {
                   (sum, item) => sum + Number(item.pricePerCaseUsd) * item.quantity,
                   0
                 ) ?? 0;
-                const landedDutyFree = Number(order.subtotalUsd) || 0;
-                const ccMargin = landedDutyFree - lineItemsTotal;
+                /*
+                  When the client owns the wine the order stores only what is
+                  charged over it, so the wine's value is added back here to
+                  show the whole chain, then taken off again at the foot.
+                */
+                const ownedGoods =
+                  order.orderKind === 'owner_delivery' && lineItemsTotal > 0 ? lineItemsTotal : 0;
+                const landedDutyFree = (Number(order.subtotalUsd) || 0) + ownedGoods;
+                const handlingPerBottle = order.pricingVariables?.handlingPerBottleUsd ?? 0;
+                const bottlesPriced =
+                  order.items?.reduce((sum, item) => sum + pcoLineBottles(item), 0) ?? 0;
+                const handlingUsd = lineItemsTotal > 0 ? handlingPerBottle * bottlesPriced : 0;
+                const ccMargin = landedDutyFree - lineItemsTotal - handlingUsd;
                 const dutyUsd = Number(order.dutyUsd) || 0;
                 const transferUsd = Number(order.logisticsUsd) || 0;
                 const dutyPaidLanded = landedDutyFree + dutyUsd + transferUsd;
                 const vatUsd = Number(order.vatUsd) || 0;
-                const totalUsd = Number(order.totalUsd) || 0;
+                const totalUsd = (Number(order.totalUsd) || 0) + ownedGoods;
                 const afterDistributor = totalUsd - vatUsd;
                 const distributorMargin = afterDistributor - dutyPaidLanded;
 
                 // Derive actual percentages from values
-                const ccMarginPct = lineItemsTotal > 0 ? ((1 - lineItemsTotal / landedDutyFree) * 100) : 2.5;
+                const ccMarginPct = lineItemsTotal > 0 ? ((1 - lineItemsTotal / (landedDutyFree - handlingUsd)) * 100) : 2.5;
                 const dutyPct = landedDutyFree > 0 ? ((dutyUsd / landedDutyFree) * 100) : 20;
                 const transferPct = landedDutyFree > 0 ? ((transferUsd / landedDutyFree) * 100) : 0.75;
                 const distPct = afterDistributor > 0 ? ((1 - dutyPaidLanded / afterDistributor) * 100) : 7.5;
@@ -1682,6 +1746,14 @@ const AdminPrivateOrderDetailPage = () => {
                       <span className="pl-2">+ C&C Margin ({fmtPct(shownMarginPct)}%)</span>
                       <span>{formatCurrencyValue(getAmount(ccMargin), currency)}</span>
                     </div>
+                    {handlingUsd > 0 && (
+                      <div className="flex justify-between text-text-muted">
+                        <span className="pl-2">
+                          + Handling ({formatCurrencyValue(getAmount(handlingPerBottle), currency)} × {bottlesPriced} btl)
+                        </span>
+                        <span>{formatCurrencyValue(getAmount(handlingUsd), currency)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between font-medium">
                       <span>= Landed Duty Free</span>
                       <span>{formatCurrencyValue(getAmount(landedDutyFree), currency)}</span>
@@ -1723,9 +1795,30 @@ const AdminPrivateOrderDetailPage = () => {
                       <span>{formatCurrencyValue(getAmount(vatUsd), currency)}</span>
                     </div>
                     <div className="flex justify-between font-semibold text-sm pt-1">
-                      <span>Total</span>
+                      <span>{ownedGoods > 0 ? 'Value chain total' : 'Total'}</span>
                       <span>{formatCurrencyValue(getAmount(totalUsd), currency)}</span>
                     </div>
+                    {ownedGoods > 0 && (
+                      <>
+                        <div className="flex justify-between text-text-muted">
+                          <span className="pl-2">− Wine the client owns</span>
+                          <span>{formatCurrencyValue(getAmount(ownedGoods), currency)}</span>
+                        </div>
+                        <div className="flex justify-between font-semibold text-sm pt-1">
+                          <span>Client pays</span>
+                          <span>{formatCurrencyValue(getAmount(totalUsd - ownedGoods), currency)}</span>
+                        </div>
+                        <div className="flex justify-between text-text-muted">
+                          <span>Distributor pays C&C</span>
+                          <span>
+                            {formatCurrencyValue(
+                              getAmount((Number(order.subtotalUsd) || 0) + transferUsd),
+                              currency,
+                            )}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 );
               })()}

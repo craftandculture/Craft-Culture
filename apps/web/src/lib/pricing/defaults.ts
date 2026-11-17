@@ -20,6 +20,7 @@ export const DEFAULT_PCO_VARIABLES: PCOPricingVariables = {
   transferCostPercent: 0.75,
   distributorMarginPercent: 7.5,
   vatPercent: 5,
+  handlingPerBottleUsd: 0,
 };
 
 export const DEFAULT_B2B_VARIABLES: B2BPricingVariables = {

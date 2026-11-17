@@ -47,23 +47,40 @@ const round2 = (value: number) => {
  * Calculate PCO pricing with full admin breakdown
  *
  * Formula:
- * 1. Landed Duty Free = Supplier Price ÷ (1 - C&C Margin%)
+ * 1. Landed Duty Free = Supplier Price ÷ (1 - C&C Margin%) + Handling × bottles
  * 2. Import Duty = LDF × Duty%
  * 3. Transfer Cost = LDF × Transfer%
  * 4. Duty Paid Landed = LDF + Duty + Transfer
  * 5. After Distributor = DPL ÷ (1 - Distributor Margin%)
  * 6. VAT = After Distributor × VAT%
  * 7. Final = After Distributor + VAT
+ *
+ * The handling fee is a fixed dollar amount per bottle (the house tariff's
+ * $2.50), so it needs the number of bottles being priced. It goes in after
+ * C&C's margin, so no margin is taken on it, and before the in-bond price, so
+ * duty and everything after it are taken on it like the wine.
+ *
+ * @param supplierPriceUsd - The wine's price for the bottles priced
+ * @param variables - The margins, rates and handling fee
+ * @param exchangeRates - For the AED figure
+ * @param isBespoke - Recorded on the result
+ * @param bottles - How many bottles the supplier price is for (handling only)
  */
 const calculatePCOAdmin = (
   supplierPriceUsd: number,
   variables: PCOPricingVariables = DEFAULT_PCO_VARIABLES,
   exchangeRates: ExchangeRates = DEFAULT_EXCHANGE_RATES,
   isBespoke: boolean = false,
+  bottles: number = 0,
 ): PCOPricingResultAdmin => {
   // Step 1: Apply C&C Margin
-  const landedDutyFree = applyMargin(supplierPriceUsd, variables.ccMarginPercent);
-  const ccMarginAmount = landedDutyFree - supplierPriceUsd;
+  const afterCcMargin = applyMargin(supplierPriceUsd, variables.ccMarginPercent);
+  const ccMarginAmount = afterCcMargin - supplierPriceUsd;
+
+  // Step 1b: The fixed handling fee, before the in-bond price
+  const handlingPerBottleUsd = variables.handlingPerBottleUsd ?? 0;
+  const handlingAmount = handlingPerBottleUsd * Math.max(0, bottles);
+  const landedDutyFree = afterCcMargin + handlingAmount;
 
   // Step 2 & 3: Import Duty and Transfer Cost (on Landed Duty Free)
   const importDutyAmount = landedDutyFree * (variables.importDutyPercent / 100);
@@ -87,6 +104,8 @@ const calculatePCOAdmin = (
     supplierPriceUsd: round2(supplierPriceUsd),
     ccMarginPercent: variables.ccMarginPercent,
     ccMarginAmount: round2(ccMarginAmount),
+    handlingPerBottleUsd,
+    handlingAmount: round2(handlingAmount),
     landedDutyFree: round2(landedDutyFree),
     importDutyPercent: variables.importDutyPercent,
     importDutyAmount: round2(importDutyAmount),
@@ -110,22 +129,29 @@ const calculatePCOAdmin = (
  *
  * For an order where the client's price is agreed first (Filippo's PCO-99):
  * type what the client pays, incl. VAT, and the line price follows. Each step
- * of `calculatePCOAdmin` is a fixed multiplier, so the inverse is exact before
- * rounding.
+ * of `calculatePCOAdmin` is a fixed multiplier or a fixed amount, so the
+ * inverse is exact before rounding.
  *
  * @example
  *   supplierPriceForFinalPrice(1000, DEFAULT_PCO_VARIABLES); // ≈ 711.33
+ *
+ * @param finalPriceUsd - What the client pays, incl. VAT
+ * @param variables - The margins, rates and handling fee
+ * @param bottles - How many bottles the price is for (handling only)
  */
 const supplierPriceForFinalPrice = (
   finalPriceUsd: number,
   variables: PCOPricingVariables = DEFAULT_PCO_VARIABLES,
+  bottles: number = 0,
 ) => {
   const afterDistributor = finalPriceUsd / (1 + variables.vatPercent / 100);
   const dutyPaidLanded = afterDistributor * (1 - variables.distributorMarginPercent / 100);
   const landedDutyFree =
     dutyPaidLanded / (1 + variables.importDutyPercent / 100 + variables.transferCostPercent / 100);
+  const afterCcMargin =
+    landedDutyFree - (variables.handlingPerBottleUsd ?? 0) * Math.max(0, bottles);
 
-  return landedDutyFree * (1 - variables.ccMarginPercent / 100);
+  return afterCcMargin * (1 - variables.ccMarginPercent / 100);
 };
 
 /**
@@ -142,8 +168,9 @@ const calculatePCOPartner = (
   supplierPriceUsd: number,
   variables: PCOPricingVariables = DEFAULT_PCO_VARIABLES,
   exchangeRates: ExchangeRates = DEFAULT_EXCHANGE_RATES,
+  bottles: number = 0,
 ): PCOPricingResultPartner => {
-  const adminResult = calculatePCOAdmin(supplierPriceUsd, variables, exchangeRates);
+  const adminResult = calculatePCOAdmin(supplierPriceUsd, variables, exchangeRates, false, bottles);
 
   return {
     subtotalUsd: adminResult.landedDutyFree,

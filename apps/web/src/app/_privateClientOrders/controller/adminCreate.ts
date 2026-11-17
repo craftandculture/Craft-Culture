@@ -2,7 +2,6 @@ import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import resolveOrderPartnerId from '@/app/_partners/data/resolveOrderPartnerId';
 import { orderDetailsFromClient } from '@/app/_privateClientContacts/utils/clientIdentity';
 import findOrCreateClientForPartner from '@/app/_privateClientContacts/utils/findOrCreateClientForPartner';
 import db from '@/database/client';
@@ -35,7 +34,12 @@ const adminCreate = adminProcedure
   )
   .mutation(async ({ input }) => {
     // A Private Cellar member's order is raised under C&C, not under the member
-    const partnerId = await resolveOrderPartnerId(input.partnerId);
+    /*
+      The partner chosen. A Private Cellar member is the partner on their own
+      orders: it is their wine and their value chain, priced off their cellar
+      rate card. (They were raised under C&C until 17 Nov 2026.)
+    */
+    const partnerId = input.partnerId;
 
     /*
       Keep the client, exactly as the partner-side create does. An admin can

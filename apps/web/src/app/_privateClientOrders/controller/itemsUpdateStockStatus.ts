@@ -11,6 +11,8 @@ import {
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import isCellarMemberPartner from '../data/isCellarMemberPartner';
+
 const stockStatusLabels: Record<string, string> = {
   pending: 'Pending',
   confirmed: 'Confirmed',
@@ -136,10 +138,12 @@ const itemsUpdateStockStatus = wmsOperatorProcedure
 
       // Notify partner
       if (item.order.partnerId) {
-        const partnerMembersList = await db
-          .select({ userId: partnerMembers.userId })
-          .from(partnerMembers)
-          .where(eq(partnerMembers.partnerId, item.order.partnerId));
+        const partnerMembersList = (await isCellarMemberPartner(item.order.partnerId))
+          ? []
+          : await db
+              .select({ userId: partnerMembers.userId })
+              .from(partnerMembers)
+              .where(eq(partnerMembers.partnerId, item.order.partnerId));
 
         for (const member of partnerMembersList) {
           await createNotification({

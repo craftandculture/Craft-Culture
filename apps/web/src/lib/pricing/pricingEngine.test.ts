@@ -505,4 +505,33 @@ describe('pricingEngine', () => {
       expect(Math.abs(calculatePCOAdmin(supplier, variables).finalPriceAed - 5000)).toBeLessThan(0.05);
     });
   });
+  describe('handling per bottle', () => {
+    const variables = { ...DEFAULT_PCO_VARIABLES, handlingPerBottleUsd: 2.5 };
+
+    it('adds the fixed amount after the C&C margin, before the in-bond price', () => {
+      // A 6-bottle case at $600: 600 ÷ 0.975 = 615.38, + 6 × $2.50 = 630.38
+      const result = calculatePCOAdmin(600, variables, DEFAULT_EXCHANGE_RATES, false, 6);
+
+      expect(result.ccMarginAmount).toBe(15.38);
+      expect(result.handlingAmount).toBe(15);
+      expect(result.landedDutyFree).toBe(630.38);
+      // Duty is taken on the in-bond price, handling included
+      expect(result.importDutyAmount).toBe(126.08);
+    });
+
+    it('changes nothing when no bottles are given', () => {
+      const withFee = calculatePCOAdmin(600, variables);
+      const without = calculatePCOAdmin(600, DEFAULT_PCO_VARIABLES);
+
+      expect(withFee.finalPriceUsd).toBe(without.finalPriceUsd);
+      expect(withFee.handlingAmount).toBe(0);
+    });
+
+    it('inverts exactly with the same bottles', () => {
+      const final = calculatePCOAdmin(600, variables, DEFAULT_EXCHANGE_RATES, false, 6).finalPriceUsd;
+      const supplier = supplierPriceForFinalPrice(final, variables, 6);
+
+      expect(Math.abs(supplier - 600)).toBeLessThan(0.01);
+    });
+  });
 });

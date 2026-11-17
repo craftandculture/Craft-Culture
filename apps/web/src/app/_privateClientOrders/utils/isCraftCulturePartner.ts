@@ -8,7 +8,7 @@ import getCraftCulturePartnerId from './getCraftCulturePartnerId';
  * alone decided that before, so any account renamed "Craft & Culture" would
  * have skipped it too. Now it must be the one record that is C&C: the oldest
  * active partner of that name, which is the same record new Private Cellar
- * orders are raised under (see `resolveOrderPartnerId`), and never a private
+ * orders were raised under before 17 Nov 2026, and never a private
  * collector's record. Anything else goes through verification as normal.
  *
  * @param partnerId - The order's partner

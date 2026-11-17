@@ -50,7 +50,7 @@ const getOrderPCOVariables = cache(
     const partnerOverride = partnerId ? await getPartnerPricingOverrides(partnerId) : null;
 
     if (orderOverride || partnerOverride) {
-      const pick = (field: keyof PCOPricingVariables) =>
+      const pick = (field: Exclude<keyof PCOPricingVariables, 'handlingPerBottleUsd'>) =>
         orderOverride?.[field] ?? partnerOverride?.[field] ?? globalVariables[field];
 
       return {
@@ -59,6 +59,10 @@ const getOrderPCOVariables = cache(
         transferCostPercent: pick('transferCostPercent'),
         distributorMarginPercent: pick('distributorMarginPercent'),
         vatPercent: pick('vatPercent'),
+        handlingPerBottleUsd:
+          partnerOverride?.handlingPerBottleUsd ??
+          globalVariables.handlingPerBottleUsd ??
+          0,
       };
     }
 

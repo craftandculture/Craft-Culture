@@ -8,6 +8,7 @@ import { privateClientOrderActivityLogs, privateClientOrders } from '@/database/
 import isCraftCulturePartner from './isCraftCulturePartner';
 import notifyDistributorOfOrderUpdate from './notifyDistributorOfOrderUpdate';
 import notifyPartnerOfOrderUpdate from './notifyPartnerOfOrderUpdate';
+import isCellarMemberPartner from '../data/isCellarMemberPartner';
 
 /**
  * Assign a distributor to a private client order
@@ -88,7 +89,11 @@ const assignDistributorToOrder = async (
   // C&C acts as its own partner on some orders, so there's no external partner
   // to run the client-verification handshake. Detect that so we can skip the
   // awaiting_partner_verification step and record C&C as the verifier.
-  const partnerIsCraftCulture = await isCraftCulturePartner(order.partnerId);
+  // A Private Cellar member is the partner on their own orders, but C&C runs
+  // those orders for them, so C&C verifies on their behalf as well.
+  const partnerIsCraftCulture =
+    (await isCraftCulturePartner(order.partnerId)) ||
+    (await isCellarMemberPartner(order.partnerId));
 
   // Determine the new status based on whether verification is still needed
   const previousStatus = order.status;

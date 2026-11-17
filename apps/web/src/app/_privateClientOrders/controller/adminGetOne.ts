@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import getCellarMemberPCOVariables from '@/app/_pricing/data/getCellarMemberPCOVariables';
 import {
   getOrderPCOVariables,
   getOrderPricingOverrides,
@@ -153,9 +154,18 @@ const adminGetOne = wmsOperatorProcedure
         ).catch(() => null)
       : null;
 
+    /* A Private Cellar member's order is priced off their cellar rate card */
+    const memberRates = orderResult.order.partnerId
+      ? await getCellarMemberPCOVariables(orderResult.order.partnerId).catch(
+          () => null,
+        )
+      : null;
+
     return {
       ...orderResult.order,
       cellarRelease: cellarRelease ?? null,
+      /* 'house' or 'bespoke' when the rates come from a cellar rate card */
+      cellarRateSource: memberRates?.source ?? null,
       ccMarginPercent: pricingVariables?.ccMarginPercent ?? null,
       /* Every rate the order is priced at, and whether they are its own */
       pricingVariables,

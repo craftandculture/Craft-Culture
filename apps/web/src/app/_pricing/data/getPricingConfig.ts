@@ -40,6 +40,8 @@ const getPCOVariables = cache(async (): Promise<PCOPricingVariables> => {
     distributorMarginPercent:
       config.distributor_margin_percent ?? DEFAULT_PCO_VARIABLES.distributorMarginPercent,
     vatPercent: config.vat_percent ?? DEFAULT_PCO_VARIABLES.vatPercent,
+    handlingPerBottleUsd:
+      config.handling_per_bottle_usd ?? DEFAULT_PCO_VARIABLES.handlingPerBottleUsd,
   };
 });
 

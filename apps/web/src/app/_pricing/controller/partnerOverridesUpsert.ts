@@ -1,6 +1,8 @@
+import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import isCellarMemberPartner from '@/app/_privateClientOrders/data/isCellarMemberPartner';
 import db from '@/database/client';
 import { partnerPricingOverrides } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
@@ -24,6 +26,18 @@ const inputSchema = z.object({
  * Uses partnerId as the unique key for upsert.
  */
 const partnerOverridesUpsert = adminProcedure.input(inputSchema).mutation(async ({ input, ctx }) => {
+  /*
+    A Private Cellar member is priced at their cellar rate card, set in the
+    Rates section of their cellar. A row here would never be read.
+  */
+  if (await isCellarMemberPartner(input.partnerId)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message:
+        "Private Cellar members are priced at their cellar rates. Change them in the Rates section of the member's cellar.",
+    });
+  }
+
   const { partnerId, ...values } = input;
   const { user } = ctx;
 

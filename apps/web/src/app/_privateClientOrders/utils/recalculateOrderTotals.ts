@@ -8,6 +8,8 @@ import { DEFAULT_EXCHANGE_RATES } from '@/lib/pricing/defaults';
 import { calculatePCOAdmin } from '@/lib/pricing/pricingEngine';
 import logger from '@/utils/logger';
 
+import pcoLineBottles from './pcoLineBottles';
+
 /**
  * Recalculate order totals using the PCO pricing engine
  *
@@ -31,7 +33,7 @@ const recalculateOrderTotals = async (orderId: string) => {
     // Get the order to resolve partnerId
     const order = await db.query.privateClientOrders.findFirst({
       where: { id: orderId },
-      columns: { partnerId: true, totalUsd: true },
+      columns: { partnerId: true, totalUsd: true, orderKind: true },
     });
 
     // Get global PCO variables (from database or defaults)
@@ -56,6 +58,7 @@ const recalculateOrderTotals = async (orderId: string) => {
         id: privateClientOrderItems.id,
         quantity: privateClientOrderItems.quantity,
         pricePerCaseUsd: privateClientOrderItems.pricePerCaseUsd,
+        caseConfig: privateClientOrderItems.caseConfig,
       })
       .from(privateClientOrderItems)
       .where(eq(privateClientOrderItems.orderId, orderId));
@@ -67,12 +70,21 @@ const recalculateOrderTotals = async (orderId: string) => {
     let totalVat = 0;
     let totalFinal = 0;
     let totalCases = 0;
+    let totalGoods = 0;
 
     for (const item of items) {
       // Calculate for total line item value (pricePerCase * quantity)
       const lineTotal = item.pricePerCaseUsd * item.quantity;
-      const result = calculatePCOAdmin(lineTotal, effectiveVariables, DEFAULT_EXCHANGE_RATES);
+      const bottles = pcoLineBottles(item);
+      const result = calculatePCOAdmin(
+        lineTotal,
+        effectiveVariables,
+        DEFAULT_EXCHANGE_RATES,
+        false,
+        bottles,
+      );
 
+      totalGoods += lineTotal;
       totalLandedDutyFree += result.landedDutyFree;
       totalDuty += result.importDutyAmount;
       totalTransfer += result.transferCostAmount;
@@ -101,6 +113,47 @@ const recalculateOrderTotals = async (orderId: string) => {
 
     // Round all values
     const round2 = (v: number) => Math.round(v * 100) / 100;
+
+    /*
+      The client already owns the wine (a Private Cellar member's own wine, or
+      an order switched to "client owns the wine"). The lines carry the wine's
+      commercial invoice price so duty, margins and VAT are built off it, but
+      the client is never charged for the wine itself. So the order holds what
+      is charged over it: the client total less the wine, and as the subtotal
+      what the distributor pays C&C over the wine (C&C's margin and handling).
+      The wine's value is the sum of the lines, read from them wherever shown.
+
+      A legacy release order has zero-priced lines and carries the member's
+      quote as its totals; with no wine value to build from, that is kept.
+    */
+    if (order?.orderKind === 'owner_delivery') {
+      if (totalGoods <= 0) {
+        await db
+          .update(privateClientOrders)
+          .set({ itemCount, caseCount: totalCases, updatedAt: new Date() })
+          .where(eq(privateClientOrders.id, orderId));
+        return;
+      }
+
+      const clientTotal = Math.max(0, totalFinal - totalGoods);
+
+      await db
+        .update(privateClientOrders)
+        .set({
+          itemCount,
+          caseCount: totalCases,
+          subtotalUsd: round2(Math.max(0, totalLandedDutyFree - totalGoods)),
+          dutyUsd: round2(totalDuty),
+          vatUsd: round2(totalVat),
+          logisticsUsd: round2(totalTransfer),
+          totalUsd: round2(clientTotal),
+          totalAed: round2(clientTotal * DEFAULT_EXCHANGE_RATES.usdToAed),
+          usdToAedRate: DEFAULT_EXCHANGE_RATES.usdToAed,
+          updatedAt: new Date(),
+        })
+        .where(eq(privateClientOrders.id, orderId));
+      return;
+    }
 
     // Update the order
     // Note: "subtotalUsd" stores Landed Duty Free (after C&C margin)

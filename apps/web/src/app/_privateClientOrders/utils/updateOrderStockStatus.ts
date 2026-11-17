@@ -21,6 +21,7 @@ const stockStatusLabels: Record<string, string> = {
   delivered: 'Delivered',
 };
 
+import isCellarMemberPartner from '../data/isCellarMemberPartner';
 import type stockStatusUpdateSchema from '../schemas/stockStatusUpdateSchema';
 
 /**
@@ -142,10 +143,12 @@ const updateOrderStockStatus = async (
 
   // Notify partner
   if (order.partnerId) {
-    const partnerMembersList = await db
-      .select({ userId: partnerMembers.userId })
-      .from(partnerMembers)
-      .where(eq(partnerMembers.partnerId, order.partnerId));
+    const partnerMembersList = (await isCellarMemberPartner(order.partnerId))
+      ? []
+      : await db
+          .select({ userId: partnerMembers.userId })
+          .from(partnerMembers)
+          .where(eq(partnerMembers.partnerId, order.partnerId));
 
     for (const member of partnerMembersList) {
       await createNotification({

@@ -12,6 +12,7 @@ import {
 } from '@/database/schema';
 import { distributorProcedure } from '@/lib/trpc/procedures';
 
+import isCellarMemberPartner from '../data/isCellarMemberPartner';
 import assertDistributorSku from '../utils/assertDistributorSku';
 import distributorOrderView from '../utils/distributorOrderView';
 
@@ -84,10 +85,12 @@ const ordersDistributorPaymentVerification = distributorProcedure
 
     // Notify partner that payment is verified and delivery scheduling can begin
     if (order.partnerId) {
-      const partnerMembersList = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.partnerId));
+      const partnerMembersList = (await isCellarMemberPartner(order.partnerId))
+        ? []
+        : await db
+            .select({ userId: partnerMembers.userId })
+            .from(partnerMembers)
+            .where(eq(partnerMembers.partnerId, order.partnerId));
 
       for (const member of partnerMembersList) {
         await createNotification({

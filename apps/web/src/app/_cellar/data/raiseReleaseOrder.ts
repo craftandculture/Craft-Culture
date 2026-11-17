@@ -1,8 +1,9 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
-import resolveOrderPartnerId from '@/app/_partners/data/resolveOrderPartnerId';
 import generateOrderNumber from '@/app/_privateClientOrders/utils/generateOrderNumber';
+import recalculateOrderTotals from '@/app/_privateClientOrders/utils/recalculateOrderTotals';
+import { lwinPakKeyOf } from '@/app/_wms/utils/lwinPakKey';
 import db from '@/database/client';
 import {
   type CellarReleaseRequest,
@@ -13,6 +14,7 @@ import {
   privateClientOrders,
 } from '@/database/schema';
 
+import getMemberValuePerBottle from './getMemberValuePerBottle';
 import getReleaseDeliveryDetails from './getReleaseDeliveryDetails';
 import buildReleaseDeliveryNotes from '../utils/buildReleaseDeliveryNotes';
 import releaseLineQuantity from '../utils/releaseLineQuantity';
@@ -73,7 +75,18 @@ const raiseReleaseOrder = async ({
     .limit(1);
 
   const memberName = owner?.businessName ?? 'Private Cellar member';
-  const orderPartnerId = await resolveOrderPartnerId(request.partnerId);
+
+  /*
+    The wine's commercial invoice value, the same figure the release quote
+    takes duty on. The member owes nothing for it, but the order's duty,
+    margins and VAT are all built off the wine's price, so each line carries
+    it and the order charges only what sits on top.
+  */
+  const valueByLwin = await getMemberValuePerBottle(
+    request.partnerId,
+    [...new Set(lines.map((line) => line.lwin18))],
+    { sharedFallback: true },
+  );
 
   /*
     The person at the door. For a gift that is the recipient, and the
@@ -167,8 +180,11 @@ const raiseReleaseOrder = async ({
         orderNumber: generateOrderNumber(nextSequence),
         // The member's own wine coming to them: delivered, not sold
         orderKind: 'owner_delivery',
-        // Raised under C&C; whose wine it is stays on the release request
-        partnerId: orderPartnerId,
+        /*
+          Raised under the member. It is their wine and their value chain
+          (their cellar rate card), not C&C's, so the order is theirs.
+        */
+        partnerId: request.partnerId,
         clientName: isGift
           ? `${details?.recipientName} (gift from ${memberName})`
           : memberName,
@@ -213,7 +229,16 @@ const raiseReleaseOrder = async ({
     }
 
     await tx.insert(privateClientOrderItems).values(
-      lines.map((line) => ({
+      lines.map((line) => {
+        const pack = releaseLineQuantity({
+          bottles: line.bottles,
+          caseConfig: line.caseConfig,
+        });
+        const perBottle = valueByLwin.get(lwinPakKeyOf(line.lwin18)) ?? 0;
+        const pricePerCaseUsd =
+          Math.round(perBottle * pack.caseConfig * 100) / 100;
+
+        return {
         orderId: created.id,
         productName: line.productName,
         vintage: line.vintage ? String(line.vintage) : null,
@@ -224,20 +249,22 @@ const raiseReleaseOrder = async ({
           as cases and anything else as single bottles (a pack of one), so
           one bottle of a 6-pack is not raised as a case of six.
         */
-        ...releaseLineQuantity({
-          bottles: line.bottles,
-          caseConfig: line.caseConfig,
-        }),
+        ...pack,
         /*
           The parcel the member chose, carried through so the pick is against
           their bottles rather than any bottles of the same wine.
         */
         sourceStockId: line.stockId,
         sourceLotNumber: line.lotNumber,
-        // Nothing is being sold: the member already owns the wine.
-        pricePerCaseUsd: 0,
-        totalUsd: 0,
-      })),
+        /*
+          The wine's value, so the value chain is built off it. The member
+          already owns the wine: the order is an owner delivery, so the
+          client total leaves this out.
+        */
+        pricePerCaseUsd,
+        totalUsd: Math.round(pricePerCaseUsd * pack.quantity * 100) / 100,
+        };
+      }),
     );
 
     await tx
@@ -247,6 +274,24 @@ const raiseReleaseOrder = async ({
 
     return created;
   });
+
+  /*
+    Priced off the member's rate card once the lines exist. Only for an order
+    raised here: one the team raised by hand is left as it was.
+  */
+  if (!salesOrder?.linkedOrderId) {
+    /*
+      The order is already raised and the request confirmed, so a pricing
+      failure must not fail the member's Accept. The order keeps the quote's
+      figures until someone reprices it.
+    */
+    await recalculateOrderTotals(order.id).catch((error: unknown) => {
+      console.error('Release order raised but not repriced', {
+        orderId: order.id,
+        error,
+      });
+    });
+  }
 
   return { ...order, bottles };
 };

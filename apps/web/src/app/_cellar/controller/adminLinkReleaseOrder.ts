@@ -3,7 +3,7 @@ import { and, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
 import wineKey from '@/app/_distribution/utils/wineKey';
-import resolveOrderPartnerId from '@/app/_partners/data/resolveOrderPartnerId';
+import getCraftCulturePartnerId from '@/app/_privateClientOrders/utils/getCraftCulturePartnerId';
 import db from '@/database/client';
 import {
   cellarReleaseRequestItems,
@@ -96,12 +96,15 @@ const adminLinkReleaseOrder = staffAdminProcedure
         The PCO number is typed by hand, and linking marks the order as the
         member's own delivery, which lets their bottles go out on it. So the
         order must be raised for this member (under their own record, or under
-        C&C as member orders are), and carry only this release's wines.
+        C&C as member orders were before 17 Nov 2026), and carry only this
+        release's wines.
       */
-      const allowedPartnerIds = new Set([
-        request.partnerId,
-        await resolveOrderPartnerId(request.partnerId),
-      ]);
+      const craftCultureId = await getCraftCulturePartnerId();
+      const allowedPartnerIds = new Set(
+        [request.partnerId, craftCultureId].filter(
+          (id): id is string => !!id,
+        ),
+      );
 
       if (!order.partnerId || !allowedPartnerIds.has(order.partnerId)) {
         throw new TRPCError({

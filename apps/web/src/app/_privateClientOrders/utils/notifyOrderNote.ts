@@ -10,6 +10,7 @@ import logger from '@/utils/logger';
 import { PCO_NOTE_EMAIL_TEMPLATE_ID } from '../constants';
 import maskEmail from './maskEmail';
 import getPartnerUsers from '../data/getPartnerUsers';
+import isCellarMemberPartner from '../data/isCellarMemberPartner';
 
 
 export type NoteParty = 'partner' | 'distributor' | 'admin';
@@ -56,7 +57,13 @@ const notifyOrderNote = async (params: NotifyOrderNoteParams) => {
         .where(eq(users.role, 'admin')),
     });
   }
-  if (!params.internal && params.authorParty !== 'partner' && params.partnerId) {
+  if (
+    !params.internal &&
+    params.authorParty !== 'partner' &&
+    params.partnerId &&
+    // A Private Cellar member is not sent trade notes on their own order
+    !(await isCellarMemberPartner(params.partnerId))
+  ) {
     audiences.push({
       party: 'partner',
       url: `${serverConfig.appUrl}/platform/private-orders/${params.orderId}`,

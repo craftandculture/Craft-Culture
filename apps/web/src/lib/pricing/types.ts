@@ -75,6 +75,12 @@ export interface PCOPricingVariables {
   transferCostPercent: number; // default 0.75%
   distributorMarginPercent: number; // default 7.5%
   vatPercent: number; // default 5%
+  /**
+   * A fixed amount per bottle added before the in-bond price, after C&C's
+   * margin (the house tariff's handling fee). Optional so every older caller
+   * prices exactly as before.
+   */
+  handlingPerBottleUsd?: number; // default $0
 }
 
 // ============================================================================
@@ -111,6 +117,9 @@ export interface PCOPricingResultAdmin {
   // Step 1: C&C Margin
   ccMarginPercent: number;
   ccMarginAmount: number;
+  /** The fixed handling amount, per bottle and for the bottles priced */
+  handlingPerBottleUsd: number;
+  handlingAmount: number;
   landedDutyFree: number;
 
   // Step 2 & 3: Duty and Transfer (on LDF)
@@ -242,6 +251,7 @@ export const PCO_CONFIG_KEYS = [
   'transfer_cost_percent',
   'distributor_margin_percent',
   'vat_percent',
+  'handling_per_bottle_usd',
 ] as const;
 
 export const B2B_CONFIG_KEYS = ['cc_margin_percent'] as const;

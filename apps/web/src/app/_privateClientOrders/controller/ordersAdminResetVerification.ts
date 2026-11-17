@@ -7,6 +7,8 @@ import db from '@/database/client';
 import { partnerMembers, privateClientOrderActivityLogs, privateClientOrders } from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import isCellarMemberPartner from '../data/isCellarMemberPartner';
+
 const adminResetSchema = z.object({
   orderId: z.string().uuid(),
   targetStatus: z.enum([
@@ -120,10 +122,12 @@ const ordersAdminResetVerification = adminProcedure
     // Send notifications based on target status
     if (targetStatus === 'awaiting_partner_verification' && order.partnerId) {
       // Notify partner to verify again
-      const partnerMembersList = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.partnerId));
+      const partnerMembersList = (await isCellarMemberPartner(order.partnerId))
+        ? []
+        : await db
+            .select({ userId: partnerMembers.userId })
+            .from(partnerMembers)
+            .where(eq(partnerMembers.partnerId, order.partnerId));
 
       for (const member of partnerMembersList) {
         await createNotification({
@@ -158,10 +162,12 @@ const ordersAdminResetVerification = adminProcedure
       }
     } else if (targetStatus === 'awaiting_client_payment' && order.partnerId) {
       // Notify partner that verification was bypassed
-      const partnerMembersList = await db
-        .select({ userId: partnerMembers.userId })
-        .from(partnerMembers)
-        .where(eq(partnerMembers.partnerId, order.partnerId));
+      const partnerMembersList = (await isCellarMemberPartner(order.partnerId))
+        ? []
+        : await db
+            .select({ userId: partnerMembers.userId })
+            .from(partnerMembers)
+            .where(eq(partnerMembers.partnerId, order.partnerId));
 
       for (const member of partnerMembersList) {
         await createNotification({

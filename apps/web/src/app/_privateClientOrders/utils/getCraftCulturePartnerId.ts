@@ -8,7 +8,7 @@ import { partners } from '@/database/schema';
  *
  * The oldest active partner named "Craft & Culture" that is not a private
  * collector's record: the same record new Private Cellar orders are raised
- * under (see `resolveOrderPartnerId`).
+ * under before 17 Nov 2026.
  *
  * @returns C&C's partner id, or null when there is none
  */

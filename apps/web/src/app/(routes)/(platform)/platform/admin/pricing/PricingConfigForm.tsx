@@ -68,6 +68,13 @@ const PCO_VARIABLES: PricingVariable[] = [
     step: 'any',
   },
   {
+    key: 'handling_per_bottle_usd',
+    label: 'Handling per Bottle',
+    description: 'Fixed amount per bottle added after the C&C margin, before the in-bond price',
+    suffix: 'USD',
+    step: 'any',
+  },
+  {
     key: 'import_duty_percent',
     label: 'Import Duty',
     description: 'UAE import duty applied to landed duty free',
@@ -233,6 +240,7 @@ const PricingConfigForm = () => {
           transfer_cost_percent: pricingConfig.pco.transferCostPercent,
           distributor_margin_percent: pricingConfig.pco.distributorMarginPercent,
           vat_percent: pricingConfig.pco.vatPercent,
+          handling_per_bottle_usd: pricingConfig.pco.handlingPerBottleUsd ?? 0,
         };
       }
 
@@ -419,7 +427,8 @@ const PricingConfigForm = () => {
           <div className="overflow-x-auto">
             <div className="min-w-max space-y-1 font-mono text-xs sm:text-sm">
               <Typography variant="bodySm" className="whitespace-nowrap">
-                1. LDF = Supplier Price ÷ (1 - {currentValues.cc_margin_percent ?? 2.5}%)
+                1. LDF = Supplier Price ÷ (1 - {currentValues.cc_margin_percent ?? 2.5}%) + $
+                {currentValues.handling_per_bottle_usd ?? 0} per bottle
               </Typography>
               <Typography variant="bodySm" className="whitespace-nowrap">
                 2. Import Duty = LDF × {currentValues.import_duty_percent ?? 20}%

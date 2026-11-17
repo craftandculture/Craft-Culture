@@ -138,9 +138,12 @@ const planZohoSalesOrder = async (orderId: string) => {
   const variables = globalVariables
     ? await getOrderPCOVariables(orderId, order.partnerId ?? null, globalVariables)
     : null;
-  const landedDutyFree = (linePrice: number) =>
+  const landedDutyFree = (linePrice: number, bottles: number) =>
     variables
-      ? Math.round(calculatePCOAdmin(linePrice, variables, DEFAULT_EXCHANGE_RATES).landedDutyFree * 100) / 100
+      ? Math.round(
+          calculatePCOAdmin(linePrice, variables, DEFAULT_EXCHANGE_RATES, false, bottles)
+            .landedDutyFree * 100,
+        ) / 100
       : null;
 
   const blockers: string[] = [];
@@ -281,7 +284,8 @@ const planZohoSalesOrder = async (orderId: string) => {
         stays the base, never the catalogue's figure of the day; C&C's margin
         goes on top of it, as on the order's own Landed Duty Free.
       */
-      ratePerCase: item.pricePerCaseUsd > 0 ? (landedDutyFree(item.pricePerCaseUsd) ?? 0) : 0,
+      // One case's handling fee goes on with it: the pack's bottles
+      ratePerCase: item.pricePerCaseUsd > 0 ? (landedDutyFree(item.pricePerCaseUsd, pack) ?? 0) : 0,
       tradeRatePerCase: trade
         ? Math.round(trade.perBottle * pack * 100) / 100
         : null,
