@@ -47,7 +47,7 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
     total === 0
       ? 'No sales recorded.'
       : [
-          `*${total} bottles* · *${money(totalValue, sales.currency)}*`,
+          `*${total} bottles* · *${worth(total, totalValue)}*`,
           `Consigned: ${day.consigned.bottles} bottles · ${worth(day.consigned.bottles, day.consigned.value)}`,
           `Bought: ${day.bought.bottles} bottles · ${worth(day.bought.bottles, day.bought.value)}`,
         ].join('\n');
@@ -168,10 +168,10 @@ const formatDailySalesForSlack = (sales: DailyOutletSales) => {
 
   if (day.lines.length > 0) {
     if (consignedLines.length > 0) {
-      blocks.push(...listBlocks(`Consigned · ${consignedLines.length} wines`, consignedLines));
+      blocks.push(...listBlocks(`Consigned · ${consignedLines.length} wine${consignedLines.length === 1 ? '' : 's'}`, consignedLines));
     }
     if (boughtLines.length > 0) {
-      blocks.push(...listBlocks(`Bought · ${boughtLines.length} wines`, boughtLines));
+      blocks.push(...listBlocks(`Bought · ${boughtLines.length} wine${boughtLines.length === 1 ? '' : 's'}`, boughtLines));
     }
     blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `By owner — ${byOwner}` }] });
     blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `By type — ${byType}` }] });

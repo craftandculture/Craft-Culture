@@ -7,6 +7,7 @@ import getDailyOutletSales from './getDailyOutletSales';
 import rememberLandedCosts from './rememberLandedCosts';
 import writeSnapshot from './writeSnapshot';
 import formatDailySalesForSlack from '../utils/formatDailySalesForSlack';
+import mergeSalesWindows from '../utils/mergeSalesWindows';
 
 /** The #cd-sales incoming webhook */
 const DAILY_SALES_WEBHOOK_ENV = 'SLACK_CD_SALES_WEBHOOK_URL';
@@ -62,7 +63,15 @@ const sendDailySalesReport = async () => {
         logger.error(`Daily sales: pulling ${outlet.name} failed`, { error: note });
       }
 
-      const sales = await getDailyOutletSales(outlet.id, 1);
+      /*
+        A count pulled by hand during the day splits it into two windows, so
+        the report adds up every window since the last one it covered. A week
+        of windows also gives the currency, which a window with no valued sale
+        does not.
+      */
+      const week = await getDailyOutletSales(outlet.id, 8);
+      const merged = mergeSalesWindows(week.days);
+      const sales = { ...week, days: merged ? [merged] : [] };
       const message = formatDailySalesForSlack(sales);
 
       await postSlackWebhook(DAILY_SALES_WEBHOOK_ENV, message);
