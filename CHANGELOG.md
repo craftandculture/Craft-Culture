@@ -1,3 +1,9 @@
+## [2.1.152](https://github.com/craftandculture/Craft-Culture/compare/v2.1.151...v2.1.152) (2026-11-17)
+
+### Features
+
+* handling per bottle can be overridden on a single PCO, next to its other rates ([e03ec04](https://github.com/craftandculture/Craft-Culture/commit/e03ec04264afc892a22148b52bd057295d25983c))
+
 ## [2.1.151](https://github.com/craftandculture/Craft-Culture/compare/v2.1.150...v2.1.151) (2026-11-17)
 
 ### Features
