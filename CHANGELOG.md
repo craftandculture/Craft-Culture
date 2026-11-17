@@ -1,3 +1,9 @@
+## [2.1.151](https://github.com/craftandculture/Craft-Culture/compare/v2.1.150...v2.1.151) (2026-11-17)
+
+### Features
+
+* Private Cellar orders are raised under the member and priced at their cellar rates ([cfb8425](https://github.com/craftandculture/Craft-Culture/commit/cfb8425c79e83e875ee54cef30d178a8785ee631))
+
 ## [2.1.150](https://github.com/craftandculture/Craft-Culture/compare/v2.1.149...v2.1.150) (2026-11-17)
 
 ### Bug Fixes
