@@ -1,3 +1,9 @@
+## [2.1.153](https://github.com/craftandculture/Craft-Culture/compare/v2.1.152...v2.1.153) (2026-11-17)
+
+### Features
+
+* the team's release email lists each wine once with its sizes together, names a shared producer and vintage in the heading, and links by request number ([4a9bef0](https://github.com/craftandculture/Craft-Culture/commit/4a9bef0ea86e8e29f4549bfba6098d13131380a3))
+
 ## [2.1.152](https://github.com/craftandculture/Craft-Culture/compare/v2.1.151...v2.1.152) (2026-11-17)
 
 ### Features
