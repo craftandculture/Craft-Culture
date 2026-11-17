@@ -1733,6 +1733,8 @@ export const orderPricingOverrides = pgTable(
     transferCostPercent: doublePrecision('transfer_cost_percent'), // default 0.75%
     distributorMarginPercent: doublePrecision('distributor_margin_percent'), // default 7.5%
     vatPercent: doublePrecision('vat_percent'), // default 5%
+    /** Handling per bottle for this order alone; null takes the partner's or the standard rate */
+    handlingPerBottleUsd: doublePrecision('handling_per_bottle_usd'),
     // Audit
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
     createdBy: uuid('created_by').references(() => users.id, {

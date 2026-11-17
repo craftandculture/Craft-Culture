@@ -254,7 +254,12 @@ const AdminPrivateOrderDetailPage = () => {
 
   /* This order's own rates while they are being overridden, as typed */
   const [rateDraft, setRateDraft] = useState<Record<
-    'ccMarginPercent' | 'importDutyPercent' | 'transferCostPercent' | 'distributorMarginPercent' | 'vatPercent',
+    | 'ccMarginPercent'
+    | 'importDutyPercent'
+    | 'transferCostPercent'
+    | 'distributorMarginPercent'
+    | 'vatPercent'
+    | 'handlingPerBottleUsd',
     string
   > | null>(null);
 
@@ -1548,6 +1553,7 @@ const AdminPrivateOrderDetailPage = () => {
                         transferCostPercent: String(v?.transferCostPercent ?? ''),
                         distributorMarginPercent: String(v?.distributorMarginPercent ?? ''),
                         vatPercent: String(v?.vatPercent ?? ''),
+                        handlingPerBottleUsd: String(v?.handlingPerBottleUsd ?? 0),
                       });
                     }}
                     className="text-text-muted hover:text-text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
@@ -1630,6 +1636,24 @@ const AdminPrivateOrderDetailPage = () => {
                       </span>
                     </label>
                   ))}
+                  {/* Handling is dollars per bottle, not a percentage; 0 waives it */}
+                  <label className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-text-muted">Handling</span>
+                    <span className="flex items-center gap-1">
+                      $
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        value={rateDraft.handlingPerBottleUsd}
+                        onChange={(event) =>
+                          setRateDraft({ ...rateDraft, handlingPerBottleUsd: event.target.value })
+                        }
+                        className="h-7 w-24 text-right text-xs"
+                      />
+                      /btl
+                    </span>
+                  </label>
                   {order.zohoSalesOrderId && (
                     <p className="text-[11px] text-amber-700 dark:text-amber-300">
                       {order.zohoSalesOrderNumber ?? 'The Zoho order'} is already raised — update its prices in Zoho too.
@@ -1651,6 +1675,7 @@ const AdminPrivateOrderDetailPage = () => {
                           transferCostPercent: Number(rateDraft.transferCostPercent),
                           distributorMarginPercent: Number(rateDraft.distributorMarginPercent),
                           vatPercent: Number(rateDraft.vatPercent),
+                          handlingPerBottleUsd: Number(rateDraft.handlingPerBottleUsd),
                         })
                       }
                     >

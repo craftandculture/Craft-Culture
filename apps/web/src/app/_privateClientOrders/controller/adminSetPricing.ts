@@ -40,6 +40,8 @@ const adminSetPricing = adminProcedure
         transferCostPercent: percent,
         distributorMarginPercent: marginPercent,
         vatPercent: percent,
+        /** Dollars per bottle; 0 waives it */
+        handlingPerBottleUsd: z.number().min(0).max(1000),
       }),
       z.object({ mode: z.literal('standard'), orderId: z.string().uuid() }),
     ]),
@@ -91,7 +93,7 @@ const adminSetPricing = adminProcedure
       notes:
         input.mode === 'standard'
           ? 'Pricing put back on standard rates'
-          : `Pricing overridden: C&C ${input.ccMarginPercent}%, duty ${input.importDutyPercent}%, transfer ${input.transferCostPercent}%, distributor ${input.distributorMarginPercent}%, VAT ${input.vatPercent}%`,
+          : `Pricing overridden: C&C ${input.ccMarginPercent}%, duty ${input.importDutyPercent}%, transfer ${input.transferCostPercent}%, distributor ${input.distributorMarginPercent}%, VAT ${input.vatPercent}%, handling $${input.handlingPerBottleUsd}/btl`,
       metadata: {
         before: before
           ? {
@@ -100,6 +102,7 @@ const adminSetPricing = adminProcedure
               transferCostPercent: before.transferCostPercent,
               distributorMarginPercent: before.distributorMarginPercent,
               vatPercent: before.vatPercent,
+              handlingPerBottleUsd: before.handlingPerBottleUsd,
             }
           : null,
       },

@@ -60,6 +60,7 @@ const getOrderPCOVariables = cache(
         distributorMarginPercent: pick('distributorMarginPercent'),
         vatPercent: pick('vatPercent'),
         handlingPerBottleUsd:
+          orderOverride?.handlingPerBottleUsd ??
           partnerOverride?.handlingPerBottleUsd ??
           globalVariables.handlingPerBottleUsd ??
           0,

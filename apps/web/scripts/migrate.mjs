@@ -4544,6 +4544,16 @@ const runMigrations = async () => {
     await client.unsafe(`ALTER TABLE "product_colours" ENABLE ROW LEVEL SECURITY`);
     console.log('✅ Wine colours ready');
 
+    /*
+      Handling on one order (17 Nov 2026). The Override rates panel set the five
+      percentages but not handling, which always came from the partner's or the
+      standard rate ($2.50 a bottle), so it could not be waived or changed.
+    */
+    await client.unsafe(
+      `ALTER TABLE "order_pricing_overrides" ADD COLUMN IF NOT EXISTS "handling_per_bottle_usd" double precision`,
+    );
+    console.log('✅ Order handling override ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {
