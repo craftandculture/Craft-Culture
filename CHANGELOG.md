@@ -1,3 +1,9 @@
+## [2.1.150](https://github.com/craftandculture/Craft-Culture/compare/v2.1.149...v2.1.150) (2026-11-17)
+
+### Bug Fixes
+
+* **distribution:** the morning sales post covers the whole day, even when a count was pulled by hand during it ([17440aa](https://github.com/craftandculture/Craft-Culture/commit/17440aacd2fe64ce2747de40ade53a574107e378))
+
 ## [2.1.149](https://github.com/craftandculture/Craft-Culture/compare/v2.1.148...v2.1.149) (2026-11-16)
 
 ### Bug Fixes
