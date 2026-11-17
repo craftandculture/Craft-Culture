@@ -1,9 +1,11 @@
 import { and, asc, desc, eq, gte, isNotNull } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { partners, privateClientOrderActivityLogs } from '@/database/schema';
+import { partnerContacts, partners, privateClientOrderActivityLogs } from '@/database/schema';
 
 import getPartnerUsers from './getPartnerUsers';
+import contactDepartment from '../utils/contactDepartment';
+import type { OrderEmailDepartment } from '../utils/orderEmailDepartments';
 
 /** How far back a distributor's recent order work counts, for a new order */
 const RECENT_DAYS = 60;
@@ -27,16 +29,40 @@ const RECENT_PEOPLE = 3;
  * With nobody found, the account's owner. Anyone who has left the account
  * hears nothing more.
  *
+ * A distributor that lists Purchasing or Finance contacts (Partners > Contacts,
+ * by role) has each email sent to the team it is meant for, and only to them:
+ * City Drinks asked that client verification go to Purchasing and payment
+ * collection to Finance. A team with no contacts listed falls back to the above.
+ *
  * @param partnerId - The wine partner or distributor
  * @param orderId - The order
  * @param audience - Which side they are on
+ * @param departments - For a distributor, the teams the email is meant for
  * @returns Addresses with the name to greet
  */
 const getOrderEmailRecipients = async (
   partnerId: string,
   orderId: string,
   audience: 'partner' | 'distributor' = 'partner',
+  departments: OrderEmailDepartment[] = [],
 ) => {
+  if (audience === 'distributor' && departments.length) {
+    const contacts = await db
+      .select({ name: partnerContacts.name, email: partnerContacts.email, role: partnerContacts.role })
+      .from(partnerContacts)
+      .where(eq(partnerContacts.partnerId, partnerId));
+
+    const routed = new Map<string, { email: string; name: string }>();
+    for (const contact of contacts) {
+      const team = contactDepartment(contact.role);
+      const key = contact.email?.trim().toLowerCase();
+      if (!team || !departments.includes(team) || !key || routed.has(key)) continue;
+      routed.set(key, { email: contact.email.trim(), name: contact.name.trim() });
+    }
+
+    if (routed.size) return [...routed.values()];
+  }
+
   const since = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000);
   const actedBy = and(
     eq(privateClientOrderActivityLogs.partnerId, partnerId),

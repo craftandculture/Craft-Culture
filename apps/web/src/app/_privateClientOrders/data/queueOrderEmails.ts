@@ -9,6 +9,7 @@ import getOrderEmailRecipients from './getOrderEmailRecipients';
 import getOrderEmailSnapshot from './getOrderEmailSnapshot';
 import getCraftCulturePartnerId from '../utils/getCraftCulturePartnerId';
 import orderEmailCopy from '../utils/orderEmailCopy';
+import orderEmailDepartments from '../utils/orderEmailDepartments';
 import { isDigestUpdate, nextDigestAt } from '../utils/orderEmailDigest';
 import type { OrderEmailAudience, OrderEmailEvent, OrderStatus } from '../utils/orderEmailTypes';
 
@@ -128,9 +129,11 @@ const queueOrderEmails = async () => {
         if (!copy) continue;
 
         // The business address and the people who work this order, never the whole account
-        const recipientsKey = `${audience}:${partyId}:${log.orderId}`;
+        // A distributor's Purchasing and Finance teams each get the emails meant for them
+        const departments = audience === 'distributor' ? orderEmailDepartments(event) : [];
+        const recipientsKey = `${audience}:${partyId}:${log.orderId}:${departments.join('+')}`;
         if (!recipientsOf.has(recipientsKey)) {
-          recipientsOf.set(recipientsKey, await getOrderEmailRecipients(partyId, log.orderId, audience));
+          recipientsOf.set(recipientsKey, await getOrderEmailRecipients(partyId, log.orderId, audience, departments));
         }
 
         // Updates that ask nothing of a partner wait for their daily summary
