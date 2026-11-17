@@ -1,3 +1,9 @@
+## [2.1.156](https://github.com/craftandculture/Craft-Culture/compare/v2.1.155...v2.1.156) (2026-11-17)
+
+### Bug Fixes
+
+* Shipment emails to partners now count each wine once, list lines in document order and show the route, carrier and air waybill or bill of lading ([b0ab568](https://github.com/craftandculture/Craft-Culture/commit/b0ab568002e9b139d25f99b370f71a3cb4683f53))
+
 ## [2.1.155](https://github.com/craftandculture/Craft-Culture/compare/v2.1.154...v2.1.155) (2026-11-17)
 
 ### Features
