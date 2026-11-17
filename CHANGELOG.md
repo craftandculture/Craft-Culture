@@ -1,3 +1,13 @@
+## [2.1.155](https://github.com/craftandculture/Craft-Culture/compare/v2.1.154...v2.1.155) (2026-11-17)
+
+### Features
+
+* **partners:** add order email contacts to the distributor edit screen ([e5c8a29](https://github.com/craftandculture/Craft-Culture/commit/e5c8a2984358f346215619b6e6583575c090945b))
+
+### Bug Fixes
+
+* **order-emails:** send distributor emails to the team they are meant for ([40568ad](https://github.com/craftandculture/Craft-Culture/commit/40568ad145e53ba33356c0634e0b32766a5484e7))
+
 ## [2.1.154](https://github.com/craftandculture/Craft-Culture/compare/v2.1.153...v2.1.154) (2026-11-17)
 
 ### Features
