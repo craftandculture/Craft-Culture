@@ -1,3 +1,9 @@
+## [2.1.154](https://github.com/craftandculture/Craft-Culture/compare/v2.1.153...v2.1.154) (2026-11-17)
+
+### Features
+
+* **order-emails:** list the shipment updates sent to wine partners ([59656b4](https://github.com/craftandculture/Craft-Culture/commit/59656b49036a65d60a704334f03ab0b3267dcf64))
+
 ## [2.1.153](https://github.com/craftandculture/Craft-Culture/compare/v2.1.152...v2.1.153) (2026-11-17)
 
 ### Features
