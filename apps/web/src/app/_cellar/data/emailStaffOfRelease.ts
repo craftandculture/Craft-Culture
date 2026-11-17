@@ -88,7 +88,7 @@ const emailStaffOfRelease = async ({
       .where(eq(cellarReleaseRequestItems.requestId, requestId));
 
     const bottles = items.reduce((sum, item) => sum + (item.bottles ?? 0), 0);
-    const link = `${serverConfig.appUrl}/platform/admin/cellar-releases?open=${requestId}`;
+    const link = `${serverConfig.appUrl}/platform/admin/cellar-releases?open=${request.number}`;
 
     const { subject, lines } = formatReleaseStaffEmail({
       event,

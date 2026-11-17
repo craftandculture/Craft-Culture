@@ -22,11 +22,22 @@ describe('formatReleaseStaffEmail', () => {
     expect(formatReleaseStaffEmail(sunil).subject).toBe('New release: REL-2026-0013 · Sunil Kaushal · 32 bottles to price');
   });
 
-  it('writes each wine as quantity, name, vintage and size, without the name repeating them', () => {
+  it('gives each wine one line with its sizes together, and the shared producer and vintage once', () => {
     const { lines } = formatReleaseStaffEmail(sunil);
-    expect(lines).toContain('4 × 6 · Hospice de Beaune - Beaune 1er cru Cuvée M. Drouhin · 2023 · 75cl');
-    expect(lines).toContain('5 btl · Hospice de Beaune - Savigny les Beaune 1er Cru Cuvée Arthur Girard · 2023 · 75cl');
-    expect(lines).toContain('1 × 3 · Hospice de Beaune - Savigny les Beaune 1er Cru Cuvée Arthur Girard · 2023 · 150cl');
+    expect(lines).toContain('WINES · Hospice de Beaune 2023 · 2 wines · 32 bottles');
+    expect(lines).toContain('Beaune 1er cru Cuvée M. Drouhin — 4 × 6 (75cl)');
+    expect(lines).toContain('Savigny les Beaune 1er Cru Cuvée Arthur Girard — 5 btl (75cl), 1 × 3 (150cl)');
+  });
+
+  it('keeps the full name and vintage when the wines differ', () => {
+    const { lines } = formatReleaseStaffEmail({
+      ...sunil,
+      items: [
+        { name: 'Tignanello, Toscana', vintage: 2015, bottleSize: '75cl', caseConfig: 6, bottles: 6 },
+        { name: 'Antoine Jobard, Meursault', vintage: 2020, bottleSize: '75cl', caseConfig: 6, bottles: 6 },
+      ],
+    });
+    expect(lines).toContain('Tignanello, Toscana 2015 — 1 × 6 (75cl)');
   });
 
   it('gives the delivery its own block', () => {

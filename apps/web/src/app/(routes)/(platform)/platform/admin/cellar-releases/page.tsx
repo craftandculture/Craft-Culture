@@ -147,8 +147,12 @@ const CellarReleasesPage = () => {
   /* A linked request has no row click to load its figures; without this it quotes $0. */
   useEffect(() => {
     if (!seedFromLink || !openId || !data) return;
-    const request = data.requests.find((row) => row.id === openId);
+    /* The team's emails link by request number (?open=REL-2026-0013), older links by id */
+    const request = data.requests.find(
+      (row) => row.id === openId || row.requestNumber.toLowerCase() === openId.toLowerCase(),
+    );
     if (!request) return;
+    setOpenId(request.id);
     setSeedFromLink(false);
     setIsOverridden(false);
     setForm(formFromRequest(request));

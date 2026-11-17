@@ -71,7 +71,6 @@ const quantityOf = (bottles: number, caseConfig: number | null) =>
  */
 const formatReleaseStaffEmail = (input: ReleaseStaffEmailInput) => {
   const bottles = input.items.reduce((sum, item) => sum + (item.bottles ?? 0), 0);
-  const wines = `${input.items.length} ${input.items.length === 1 ? 'wine' : 'wines'} · ${bottles} bottles`;
 
   const [subject, action] =
     input.event === 'accepted'
@@ -98,21 +97,39 @@ const formatReleaseStaffEmail = (input: ReleaseStaffEmailInput) => {
     ...(input.gift ? [`Gift${input.gift.recipientName ? ` for ${input.gift.recipientName}` : ''} · ID check on delivery`] : []),
   ];
 
+  /*
+    One line per wine, its sizes side by side. When every wine shares a
+    producer and vintage ("Hospice de Beaune 2023 - …"), that goes in the
+    heading once instead of opening every line.
+  */
+  const named = input.items.map((item) => ({ ...item, clean: cleanName(item.name, item.vintage) }));
+  const prefixes = new Set(named.map((item) => item.clean.split(' - ')[0]));
+  const vintages = new Set(named.map((item) => item.vintage ?? 'NV'));
+  const shared =
+    named.length > 1 && prefixes.size === 1 && vintages.size === 1 && named.every((item) => item.clean.includes(' - '))
+      ? `${[...prefixes][0]} ${[...vintages][0]}`
+      : null;
+
+  const groups = new Map<string, { label: string; parts: string[] }>();
+  for (const item of named) {
+    const label = shared
+      ? item.clean.split(' - ').slice(1).join(' - ')
+      : `${item.clean} ${item.vintage ?? 'NV'}`;
+    const size = sizeOf(item.bottleSize);
+    const part = `${quantityOf(item.bottles ?? 0, item.caseConfig)}${size ? ` (${size})` : ''}`;
+    const group = groups.get(label) ?? { label, parts: [] };
+    group.parts.push(part);
+    groups.set(label, group);
+  }
+
+  const wines = `${groups.size} ${groups.size === 1 ? 'wine' : 'wines'} · ${bottles} bottles`;
+
   const lines = [
     `${input.requestNumber} · ${input.member}`,
     action,
     '',
-    `WINES · ${wines}`,
-    ...input.items.map((item) =>
-      [
-        quantityOf(item.bottles ?? 0, item.caseConfig),
-        cleanName(item.name, item.vintage),
-        item.vintage ?? 'NV',
-        sizeOf(item.bottleSize),
-      ]
-        .filter(Boolean)
-        .join(' · '),
-    ),
+    shared ? `WINES · ${shared} · ${wines}` : `WINES · ${wines}`,
+    ...[...groups.values()].map((group) => `${group.label} — ${group.parts.join(', ')}`),
     '',
     'DELIVERY',
     ...delivery,
