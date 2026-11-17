@@ -45,6 +45,8 @@ import DialogTrigger from '@/app/_ui/components/Dialog/DialogTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
+import PartnerContactsSection from '../wine-partners/PartnerContactsSection';
+
 type PartnerType = 'distributor';
 type PartnerStatus = 'active' | 'inactive' | 'suspended';
 
@@ -1264,6 +1266,13 @@ const DistributorsPage = () => {
                     </Typography>
                   </div>
                 </div>
+
+                <PartnerContactsSection
+                  partnerId={editingPartner.id}
+                  title="Order email contacts"
+                  description="Set the role to Purchasing or Finance. Client verification and new orders go to Purchasing; payment collection and confirmation go to Finance. With none listed, order emails go to the business email and the people working the order."
+                  rolePlaceholder="Role (Purchasing or Finance)"
+                />
 
                 {/* Payment Configuration */}
                 <div className="space-y-4 border-t border-border-muted pt-4">

@@ -28,12 +28,23 @@ import useTRPC from '@/lib/trpc/browser';
 
 export interface PartnerContactsSectionProps {
   partnerId: string;
+  /** Heading above the list */
+  title?: string;
+  /** What the role decides, shown under the heading */
+  description?: string;
+  /** Example role for the add form */
+  rolePlaceholder?: string;
 }
 
 /**
  * Section for managing partner contacts (for RFQ notifications)
  */
-const PartnerContactsSection = ({ partnerId }: PartnerContactsSectionProps) => {
+const PartnerContactsSection = ({
+  partnerId,
+  title = 'Contacts for RFQ Notifications',
+  description,
+  rolePlaceholder = 'Role (e.g., Buyer)',
+}: PartnerContactsSectionProps) => {
   const api = useTRPC();
   const [isAddingContact, setIsAddingContact] = useState(false);
   const [newContact, setNewContact] = useState({
@@ -98,7 +109,7 @@ const PartnerContactsSection = ({ partnerId }: PartnerContactsSectionProps) => {
       <div className="flex items-center justify-between">
         <Typography variant="bodySm" className="font-semibold flex items-center gap-2">
           <IconUser className="h-4 w-4" />
-          Contacts for RFQ Notifications
+          {title}
         </Typography>
         {!isAddingContact && (
           <Button size="sm" variant="ghost" onClick={() => setIsAddingContact(true)}>
@@ -106,6 +117,12 @@ const PartnerContactsSection = ({ partnerId }: PartnerContactsSectionProps) => {
           </Button>
         )}
       </div>
+
+      {description && (
+        <Typography variant="bodyXs" colorRole="muted">
+          {description}
+        </Typography>
+      )}
 
       {/* Add Contact Form */}
       {isAddingContact && (
@@ -127,7 +144,7 @@ const PartnerContactsSection = ({ partnerId }: PartnerContactsSectionProps) => {
             />
             <input
               type="text"
-              placeholder="Role (e.g., Buyer)"
+              placeholder={rolePlaceholder}
               value={newContact.role}
               onChange={(e) => setNewContact({ ...newContact, role: e.target.value })}
               className="rounded-md border border-border-primary bg-background-primary px-2 py-1.5 text-sm"
