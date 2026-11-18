@@ -44,8 +44,14 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
  *
  * @param shipmentId - The shipment
  * @param milestone - The moment it has reached
+ * @param options - force: post even if this moment was posted before (a resend)
+ * @returns null when posted or rightly skipped, otherwise why it did not go
  */
-const announceShipment = async (shipmentId: string, milestone: ShipmentMilestone) => {
+const announceShipment = async (
+  shipmentId: string,
+  milestone: ShipmentMilestone,
+  { force = false }: { force?: boolean } = {},
+) => {
   try {
     const [shipment] = await db
       .select({
@@ -66,7 +72,8 @@ const announceShipment = async (shipmentId: string, milestone: ShipmentMilestone
       .leftJoin(partners, eq(partners.id, logisticsShipments.partnerId))
       .where(eq(logisticsShipments.id, shipmentId))
       .limit(1);
-    if (!shipment || shipment.type !== 'inbound') return;
+    if (!shipment) return 'Shipment not found';
+    if (shipment.type !== 'inbound') return 'Only inbound shipments are posted';
 
     // Once per moment, and never after a later one
     const posted = await db
@@ -79,7 +86,7 @@ const announceShipment = async (shipmentId: string, milestone: ShipmentMilestone
         SHIPMENT_MILESTONES.indexOf((row.metadata as { milestone?: ShipmentMilestone } | null)?.milestone ?? 'departed'),
       ),
     );
-    if (SHIPMENT_MILESTONES.indexOf(milestone) <= furthest) return;
+    if (!force && SHIPMENT_MILESTONES.indexOf(milestone) <= furthest) return null;
 
     // Recorded first, so two cases scanned at once do not both post
     await db.insert(logisticsShipmentActivityLogs).values({
@@ -210,7 +217,7 @@ const announceShipment = async (shipmentId: string, milestone: ShipmentMilestone
       }
     }
 
-    await postWarehouseSlack(text);
+    return await postWarehouseSlack(text);
   } catch (error) {
     // Best effort only: never fail the warehouse action, but leave a trace
     logger.error('Warehouse activity: could not post the shipment', {
@@ -218,6 +225,7 @@ const announceShipment = async (shipmentId: string, milestone: ShipmentMilestone
       milestone,
       error: error instanceof Error ? error.message : String(error),
     });
+    return error instanceof Error ? error.message : String(error);
   }
 };
 

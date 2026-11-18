@@ -109,6 +109,7 @@ import adminRepairStockAvailability from './controller/adminRepairStockAvailabil
 import adminRepairStockCounters from './controller/adminRepairStockCounters';
 import adminReprintCaseLabels from './controller/adminReprintCaseLabels';
 import adminResendPickListPost from './controller/adminResendPickListPost';
+import adminResendShipmentPost from './controller/adminResendShipmentPost';
 import adminReserveStock from './controller/adminReserveStock';
 import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
 import adminResolvePcoOrder from './controller/adminResolvePcoOrder';
@@ -172,6 +173,7 @@ const receivingRouter = createTRPCRouter({
   receiveShipment: adminReceiveShipment,
   receiveShipmentItem: adminReceiveShipmentItem,
   finalizeReceiving: adminFinalizeReceiving,
+  resendPost: adminResendShipmentPost,
   getDraft: adminGetReceivingDraft,
   saveDraft: adminSaveReceivingDraft,
   deleteDraft: adminDeleteReceivingDraft,
