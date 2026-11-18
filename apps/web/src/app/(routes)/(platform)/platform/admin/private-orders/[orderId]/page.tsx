@@ -423,11 +423,12 @@ const AdminPrivateOrderDetailPage = () => {
 
   // Confirm distributor payment received (distributor paid C&C)
   const { mutate: confirmDistributorPayment, isPending: isConfirmingDistributorPayment } = useMutation({
-    mutationFn: ({ reference }: { reference?: string }) =>
+    mutationFn: ({ reference, paidOn }: { reference?: string; paidOn?: string }) =>
       trpcClient.privateClientOrders.confirmPayment.mutate({
         orderId,
         paymentStage: 'distributor',
         reference,
+        paidOn,
       }),
     onSuccess: () => {
       toast.success('Distributor payment confirmed');
@@ -459,17 +460,17 @@ const AdminPrivateOrderDetailPage = () => {
     },
   });
 
-  // Move a recorded partner payment to the day it was really made
-  const { mutate: changePartnerPaidDate, isPending: isChangingPartnerPaidDate } = useMutation({
-    mutationFn: (paidOn: string) =>
-      trpcClient.privateClientOrders.adminSetPartnerPaidDate.mutate({ orderId, paidOn }),
+  // Correct a recorded payment's day and reference
+  const { mutate: editPaymentRecord, isPending: isEditingPayment } = useMutation({
+    mutationFn: ({ stage, paidOn, reference }: { stage: 'distributor' | 'partner'; paidOn: string; reference: string }) =>
+      trpcClient.privateClientOrders.adminEditPaymentRecord.mutate({ orderId, stage, paidOn, reference }),
     onSuccess: () => {
-      toast.success('Payment date updated');
+      toast.success('Payment updated');
       void refetch();
       void queryClient.invalidateQueries({ queryKey: ['privateClientOrders'] });
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to update the payment date');
+      toast.error(error.message || 'Failed to update the payment');
     },
   });
 
@@ -912,14 +913,16 @@ const AdminPrivateOrderDetailPage = () => {
             order={order}
             distributorPaymentRef={distributorPaymentRef}
             onDistributorPaymentRefChange={setDistributorPaymentRef}
-            onConfirmDistributorPayment={() => confirmDistributorPayment({ reference: distributorPaymentRef || undefined })}
+            onConfirmDistributorPayment={(paidOn) =>
+              confirmDistributorPayment({ reference: distributorPaymentRef || undefined, paidOn })
+            }
             isConfirmingDistributorPayment={isConfirmingDistributorPayment}
             partnerPaymentRef={partnerPaymentRef}
             onPartnerPaymentRefChange={setPartnerPaymentRef}
             onMarkPartnerPaid={(paidOn) => markPartnerPaid({ reference: partnerPaymentRef || undefined, paidOn })}
             isMarkingPartnerPaid={isMarkingPartnerPaid}
-            onChangePartnerPaidDate={changePartnerPaidDate}
-            isChangingPartnerPaidDate={isChangingPartnerPaidDate}
+            onEditPayment={(stage, paidOn, reference) => editPaymentRecord({ stage, paidOn, reference })}
+            isEditingPayment={isEditingPayment}
             onViewDeliveryPhoto={() => setShowDeliveryPhoto(true)}
             formatDate={formatDate}
           />
@@ -2038,14 +2041,16 @@ const AdminPrivateOrderDetailPage = () => {
             order={order}
             distributorPaymentRef={distributorPaymentRef}
             onDistributorPaymentRefChange={setDistributorPaymentRef}
-            onConfirmDistributorPayment={() => confirmDistributorPayment({ reference: distributorPaymentRef || undefined })}
+            onConfirmDistributorPayment={(paidOn) =>
+              confirmDistributorPayment({ reference: distributorPaymentRef || undefined, paidOn })
+            }
             isConfirmingDistributorPayment={isConfirmingDistributorPayment}
             partnerPaymentRef={partnerPaymentRef}
             onPartnerPaymentRefChange={setPartnerPaymentRef}
             onMarkPartnerPaid={(paidOn) => markPartnerPaid({ reference: partnerPaymentRef || undefined, paidOn })}
             isMarkingPartnerPaid={isMarkingPartnerPaid}
-            onChangePartnerPaidDate={changePartnerPaidDate}
-            isChangingPartnerPaidDate={isChangingPartnerPaidDate}
+            onEditPayment={(stage, paidOn, reference) => editPaymentRecord({ stage, paidOn, reference })}
+            isEditingPayment={isEditingPayment}
             onViewDeliveryPhoto={() => setShowDeliveryPhoto(true)}
             formatDate={formatDate}
           />

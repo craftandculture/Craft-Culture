@@ -33,16 +33,17 @@ export interface OrderCompletionCardProps {
   prominent: boolean;
   distributorPaymentRef: string;
   onDistributorPaymentRefChange: (value: string) => void;
-  onConfirmDistributorPayment: () => void;
+  /** Records the distributor's payment as received on `paidOn` (YYYY-MM-DD) */
+  onConfirmDistributorPayment: (paidOn: string) => void;
   isConfirmingDistributorPayment: boolean;
   partnerPaymentRef: string;
   onPartnerPaymentRefChange: (value: string) => void;
   /** Records the payment as made on `paidOn` (YYYY-MM-DD) */
   onMarkPartnerPaid: (paidOn: string) => void;
   isMarkingPartnerPaid: boolean;
-  /** Moves an already-recorded payment to the day it was really made */
-  onChangePartnerPaidDate: (paidOn: string) => void;
-  isChangingPartnerPaidDate: boolean;
+  /** Corrects a recorded payment's day (YYYY-MM-DD) and reference */
+  onEditPayment: (stage: 'distributor' | 'partner', paidOn: string, reference: string) => void;
+  isEditingPayment: boolean;
   onViewDeliveryPhoto: () => void;
   formatDate: (date: Date | null | undefined) => string;
 }
@@ -119,8 +120,8 @@ const OrderCompletionCard = ({
   onPartnerPaymentRefChange,
   onMarkPartnerPaid,
   isMarkingPartnerPaid,
-  onChangePartnerPaidDate,
-  isChangingPartnerPaidDate,
+  onEditPayment,
+  isEditingPayment,
   onViewDeliveryPhoto,
   formatDate,
 }: OrderCompletionCardProps) => {
@@ -128,7 +129,13 @@ const OrderCompletionCard = ({
   // The day the money went, which is often not the day it is recorded here
   const today = new Date().toLocaleDateString('en-CA');
   const [partnerPaidOn, setPartnerPaidOn] = useState(today);
-  const [changingPaidDate, setChangingPaidDate] = useState(false);
+  const [distributorPaidOn, setDistributorPaidOn] = useState(today);
+  // The recorded payment being corrected, with the day and reference typed so far
+  const [editing, setEditing] = useState<{
+    stage: 'distributor' | 'partner';
+    paidOn: string;
+    reference: string;
+  } | null>(null);
   const pendingTone = prominent ? 'warning' : 'muted';
 
   const outstanding = [
@@ -139,6 +146,43 @@ const OrderCompletionCard = ({
 
   const toDate = (value: Date | string | null) =>
     value ? new Date(value) : null;
+  // Stored at midday UTC, so the UTC day is the day that was picked
+  const dayOf = (value: Date | string | null) =>
+    value ? new Date(value).toISOString().slice(0, 10) : today;
+
+  const editForm = editing && (
+    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+      <Input
+        type="date"
+        aria-label="Day the payment was made"
+        value={editing.paidOn}
+        max={today}
+        onChange={(e) => setEditing({ ...editing, paidOn: e.target.value })}
+        className="w-full text-xs sm:w-[150px]"
+      />
+      <Input
+        placeholder="Reference"
+        aria-label="Payment reference"
+        value={editing.reference}
+        onChange={(e) => setEditing({ ...editing, reference: e.target.value })}
+        className="w-full text-xs sm:w-[160px]"
+      />
+      <Button
+        type="button"
+        size="sm"
+        disabled={!editing.paidOn || isEditingPayment}
+        onClick={() => {
+          onEditPayment(editing.stage, editing.paidOn, editing.reference);
+          setEditing(null);
+        }}
+      >
+        {isEditingPayment ? 'Saving...' : 'Save'}
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(null)}>
+        Cancel
+      </Button>
+    </div>
+  );
 
   return (
     <Card
@@ -215,8 +259,34 @@ const OrderCompletionCard = ({
                   : 'Confirm when the distributor has paid C&C for the order'
               }
             >
+              {order.distributorPaidAt && editing?.stage !== 'distributor' && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() =>
+                    setEditing({
+                      stage: 'distributor',
+                      paidOn: dayOf(order.distributorPaidAt),
+                      reference: order.distributorPaymentReference ?? '',
+                    })
+                  }
+                >
+                  Edit
+                </Button>
+              )}
+              {order.distributorPaidAt && editing?.stage === 'distributor' && editForm}
               {!order.distributorPaidAt && (
                 <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    type="date"
+                    aria-label="Day the distributor paid C&C"
+                    title="The day the payment was received — today unless you change it"
+                    value={distributorPaidOn}
+                    max={today}
+                    onChange={(e) => setDistributorPaidOn(e.target.value)}
+                    className="w-full text-xs sm:w-[150px]"
+                  />
                   <Input
                     placeholder="Reference (optional)"
                     aria-label="Distributor payment reference"
@@ -228,8 +298,8 @@ const OrderCompletionCard = ({
                   />
                   <Button
                     type="button"
-                    onClick={onConfirmDistributorPayment}
-                    disabled={isConfirmingDistributorPayment}
+                    onClick={() => onConfirmDistributorPayment(distributorPaidOn)}
+                    disabled={isConfirmingDistributorPayment || !distributorPaidOn}
                     colorRole="brand"
                     size="sm"
                   >
@@ -265,54 +335,23 @@ const OrderCompletionCard = ({
                   : 'Record when C&C has paid the wine partner for the stock'
               }
             >
-              {order.partnerPaidAt && !changingPaidDate && (
+              {order.partnerPaidAt && editing?.stage !== 'partner' && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="xs"
-                  onClick={() => {
-                    setPartnerPaidOn(
-                      new Date(order.partnerPaidAt as Date | string)
-                        .toISOString()
-                        .slice(0, 10),
-                    );
-                    setChangingPaidDate(true);
-                  }}
+                  onClick={() =>
+                    setEditing({
+                      stage: 'partner',
+                      paidOn: dayOf(order.partnerPaidAt),
+                      reference: order.partnerPaymentReference ?? '',
+                    })
+                  }
                 >
-                  Change date
+                  Edit
                 </Button>
               )}
-              {order.partnerPaidAt && changingPaidDate && (
-                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                  <Input
-                    type="date"
-                    aria-label="Day C&C paid the partner"
-                    value={partnerPaidOn}
-                    max={today}
-                    onChange={(e) => setPartnerPaidOn(e.target.value)}
-                    className="w-full text-xs sm:w-[150px]"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={!partnerPaidOn || isChangingPartnerPaidDate}
-                    onClick={() => {
-                      onChangePartnerPaidDate(partnerPaidOn);
-                      setChangingPaidDate(false);
-                    }}
-                  >
-                    {isChangingPartnerPaidDate ? 'Saving...' : 'Save date'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setChangingPaidDate(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              )}
+              {order.partnerPaidAt && editing?.stage === 'partner' && editForm}
               {!order.partnerPaidAt && (
                 <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                   <Input

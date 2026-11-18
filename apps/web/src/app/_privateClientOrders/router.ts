@@ -10,6 +10,7 @@ import adminCreate from './controller/adminCreate';
 import adminCreateZohoSalesOrder from './controller/adminCreateZohoSalesOrder';
 import adminDashboard from './controller/adminDashboard';
 import adminDelete from './controller/adminDelete';
+import adminEditPaymentRecord from './controller/adminEditPaymentRecord';
 import adminGetMany from './controller/adminGetMany';
 import adminGetOne from './controller/adminGetOne';
 import adminGetOrderEmails from './controller/adminGetOrderEmails';
@@ -158,6 +159,8 @@ const privateClientOrdersRouter = createTRPCRouter({
   adminResetVerification: ordersAdminResetVerification,
   adminMarkPartnerPaid,
   adminSetPartnerPaidDate,
+  // Date and reference of a recorded distributor or partner payment
+  adminEditPaymentRecord,
   // Order emails to partners and distributors: the switch and the outbox
   adminGetOrderEmails,
   adminSetOrderEmailMode,

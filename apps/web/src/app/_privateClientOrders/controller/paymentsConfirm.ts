@@ -12,6 +12,7 @@ import {
 import { approvedProcedure } from '@/lib/trpc/procedures';
 
 import partnerOrderView from '../utils/partnerOrderView';
+import paymentDateFromDay from '../utils/paymentDateFromDay';
 import isRoutinePcoTransition from '../utils/pcoStatusTransitions';
 import resolveOrderParty from '../utils/resolveOrderParty';
 
@@ -19,6 +20,8 @@ const confirmPaymentSchema = z.object({
   orderId: z.string().uuid(),
   paymentStage: z.enum(['client', 'distributor', 'partner']),
   reference: z.string().optional(),
+  /** The day the money moved (YYYY-MM-DD), when not today; distributor and partner stages */
+  paidOn: z.string().optional(),
 });
 
 /**
@@ -28,7 +31,16 @@ const confirmPaymentSchema = z.object({
  * Also moves the order status on, but only when that is the routine next step.
  */
 const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(async ({ input, ctx }) => {
-  const { orderId, paymentStage, reference } = input;
+  const { orderId, paymentStage, reference, paidOn } = input;
+
+  // Payments are often recorded days after they land; the day picked is the day kept
+  const paidAt = paidOn ? paymentDateFromDay(paidOn) : new Date();
+  if (!paidAt) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Pick the day the payment was made (not in the future)',
+    });
+  }
   const { user } = ctx;
 
   // Verify order exists
@@ -118,7 +130,7 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
           message: 'Distributor payment already confirmed',
         });
       }
-      updateData.distributorPaidAt = now;
+      updateData.distributorPaidAt = paidAt;
       updateData.distributorPaymentConfirmedBy = user.id;
       if (reference) {
         updateData.distributorPaymentReference = reference;
@@ -137,7 +149,7 @@ const paymentsConfirm = approvedProcedure.input(confirmPaymentSchema).mutation(a
           message: 'Partner payment already confirmed',
         });
       }
-      updateData.partnerPaidAt = now;
+      updateData.partnerPaidAt = paidAt;
       updateData.partnerPaymentConfirmedBy = user.id;
       if (reference) {
         updateData.partnerPaymentReference = reference;
