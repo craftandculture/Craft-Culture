@@ -1,3 +1,9 @@
+## [2.1.160](https://github.com/craftandculture/Craft-Culture/compare/v2.1.159...v2.1.160) (2026-11-18)
+
+### Features
+
+* **pco:** record the day a distributor paid C&C, and correct the date and reference of either payment afterwards ([c6eea66](https://github.com/craftandculture/Craft-Culture/commit/c6eea660f4266c2d8d885dd4d2cc01572163eda9))
+
 ## [2.1.159](https://github.com/craftandculture/Craft-Culture/compare/v2.1.158...v2.1.159) (2026-11-18)
 
 ### Bug Fixes
