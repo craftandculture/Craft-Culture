@@ -1,3 +1,9 @@
+## [2.1.159](https://github.com/craftandculture/Craft-Culture/compare/v2.1.158...v2.1.159) (2026-11-18)
+
+### Bug Fixes
+
+* **wms:** pick a consignment order from its named owner's stock only ([491f73f](https://github.com/craftandculture/Craft-Culture/commit/491f73fb163df4ba048ac42c51a5e50fd7495c8e))
+
 ## [2.1.158](https://github.com/craftandculture/Craft-Culture/compare/v2.1.157...v2.1.158) (2026-11-18)
 
 ### Features
