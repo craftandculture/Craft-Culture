@@ -1,6 +1,6 @@
-import { and, eq, gt, inArray, like, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, like, ne, or, sql } from 'drizzle-orm';
 
-import { wmsStock, wmsStockReservations, zohoSalesOrderItems } from '@/database/schema';
+import { wmsStock, wmsStockReservations, zohoSalesOrderItems, zohoSalesOrders } from '@/database/schema';
 
 import inOurWarehouse from './inOurWarehouse';
 import lwinPackAgnosticPattern from './lwinPackAgnosticPattern';
@@ -8,6 +8,8 @@ import normalizeLwin18 from './normalizeLwin18';
 import { spareHeldBottles } from './planSharedHold';
 import rankStockByPack from './rankStockByPack';
 import { readOrderedPackOrNull } from './readOrderedPack';
+import releaseLineHolds from './releaseLineHolds';
+import getOrderStockOwner from '../data/getOrderStockOwner';
 
 export interface HoldShort {
   orderItemId: string;
@@ -44,6 +46,7 @@ export const holdLines = async ({
   orderId,
   orderNumber,
   lines,
+  ownerId,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
@@ -51,6 +54,8 @@ export const holdLines = async ({
   orderId: string;
   orderNumber: string;
   lines: HoldLine[];
+  /** The owner the order names (CONSIGNMENT_*): only their rows are held */
+  ownerId?: string | null;
 }) => {
   if (!lines.length) return { held: 0, short: [] as HoldShort[] };
 
@@ -104,6 +109,8 @@ export const holdLines = async ({
           gt(wmsStock.availableCases, 0),
           eq(wmsStock.notForSale, false),
           inOurWarehouse(),
+          // Short on the named owner's wine is short, not a reason to take someone else's
+          ...(ownerId ? [eq(wmsStock.ownerId, ownerId)] : []),
         ),
       );
 
@@ -206,6 +213,68 @@ export const holdLines = async ({
 };
 
 /**
+ * Move an order's holds off rows that are not the named owner's
+ *
+ * Lines held before the owner was read (or held from the wrong owner by an
+ * older build) keep pointing at somebody else's cases: the pick goes where the
+ * hold is. Each such line's holds are released and the line held again from
+ * the owner's own rows. Only lines with an active hold are touched, so a line
+ * already picked is never held a second time.
+ *
+ * @example
+ *   await moveHoldsToOrderOwner({ db, orderId, orderNumber: 'SO-00268', ownerId: cruratedPartnerId });
+ *
+ * @param params.orderId - zoho_sales_orders.id
+ * @param params.ownerId - The partner whose wine the order is
+ * @returns The lines moved, and any now short on the owner's own stock
+ */
+export const moveHoldsToOrderOwner = async ({
+  db,
+  orderId,
+  orderNumber,
+  ownerId,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any;
+  orderId: string;
+  orderNumber: string;
+  ownerId: string;
+}) => {
+  const wrong: { orderItemId: string | null }[] = await db
+    .select({ orderItemId: wmsStockReservations.orderItemId })
+    .from(wmsStockReservations)
+    .innerJoin(wmsStock, eq(wmsStock.id, wmsStockReservations.stockId))
+    .where(
+      and(
+        eq(wmsStockReservations.orderId, orderId),
+        eq(wmsStockReservations.orderType, 'zoho'),
+        eq(wmsStockReservations.status, 'active'),
+        or(isNull(wmsStock.ownerId), ne(wmsStock.ownerId, ownerId)),
+      ),
+    );
+  const lineIds = [...new Set(wrong.map((r) => r.orderItemId).filter((id): id is string => !!id))];
+  if (!lineIds.length) return { moved: 0, short: [] as HoldShort[] };
+
+  await releaseLineHolds({ db, orderItemIds: lineIds, reason: "Held from another owner's stock" });
+
+  const lines: HoldLine[] = await db
+    .select({
+      id: zohoSalesOrderItems.id,
+      sku: zohoSalesOrderItems.sku,
+      lwin18: zohoSalesOrderItems.lwin18,
+      name: zohoSalesOrderItems.name,
+      description: zohoSalesOrderItems.description,
+      quantity: zohoSalesOrderItems.quantity,
+      unit: zohoSalesOrderItems.unit,
+    })
+    .from(zohoSalesOrderItems)
+    .where(inArray(zohoSalesOrderItems.id, lineIds));
+
+  const { short } = await holdLines({ db, orderType: 'zoho', orderId, orderNumber, lines, ownerId });
+  return { moved: lineIds.length, short };
+};
+
+/**
  * Hold stock for every line of a Zoho sales order that is not already held
  *
  * The one place a sales order takes stock off "available". Before this, only
@@ -262,7 +331,17 @@ const holdStockForSalesOrder = async ({
 
   if (!lines.length) return { held: 0, short: [] as HoldShort[] };
 
-  return holdLines({ db, orderType: 'zoho', orderId, orderNumber, lines });
+  const [order]: { referenceNumber: string | null }[] = await db
+    .select({ referenceNumber: zohoSalesOrders.referenceNumber })
+    .from(zohoSalesOrders)
+    .where(eq(zohoSalesOrders.id, orderId));
+  const owner = await getOrderStockOwner({ db, referenceNumber: order?.referenceNumber });
+
+  if (owner) {
+    await moveHoldsToOrderOwner({ db, orderId, orderNumber, ownerId: owner.ownerId });
+  }
+
+  return holdLines({ db, orderType: 'zoho', orderId, orderNumber, lines, ownerId: owner?.ownerId });
 };
 
 export default holdStockForSalesOrder;

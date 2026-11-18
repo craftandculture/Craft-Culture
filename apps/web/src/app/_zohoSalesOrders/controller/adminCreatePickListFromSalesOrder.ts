@@ -11,6 +11,7 @@ import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import announcePickList from '@/app/_wms/data/announcePickList';
+import getOrderStockOwner from '@/app/_wms/data/getOrderStockOwner';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
 import resolvePickStock from '@/app/_wms/utils/resolvePickStock';
 import db from '@/database/client';
@@ -158,6 +159,8 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
       // Create pick list items with suggested locations.
       // A member's own delivery comes only from their own bottles
       const ownDelivery = (await getOwnerDeliveryOwners([salesOrderId])).get(salesOrderId);
+      // A consignment order is its owner's wine and nobody else's
+      const saleOwner = await getOrderStockOwner({ db, referenceNumber: order.referenceNumber });
 
       for (const item of orderItems) {
         // Resolve LWIN18: use explicit lwin18 field, or convert SKU to LWIN18 format
@@ -172,6 +175,7 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
         // path that mis-matched Talenti Brunello to the empty Talenti Piero pack).
         const suggestedStock = await resolvePickStock({
           ownerId: ownDelivery?.ownerId,
+          saleOwnerId: saleOwner?.ownerId,
           lwin18: resolvedLwin18,
           productName: item.name,
           neededCases: item.quantity,

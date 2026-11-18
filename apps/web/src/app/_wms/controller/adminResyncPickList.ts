@@ -24,6 +24,8 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { getSalesOrder } from '@/lib/zoho/salesOrders';
 
+import getOrderStockOwner from '../data/getOrderStockOwner';
+import { moveHoldsToOrderOwner } from '../utils/holdStockForSalesOrder';
 import parseSkuPack from '../utils/parseSkuPack';
 import readOrderedPack from '../utils/readOrderedPack';
 import reconcileZohoSalesOrderItems from '../utils/reconcileZohoSalesOrderItems';
@@ -96,6 +98,21 @@ const adminResyncPickList = wmsOperatorProcedure
           error,
         });
       }
+    }
+
+    /*
+      A consignment order is its owner's wine. Holds taken from another owner's
+      rows move to the owner's own first, so the rebuilt lines and the holds
+      point at the same cases.
+    */
+    const saleOwner = await getOrderStockOwner({ db, referenceNumber: order.referenceNumber });
+    if (saleOwner) {
+      await moveHoldsToOrderOwner({
+        db,
+        orderId: order.id,
+        orderNumber: order.salesOrderNumber,
+        ownerId: saleOwner.ownerId,
+      });
     }
 
     const orderItems = await db
@@ -231,6 +248,7 @@ const adminResyncPickList = wmsOperatorProcedure
         // fallback) — never pins an empty pack or a lookalike cuvée.
         const suggestedStock = await resolvePickStock({
           ownerId: ownDelivery?.ownerId,
+          saleOwnerId: saleOwner?.ownerId,
           lwin18: resolvedLwin18,
           productName: item.name,
           neededCases: remaining,

@@ -4,6 +4,7 @@ import { and, eq, gt, ilike, like, ne, sql } from 'drizzle-orm';
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
+import getOrderStockOwner from '@/app/_wms/data/getOrderStockOwner';
 import db from '@/database/client';
 import {
   privateClientOrders,
@@ -13,6 +14,7 @@ import {
   wmsStock,
   wmsStockMovements,
   wmsStockReservations,
+  zohoSalesOrders,
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
@@ -379,6 +381,33 @@ const adminPickItem = wmsOperatorProcedure
           });
         }
         candidates = theirs;
+      }
+
+      /*
+        A consignment order (CONSIGNMENT_CRURATED) is that owner's wine. On
+        SO-00268 the scanner sent the picker to Michael Humphreys-Davies'
+        Gravida Primogenita on a Crurated order and accepted it; another
+        owner's case of the same wine is not a substitute.
+      */
+      if (!ownDelivery) {
+        const [salesOrder] = await tx
+          .select({ referenceNumber: zohoSalesOrders.referenceNumber })
+          .from(zohoSalesOrders)
+          .where(eq(zohoSalesOrders.id, pickList.orderId));
+        const saleOwner = await getOrderStockOwner({ db: tx, referenceNumber: salesOrder?.referenceNumber });
+        if (saleOwner) {
+          const theirs = candidates.filter((row) => row.ownerId === saleOwner.ownerId);
+          if (theirs.length === 0) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message:
+                `This order is ${saleOwner.name}'s wine, and the ${pickListItem.productName} at ` +
+                `${location.locationCode} belongs to ${candidates[0]?.ownerName ?? 'another owner'}. ` +
+                `Pick ${saleOwner.name}'s own cases, or ask the office.`,
+            });
+          }
+          candidates = theirs;
+        }
       }
 
       const packOf = (row: (typeof candidates)[number]) => row.caseConfig ?? 12;

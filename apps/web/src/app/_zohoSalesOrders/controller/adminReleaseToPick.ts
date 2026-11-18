@@ -13,7 +13,9 @@ import { z } from 'zod';
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
+import getOrderStockOwner from '@/app/_wms/data/getOrderStockOwner';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
+import { moveHoldsToOrderOwner } from '@/app/_wms/utils/holdStockForSalesOrder';
 import lwinPackAgnosticPattern from '@/app/_wms/utils/lwinPackAgnosticPattern';
 import normalizeLwin18 from '@/app/_wms/utils/normalizeLwin18';
 import planOutstandingRelease from '@/app/_wms/utils/planOutstandingRelease';
@@ -230,6 +232,21 @@ const adminReleaseToPick = wmsOperatorProcedure
     // A member's own delivery, raised in Zoho with the PCO as its reference
     const ownDelivery = (await getOwnerDeliveryOwners([order.id])).get(order.id);
 
+    /*
+      A consignment order (CONSIGNMENT_CRURATED) is its owner's wine and nobody
+      else's. Holds taken from another owner's rows are moved first, so release
+      finds them on the owner's own cases rather than following them elsewhere.
+    */
+    const saleOwner = await getOrderStockOwner({ db, referenceNumber: order.referenceNumber });
+    if (saleOwner) {
+      await moveHoldsToOrderOwner({
+        db,
+        orderId: order.id,
+        orderNumber: order.salesOrderNumber,
+        ownerId: saleOwner.ownerId,
+      });
+    }
+
     for (const item of itemsToRelease) {
       // Normalize LWIN18 to dashed format (Zoho imports may lack dashes)
       const itemLwin18 = item.lwin18 ? normalizeLwin18(item.lwin18) : null;
@@ -403,6 +420,8 @@ const adminReleaseToPick = wmsOperatorProcedure
         holds.isHeld({ ...s, id: s.stockId }) && s.ownerId !== ownDelivery?.ownerId;
       const heldForMembers = availableStock.filter(blocked);
       availableStock = availableStock.filter((s) => !blocked(s));
+      const otherOwners = saleOwner ? availableStock.filter((s) => s.ownerId !== saleOwner.ownerId) : [];
+      if (saleOwner) availableStock = availableStock.filter((s) => s.ownerId === saleOwner.ownerId);
       availableStock = rankStockByPack(availableStock, orderedPack);
 
       // Prefer a bay with enough UNRESERVED stock; fall back to one that
@@ -484,7 +503,9 @@ const adminReleaseToPick = wmsOperatorProcedure
           suggestedLocationId: suggestedStock?.locationId ?? null,
           suggestedStockId: suggestedStock?.stockId ?? null,
           notes: !suggestedStock
-            ? heldForMembers.length > 0
+            ? otherOwners.length > 0 && saleOwner
+              ? `UNRESOLVED: this order is ${saleOwner.name}'s wine and they hold none of it — the stock at ${[...new Set(otherOwners.map((h) => h.locationCode))].join(', ')} belongs to another owner, do not pick it`
+              : heldForMembers.length > 0
               ? `UNRESOLVED: the only stock of this wine (${heldForMembers.map((h) => h.locationCode).join(', ')}) is held for its owner, not for sale — do not pick it`
               : 'UNRESOLVED: no matching stock found at release — check the wine/vintage before picking'
             : !isHeld && suggestedStock.availableCases < casesNeeded

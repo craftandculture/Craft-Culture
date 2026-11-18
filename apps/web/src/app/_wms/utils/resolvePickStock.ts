@@ -26,6 +26,12 @@ interface ResolvePickStockParams {
     release-to-pick and the pick itself already do.
   */
   ownerId?: string | null;
+  /*
+    The owner a trade order names (CONSIGNMENT_CRURATED). Only their rows
+    qualify, and rows they hold back are still left out. SO-00268 was
+    Crurated's order and sent the picker to Michael Humphreys-Davies' cases.
+  */
+  saleOwnerId?: string | null;
   /** The ordered line's LWIN18 (dashed or raw); may be empty. */
   lwin18: string | null | undefined;
   /** The ordered line's product name, for the name fallback. */
@@ -71,6 +77,7 @@ interface StockRow {
 const resolvePickStock = async ({
   sourceStockId,
   ownerId,
+  saleOwnerId,
   lwin18,
   productName,
   neededCases,
@@ -148,7 +155,9 @@ const resolvePickStock = async ({
       ? null
       : await getCollectorStockHolds(present.map((s) => ({ ...s, id: s.stockId })));
     const inStock = present.filter((s) =>
-      ownerId ? s.ownerId === ownerId : !holds?.isHeld({ ...s, id: s.stockId }),
+      ownerId
+        ? s.ownerId === ownerId
+        : !holds?.isHeld({ ...s, id: s.stockId }) && (!saleOwnerId || s.ownerId === saleOwnerId),
     );
     if (inStock.length === 0) return null;
     const exact =
