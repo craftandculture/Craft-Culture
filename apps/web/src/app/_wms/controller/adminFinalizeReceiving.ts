@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import notifyPartnerOfShipment from '@/app/_logistics/data/notifyPartnerOfShipment';
 import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
+import announceShipment from '@/app/_wms/data/announceShipment';
 import db from '@/database/client';
 import { logisticsShipments, wmsReceivingDrafts, wmsStock } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
@@ -53,6 +54,8 @@ const adminFinalizeReceiving = wmsOperatorProcedure
     await advanceShipmentIntakes(shipmentId);
     // The wine partner hears it is in stock (Order Emails switch)
     await notifyPartnerOfShipment(shipmentId, 'received');
+    // The warehouse team sees it go on the shelf
+    await announceShipment(shipmentId, 'received');
 
     // Backfill photos from draft items to stock records before deleting
     const [draft] = await db

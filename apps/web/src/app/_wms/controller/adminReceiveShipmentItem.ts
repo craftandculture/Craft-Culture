@@ -4,6 +4,7 @@ import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import notifyPartnerOfShipment from '@/app/_logistics/data/notifyPartnerOfShipment';
 import normalizeLwin18 from '@/app/_lwin/utils/normalizeLwin18';
 import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
+import announceShipment from '@/app/_wms/data/announceShipment';
 import db from '@/database/client';
 import {
   logisticsShipmentItems,
@@ -424,6 +425,7 @@ const adminReceiveShipmentItem = wmsOperatorProcedure
 
     // The first case scanned means the shipment is here, whatever its status says
     await notifyPartnerOfShipment(shipmentId, 'landed');
+    await announceShipment(shipmentId, 'landed');
 
     return {
       success: true,

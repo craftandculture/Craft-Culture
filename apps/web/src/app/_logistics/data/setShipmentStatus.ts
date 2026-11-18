@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import notifyMembersWineAtWarehouse from '@/app/_cellar/data/notifyMembersWineAtWarehouse';
 import advanceShipmentIntakes from '@/app/_onboarding/data/advanceShipmentIntakes';
+import announceShipment from '@/app/_wms/data/announceShipment';
 import db from '@/database/client';
 import { logisticsShipmentActivityLogs, logisticsShipments, wmsReceivingDrafts } from '@/database/schema';
 
@@ -112,6 +113,8 @@ const setShipmentStatus = async ({
     // The wine partner hears when it departs, arrives and is in stock (Order Emails switch)
     const milestone = milestoneForStatus(status);
     if (milestone) await notifyPartnerOfShipment(id, milestone);
+    // And the warehouse team, in #warehouse-activity, whoever owns it
+    if (milestone) await announceShipment(id, milestone);
 
     // Private Cellar members hear the moment it lands, not only once every bottle is checked in
     if (status === 'at_warehouse' || status === 'partially_received') {
