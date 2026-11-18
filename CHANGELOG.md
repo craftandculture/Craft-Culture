@@ -1,3 +1,9 @@
+## [2.1.157](https://github.com/craftandculture/Craft-Culture/compare/v2.1.156...v2.1.157) (2026-11-18)
+
+### Features
+
+* [#warehouse](https://github.com/craftandculture/Craft-Culture/issues/warehouse)-activity now shows inbound cargo: when it departs, reaches the UAE, when receiving starts at the warehouse, and when it is on the shelf, with each wine's bay and any cases short or over ([7683212](https://github.com/craftandculture/Craft-Culture/commit/76832122d6664e70bf85d571cd80a95a3ec1bd53))
+
 ## [2.1.156](https://github.com/craftandculture/Craft-Culture/compare/v2.1.155...v2.1.156) (2026-11-17)
 
 ### Bug Fixes
