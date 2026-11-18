@@ -1,3 +1,9 @@
+## [2.1.158](https://github.com/craftandculture/Craft-Culture/compare/v2.1.157...v2.1.158) (2026-11-18)
+
+### Features
+
+* staff can post an inbound shipment to [#warehouse](https://github.com/craftandculture/Craft-Culture/issues/warehouse)-activity again, for cargo received before the feed existed or a post that went missing ([04d279e](https://github.com/craftandculture/Craft-Culture/commit/04d279e406d2a44dbc5f29e6ecc038e8d9ad1287))
+
 ## [2.1.157](https://github.com/craftandculture/Craft-Culture/compare/v2.1.156...v2.1.157) (2026-11-18)
 
 ### Features
