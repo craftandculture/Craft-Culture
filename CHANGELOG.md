@@ -1,3 +1,9 @@
+## [2.1.161](https://github.com/craftandculture/Craft-Culture/compare/v2.1.160...v2.1.161) (2026-11-19)
+
+### Features
+
+* **warehouse-updates:** email distributors when their orders are picked, ready for dispatch or held up ([5457ed1](https://github.com/craftandculture/Craft-Culture/commit/5457ed1a7e10db05270c1cb3c24b304f2f1c95ba))
+
 ## [2.1.160](https://github.com/craftandculture/Craft-Culture/compare/v2.1.159...v2.1.160) (2026-11-18)
 
 ### Features
