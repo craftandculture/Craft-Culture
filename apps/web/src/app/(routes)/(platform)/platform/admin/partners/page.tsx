@@ -43,7 +43,9 @@ import DialogHeader from '@/app/_ui/components/Dialog/DialogHeader';
 import DialogTitle from '@/app/_ui/components/Dialog/DialogTitle';
 import DialogTrigger from '@/app/_ui/components/Dialog/DialogTrigger';
 import Typography from '@/app/_ui/components/Typography/Typography';
+import WarehouseUpdatesSection from '@/app/_warehouseUpdates/components/WarehouseUpdatesSection';
 import useTRPC from '@/lib/trpc/browser';
+
 
 import PartnerContactsSection from '../wine-partners/PartnerContactsSection';
 
@@ -1270,9 +1272,11 @@ const DistributorsPage = () => {
                 <PartnerContactsSection
                   partnerId={editingPartner.id}
                   title="Order email contacts"
-                  description="Set the role to Purchasing or Finance. Client verification and new orders go to Purchasing; payment collection and confirmation go to Finance. With none listed, order emails go to the business email and the people working the order."
-                  rolePlaceholder="Role (Purchasing or Finance)"
+                  description="Set the role to Purchasing, Finance or Logistics. Client verification and new orders go to Purchasing; payment collection and confirmation go to Finance; warehouse updates (picked, ready for dispatch) go to Logistics, else Purchasing. With none listed, order emails go to the business email and the people working the order."
+                  rolePlaceholder="Role (Purchasing, Finance or Logistics)"
                 />
+
+                <WarehouseUpdatesSection partnerId={editingPartner.id} />
 
                 {/* Payment Configuration */}
                 <div className="space-y-4 border-t border-border-muted pt-4">

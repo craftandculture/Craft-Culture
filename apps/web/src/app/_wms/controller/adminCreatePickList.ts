@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import saleLwin18Of from '@/app/_privateClientOrders/utils/saleLwin18Of';
+import notePickListUpdate from '@/app/_warehouseUpdates/data/notePickListUpdate';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import db from '@/database/client';
 import {
@@ -151,6 +152,7 @@ const adminCreatePickList = wmsOperatorProcedure
 
     // Tell #warehouse-activity a new list is out to the floor
     if (pickList) await announcePickList(pickList.id, 'released');
+    if (pickList) await notePickListUpdate(pickList.id, 'released');
 
     return {
       success: true,

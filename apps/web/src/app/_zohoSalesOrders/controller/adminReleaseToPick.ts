@@ -11,6 +11,7 @@ import { and, eq, gt, ilike, inArray, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
+import notePickListUpdate from '@/app/_warehouseUpdates/data/notePickListUpdate';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import getCollectorStockHolds from '@/app/_wms/data/getCollectorStockHolds';
 import getOrderStockOwner from '@/app/_wms/data/getOrderStockOwner';
@@ -588,6 +589,7 @@ const adminReleaseToPick = wmsOperatorProcedure
 
     // Tell #warehouse-activity a new list is out to the floor
     if (pickList) await announcePickList(pickList.id, 'released');
+    if (pickList) await notePickListUpdate(pickList.id, 'released');
 
     return {
       success: true,

@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, ne, notInArray } from 'drizzle-orm';
 
+import notePickListUpdate from '@/app/_warehouseUpdates/data/notePickListUpdate';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import db from '@/database/client';
 import { wmsPickListItems, wmsPickLists, zohoSalesOrders } from '@/database/schema';
@@ -138,6 +139,7 @@ const adminCompletePickList = wmsOperatorProcedure
     }
 
     await announcePickList(pickListId, 'completed', ctx.user.name);
+    await notePickListUpdate(pickListId, 'completed');
 
     return {
       success: true,

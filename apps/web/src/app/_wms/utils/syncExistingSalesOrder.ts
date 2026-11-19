@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import noteOrderChanged from '@/app/_warehouseUpdates/data/noteOrderChanged';
 import holdStockForSalesOrder from '@/app/_wms/utils/holdStockForSalesOrder';
 import reconcileZohoSalesOrderItems from '@/app/_wms/utils/reconcileZohoSalesOrderItems';
 import isSalesOrderUnchanged from '@/app/_zohoSalesOrders/utils/isSalesOrderUnchanged';
@@ -300,6 +301,19 @@ const syncExistingSalesOrder = async ({
       lastSyncAt: new Date(),
     })
     .where(eq(zohoSalesOrders.id, existing.id));
+
+  /*
+    The distributor hears when the lines themselves moved under a pick, not
+    when Zoho only bumped its last-modified time (an invoice being raised).
+    Checked before the lines are taken in below.
+  */
+  if (
+    shouldFlag &&
+    !settled &&
+    (await linesChanged({ orderId: existing.id, zohoLineItems: fullOrder.line_items ?? [], db }))
+  ) {
+    await noteOrderChanged(existing.id, zohoModifiedAt);
+  }
 
   if (settled && fullOrder.line_items && fullOrder.line_items.length > 0) {
     const reconciled = await reconcileZohoSalesOrderItems({

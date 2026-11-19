@@ -10,6 +10,7 @@ import { and, eq, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
+import notePickListUpdate from '@/app/_warehouseUpdates/data/notePickListUpdate';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import getOrderStockOwner from '@/app/_wms/data/getOrderStockOwner';
 import generatePickListNumber from '@/app/_wms/utils/generatePickListNumber';
@@ -255,6 +256,7 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
 
     // Tell #warehouse-activity a new list is out to the floor
     if (pickList) await announcePickList(pickList.id, 'released');
+    if (pickList) await notePickListUpdate(pickList.id, 'released');
 
     return {
       success: true,

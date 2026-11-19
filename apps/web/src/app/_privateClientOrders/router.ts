@@ -1,3 +1,5 @@
+import adminGetWarehouseUpdateSettings from '@/app/_warehouseUpdates/controller/adminGetWarehouseUpdateSettings';
+import adminSetWarehouseUpdateSettings from '@/app/_warehouseUpdates/controller/adminSetWarehouseUpdateSettings';
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddItem from './controller/adminAddItem';
@@ -164,6 +166,8 @@ const privateClientOrdersRouter = createTRPCRouter({
   // Order emails to partners and distributors: the switch and the outbox
   adminGetOrderEmails,
   adminSetOrderEmailMode,
+  adminGetWarehouseUpdateSettings,
+  adminSetWarehouseUpdateSettings,
   // Manual invoicing of delivered lines
   adminGetOrderInvoicing,
   adminMarkDeliveredInvoicePending,

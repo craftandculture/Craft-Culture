@@ -3,6 +3,7 @@ import { and, eq, gt, inArray, like, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
+import noteBatchReady from '@/app/_warehouseUpdates/data/noteBatchReady';
 import announceDispatch from '@/app/_wms/data/announceDispatch';
 import db from '@/database/client';
 import {
@@ -763,6 +764,7 @@ const adminQuickDispatch = wmsOperatorProcedure
     }
 
     await announceDispatch(batch.id, 'dispatched');
+    await noteBatchReady(batch.id, 'dispatched');
 
     return {
       success: true,

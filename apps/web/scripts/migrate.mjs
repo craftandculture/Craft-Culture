@@ -4554,6 +4554,35 @@ const runMigrations = async () => {
     );
     console.log('✅ Order handling override ready');
 
+    /* Warehouse updates to distributors (warehouse-updates cron) */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "distributor_warehouse_updates" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "dedupe_key" text NOT NULL UNIQUE,
+        "partner_id" uuid NOT NULL,
+        "kind" text NOT NULL,
+        "order_id" uuid,
+        "batch_id" uuid,
+        "data" jsonb NOT NULL,
+        "send_at" timestamp NOT NULL,
+        "status" text DEFAULT 'pending' NOT NULL,
+        "sent_mode" text,
+        "sent_to" text,
+        "sent_at" timestamp,
+        "error" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`ALTER TABLE "distributor_warehouse_updates" ENABLE ROW LEVEL SECURITY`);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "distributor_warehouse_updates_due_idx" ON "distributor_warehouse_updates" ("status", "send_at")`,
+    );
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "distributor_warehouse_updates_partner_idx" ON "distributor_warehouse_updates" ("partner_id", "created_at")`,
+    );
+    console.log('✅ Distributor warehouse updates ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

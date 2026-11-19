@@ -9,6 +9,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import notePickListUpdate from '@/app/_warehouseUpdates/data/notePickListUpdate';
 import announcePickList from '@/app/_wms/data/announcePickList';
 import db from '@/database/client';
 import { wmsPickListItems, wmsPickLists, zohoSalesOrders } from '@/database/schema';
@@ -79,6 +80,7 @@ const adminDeletePickList = wmsOperatorProcedure
 
     // Tell #warehouse-activity before the lines are gone
     await announcePickList(pickListId, 'cancelled');
+    await notePickListUpdate(pickListId, 'cancelled');
 
     // Delete pick list items
     await db

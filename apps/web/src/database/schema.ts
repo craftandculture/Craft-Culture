@@ -8712,6 +8712,44 @@ export const orderEmailOutbox = pgTable(
 export type OrderEmailOutboxRow = typeof orderEmailOutbox.$inferSelect;
 
 /**
+ * Warehouse updates to distributors: what the warehouse did on their orders
+ *
+ * One row per event (pick list released, picked and packed, ready for
+ * dispatch, a problem) and one per daily summary. A released pick list is
+ * kept for the summary only and never emailed on its own ('info').
+ */
+export const distributorWarehouseUpdates = pgTable(
+  'distributor_warehouse_updates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** One row per event: a repeated tap or a re-run never adds a second */
+    dedupeKey: text('dedupe_key').notNull().unique(),
+    partnerId: uuid('partner_id').notNull(),
+    kind: text('kind').$type<'received' | 'picked' | 'ready' | 'problem' | 'summary'>().notNull(),
+    /** The Zoho sales order or private client order; empty on a dispatch or summary */
+    orderId: uuid('order_id'),
+    batchId: uuid('batch_id'),
+    data: jsonb('data').$type<Record<string, unknown>>().notNull(),
+    sendAt: timestamp('send_at', { mode: 'date' }).notNull(),
+    status: text('status')
+      .$type<'info' | 'pending' | 'sending' | 'sent' | 'shadowed' | 'suppressed' | 'skipped' | 'failed'>()
+      .notNull()
+      .default('pending'),
+    sentMode: text('sent_mode'),
+    sentTo: text('sent_to'),
+    sentAt: timestamp('sent_at', { mode: 'date' }),
+    error: text('error'),
+    ...timestamps,
+  },
+  (table) => [
+    index('distributor_warehouse_updates_due_idx').on(table.status, table.sendAt),
+    index('distributor_warehouse_updates_partner_idx').on(table.partnerId, table.createdAt),
+  ],
+).enableRLS();
+
+export type DistributorWarehouseUpdate = typeof distributorWarehouseUpdates.$inferSelect;
+
+/**
  * Every email the app hands to Loops, as it leaves
  *
  * Written by the Loops client itself, so no email can skip it: the Sent

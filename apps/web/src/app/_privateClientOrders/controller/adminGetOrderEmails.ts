@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 
 import getShipmentEmailMode from '@/app/_logistics/data/getShipmentEmailMode';
+import getWarehouseUpdateMode from '@/app/_warehouseUpdates/data/getWarehouseUpdateMode';
 import getTransferSummaryMode from '@/app/_wms/data/getTransferSummaryMode';
 import db from '@/database/client';
 import { logisticsShipmentActivityLogs, logisticsShipments, orderEmailOutbox, partners } from '@/database/schema';
@@ -17,11 +18,12 @@ import getOrderEmailMode, { ORDER_EMAIL_SHADOW_INBOX } from '../data/getOrderEma
  * and checked against what actually happened on the order.
  */
 const adminGetOrderEmails = staffAdminProcedure.query(async () => {
-  const [partner, distributor, shipments, transfers] = await Promise.all([
+  const [partner, distributor, shipments, transfers, warehouse] = await Promise.all([
     getOrderEmailMode('partner'),
     getOrderEmailMode('distributor'),
     getShipmentEmailMode(),
     getTransferSummaryMode(),
+    getWarehouseUpdateMode(),
   ]);
 
   const rows = await db
@@ -69,7 +71,7 @@ const adminGetOrderEmails = staffAdminProcedure.query(async () => {
     .from(orderEmailOutbox)
     .where(and(inArray(orderEmailOutbox.status, ['sent', 'shadowed']), gte(orderEmailOutbox.sentAt, since)));
 
-  return { modes: { partner, distributor, shipments, transfers }, shadowInbox: ORDER_EMAIL_SHADOW_INBOX, sentLast30Days: Number(sent?.count ?? 0), rows, shipmentRows };
+  return { modes: { partner, distributor, shipments, transfers, warehouse }, shadowInbox: ORDER_EMAIL_SHADOW_INBOX, sentLast30Days: Number(sent?.count ?? 0), rows, shipmentRows };
 });
 
 export default adminGetOrderEmails;

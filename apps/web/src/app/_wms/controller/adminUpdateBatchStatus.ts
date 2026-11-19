@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
+import noteBatchReady from '@/app/_warehouseUpdates/data/noteBatchReady';
 import announceDispatch from '@/app/_wms/data/announceDispatch';
 import db from '@/database/client';
 import {
@@ -233,6 +234,11 @@ const adminUpdateBatchStatus = wmsOperatorProcedure
 
     if (status === 'dispatched' || status === 'delivered') {
       await announceDispatch(batchId, status);
+    }
+
+    // The distributor hears once, when the batch is staged or, if it skipped staging, dispatched
+    if (status === 'staged' || status === 'dispatched') {
+      await noteBatchReady(batchId, status);
     }
 
     return {

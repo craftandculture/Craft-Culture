@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import settingsUpdateController from '@/app/_admin/controllers/settingsUpdateController';
 import { SHIPMENT_EMAIL_MODE_SETTING } from '@/app/_logistics/data/getShipmentEmailMode';
+import { WAREHOUSE_UPDATE_MODE_SETTING } from '@/app/_warehouseUpdates/constants';
 import { TRANSFER_SUMMARY_MODE_SETTING } from '@/app/_wms/data/getTransferSummaryMode';
 import { staffAdminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
@@ -15,16 +16,19 @@ import { ORDER_EMAIL_MODES, ORDER_EMAIL_MODE_SETTING } from '../data/getOrderEma
  * Live also stops the older per-event emails to that audience, so nobody
  * receives both; moving back to off or shadow restores them. "shipments" is
  * the wine partners' shipment emails and notices, and "transfers" the
- * daily stock transfer summaries to every owner, each on its own key.
+ * daily stock transfer summaries to every owner, and "warehouse" the picking
+ * and dispatch updates to distributors, each on its own key.
  */
 const adminSetOrderEmailMode = staffAdminProcedure
-  .input(z.object({ audience: z.enum(['partner', 'distributor', 'shipments', 'transfers']), mode: z.enum(ORDER_EMAIL_MODES) }))
+  .input(z.object({ audience: z.enum(['partner', 'distributor', 'shipments', 'transfers', 'warehouse']), mode: z.enum(ORDER_EMAIL_MODES) }))
   .mutation(async ({ ctx, input }) => {
     const key =
       input.audience === 'shipments'
         ? SHIPMENT_EMAIL_MODE_SETTING
         : input.audience === 'transfers'
           ? TRANSFER_SUMMARY_MODE_SETTING
+          : input.audience === 'warehouse'
+            ? WAREHOUSE_UPDATE_MODE_SETTING
           : `${ORDER_EMAIL_MODE_SETTING}.${input.audience}`;
     await settingsUpdateController({ key, value: input.mode });
 
