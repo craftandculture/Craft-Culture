@@ -1,3 +1,14 @@
+## [2.1.162](https://github.com/craftandculture/Craft-Culture/compare/v2.1.161...v2.1.162) (2026-11-19)
+
+### Bug Fixes
+
+* Price list keeps its own inclusion rules and line labels while pricing per owner ([e48c994](https://github.com/craftandculture/Craft-Culture/commit/e48c994007a37d80fcf35a325e75b9b553503c09))
+* Price lists now carry the Pricing Manager's price per owner from the newest lot, so trade and private-client prices match it exactly ([b2c4763](https://github.com/craftandculture/Craft-Culture/commit/b2c47630075feea05468bc043fed154dd82d7c23))
+
+### Code Refactoring
+
+* price lists and the Pricing Manager resolve import cost through one helper ([d7e7048](https://github.com/craftandculture/Craft-Culture/commit/d7e70483268657d5b0b779ba1aeb88564f3a9c2c))
+
 ## [2.1.161](https://github.com/craftandculture/Craft-Culture/compare/v2.1.160...v2.1.161) (2026-11-19)
 
 ### Features
