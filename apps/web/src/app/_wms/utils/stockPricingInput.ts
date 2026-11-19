@@ -1,5 +1,5 @@
-import pricingManagerCostParts from './pricingManagerCostParts';
 import type { PricingManagerRowInput } from './pricePricingManagerRow';
+import pricingManagerCostParts from './pricingManagerCostParts';
 
 /** One `(wine, owner)` group as `stockPricingSelect` returns it */
 export interface StockPricingRaw extends PricingManagerRowInput {
