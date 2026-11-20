@@ -1,3 +1,9 @@
+## [2.1.167](https://github.com/craftandculture/Craft-Culture/compare/v2.1.166...v2.1.167) (2026-11-20)
+
+### Bug Fixes
+
+* Crurated's 10% cut from 9 Oct comes off City Drinks' price for the four wines, and a stock code with a W-code buried in it still finds its Pricing Manager cost ([d81ef44](https://github.com/craftandculture/Craft-Culture/commit/d81ef44bac1e825f830e959e27a1229080619495))
+
 ## [2.1.166](https://github.com/craftandculture/Craft-Culture/compare/v2.1.165...v2.1.166) (2026-11-20)
 
 ### Features
