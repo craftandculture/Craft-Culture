@@ -1,3 +1,9 @@
+## [2.1.168](https://github.com/craftandculture/Craft-Culture/compare/v2.1.167...v2.1.168) (2026-11-20)
+
+### Bug Fixes
+
+* **distribution:** October settles from CD codes only, the same wine only, invoices dated by month end, oldest invoice first whatever its type, and a price check before approval ([7a0e189](https://github.com/craftandculture/Craft-Culture/commit/7a0e189621bbaf95679dc45e2c26cffa20aec646))
+
 ## [2.1.167](https://github.com/craftandculture/Craft-Culture/compare/v2.1.166...v2.1.167) (2026-11-20)
 
 ### Bug Fixes
