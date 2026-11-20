@@ -5,9 +5,9 @@ import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import reattributeMonth from '../data/reattributeMonth';
+import assertMonthOpen from '../utils/assertMonthOpen';
 import { confirmedLinksReady } from '../utils/codeBridge';
 import tableReady from '../utils/tableReady';
-import assertMonthOpen from '../utils/assertMonthOpen';
 
 /**
  * Answer a sale from the queue: this code is this wine, or it is not ours
