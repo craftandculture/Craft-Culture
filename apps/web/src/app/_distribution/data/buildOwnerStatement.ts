@@ -1,5 +1,7 @@
 import { client } from '@/database/client';
 
+import getPartnerPayoutCost from './getPartnerPayoutCost';
+import type { PartnerPayoutCost } from './getPartnerPayoutCost';
 import getPricingManagerLanded from './getPricingManagerLanded';
 import { settles } from '../utils/classifyInvoice';
 import tableReady from '../utils/tableReady';
@@ -30,8 +32,16 @@ export interface StatementLine {
   shortBottles: number;
   /** Drawn from the outlet's own prepaid or outright stock: billed and paid to nobody */
   unsettledBottles: number;
+  /** A dated cut to the price City Drinks pay, as a percentage, if one applies */
+  priceCutPct: number | null;
   /** Which of our invoices the value came from */
-  drawnFrom: { docRef: string | null; bottles: number; value: number }[];
+  drawnFrom: {
+    docRef: string | null;
+    bottles: number;
+    value: number;
+    pricePerBottle: number;
+    settles: boolean;
+  }[];
 }
 
 interface SoldRow {
@@ -185,9 +195,26 @@ const buildOwnerStatement = async (input: {
     const remembers = await wineLandedReady();
 
     /* Shared with cellar sales of partner wine, so both owe the same figure */
-    const [owner] = await client<{ partnerId: string | null }[]>`
-      SELECT partner_id AS "partnerId" FROM cons_owners WHERE id = ${input.ownerId}
+    const settlementReady = await tableReady('cons_price_cuts');
+    const [owner] = await client<
+      {
+        partnerId: string | null;
+        kind: string | null;
+        payoutRule: string | null;
+        sharePct: number | null;
+        recoveryPer75: number | null;
+        recoveryFrom: string | null;
+      }[]
+    >`
+      SELECT partner_id AS "partnerId", kind,
+             ${settlementReady ? client`payout_rule` : client`'landed'::text`} AS "payoutRule",
+             ${settlementReady ? client`payout_share_pct::float8` : client`NULL::float8`} AS "sharePct",
+             ${settlementReady ? client`freight_recovery_per_75cl::float8` : client`NULL::float8`} AS "recoveryPer75",
+             ${settlementReady ? client`freight_recovery_from::text` : client`NULL::text`} AS "recoveryFrom"
+      FROM cons_owners WHERE id = ${input.ownerId}
     `;
+    /* City Drinks' own stock: bought and paid for, so owed to nobody */
+    const owedToNobody = owner?.kind === 'outlet-own';
     const live = await getPricingManagerLanded(keys, {
       shipmentFallback: true,
       partnerId: owner?.partnerId ?? null,
@@ -210,43 +237,19 @@ const buildOwnerStatement = async (input: {
       : [];
 
     /*
-      The partner's own price sheet, where they have one: Crurated's recon
-      workbook and Cru's price list. Their price is what they are owed; the
-      Pricing Manager is our cost model and, for them, has no import price.
-      A dated cut (Crurated's 10% on four wines from 9 Oct 2026) applies to
-      any month it falls in.
+      Sophie's rule (19 Nov 2026): a partner is paid the Pricing Manager's
+      import + logistics + override on their own lot, nothing from a separate
+      price sheet. So fixing what a partner is owed is always done in one
+      place. A figure set by hand on the statement still wins, and a wine the
+      Pricing Manager no longer holds falls back to its last known figure.
     */
-    const monthEnd = `${input.month}-28`;
-    const hasSheets = await tableReady('cons_owner_costs');
-    const sheet = hasSheets && keys.length
-      ? await client<
-          { key: string; costPerBottle: number; tab: string | null; pctOff: number | null }[]
-        >`
-          SELECT DISTINCT ON (c.wine_key)
-                 c.wine_key AS key, c.cost_per_bottle::float8 AS "costPerBottle",
-                 c.tab,
-                 (
-                   SELECT MAX(j.pct_off)::float8
-                   FROM cons_cost_adjustments j
-                   WHERE j.owner_id = c.owner_id
-                     AND UPPER(j.w_code) = UPPER(c.w_code)
-                     AND j.valid_from <= (DATE_TRUNC('month', ${monthEnd}::date)
-                                          + INTERVAL '1 month - 1 day')
-                 ) AS "pctOff"
-          FROM cons_owner_costs c
-          WHERE c.owner_id = ${input.ownerId}
-            AND c.wine_key = ANY(${keys}::text[])
-          ORDER BY c.wine_key, c.created_at DESC
-        `
-      : [];
+    const payout = owner?.partnerId
+      ? await getPartnerPayoutCost(owner.partnerId, keys)
+      : new Map<string, PartnerPayoutCost>();
 
-    /*
-      Set by hand wins outright: somebody has looked. Then the partner's own
-      sheet, then the Pricing Manager, then the last figure it gave.
-    */
     const costs = keys.map((key) => {
       const kept = remembered.find((row) => row.key === key);
-      const listed = sheet.find((row) => row.key === key);
+      const lot = payout.get(key);
       const now = live.find((row) => row.key === key);
 
       if (kept?.source === 'by-hand') {
@@ -258,15 +261,11 @@ const buildOwnerStatement = async (input: {
         };
       }
 
-      if (listed) {
-        const cut = listed.pctOff ? 1 - listed.pctOff / 100 : 1;
-
+      if (lot) {
         return {
           key,
-          landedPerBottle: Math.round(listed.costPerBottle * cut * 100) / 100,
-          shipmentNumber: `${listed.tab ?? 'Partner price sheet'}${
-            listed.pctOff ? `, less ${listed.pctOff}%` : ''
-          }`,
+          landedPerBottle: lot.perBottle,
+          shipmentNumber: lot.from,
           ownLine: true,
         };
       }
@@ -285,6 +284,24 @@ const buildOwnerStatement = async (input: {
         ownLine: true,
       };
     });
+
+    /*
+      A dated cut to what City Drinks pay (10% from 9 Oct 2026 on four
+      Crurated wines). It comes off the invoice price for any month it has
+      started in; the owner's side already carries it in the Pricing Manager.
+    */
+    const monthLast = `${input.month}-01`;
+    const cuts = settlementReady && keys.length
+      ? await client<{ key: string; pctOff: number }[]>`
+          SELECT wine_key AS key, MAX(pct_off)::float8 AS "pctOff"
+          FROM cons_price_cuts
+          WHERE outlet_id = ${input.outletId}
+            AND wine_key = ANY(${keys}::text[])
+            AND valid_from < (${monthLast}::date + INTERVAL '1 month')
+          GROUP BY wine_key
+        `
+      : [];
+    const cutByKey = new Map(cuts.map((row) => [row.key, row.pctOff]));
 
     const costByLwin = new Map(costs.map((row) => [row.key, row]));
     const consumedByLwin = new Map<string, number>();
@@ -317,11 +334,24 @@ const buildOwnerStatement = async (input: {
           settles: settles(layer.invoiceType),
         }));
 
-      const valued = valueFifo(
+      const fifo = valueFifo(
         outLayers,
         row.bottles,
         consumedByLwin.get(key) ?? 0,
       );
+      const cutPct = cutByKey.get(key) ?? null;
+      const keep = cutPct ? 1 - cutPct / 100 : 1;
+      const valued = cutPct
+        ? {
+            ...fifo,
+            value: fifo.value * keep,
+            drawnFrom: fifo.drawnFrom.map((draw) => ({
+              ...draw,
+              value: draw.value * keep,
+              pricePerBottle: draw.pricePerBottle * keep,
+            })),
+          }
+        : fifo;
 
       const costed = costByLwin.get(wineKey(row.lwin18));
       /*
@@ -331,12 +361,39 @@ const buildOwnerStatement = async (input: {
         billing currency: AED at the fixed peg. Any other billing currency is
         left as it was and the line says so through costCurrency.
       */
-      const landedUsd = costed?.landedPerBottle ?? null;
+      /*
+        Alain's agreed basis (Sophie, 19 Nov 2026): a share of what City
+        Drinks pay for the bottle, less freight recovered per 75cl once his
+        first settlement has been made. Import prices play no part in it.
+      */
+      const shareRule =
+        owner?.payoutRule === 'invoice_share' && owner.sharePct != null;
+      const billedPerBottle =
+        valued.bottles - valued.unsettledBottles > 0
+          ? valued.value / (valued.bottles - valued.unsettledBottles)
+          : 0;
+      const sizeMl = Number((row.lwin18 ?? '').replace(/\D/g, '').slice(-5)) || 750;
+      const recovery =
+        shareRule &&
+        owner?.recoveryPer75 &&
+        owner.recoveryFrom &&
+        `${input.month}-01` >= owner.recoveryFrom.slice(0, 7) + '-01'
+          ? owner.recoveryPer75 * (sizeMl / 750)
+          : 0;
+      const landedUsd = shareRule
+        ? Math.max(0, billedPerBottle * (owner!.sharePct! / 100) - recovery)
+        : (costed?.landedPerBottle ?? null);
       const inAed = valued.currency === 'AED';
       const costPerBottle =
-        landedUsd === null ? null : inAed ? landedUsd * AED_PER_USD : landedUsd;
+        landedUsd === null
+          ? null
+          : inAed && !shareRule
+            ? landedUsd * AED_PER_USD
+            : landedUsd;
       /* Bottles of the outlet's own stock are owed to nobody */
-      const owedBottles = row.bottles - valued.unsettledBottles;
+      const owedBottles = owedToNobody
+        ? 0
+        : row.bottles - valued.unsettledBottles - valued.shortBottles;
 
       return {
         lwin18: row.lwin18,
@@ -352,7 +409,9 @@ const buildOwnerStatement = async (input: {
               ? null
               : costPerBottle * owedBottles,
         /** The shipment the landed cost came from, so a figure can be traced */
-        costFrom: costed?.shipmentNumber ?? null,
+        costFrom: shareRule
+          ? `${owner!.sharePct}% of the invoice price${recovery ? `, less $${recovery.toFixed(2)} freight` : ''}`
+          : (costed?.shipmentNumber ?? null),
         /** False where the cost came from another owner's shipment line */
         costIsOwnLine: costed?.ownLine ?? false,
         billedToOutlet: valued.value,
@@ -360,6 +419,7 @@ const buildOwnerStatement = async (input: {
         costCurrency: inAed ? 'AED' : 'USD',
         shortBottles: valued.shortBottles,
         unsettledBottles: valued.unsettledBottles,
+        priceCutPct: cutPct,
         drawnFrom: valued.drawnFrom,
       };
     });

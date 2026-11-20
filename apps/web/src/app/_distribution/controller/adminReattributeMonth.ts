@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import reattributeMonth from '../data/reattributeMonth';
+import assertMonthOpen from '../utils/assertMonthOpen';
 
 /**
  * Run the month's matching again against what we know now
@@ -23,6 +24,8 @@ const adminReattributeMonth = adminProcedure
     }),
   )
   .mutation(async ({ input }) => {
+    await assertMonthOpen(input.outletId, input.month);
+
     const result = await reattributeMonth(input);
 
     if (!result) {

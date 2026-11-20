@@ -15,7 +15,13 @@ describe('valueFifo', () => {
 
     expect(result.value).toBe(600);
     expect(result.drawnFrom).toEqual([
-      { docRef: 'INV-100', bottles: 6, value: 600 },
+      {
+        docRef: 'INV-100',
+        bottles: 6,
+        value: 600,
+        pricePerBottle: 100,
+        settles: true,
+      },
     ]);
   });
 

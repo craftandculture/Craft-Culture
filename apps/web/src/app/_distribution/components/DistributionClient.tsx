@@ -15,10 +15,10 @@ import useTRPC from '@/lib/trpc/browser';
 import CodeLinkPanel from './CodeLinkPanel';
 import CodesRegisterUpload from './CodesRegisterUpload';
 import InvoiceTypesPanel from './InvoiceTypesPanel';
-import MonthSummaryPanel from './MonthSummaryPanel';
 import OwnerCostsUpload from './OwnerCostsUpload';
 import SalesUpload from './SalesUpload';
 import SameWinePanel from './SameWinePanel';
+import SettlementPanel from './SettlementPanel';
 import StatementPanel from './StatementPanel';
 import UnmatchedLinesPanel from './UnmatchedLinesPanel';
 import ownerColour from '../utils/ownerColour';
@@ -512,7 +512,14 @@ const DistributionClient = () => {
         each partner is the question the page exists to answer; the per-wine
         position below is how it is checked.
       */}
-      <MonthSummaryPanel outletId={outletId} month={statementMonth} />
+      <SettlementPanel
+        outletId={outletId}
+        month={statementMonth}
+        owners={(setup.data?.owners ?? []).map((row) => ({
+          id: row.id,
+          name: row.name,
+        }))}
+      />
 
       <UnmatchedLinesPanel outletId={outletId} month={statementMonth} />
 

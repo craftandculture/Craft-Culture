@@ -2560,6 +2560,149 @@ const runMigrations = async () => {
     });
 
     /*
+      Monthly settlement with City Drinks (Sophie's brief, 19 Nov 2026).
+
+      cons_adjustments: one-off corrections to a month (Murrieta 170th +$416.90,
+      an overcharge refunded), kept as lines instead of being added by hand.
+      cons_price_cuts: a dated cut to what City Drinks pay us for a wine (10%
+      from 9 Oct 2026 on four Crurated wines). It is applied to the invoice
+      price, never to the owner's cost, which the Pricing Manager already
+      carries as a negative override.
+      cons_month_reports: what the outlet's report said, so a month can be
+      checked bottle for bottle.
+      cons_month_closes: an approved month, frozen with the figures it was
+      approved on and the Zoho drafts it raised.
+      cons_owners payout columns: how an owner is paid. 'landed' is the Pricing
+      Manager's import + logistics + override on the owner's lot; 'invoice_share'
+      is Alain's agreed basis, a share of the invoice price less freight.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_adjustments" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "month" text NOT NULL,
+        "description" text NOT NULL,
+        "amount" double precision NOT NULL,
+        "owner_id" uuid REFERENCES "cons_owners"("id") ON DELETE SET NULL,
+        "owner_amount" double precision,
+        "created_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cons_adjustments_month_idx" ON "cons_adjustments"("outlet_id","month")`,
+    );
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_price_cuts" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "wine_key" text NOT NULL,
+        "label" text,
+        "pct_off" double precision NOT NULL,
+        "valid_from" date NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "cons_price_cuts_unique" ON "cons_price_cuts"("outlet_id","wine_key","valid_from")`,
+    );
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_month_reports" (
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "month" text NOT NULL,
+        "declared_bottles" double precision,
+        "read_bottles" double precision NOT NULL,
+        "lines" integer NOT NULL,
+        "skipped" jsonb,
+        "uploaded_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "uploaded_at" timestamp DEFAULT now() NOT NULL,
+        PRIMARY KEY ("outlet_id","month")
+      )
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_month_closes" (
+        "outlet_id" uuid NOT NULL REFERENCES "cons_outlets"("id") ON DELETE CASCADE,
+        "month" text NOT NULL,
+        "figures" jsonb NOT NULL,
+        "zoho_invoice_id" text,
+        "zoho_invoice_number" text,
+        "zoho_bills" jsonb,
+        "approved_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "approved_at" timestamp DEFAULT now() NOT NULL,
+        PRIMARY KEY ("outlet_id","month")
+      )
+    `);
+    for (const statement of [
+      `ALTER TABLE "cons_owners" ADD COLUMN IF NOT EXISTS "payout_rule" text NOT NULL DEFAULT 'landed'`,
+      `ALTER TABLE "cons_owners" ADD COLUMN IF NOT EXISTS "payout_share_pct" double precision`,
+      `ALTER TABLE "cons_owners" ADD COLUMN IF NOT EXISTS "freight_recovery_per_75cl" double precision`,
+      `ALTER TABLE "cons_owners" ADD COLUMN IF NOT EXISTS "freight_recovery_from" date`,
+    ]) {
+      await client.unsafe(statement);
+    }
+    console.log('✅ cons settlement tables ready');
+
+    await dataFix('settlement: owners, Alain payout rule and CD price cuts', async () => {
+      /* The three owners Sophie's tag table adds (IHAB, ALAIN, WINETED) */
+      await client.unsafe(`
+        INSERT INTO "cons_owners"
+          ("name","slug","consignment_tag","wms_owner_match","takes_unattributed","partner_id","kind")
+        SELECT v.name, v.slug, v.tag, v.match, false,
+               (SELECT p."id" FROM "partners" p
+                WHERE p."business_name" ILIKE v.pattern
+                ORDER BY p."created_at" LIMIT 1),
+               'partner'
+        FROM (VALUES
+          ('Ihab Toma','ihab-toma','IHAB','IHAB','%ihab%'),
+          ('Alain Brahamcha','alain-brahamcha','ALAIN','BRAHAMCHA','%brahamcha%'),
+          ('Maison Wineted','maison-wineted','WINETED','WINETED','%wineted%')
+        ) AS v(name, slug, tag, match, pattern)
+        ON CONFLICT ("slug") DO NOTHING
+      `);
+      await client.unsafe(`
+        INSERT INTO "cons_arrangements" ("owner_id","outlet_id")
+        SELECT ow."id", ou."id"
+        FROM "cons_owners" ow
+        CROSS JOIN "cons_outlets" ou
+        WHERE ou."slug" = 'city-drinks'
+          AND ow."slug" IN ('ihab-toma','alain-brahamcha','maison-wineted')
+        ON CONFLICT ("owner_id","outlet_id") DO NOTHING
+      `);
+      /* Alain: invoice price x 0.9, less $7.40 freight per 75cl (Sophie, 19 Nov 2026) */
+      await client.unsafe(`
+        UPDATE "cons_owners"
+        SET "payout_rule" = 'invoice_share', "payout_share_pct" = 90,
+            "freight_recovery_per_75cl" = 7.40
+        WHERE "slug" = 'alain-brahamcha' AND "payout_rule" = 'landed'
+      `);
+      /* The CD side of Crurated's 10% cut, keyed on the wine the W-code prices */
+      await client.unsafe(`
+        INSERT INTO "cons_price_cuts" ("outlet_id","wine_key","label","pct_off","valid_from")
+        SELECT DISTINCT ON (c."wine_key") ou."id", c."wine_key", j."note", j."pct_off", j."valid_from"
+        FROM "cons_cost_adjustments" j
+        JOIN "cons_owner_costs" c
+          ON c."owner_id" = j."owner_id" AND UPPER(c."w_code") = UPPER(j."w_code")
+        CROSS JOIN "cons_outlets" ou
+        WHERE ou."slug" = 'city-drinks' AND c."wine_key" IS NOT NULL
+        ORDER BY c."wine_key", j."valid_from"
+        ON CONFLICT ("outlet_id","wine_key","valid_from") DO NOTHING
+      `);
+      /* October 2026: Murrieta 170th sold 12 in September, reported as 2 */
+      await client.unsafe(`
+        INSERT INTO "cons_adjustments" ("outlet_id","month","description","amount")
+        SELECT ou."id", '2026-10',
+               'September adjustment: Marqués de Murrieta 170th (CDR2141640766) sold 2 cases (12 btl), reported as 2 btl. 10 btl x $41.69',
+               416.90
+        FROM "cons_outlets" ou
+        WHERE ou."slug" = 'city-drinks'
+          AND NOT EXISTS (
+            SELECT 1 FROM "cons_adjustments" a
+            WHERE a."outlet_id" = ou."id" AND a."month" = '2026-10' AND a."description" ILIKE '%Murrieta%'
+          )
+      `);
+    });
+
+    /*
       Export invoices — the combined commercial invoice & packing list.
 
       The document is JSON; versions keep every state with the ops and request

@@ -222,6 +222,12 @@ const adminSyncOutFromZoho = adminProcedure
       for (const invoice of result.invoices) {
         if (invoice.status === 'void' || invoice.status === 'draft') continue;
         if (!squash(invoice.customer_name ?? '').includes(wanted)) continue;
+        /*
+          Our monthly settlement invoice bills sales, it does not send wine.
+          Read as a delivery it would put every bottle sold back on their
+          shelf as City Drinks' own stock.
+        */
+        if (/^SETTLEMENT\b/i.test(invoice.reference_number ?? '')) continue;
 
         headers.push({ id: invoice.invoice_id, number: invoice.invoice_number });
       }

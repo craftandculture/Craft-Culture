@@ -133,3 +133,47 @@ describe('parseOutletSalesReport, a workbook with a hidden pivot first', () => {
     expect(pivot.lines).toEqual([{ outletCode: 'CDR6645813799', productName: 'Tenuta San Guido Sassicaia 2019', bottles: 1 }]);
   });
 });
+
+/*
+  Our own October 2026 payment-run tab, uploaded as the month's report. Under
+  its total it lists the bottles already billed, keyed on the same CD codes,
+  and reading on counted them twice: 547 bottles became 588.
+*/
+describe('a report with sections below its total', () => {
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    book,
+    XLSX.utils.aoa_to_sheet([
+      ['City Drinks – October 2026 consignment sales'],
+      [],
+      ['CD code', 'Wine', 'Bottles sold in October', 'Invoice'],
+      ['CDR2341469877', 'Tenuta San Guido Sassicaia 2020', '3', 'INV-000236'],
+      ['CDR0277055192', 'Armand Heitz Bourgogne Blanc 2023', '36', 'INV-000367'],
+      ['CDR0277055192', 'Armand Heitz Bourgogne Blanc 2023', '7', 'INV-000464'],
+      ['October sales', '', '46', ''],
+      ['September adjustment', 'Murrieta: add 10 btl', '', ''],
+      ['TOTAL DUE FOR OCTOBER', '', '', ''],
+      ['PLEASE CHECK – already billed'],
+      ['CD code', 'Wine', 'Bottles', 'Our invoice'],
+      ['CDR0277055192', 'Armand Heitz Bourgogne Blanc 2023', '7', 'INV-000464'],
+    ]),
+    'October',
+  );
+
+  const parsed = parseOutletSalesReport(
+    XLSX.write(book, { type: 'base64', bookType: 'xlsx' }) as string,
+    2026,
+  );
+
+  it('reads only the rows above the first total', () => {
+    expect(parsed.month).toBe('2026-10');
+    expect(parsed.counts.bottles).toBe(46);
+    expect(parsed.declaredBottles).toBe(46);
+    expect(parsed.agrees).toBe(true);
+    expect(parsed.lines.some((line) => line.outletCode === '')).toBe(false);
+  });
+
+  it('says what it left unread', () => {
+    expect(parsed.skipped.some((line) => line.includes('below'))).toBe(true);
+  });
+});

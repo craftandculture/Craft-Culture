@@ -7,6 +7,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import reattributeMonth from '../data/reattributeMonth';
 import { confirmedLinksReady } from '../utils/codeBridge';
 import tableReady from '../utils/tableReady';
+import assertMonthOpen from '../utils/assertMonthOpen';
 
 /**
  * Answer a sale from the queue: this code is this wine, or it is not ours
@@ -44,6 +45,8 @@ const adminConfirmSale = adminProcedure
       }),
   )
   .mutation(async ({ input, ctx }) => {
+    await assertMonthOpen(input.outletId, input.month);
+
     if (!(await confirmedLinksReady())) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',

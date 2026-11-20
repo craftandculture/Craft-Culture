@@ -1,8 +1,11 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
+import adminAddAdjustment from './controller/adminAddAdjustment';
+import adminApproveMonth from './controller/adminApproveMonth';
 import adminAutoLinkCodes from './controller/adminAutoLinkCodes';
 import adminConfirmSale from './controller/adminConfirmSale';
 import adminDeriveSold from './controller/adminDeriveSold';
+import adminExportSettlement from './controller/adminExportSettlement';
 import adminExportStatement from './controller/adminExportStatement';
 import adminGetBalances from './controller/adminGetBalances';
 import adminGetCodeSuggestions from './controller/adminGetCodeSuggestions';
@@ -11,6 +14,7 @@ import adminGetInvoices from './controller/adminGetInvoices';
 import adminGetLineDuplicates from './controller/adminGetLineDuplicates';
 import adminGetMonthSummary from './controller/adminGetMonthSummary';
 import adminGetOwed from './controller/adminGetOwed';
+import adminGetSettlement from './controller/adminGetSettlement';
 import adminGetSetup from './controller/adminGetSetup';
 import adminGetStatement from './controller/adminGetStatement';
 import adminGetUnmatchedLines from './controller/adminGetUnmatchedLines';
@@ -21,6 +25,7 @@ import adminLinkCode from './controller/adminLinkCode';
 import adminMergeWine from './controller/adminMergeWine';
 import adminPullOutletStock from './controller/adminPullOutletStock';
 import adminReattributeMonth from './controller/adminReattributeMonth';
+import adminRemoveAdjustment from './controller/adminRemoveAdjustment';
 import adminSearchWines from './controller/adminSearchWines';
 import adminSetInvoiceOwner from './controller/adminSetInvoiceOwner';
 import adminSetInvoiceType from './controller/adminSetInvoiceType';
@@ -53,7 +58,12 @@ import staffSendDailySales from './controller/staffSendDailySales';
  */
 const distributionRouter = createTRPCRouter({
   admin: createTRPCRouter({
+    addAdjustment: adminAddAdjustment,
+    approveMonth: adminApproveMonth,
     autoLinkCodes: adminAutoLinkCodes,
+    exportSettlement: adminExportSettlement,
+    getSettlement: adminGetSettlement,
+    removeAdjustment: adminRemoveAdjustment,
     confirmSale: adminConfirmSale,
     deriveSold: adminDeriveSold,
     exportStatement: adminExportStatement,

@@ -43,7 +43,8 @@ export interface ParsedOutletSales {
  * added 352 bottles to a 352-bottle month and doubled it exactly, which is the
  * kind of wrong that looks plausible.
  */
-const TOTALS_ROW = /^(grand\s+)?total$|^sum$|^subtotal$/i;
+const TOTALS_ROW =
+  /^(grand\s+)?total\b|^sum$|^subtotal$|^total due\b|^(january|february|march|april|may|june|july|august|september|october|november|december)\s+sales$|\badjustment\b/i;
 
 const MONTHS = [
   'january', 'february', 'march', 'april', 'may', 'june',
@@ -192,6 +193,8 @@ const parseOutletSalesReport = (
   let unreadable = 0;
   let declaredBottles: number | null = null;
   let totals = 0;
+  /** The label of the first total row, once it has been passed */
+  let endedAt: string | null = null;
 
   for (const row of rows) {
     const outletCode = String(row[codeKey] ?? '').trim();
@@ -209,9 +212,29 @@ const parseOutletSalesReport = (
     ) {
       const stated = Number(row[monthKey] ?? 0);
 
-      if (Number.isFinite(stated) && stated > 0) declaredBottles = stated;
+      if (declaredBottles === null && Number.isFinite(stated) && stated > 0) {
+        declaredBottles = stated;
+      }
 
       totals += 1;
+      /*
+        Nothing below the first total is a sale. Our own payment-run tab was
+        uploaded for October 2026: under its "October sales" total sat an
+        adjustment and a "Please check: already billed" list keyed on the same
+        CD codes, and reading on counted those 41 bottles a second time (547
+        became 588) while the total row itself became a blank-coded wine.
+      */
+      endedAt = endedAt ?? (vendor || outletCode || productName);
+
+      continue;
+    }
+
+    if (endedAt) {
+      if (outletCode || productName) {
+        skipped.push(
+          `${outletCode || productName}: below the "${endedAt}" total, so not read as a sale`,
+        );
+      }
 
       continue;
     }

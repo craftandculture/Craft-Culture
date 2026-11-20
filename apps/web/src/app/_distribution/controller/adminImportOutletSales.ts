@@ -5,7 +5,9 @@ import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import replaceMonthSales from '../data/replaceMonthSales';
+import assertMonthOpen from '../utils/assertMonthOpen';
 import parseOutletSalesReport from '../utils/parseOutletSalesReport';
+import tableReady from '../utils/tableReady';
 
 /**
  * Take an outlet's monthly sales into the ledger
@@ -38,7 +40,7 @@ const adminImportOutletSales = adminProcedure
       fileName: z.string().max(300).optional(),
     }),
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     const parsed = parseOutletSalesReport(input.file, input.year);
 
     if (parsed.lines.length === 0) {
@@ -69,6 +71,8 @@ const adminImportOutletSales = adminProcedure
         AND m.doc_date >= ${`${parsed.month}-01`}::date
     `;
 
+    await assertMonthOpen(input.outletId, parsed.month);
+
     if (derived?.windows) {
       throw new TRPCError({
         code: 'CONFLICT',
@@ -83,9 +87,34 @@ const adminImportOutletSales = adminProcedure
       docRef: input.fileName ?? `${parsed.monthLabel} sales`,
     });
 
+    /*
+      What the report itself said, kept so the month can be checked bottle for
+      bottle against it later, whatever happens to the lines in between.
+    */
+    if (await tableReady('cons_month_reports')) {
+      await client`
+        INSERT INTO cons_month_reports
+          (outlet_id, month, declared_bottles, read_bottles, lines, skipped, uploaded_by, uploaded_at)
+        VALUES (
+          ${input.outletId}, ${parsed.month}, ${parsed.declaredBottles},
+          ${parsed.counts.bottles}, ${parsed.lines.length},
+          ${client.json(parsed.skipped)}, ${ctx.user.id}, now()
+        )
+        ON CONFLICT (outlet_id, month) DO UPDATE SET
+          declared_bottles = EXCLUDED.declared_bottles,
+          read_bottles = EXCLUDED.read_bottles,
+          lines = EXCLUDED.lines,
+          skipped = EXCLUDED.skipped,
+          uploaded_by = EXCLUDED.uploaded_by,
+          uploaded_at = now()
+      `;
+    }
+
     return {
       month: parsed.month,
       monthLabel: parsed.monthLabel,
+      /** Rows the reader passed over, such as anything below the report's total */
+      skipped: parsed.skipped.slice(0, 20),
       lines: result.lines,
       bottles: result.bottles,
       /** The sheet's own total, and whether our reading of it agrees */

@@ -25,7 +25,15 @@ export interface FifoResult {
   unsettledBottles: number;
   currency: string | null;
   /** Which invoices the value came from, for the drill-down */
-  drawnFrom: { docRef: string | null; bottles: number; value: number }[];
+  drawnFrom: {
+    docRef: string | null;
+    bottles: number;
+    value: number;
+    /** The invoice's price per bottle, also where the bottles were not billed */
+    pricePerBottle: number;
+    /** False where the layer was the outlet's own stock: already billed */
+    settles: boolean;
+  }[];
 }
 
 /**
@@ -100,7 +108,13 @@ const valueFifo = (
     value += drawn;
     bottles += take;
     remaining -= take;
-    drawnFrom.push({ docRef: layer.docRef, bottles: take, value: drawn });
+    drawnFrom.push({
+      docRef: layer.docRef,
+      bottles: take,
+      value: drawn,
+      pricePerBottle: layer.pricePerBottle,
+      settles: settled,
+    });
   }
 
   return {
