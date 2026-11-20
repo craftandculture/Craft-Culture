@@ -2640,6 +2640,34 @@ const runMigrations = async () => {
     ]) {
       await client.unsafe(statement);
     }
+    /*
+      Outright sales: the owner a person confirmed for an invoice line, where
+      two or more partners hold the wine or no pick recorded whose lot it was.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_outright_owners" (
+        "invoice_line_id" uuid PRIMARY KEY,
+        "owner_partner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "set_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    /*
+      The type a sales order was released as: consignment, outright sale,
+      private client order or prepaid by the outlet. Set at release, so the
+      invoice and the Distribution page take it from there instead of from a
+      tag typed into Zoho afterwards.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "zoho_so_release_types" (
+        "sales_order_id" uuid PRIMARY KEY REFERENCES "zoho_sales_orders"("id") ON DELETE CASCADE,
+        "release_type" text NOT NULL,
+        "owner_tag" text,
+        "tag_written" text,
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "set_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
     console.log('✅ cons settlement tables ready');
 
     await dataFix('settlement: owners, Alain payout rule and CD price cuts', async () => {
@@ -2699,6 +2727,45 @@ const runMigrations = async () => {
             SELECT 1 FROM "cons_adjustments" a
             WHERE a."outlet_id" = ou."id" AND a."month" = '2026-10' AND a."description" ILIKE '%Murrieta%'
           )
+      `);
+    });
+
+    await dataFix('settlement: INV-000459 to Ihab, Racines price code, lock CD invoice history', async () => {
+      /* INV-000459 is Ihab's wine on consignment (Sophie, 19 Nov 2026) */
+      await client.unsafe(`
+        INSERT INTO "cons_invoice_types" ("outlet_id","doc_ref","invoice_type","owner_id")
+        SELECT ou."id", 'INV-000459', 'consignment', ow."id"
+        FROM "cons_outlets" ou, "cons_owners" ow
+        WHERE ou."slug" = 'city-drinks' AND ow."slug" = 'ihab-toma'
+        ON CONFLICT ("outlet_id","doc_ref") DO UPDATE
+          SET "invoice_type" = 'consignment', "owner_id" = EXCLUDED."owner_id"
+      `);
+      /*
+        Racines Sparkling Grand Reserve NV: its price sat under a broken code,
+        so City Drinks' sales (2150228-1000-06-00750) found no cost.
+      */
+      await client.unsafe(`
+        UPDATE "wms_product_pricing" SET "lwin18" = '2150228-1000-06-00750', "updated_at" = now()
+        WHERE "lwin18" = 'rentW4301023-0000-06-00750'
+          AND NOT EXISTS (
+            SELECT 1 FROM "wms_product_pricing" p2 WHERE p2."lwin18" = '2150228-1000-06-00750'
+          )
+      `);
+      /*
+        The CD invoices already classified, locked as they stand (Sophie checked
+        them against the Zoho tags, 19 Nov 2026): from now on the type comes
+        from the release, and these are never re-read from a tag again.
+      */
+      await client.unsafe(`
+        INSERT INTO "cons_invoice_types" ("outlet_id","doc_ref","invoice_type")
+        SELECT DISTINCT ON (a."outlet_id", m."doc_ref") a."outlet_id", m."doc_ref",
+               COALESCE(m."invoice_type", 'consignment')
+        FROM "cons_movements" m
+        JOIN "cons_arrangements" a ON a."id" = m."arrangement_id"
+        JOIN "cons_outlets" ou ON ou."id" = a."outlet_id" AND ou."slug" = 'city-drinks'
+        WHERE m."kind" = 'out' AND m."doc_ref" IS NOT NULL
+        ORDER BY a."outlet_id", m."doc_ref"
+        ON CONFLICT ("outlet_id","doc_ref") DO NOTHING
       `);
     });
 

@@ -243,8 +243,43 @@ const buildOwnerStatement = async (input: {
       place. A figure set by hand on the statement still wins, and a wine the
       Pricing Manager no longer holds falls back to its last known figure.
     */
+    /*
+      The other codes each wine answers to for this owner: the W-code and the
+      LWIN a partner's price sheet paired, and codes merged on this page.
+    */
+    const aliases = new Map<string, Set<string>>();
+    const squashCode = (value: string | null | undefined) =>
+      (value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    if (keys.length && (await tableReady('cons_owner_costs'))) {
+      const pairs = await client<
+        { wineKey: string | null; lwin18: string | null; wCode: string | null }[]
+      >`
+        SELECT DISTINCT wine_key AS "wineKey", lwin18, w_code AS "wCode"
+        FROM cons_owner_costs
+        WHERE owner_id = ${input.ownerId}
+      `;
+
+      for (const pair of pairs) {
+        const codes = [
+          squashCode(pair.wineKey),
+          pair.lwin18 ? wineKey(pair.lwin18) : '',
+          squashCode(pair.wCode),
+        ].filter(Boolean);
+
+        for (const code of codes) {
+          if (!keys.includes(code)) continue;
+
+          const set = aliases.get(code) ?? new Set<string>();
+
+          codes.filter((other) => other !== code).forEach((other) => set.add(other));
+          aliases.set(code, set);
+        }
+      }
+    }
+
     const payout = owner?.partnerId
-      ? await getPartnerPayoutCost(owner.partnerId, keys)
+      ? await getPartnerPayoutCost(owner.partnerId, keys, aliases)
       : new Map<string, PartnerPayoutCost>();
 
     const costs = keys.map((key) => {
@@ -291,17 +326,30 @@ const buildOwnerStatement = async (input: {
       started in; the owner's side already carries it in the Pricing Manager.
     */
     const monthLast = `${input.month}-01`;
+    const allCodes = [
+      ...new Set([...keys, ...[...aliases.values()].flatMap((set) => [...set])]),
+    ];
     const cuts = settlementReady && keys.length
       ? await client<{ key: string; pctOff: number }[]>`
           SELECT wine_key AS key, MAX(pct_off)::float8 AS "pctOff"
           FROM cons_price_cuts
           WHERE outlet_id = ${input.outletId}
-            AND wine_key = ANY(${keys}::text[])
+            AND UPPER(REGEXP_REPLACE(wine_key, '[^A-Za-z0-9]', '', 'g')) = ANY(${allCodes}::text[])
             AND valid_from < (${monthLast}::date + INTERVAL '1 month')
           GROUP BY wine_key
         `
       : [];
-    const cutByKey = new Map(cuts.map((row) => [row.key, row.pctOff]));
+    const cutByKey = new Map<string, number>();
+
+    for (const cut of cuts) {
+      const code = squashCode(cut.key);
+
+      for (const key of keys) {
+        if (key === code || aliases.get(key)?.has(code)) {
+          cutByKey.set(key, Math.max(cutByKey.get(key) ?? 0, cut.pctOff));
+        }
+      }
+    }
 
     const costByLwin = new Map(costs.map((row) => [row.key, row]));
     const consumedByLwin = new Map<string, number>();

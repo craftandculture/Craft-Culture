@@ -46,18 +46,38 @@ export interface PartnerPayoutCost {
  *
  * @param partnerId - The owner's partner record (wms_stock.owner_id)
  * @param keys - Wine keys from wineKey()
+ * @param aliases - Other codes each key answers to (W-codes, merged codes)
  * @returns One cost per key that has a costed lot
  */
-const getPartnerPayoutCost = async (partnerId: string, keys: string[]) => {
+const getPartnerPayoutCost = async (
+  partnerId: string,
+  keys: string[],
+  aliases: Map<string, Set<string>> = new Map(),
+) => {
   const result = new Map<string, PartnerPayoutCost>();
 
   if (keys.length === 0) return result;
 
-  const wanted = new Set(keys);
+  /*
+    Every code a wine answers to, pointing back at the key asked for. Crurated
+    stock is held under W-codes (W12008024-2021-06-00750) while City Drinks
+    sell and we invoice under the LWIN (1243561-2021-06-00750), or the other
+    way round, so a statement line found no lot and read as "no cost".
+  */
+  const target = new Map<string, string>();
+
+  for (const key of keys) {
+    target.set(key, key);
+
+    for (const code of aliases.get(key) ?? []) {
+      if (!target.has(code)) target.set(code, key);
+    }
+  }
 
   const rows = await db
     .select({
       lwin18: wmsStock.lwin18,
+      supplierSku: sql<string | null>`MAX(${wmsStock.supplierSku})`,
       ...stockPricingSelect,
       shipmentNumber: sql<string | null>`(
         SELECT ls.shipment_number FROM logistics_shipments ls
@@ -79,9 +99,17 @@ const getPartnerPayoutCost = async (partnerId: string, keys: string[]) => {
     .groupBy(wmsStock.lwin18);
 
   for (const raw of rows) {
-    const key = wineKey(raw.lwin18);
+    const squash = (value: string | null | undefined) =>
+      (value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const key = [
+      wineKey(raw.lwin18),
+      squash(raw.lwin18.split('-')[0]),
+      squash(raw.supplierSku),
+    ]
+      .map((code) => (code ? target.get(code) : undefined))
+      .find((found): found is string => Boolean(found));
 
-    if (!wanted.has(key)) continue;
+    if (!key) continue;
 
     const input = stockPricingInput(raw);
     const priced = pricePricingManagerRow(input, PRICE_LIST_RATES);

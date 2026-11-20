@@ -15,11 +15,13 @@ import adminGetCustomerInvoiceTotals from './controller/adminGetCustomerInvoiceT
 import adminGetOrderChain from './controller/adminGetOrderChain';
 import adminGetOutstandingOrders from './controller/adminGetOutstandingOrders';
 import adminGetPickedOrdersForDispatch from './controller/adminGetPickedOrdersForDispatch';
+import adminGetReleaseTypes from './controller/adminGetReleaseTypes';
 import adminGetSalesOrder from './controller/adminGetSalesOrder';
 import adminHoldDraft from './controller/adminHoldDraft';
 import adminLinkSalesOrderToPco from './controller/adminLinkSalesOrderToPco';
 import adminListSalesOrders from './controller/adminListSalesOrders';
 import adminReleaseToPick from './controller/adminReleaseToPick';
+import adminSetReleaseType from './controller/adminSetReleaseType';
 import adminSyncSalesOrders from './controller/adminSyncSalesOrders';
 import adminSyncZohoInvoices from './controller/adminSyncZohoInvoices';
 import adminTestPaymentAlerts from './controller/adminTestPaymentAlerts';
@@ -32,6 +34,9 @@ const zohoSalesOrdersRouter = createTRPCRouter({
   approve: adminApproveSalesOrders,
   createPickList: adminCreatePickListFromSalesOrder,
   releaseToPick: adminReleaseToPick,
+  // Consignment / outright / PCO / prepaid, chosen at release
+  releaseTypes: adminGetReleaseTypes,
+  setReleaseType: adminSetReleaseType,
   // Hold a draft SO's wine while the client finishes it
   holdDraft: adminHoldDraft,
   draftHolds: adminListDraftHolds,

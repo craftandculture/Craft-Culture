@@ -9,6 +9,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import buildMonthSettlement from '../data/buildMonthSettlement';
+import buildOutrightSales from '../data/buildOutrightSales';
 import assertMonthOpen from '../utils/assertMonthOpen';
 import tableReady from '../utils/tableReady';
 
@@ -53,12 +54,25 @@ const adminApproveMonth = adminProcedure
 
     await assertMonthOpen(input.outletId, input.month);
 
-    const settlement = await buildMonthSettlement(input);
+    const [settlement, outright] = await Promise.all([
+      buildMonthSettlement(input),
+      buildOutrightSales(input.month),
+    ]);
 
-    if (settlement.blockers.length > 0) {
+    const outrightBlockers = [
+      ...(outright.lines.some((line) => line.needsConfirm)
+        ? [`${outright.lines.filter((line) => line.needsConfirm).length} outright lines whose owner needs confirming`]
+        : []),
+      ...(outright.lines.some((line) => line.owed === null && line.ownerPartnerId)
+        ? [`${outright.lines.filter((line) => line.owed === null && line.ownerPartnerId).length} outright lines with no cost in the Pricing Manager`]
+        : []),
+    ];
+    const blockers = [...settlement.blockers, ...outrightBlockers];
+
+    if (blockers.length > 0) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: `Clear these first: ${settlement.blockers.join('; ')}.`,
+        message: `Clear these first: ${blockers.join('; ')}.`,
       });
     }
 
@@ -103,7 +117,7 @@ const adminApproveMonth = adminProcedure
       INSERT INTO cons_month_closes (outlet_id, month, figures, approved_by)
       VALUES (
         ${input.outletId}, ${input.month},
-        ${client.json(JSON.parse(JSON.stringify({ totals: settlement.totals, check: settlement.check, cdLines: settlement.cdLines, alreadyBilled: settlement.alreadyBilled, adjustments: settlement.adjustments, payouts: settlement.payouts })))},
+        ${client.json(JSON.parse(JSON.stringify({ totals: settlement.totals, check: settlement.check, cdLines: settlement.cdLines, alreadyBilled: settlement.alreadyBilled, adjustments: settlement.adjustments, payouts: settlement.payouts, outright: outright.lines })))},
         ${ctx.user.id}
       )
       ON CONFLICT (outlet_id, month) DO NOTHING
@@ -162,8 +176,59 @@ const adminApproveMonth = adminProcedure
 
     const bills: { owner: string; billId?: string; billNumber?: string; problem?: string }[] = [];
 
+    /* One bill per partner, covering consignment and outright sales together */
+    const billOwners = new Map<
+      string,
+      { ownerName: string; partnerId: string; lines: ZohoLineItem[]; total: number }
+    >();
+
     for (const owner of settlement.payouts) {
-      if (owner.dueToOwner <= 0) continue;
+      if (!owner.partnerId) continue;
+
+      const entry = billOwners.get(owner.partnerId) ?? {
+        ownerName: owner.ownerName,
+        partnerId: owner.partnerId,
+        lines: [],
+        total: 0,
+      };
+
+      entry.lines.push(
+        ...owner.lines
+          .filter((line) => line.amount !== null && line.bottles > 0)
+          .map((line) => ({
+            name: line.productName.slice(0, 100),
+            description: ['Consignment', line.outletCode, line.costFrom].filter(Boolean).join(' · '),
+            quantity: line.bottles,
+            rate: line.costPerBottle ?? 0,
+          })),
+        ...(owner.adjustments ? [{ name: 'Adjustment', quantity: 1, rate: owner.adjustments }] : []),
+      );
+      entry.total += owner.dueToOwner;
+      billOwners.set(owner.partnerId, entry);
+    }
+
+    for (const line of outright.lines) {
+      if (!line.ownerPartnerId || line.owed === null) continue;
+
+      const entry = billOwners.get(line.ownerPartnerId) ?? {
+        ownerName: line.ownerName ?? 'Owner',
+        partnerId: line.ownerPartnerId,
+        lines: [],
+        total: 0,
+      };
+
+      entry.lines.push({
+        name: line.productName.slice(0, 100),
+        description: ['Outright', line.invoiceNumber, line.customerName, line.costFrom].filter(Boolean).join(' · '),
+        quantity: line.bottles,
+        rate: line.costPerBottle ?? 0,
+      });
+      entry.total += line.owed;
+      billOwners.set(line.ownerPartnerId, entry);
+    }
+
+    for (const owner of billOwners.values()) {
+      if (owner.total <= 0) continue;
 
       const [partner] = owner.partnerId
         ? await client<{ zohoVendorId: string | null }[]>`
@@ -181,20 +246,8 @@ const adminApproveMonth = adminProcedure
           vendor_id: partner.zohoVendorId,
           reference_number: reference,
           date: new Date().toISOString().slice(0, 10),
-          line_items: [
-            ...owner.lines
-              .filter((line) => line.amount !== null && line.bottles > 0)
-              .map((line) => ({
-                name: line.productName.slice(0, 100),
-                description: [line.outletCode, line.costFrom].filter(Boolean).join(' · '),
-                quantity: line.bottles,
-                rate: line.costPerBottle ?? 0,
-              })),
-            ...(owner.adjustments
-              ? [{ name: 'Adjustment', quantity: 1, rate: owner.adjustments }]
-              : []),
-          ],
-          notes: `Consignment sales at ${outlet.name} for ${input.month}.`,
+          line_items: owner.lines,
+          notes: `Sales of your wine for ${input.month}: consignment at ${outlet.name} and outright sales to customers.`,
         });
 
         bills.push({ owner: owner.ownerName, billId: bill.bill_id, billNumber: bill.bill_number });

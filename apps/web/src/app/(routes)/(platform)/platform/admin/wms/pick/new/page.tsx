@@ -27,6 +27,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import ClientMark from '@/app/_wms/components/ClientMark';
 import PickOrderLines from '@/app/_wms/components/PickOrderLines';
 import WhereIsOrder from '@/app/_wms/components/WhereIsOrder';
+import ReleaseTypePicker from '@/app/_zohoSalesOrders/components/ReleaseTypePicker';
 import isPickableZohoStatus from '@/app/_zohoSalesOrders/utils/isPickableZohoStatus';
 import useTRPC from '@/lib/trpc/browser';
 import formatPrice from '@/utils/formatPrice';
@@ -79,6 +80,17 @@ const NewPickListPage = () => {
           (b.salesOrderNumber ?? '').localeCompare(a.salesOrderNumber ?? ''),
         ),
   });
+
+  /* Consignment / outright / prepaid for City Drinks orders, set before release */
+  const orderIds = useMemo(() => (zohoOrders ?? []).map((order) => order.id), [zohoOrders]);
+  const { data: releaseTypes } = useQuery({
+    ...api.zohoSalesOrders.releaseTypes.queryOptions({ salesOrderIds: orderIds }),
+    enabled: orderIds.length > 0,
+  });
+  const releaseTypeOf = useMemo(
+    () => new Map((releaseTypes ?? []).map((row) => [row.salesOrderId, row])),
+    [releaseTypes],
+  );
 
   const releaseToPickMutation = useMutation({
     ...api.zohoSalesOrders.releaseToPick.mutationOptions(),
@@ -235,8 +247,10 @@ const NewPickListPage = () => {
       try {
         await releaseToPickMutation.mutateAsync({ salesOrderId: id });
         succeeded++;
-      } catch {
+      } catch (error) {
         failed++;
+        /* Say why: a City Drinks order with no type chosen is refused by name */
+        if (error instanceof Error) toast.error(error.message);
       }
     }
 
@@ -514,6 +528,14 @@ const NewPickListPage = () => {
                             {order.customerName ?? 'Unknown'}
                           </p>
                           <div className="mt-1 flex flex-wrap items-center gap-1">
+                            {releaseTypeOf.get(order.id) ? (
+                              <ReleaseTypePicker
+                                salesOrderId={order.id}
+                                type={releaseTypeOf.get(order.id)!.type}
+                                required={releaseTypeOf.get(order.id)!.required}
+                                reason={releaseTypeOf.get(order.id)!.reason}
+                              />
+                            ) : null}
                             {order.referenceNumber && (
                               <span className="inline-flex max-w-full items-center gap-1 truncate rounded bg-fill-secondary px-1.5 py-0.5 text-[11px] font-medium text-text-muted">
                                 <IconTag className="h-3 w-3 shrink-0" />

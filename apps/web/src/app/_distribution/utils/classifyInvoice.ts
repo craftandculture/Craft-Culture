@@ -10,6 +10,8 @@ export type InvoiceType = (typeof INVOICE_TYPES)[number];
 export interface ClassifyInvoiceInput {
   /** The type a person set on the page, which is final */
   setByHand?: string | null;
+  /** The type the sales order was released as, which beats any tag */
+  fromRelease?: string | null;
   /** Whether the subject, reference or payment terms say consignment */
   taggedConsignment: boolean;
   /** Whether the invoice belongs to a private client order */
@@ -64,12 +66,21 @@ export const settles = (type: string | null | undefined) =>
  */
 const classifyInvoice = ({
   setByHand,
+  fromRelease,
   taggedConsignment,
   isPco,
 }: ClassifyInvoiceInput): ClassifiedInvoice => {
   const chosen = INVOICE_TYPES.find((type) => type === setByHand);
 
   if (chosen) return { type: chosen, reason: 'Set by hand' };
+
+  /*
+    Decided when the goods went out (Sophie, 19 Nov 2026), so it beats
+    whatever tag was or was not typed into Zoho afterwards.
+  */
+  const released = INVOICE_TYPES.find((type) => type === fromRelease);
+
+  if (released) return { type: released, reason: 'Set at release' };
 
   if (isPco) return { type: 'pco', reason: 'Invoice of a private client order' };
 

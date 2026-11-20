@@ -34,11 +34,14 @@ import {
 } from '@/database/schema';
 import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 
+import getReleaseTypes from '../data/getReleaseTypes';
+import recordReleaseType from '../data/recordReleaseType';
+import tagInvoiceFromRelease from '../data/tagInvoiceFromRelease';
 import isPickableZohoStatus from '../utils/isPickableZohoStatus';
 
 const adminReleaseToPick = wmsOperatorProcedure
   .input(z.object({ salesOrderId: z.string().uuid() }))
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     const { salesOrderId } = input;
 
     // Get the sales order
@@ -61,6 +64,23 @@ const adminReleaseToPick = wmsOperatorProcedure
         message: `Order must be invoiced in Zoho before release. Current Zoho status: ${order.zohoStatus}`,
       });
     }
+
+    /*
+      Consignment, outright, PCO or prepaid is decided here, when the goods go
+      out (Sophie, 19 Nov 2026). Most orders answer themselves; a City Drinks
+      order with no consignment tag has to be told, because the two settle in
+      opposite directions and nothing on the order says which.
+    */
+    const [releaseType] = await getReleaseTypes([salesOrderId]);
+
+    if (!releaseType?.type) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: `${order.salesOrderNumber}: choose whether this City Drinks order is consignment, an outright sale or prepaid before releasing it.`,
+      });
+    }
+
+    await recordReleaseType(salesOrderId, releaseType.type, ctx.user.id);
 
     // Get order items
     const orderItems = await db
@@ -586,6 +606,9 @@ const adminReleaseToPick = wmsOperatorProcedure
         updatedAt: new Date(),
       })
       .where(eq(zohoSalesOrders.id, salesOrderId));
+
+    /* The invoice carries the type: SO number + one owner tag, written for us */
+    if (pickList) await tagInvoiceFromRelease(salesOrderId);
 
     // Tell #warehouse-activity a new list is out to the floor
     if (pickList) await announcePickList(pickList.id, 'released');

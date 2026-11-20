@@ -57,3 +57,17 @@ describe('settles', () => {
     expect(settles(null)).toBe(true);
   });
 });
+
+describe('the type set at release', () => {
+  it('beats the tag on the invoice', () => {
+    expect(
+      classifyInvoice({ fromRelease: 'outright', taggedConsignment: true, isPco: false }),
+    ).toEqual({ type: 'outright', reason: 'Set at release' });
+  });
+
+  it('gives way to a type set by hand', () => {
+    expect(
+      classifyInvoice({ setByHand: 'prepaid', fromRelease: 'consignment', taggedConsignment: true, isPco: false }).type,
+    ).toBe('prepaid');
+  });
+});

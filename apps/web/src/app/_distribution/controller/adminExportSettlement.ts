@@ -6,6 +6,7 @@ import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import buildMonthSettlement from '../data/buildMonthSettlement';
+import buildOutrightSales from '../data/buildOutrightSales';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -47,7 +48,10 @@ const adminExportSettlement = adminProcedure
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No such outlet' });
     }
 
-    const settlement = await buildMonthSettlement(input);
+    const [settlement, outright] = await Promise.all([
+      buildMonthSettlement(input),
+      buildOutrightSales(input.month),
+    ]);
 
     if (settlement.blockers.length > 0 && !input.draft) {
       throw new TRPCError({
@@ -159,7 +163,39 @@ const adminExportSettlement = adminProcedure
       payouts.push([`${owner.ownerName} total`, null, null, owner.bottles, null, owner.dueToOwner, null], []);
     }
 
-    payouts.push(['TOTAL OWED TO OWNERS', null, null, null, null, settlement.totals.dueToOwners, null]);
+    payouts.push(['TOTAL OWED FOR CONSIGNMENT', null, null, null, null, settlement.totals.dueToOwners, null]);
+
+    /* Outright sales: partner wine invoiced to customers, owed at the same price */
+    const outrightOwed = Math.round(
+      outright.lines.reduce((sum, line) => sum + (line.owed ?? 0), 0) * 100,
+    ) / 100;
+
+    if (outright.lines.length > 0) {
+      payouts.push(
+        [],
+        ['OUTRIGHT SALES: partner wine invoiced to customers this month'],
+        ['Owner', 'Wine', 'Invoice', 'Bottles', 'Price / btl ($)', 'Amount owed ($)', 'Price from', 'Customer', 'Owner from'],
+        ...[...outright.lines]
+          .sort((a, b) => (a.ownerName ?? '').localeCompare(b.ownerName ?? ''))
+          .map((line) => [
+            line.ownerName ?? 'Owner unknown',
+            line.productName,
+            line.invoiceNumber,
+            line.bottles,
+            line.costPerBottle,
+            line.owed ?? 'no cost',
+            line.costFrom,
+            line.customerName,
+            line.needsConfirm ? `${line.ownerSource}, TO CONFIRM` : line.ownerSource,
+          ]),
+        ['TOTAL OWED FOR OUTRIGHT SALES', null, null, null, null, outrightOwed, null],
+      );
+    }
+
+    payouts.push(
+      [],
+      ['TOTAL OWED TO OWNERS', null, null, null, null, Math.round((settlement.totals.dueToOwners + outrightOwed) * 100) / 100, null],
+    );
 
     /* Margin */
     const margin: (string | number | null)[][] = [
@@ -182,8 +218,26 @@ const adminExportSettlement = adminProcedure
     }
 
     margin.push(
-      ['TOTAL', null, null, settlement.totals.salesDue, settlement.totals.dueToOwners, settlement.totals.margin],
+      ['CONSIGNMENT TOTAL', null, null, settlement.totals.salesDue, settlement.totals.dueToOwners, settlement.totals.margin],
     );
+
+    if (outright.lines.length > 0) {
+      const sold = outright.lines.reduce((sum, line) => sum + line.soldPerBottle * line.bottles, 0);
+
+      margin.push(
+        [],
+        ['Outright sales', null, null, 'Sold at ($)', 'Owner price ($)', 'Margin ($)'],
+        ...outright.lines.map((line) => [
+          line.ownerName,
+          line.productName,
+          line.bottles,
+          money(line.soldPerBottle * line.bottles),
+          line.owed,
+          line.owed === null ? null : money(line.soldPerBottle * line.bottles - line.owed),
+        ]),
+        ['OUTRIGHT TOTAL', null, null, money(sold), outrightOwed, money(sold - outrightOwed)],
+      );
+    }
 
     const book = XLSX.utils.book_new();
 

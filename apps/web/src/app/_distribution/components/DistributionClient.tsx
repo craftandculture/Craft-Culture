@@ -17,6 +17,7 @@ import CodesRegisterUpload from './CodesRegisterUpload';
 import InvoiceTypesPanel from './InvoiceTypesPanel';
 import OwnerCostsUpload from './OwnerCostsUpload';
 import SalesUpload from './SalesUpload';
+import PartnerStatementsPanel from './PartnerStatementsPanel';
 import SameWinePanel from './SameWinePanel';
 import SettlementPanel from './SettlementPanel';
 import StatementPanel from './StatementPanel';
@@ -520,6 +521,8 @@ const DistributionClient = () => {
           name: row.name,
         }))}
       />
+
+      <PartnerStatementsPanel outletId={outletId} month={statementMonth} />
 
       <UnmatchedLinesPanel outletId={outletId} month={statementMonth} />
 

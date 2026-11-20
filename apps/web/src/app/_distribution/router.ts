@@ -3,6 +3,7 @@ import { createTRPCRouter } from '@/lib/trpc/trpc';
 import adminAddAdjustment from './controller/adminAddAdjustment';
 import adminApproveMonth from './controller/adminApproveMonth';
 import adminAutoLinkCodes from './controller/adminAutoLinkCodes';
+import adminConfirmOutrightOwner from './controller/adminConfirmOutrightOwner';
 import adminConfirmSale from './controller/adminConfirmSale';
 import adminDeriveSold from './controller/adminDeriveSold';
 import adminExportSettlement from './controller/adminExportSettlement';
@@ -14,6 +15,7 @@ import adminGetInvoices from './controller/adminGetInvoices';
 import adminGetLineDuplicates from './controller/adminGetLineDuplicates';
 import adminGetMonthSummary from './controller/adminGetMonthSummary';
 import adminGetOwed from './controller/adminGetOwed';
+import adminGetPartnerStatements from './controller/adminGetPartnerStatements';
 import adminGetSettlement from './controller/adminGetSettlement';
 import adminGetSetup from './controller/adminGetSetup';
 import adminGetStatement from './controller/adminGetStatement';
@@ -61,6 +63,8 @@ const distributionRouter = createTRPCRouter({
     addAdjustment: adminAddAdjustment,
     approveMonth: adminApproveMonth,
     autoLinkCodes: adminAutoLinkCodes,
+    confirmOutrightOwner: adminConfirmOutrightOwner,
+    getPartnerStatements: adminGetPartnerStatements,
     exportSettlement: adminExportSettlement,
     getSettlement: adminGetSettlement,
     removeAdjustment: adminRemoveAdjustment,

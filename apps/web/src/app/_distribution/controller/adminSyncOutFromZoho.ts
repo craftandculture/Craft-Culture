@@ -8,6 +8,7 @@ import { adminProcedure } from '@/lib/trpc/procedures';
 import { isZohoConfigured } from '@/lib/zoho/client';
 import { getInvoice, listInvoices } from '@/lib/zoho/invoices';
 
+import getPickedOwnersByInvoice from '../data/getPickedOwnersByInvoice';
 import getWineAliases from '../data/getWineAliases';
 import canonicalWineCode, { isLwin18 } from '../utils/canonicalWineCode';
 import classifyInvoice from '../utils/classifyInvoice';
@@ -18,6 +19,7 @@ import readOwnerTag from '../utils/readOwnerTag';
 import resolveOwner from '../utils/resolveOwner';
 import type { OwnerRef } from '../utils/resolveOwner';
 import tableReady from '../utils/tableReady';
+import wineKey from '../utils/wineKey';
 import wineOwnersReady from '../utils/wineOwnersReady';
 
 /** Stop rather than page forever if Zoho keeps saying there is more */
@@ -143,6 +145,39 @@ const adminSyncOutFromZoho = adminProcedure
     `;
     const pcoNumbers = new Set(pcoInvoices.map((row) => row.number));
 
+    /*
+      What each invoice's sales order was released as, and whose lots the
+      warehouse picked for it (Sophie, 19 Nov 2026): the type and the owner
+      come from the release, so a mixed-owner order needs no MIX tag and a
+      tag typed afterwards cannot contradict it.
+    */
+    const hasReleaseTypes = await tableReady('zoho_so_release_types');
+    const released = hasReleaseTypes
+      ? await client<{ invoiceNumber: string; releaseType: string }[]>`
+          SELECT so.invoice_number AS "invoiceNumber", rt.release_type AS "releaseType"
+          FROM zoho_so_release_types rt
+          JOIN zoho_sales_orders so ON so.id = rt.sales_order_id
+          WHERE so.invoice_number IS NOT NULL
+        `
+      : [];
+    const releaseTypeByDoc = new Map(
+      released.map((row) => [row.invoiceNumber, row.releaseType]),
+    );
+    const pickedOwners = await getPickedOwnersByInvoice();
+    /* One owner per invoice and wine; a wine picked from two owners stays open */
+    const pickedOwnerSets = new Map<string, Set<string>>();
+
+    for (const row of pickedOwners) {
+      const key = `${row.invoiceNumber}|${wineKey(row.lwin18)}`;
+      const set = pickedOwnerSets.get(key) ?? new Set<string>();
+
+      set.add(row.ownerId);
+      pickedOwnerSets.set(key, set);
+    }
+
+    /* Invoices whose Zoho tag says something other than their release */
+    const releaseMismatches: string[] = [];
+
     const register: RegisterEntry[] = hasRegister
       ? await client<RegisterEntry[]>`
           SELECT doc_ref AS "docRef", wine_name AS "wineName",
@@ -254,12 +289,29 @@ const adminSyncOutFromZoho = adminProcedure
         invoice.payment_terms_label,
       );
 
+      const isPcoInvoice =
+        pcoNumbers.has(invoice.invoice_number) ||
+        /\bPCO[-\s]?\d/i.test(invoice.reference_number ?? '');
+      const fromRelease = releaseTypeByDoc.get(invoice.invoice_number) ?? null;
+
+      if (fromRelease) {
+        const byTag = classifyInvoice({
+          taggedConsignment: consignment.isConsignment,
+          isPco: isPcoInvoice,
+        }).type;
+
+        if (byTag !== fromRelease && !typeByDoc.get(invoice.invoice_number)) {
+          releaseMismatches.push(
+            `${invoice.invoice_number}: released as ${fromRelease}, Zoho says ${byTag}`,
+          );
+        }
+      }
+
       const invoiceType = classifyInvoice({
         setByHand: typeByDoc.get(invoice.invoice_number),
+        fromRelease,
         taggedConsignment: consignment.isConsignment,
-        isPco:
-          pcoNumbers.has(invoice.invoice_number) ||
-          /\bPCO[-\s]?\d/i.test(invoice.reference_number ?? ''),
+        isPco: isPcoInvoice,
       });
 
       typed.push({
@@ -355,11 +407,17 @@ const adminSyncOutFromZoho = adminProcedure
         const isOwnStock = invoiceType.type === 'outright' && Boolean(outletOwn);
 
         const invoiceOwner = ownerByDoc.get(invoice.invoice_number) ?? null;
+        const pickedSet = lwin18
+          ? pickedOwnerSets.get(`${invoice.invoice_number}|${wineKey(lwin18)}`)
+          : undefined;
+        const pickedOwner =
+          pickedSet && pickedSet.size === 1 ? [...pickedSet][0]! : null;
 
         if (
           !saidByHand &&
           !invoiceOwner &&
           !listedOwner &&
+          !pickedOwner &&
           !isOwnStock &&
           registry &&
           registry.size > 1
@@ -393,7 +451,9 @@ const adminSyncOutFromZoho = adminProcedure
                 }
               : invoiceOwner
                 ? { ownerId: invoiceOwner, reason: 'Owner set on the invoice' }
-                : resolveOwner({
+                : pickedOwner
+                  ? { ownerId: pickedOwner, reason: 'The lot the warehouse picked' }
+                  : resolveOwner({
                   tag: lineTag,
                   registerOwnerId: listedOwner,
                   knownOwnerId:
@@ -496,6 +556,8 @@ const adminSyncOutFromZoho = adminProcedure
         return counts;
       }, {}),
       unattributed: unattributed.slice(0, 25),
+      /** Invoices whose Zoho tag disagrees with the type they were released as */
+      releaseMismatches: releaseMismatches.slice(0, 25),
     };
   });
 
