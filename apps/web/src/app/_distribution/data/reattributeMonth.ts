@@ -1,6 +1,7 @@
 import { client } from '@/database/client';
 
 import replaceMonthSales from './replaceMonthSales';
+import { isOutletSaleCode } from '../utils/parseOutletSalesReport';
 import unmatchedReady from '../utils/unmatchedReady';
 
 
@@ -45,7 +46,15 @@ const reattributeMonth = async (input: { outletId: string; month: string }) => {
 
   const byCode = new Map<string, { outletCode: string; productName: string; bottles: number }>();
 
-  for (const line of [...sold, ...waiting]) {
+  /*
+    A month uploaded before rows without a CD code were refused still holds
+    them — October's "October sales" total, waiting as a 547-bottle wine.
+    Rebuilt from what is stored, they would come straight back.
+  */
+  const all = [...sold, ...waiting];
+  const cdMonth = all.filter((line) => isOutletSaleCode(line.outletCode)).length >= all.length / 2;
+
+  for (const line of all.filter((row) => !cdMonth || isOutletSaleCode(row.outletCode))) {
     const existing = byCode.get(line.outletCode);
 
     byCode.set(line.outletCode, {

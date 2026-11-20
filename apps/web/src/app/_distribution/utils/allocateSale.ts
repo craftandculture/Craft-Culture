@@ -19,23 +19,15 @@ export interface SaleShare {
   short: boolean;
 }
 
-/*
-  Prepaid stock first: City Drinks paid for it in advance, so it is what they
-  sell before they start selling what they owe us for (Sophie, 2 Nov 2026).
-  Consignment next. Stock they bought outright last: their consignment sales
-  report counts consigned wine, and drawing their own purchases first moved
-  150 October bottles of consigned wine off the partners' statements. An
-  outright line is reached only by a wine nobody consigned — Tignanello 2022.
-*/
-const RANK: Record<string, number> = { prepaid: 0, consignment: 1, outright: 2 };
-
-const rankOf = (type: string | null | undefined) => RANK[type ?? 'consignment'] ?? 1;
-
 /**
  * The order bottles leave a wine's invoice lines in
  *
- * Prepaid, then consignment, then outright; oldest first within each, by date
- * and then invoice number.
+ * Oldest first, by date and then invoice number, whatever the line's type
+ * (Sophie, re-test 20 Nov 2026). Drawing prepaid, then consignment, then
+ * outright put October's Elio Grasso and Caiarossa on prepaid INV-000197 and
+ * Heitz Saint-Aubin on outright INV-000464 when their bottles had come from
+ * older consignment lines. The type decides whether a bottle is billed or
+ * already billed, never which line it comes from.
  *
  * @param a - A layer
  * @param b - Another layer
@@ -45,10 +37,6 @@ export const layerOrder = (
   a: Pick<SaleLayer, 'invoiceType' | 'docDate' | 'docRef'>,
   b: Pick<SaleLayer, 'invoiceType' | 'docDate' | 'docRef'>,
 ) => {
-  const byType = rankOf(a.invoiceType) - rankOf(b.invoiceType);
-
-  if (byType !== 0) return byType;
-
   const byDate = (a.docDate ?? '').localeCompare(b.docDate ?? '');
 
   if (byDate !== 0) return byDate;

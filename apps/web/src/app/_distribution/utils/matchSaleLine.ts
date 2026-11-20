@@ -84,10 +84,17 @@ const matchSaleLine = (
     ? (context.arrangementByOwner.get(listedOwner) ?? null)
     : null;
 
+  /*
+    The same wine only. A blank key is no wine at all, and matched every
+    invoice line that also had none: Tignanello 2022 drew a bottle from each
+    line of INV-000146, 149, 166, 178 and 215 ($3,950, $2,185…).
+  */
   const ofKey = (key: string) =>
-    context.layers.filter(
-      (layer) => wineKey(layer.lwin18 ?? layer.productName) === key,
-    );
+    key
+      ? context.layers.filter(
+          (layer) => wineKey(layer.lwin18 ?? layer.productName) === key,
+        )
+      : [];
 
   const ours = context.bridge.get(code);
 

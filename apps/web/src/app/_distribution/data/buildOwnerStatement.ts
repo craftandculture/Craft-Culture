@@ -147,6 +147,8 @@ const buildOwnerStatement = async (input: {
              ${hasTypes ? client`m.invoice_type` : client`NULL::text`} AS "invoiceType"
       FROM cons_movements m
       WHERE m.arrangement_id = ${arrangement.id} AND m.kind = 'out'
+        -- Only wine invoiced by the month's last day can have sold in it
+        AND m.doc_date < (${`${input.month}-01`}::date + INTERVAL '1 month')
       ORDER BY m.doc_date, m.doc_ref
     `;
 
@@ -416,8 +418,9 @@ const buildOwnerStatement = async (input: {
         so a 3-pack at 1,698 is 566 a bottle — dividing by the pack is the
         difference between a right and a threefold-wrong settlement.
       */
+      /* The same wine only: a sale with no wine (blank key) matches no line */
       const outLayers: OutLayer[] = layers
-        .filter((layer) => keyOf(layer.lwin18, layer.productName) === key)
+        .filter((layer) => key !== '' && keyOf(layer.lwin18, layer.productName) === key)
         .map((layer) => ({
           docDate: layer.docDate,
           docRef: layer.docRef,

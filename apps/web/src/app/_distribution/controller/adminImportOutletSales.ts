@@ -98,7 +98,7 @@ const adminImportOutletSales = adminProcedure
         VALUES (
           ${input.outletId}, ${parsed.month}, ${parsed.declaredBottles},
           ${parsed.counts.bottles}, ${parsed.lines.length},
-          ${client.json(parsed.skipped)}, ${ctx.user.id}, now()
+          ${JSON.stringify(parsed.skipped)}::jsonb, ${ctx.user.id}, now()
         )
         ON CONFLICT (outlet_id, month) DO UPDATE SET
           declared_bottles = EXCLUDED.declared_bottles,

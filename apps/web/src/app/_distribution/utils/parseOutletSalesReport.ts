@@ -46,6 +46,21 @@ export interface ParsedOutletSales {
 const TOTALS_ROW =
   /^(grand\s+)?total\b|^sum$|^subtotal$|^total due\b|^(january|february|march|april|may|june|july|august|september|october|november|december)\s+sales$|\badjustment\b/i;
 
+/**
+ * Whether a code is one of the outlet's own sale codes
+ *
+ * City Drinks code every wine CDR and digits. A row with anything else in the
+ * code column ("October sales", "TOTAL", a heading repeated mid-sheet) is not
+ * a sale, wherever it sits: read as one, October's 547-bottle total became a
+ * blank-coded wine (Sophie, 20 Nov 2026). An outlet that uses other codes is
+ * read as before, by `looksLikeCdSheet` below.
+ *
+ * @example
+ *   isOutletSaleCode('CDR0988137779'); // true
+ *   isOutletSaleCode('October sales'); // false
+ */
+export const isOutletSaleCode = (code: string) => /^CDR\d{6,}$/i.test(code.trim());
+
 const MONTHS = [
   'january', 'february', 'march', 'april', 'may', 'june',
   'july', 'august', 'september', 'october', 'november', 'december',
@@ -171,7 +186,7 @@ const parseOutletSalesReport = (
 
   const headings = Object.keys(first);
   const codeKey = headings.find((key) => /code/i.test(key));
-  const nameKey = headings.find((key) => /product|name|description/i.test(key));
+  const nameKey = headings.find((key) => /product|name|description|^\s*wine\s*$/i.test(key));
   const monthKey = headings.find((key) => monthFromHeading(key, year));
 
   if (!codeKey) {
@@ -195,6 +210,14 @@ const parseOutletSalesReport = (
   let totals = 0;
   /** The label of the first total row, once it has been passed */
   let endedAt: string | null = null;
+
+  /* A City Drinks sheet: most coded rows carry a CDR code */
+  const codes = rows
+    .map((row) => String(row[codeKey] ?? '').trim())
+    .filter(Boolean);
+  const cdSheet =
+    codes.length > 0 &&
+    codes.filter(isOutletSaleCode).length >= codes.length / 2;
 
   for (const row of rows) {
     const outletCode = String(row[codeKey] ?? '').trim();
@@ -236,6 +259,11 @@ const parseOutletSalesReport = (
         );
       }
 
+      continue;
+    }
+
+    if (cdSheet && outletCode && !isOutletSaleCode(outletCode)) {
+      skipped.push(`${outletCode}${productName ? ` (${productName})` : ''}: not a CD code, so not a sale`);
       continue;
     }
 

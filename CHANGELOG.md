@@ -1,3 +1,15 @@
+## [2.1.169](https://github.com/craftandculture/Craft-Culture/compare/v2.1.168...v2.1.169) (2026-11-20)
+
+### Bug Fixes
+
+* **distribution:** uploading a month's report no longer fails after writing its sales, approval can save its Zoho bills, a 'Wine' column is read as the name, and C&C's own wine billed below cost is flagged ([2104a9f](https://github.com/craftandculture/Craft-Culture/commit/2104a9f3854421c70d3140c56294cf9667686eb2))
+
+## [2.1.168](https://github.com/craftandculture/Craft-Culture/compare/v2.1.167...v2.1.168) (2026-11-20)
+
+### Bug Fixes
+
+* **distribution:** October settles from CD codes only, the same wine only, invoices dated by month end, oldest invoice first whatever its type, and a price check before approval ([7a0e189](https://github.com/craftandculture/Craft-Culture/commit/7a0e189621bbaf95679dc45e2c26cffa20aec646))
+
 ## [2.1.167](https://github.com/craftandculture/Craft-Culture/compare/v2.1.166...v2.1.167) (2026-11-20)
 
 ### Bug Fixes
