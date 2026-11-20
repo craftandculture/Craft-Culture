@@ -1,3 +1,9 @@
+## [2.1.164](https://github.com/craftandculture/Craft-Culture/compare/v2.1.163...v2.1.164) (2026-11-20)
+
+### Features
+
+* each partner's month now shows consignment and outright sales side by side, outright sales are owned by the lot the warehouse picked with a one-click confirm where two partners hold the wine, and City Drinks orders carry a type chosen at release that the Distribution page reads instead of a Zoho tag ([1ef3e01](https://github.com/craftandculture/Craft-Culture/commit/1ef3e01285f62316a224321f57eda26ecbe1ee02))
+
 ## [2.1.163](https://github.com/craftandculture/Craft-Culture/compare/v2.1.162...v2.1.163) (2026-11-20)
 
 ### Features
