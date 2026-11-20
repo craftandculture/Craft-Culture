@@ -5,7 +5,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
 
 import useTRPC from '@/lib/trpc/browser';
 
@@ -61,6 +60,7 @@ const UkBondList = () => {
 
   const readFile = async (file: File) => {
     try {
+      const XLSX = await import('xlsx');
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0] ?? ''];
 
