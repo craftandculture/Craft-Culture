@@ -1,3 +1,9 @@
+## [2.1.163](https://github.com/craftandculture/Craft-Culture/compare/v2.1.162...v2.1.163) (2026-11-20)
+
+### Features
+
+* the City Drinks month now settles in one place: what they owe us, what each owner is owed at their Pricing Manager price, C&C's margin, an adjustments log, the bottles already billed, a bottle-for-bottle check against their report, a three-tab export, and approval that raises the Zoho drafts and locks the month ([77578a7](https://github.com/craftandculture/Craft-Culture/commit/77578a7a21b16e9923446c36cae7d6257d92919f))
+
 ## [2.1.162](https://github.com/craftandculture/Craft-Culture/compare/v2.1.161...v2.1.162) (2026-11-19)
 
 ### Bug Fixes
