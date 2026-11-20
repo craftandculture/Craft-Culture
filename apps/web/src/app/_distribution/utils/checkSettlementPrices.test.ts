@@ -31,10 +31,10 @@ describe('checkSettlementPrices', () => {
   it('flags billing below what the owner is paid', () => {
     expect(
       checkSettlementPrices([line({ pricePerBottle: 50, ownerCostPerBottle: 76.77 })], [])[0]?.detail,
-    ).toMatch(/below the \$76\.77 paid to Crurated/);
+    ).toMatch(/below the \$76\.77 cost \(Crurated\)/);
   });
 
-  it('never compares C&C’s own wine with an owner cost', () => {
+  it('never compares City Drinks’ own stock with a cost', () => {
     expect(
       checkSettlementPrices([line({ pricePerBottle: 50, ownerCostPerBottle: 76.77, payOwner: false })], []),
     ).toEqual([]);

@@ -77,7 +77,7 @@ const checkSettlementPrices = (lines: PricedLine[], recent: RecentPrice[]) => {
       line.pricePerBottle < line.ownerCostPerBottle - 0.005
     ) {
       reasons.push(
-        `billed ${money(line.pricePerBottle)}/btl, below the ${money(line.ownerCostPerBottle)} paid to ${line.ownerName}`,
+        `billed ${money(line.pricePerBottle)}/btl, below the ${money(line.ownerCostPerBottle)} cost (${line.ownerName}): check the Pricing Manager cost`,
       );
     }
 

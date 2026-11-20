@@ -186,7 +186,7 @@ const parseOutletSalesReport = (
 
   const headings = Object.keys(first);
   const codeKey = headings.find((key) => /code/i.test(key));
-  const nameKey = headings.find((key) => /product|name|description/i.test(key));
+  const nameKey = headings.find((key) => /product|name|description|^\s*wine\s*$/i.test(key));
   const monthKey = headings.find((key) => monthFromHeading(key, year));
 
   if (!codeKey) {

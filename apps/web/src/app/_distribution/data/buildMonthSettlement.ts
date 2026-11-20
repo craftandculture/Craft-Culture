@@ -228,7 +228,8 @@ const buildMonthSettlement = async (input: {
             docRef: draw.docRef,
             pricePerBottle: keep > 0 ? draw.pricePerBottle / keep : draw.pricePerBottle,
             ownerCostPerBottle: line.costPerBottle,
-            payOwner: owner.kind !== 'outlet-own' && !isCraftCultureOwner(owner.name),
+            // C&C's own wine too: billed below its cost is a loss (Cristal Rosé 2008, Mouton 1993)
+            payOwner: owner.kind !== 'outlet-own',
           });
           cdLines.push({
             outletCode: line.outletCode,

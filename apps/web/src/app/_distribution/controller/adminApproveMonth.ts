@@ -268,7 +268,7 @@ const adminApproveMonth = adminProcedure
       UPDATE cons_month_closes
       SET zoho_invoice_id = ${invoice.invoice_id},
           zoho_invoice_number = ${invoice.invoice_number},
-          zoho_bills = ${client.json(bills)}
+          zoho_bills = ${JSON.stringify(bills)}::jsonb
       WHERE outlet_id = ${input.outletId} AND month = ${input.month}
     `;
 
