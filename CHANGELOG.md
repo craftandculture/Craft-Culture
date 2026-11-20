@@ -1,3 +1,9 @@
+## [2.1.166](https://github.com/craftandculture/Craft-Culture/compare/v2.1.165...v2.1.166) (2026-11-20)
+
+### Features
+
+* the month's settlement lists the dated price cuts in force ([12f58a8](https://github.com/craftandculture/Craft-Culture/commit/12f58a897dc49d21d42f7a056ff5574930086b16))
+
 ## [2.1.165](https://github.com/craftandculture/Craft-Culture/compare/v2.1.164...v2.1.165) (2026-11-20)
 
 ### Bug Fixes
