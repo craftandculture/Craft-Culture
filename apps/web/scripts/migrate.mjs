@@ -2752,6 +2752,27 @@ const runMigrations = async () => {
       `);
     });
 
+    await dataFix('settlement: seed the four 10% cuts from 9 Oct 2026 directly', async () => {
+      /* Sophie's run: Fourrier Gevrey VV, Lafouge Macabrée, Thienpont Terre Elysée, Alfano Il Bosco */
+      await client.unsafe(`
+        INSERT INTO "cons_price_cuts" ("outlet_id","wine_key","label","pct_off","valid_from")
+        SELECT ou."id", v.wine_key, v.label, 10, DATE '2026-10-09'
+        FROM "cons_outlets" ou
+        CROSS JOIN (VALUES
+          ('1032361202300750','Fourrier Gevrey-Chambertin VV 2023'),
+          ('W0103124','Fourrier Gevrey-Chambertin VV 2023'),
+          ('1838989202200750','Lafouge Auxey-Duresses La Macabrée 2022'),
+          ('W11600324','Lafouge Auxey-Duresses La Macabrée 2022'),
+          ('1243561202100750','Thienpont Terre Elysée 2021'),
+          ('W12008024','Thienpont Terre Elysée 2021'),
+          ('W3510032420220600750','Alfano Greco di Tufo Il Bosco 2022'),
+          ('W35100324','Alfano Greco di Tufo Il Bosco 2022')
+        ) AS v(wine_key, label)
+        WHERE ou."slug" = 'city-drinks'
+        ON CONFLICT ("outlet_id","wine_key","valid_from") DO NOTHING
+      `);
+    });
+
     await dataFix('settlement: INV-000459 to Ihab, Racines price code, lock CD invoice history', async () => {
       /* INV-000459 is Ihab's wine on consignment (Sophie, 19 Nov 2026) */
       await client.unsafe(`

@@ -103,9 +103,12 @@ const getPartnerPayoutCost = async (
   for (const raw of rows) {
     const squash = (value: string | null | undefined) =>
       (value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    /* A W-code anywhere in the code: "rentW4301023-0000-06-00750" is W4301023 */
+    const embedded = /W\d{5,}/i.exec(raw.lwin18)?.[0]?.toUpperCase() ?? '';
     const key = [
       wineKey(raw.lwin18),
       squash(raw.lwin18.split('-')[0]),
+      embedded,
       squash(raw.supplierSku),
     ]
       .map((code) => (code ? target.get(code) : undefined))
@@ -130,7 +133,7 @@ const getPartnerPayoutCost = async (
       logisticsPerBottle: priced.logistics,
       overridePerBottle,
       from: `Pricing Manager${raw.shipmentNumber ? ` (${raw.shipmentNumber})` : ''}`,
-      codes: [squash(raw.lwin18.split('-')[0]), squash(raw.supplierSku)].filter(
+      codes: [squash(raw.lwin18.split('-')[0]), embedded, squash(raw.supplierSku)].filter(
         (code) => /^W\d+$/.test(code),
       ),
     };
