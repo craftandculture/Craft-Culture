@@ -1,5 +1,5 @@
-import { client } from '@/database/client';
 import tableReady from '@/app/_distribution/utils/tableReady';
+import { client } from '@/database/client';
 
 /**
  * Keep the type a sales order was released as
