@@ -2,8 +2,11 @@ import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
 import { client } from '@/database/client';
 
 import buildOwnerStatement from './buildOwnerStatement';
+import checkSettlementPrices from '../utils/checkSettlementPrices';
+import type { PricedLine } from '../utils/checkSettlementPrices';
 import tableReady from '../utils/tableReady';
 import unmatchedReady from '../utils/unmatchedReady';
+import wineKey from '../utils/wineKey';
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
@@ -52,7 +55,7 @@ export interface SettlementOwner {
 }
 
 export interface SettlementException {
-  kind: 'unmatched' | 'oversold' | 'no-cost' | 'count';
+  kind: 'unmatched' | 'oversold' | 'no-cost' | 'count' | 'price';
   outletCode: string | null;
   productName: string;
   bottles: number;
@@ -177,6 +180,29 @@ const buildMonthSettlement = async (input: {
       `
     : [];
 
+  /*
+    What City Drinks were billed for each wine in the three months before this
+    one, latest first, for the price check (Sophie, 20 Nov 2026).
+  */
+  const recentPrices = await client<
+    { lwin18: string | null; productName: string; docRef: string | null; docDate: string; perBottle: number }[]
+  >`
+    SELECT m.lwin18, m.product_name AS "productName", m.doc_ref AS "docRef",
+           m.doc_date::text AS "docDate",
+           (m.unit_price / COALESCE(NULLIF(m.pack, 0), 1))::float8 AS "perBottle"
+    FROM cons_movements m
+    JOIN cons_arrangements a ON a.id = m.arrangement_id
+    WHERE a.outlet_id = ${input.outletId}
+      AND m.kind = 'out'
+      AND m.unit_price IS NOT NULL
+      AND m.doc_date >= (${`${input.month}-01`}::date - INTERVAL '3 months')
+      AND m.doc_date < ${`${input.month}-01`}::date
+    ORDER BY m.doc_date DESC, m.doc_ref DESC
+  `;
+
+  /* Per billed line: its wine, its undiscounted price, and what the owner is paid */
+  const priced: PricedLine[] = [];
+
   const cdLines: SettlementCdLine[] = [];
   const alreadyBilled: SettlementAlreadyBilled[] = [];
   const exceptions: SettlementException[] = [];
@@ -192,6 +218,18 @@ const buildMonthSettlement = async (input: {
 
       for (const draw of line.drawnFrom) {
         if (draw.settles) {
+          const keep = line.priceCutPct ? 1 - line.priceCutPct / 100 : 1;
+
+          priced.push({
+            key: wineKey(line.lwin18 || line.productName),
+            outletCode: line.outletCode,
+            productName: line.productName,
+            ownerName: owner.name,
+            docRef: draw.docRef,
+            pricePerBottle: keep > 0 ? draw.pricePerBottle / keep : draw.pricePerBottle,
+            ownerCostPerBottle: line.costPerBottle,
+            payOwner: owner.kind !== 'outlet-own' && !isCraftCultureOwner(owner.name),
+          });
           cdLines.push({
             outletCode: line.outletCode,
             productName: line.productName,
@@ -278,6 +316,16 @@ const buildMonthSettlement = async (input: {
       billedToOutlet: round2(billed),
       margin: round2(billed - due - ownAdjustments),
       withoutCost: ownLines.filter((row) => row.amount === null).length,
+    });
+  }
+
+  for (const flag of checkSettlementPrices(priced, recentPrices)) {
+    exceptions.push({
+      kind: 'price',
+      outletCode: flag.outletCode,
+      productName: flag.productName,
+      bottles: 0,
+      detail: flag.detail,
     });
   }
 

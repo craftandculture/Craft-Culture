@@ -21,8 +21,8 @@ describe('allocateSale', () => {
     ]);
   });
 
-  /* Prepaid first; their own purchases only once consignment runs out */
-  it('draws consignment before stock the outlet bought outright', () => {
+  /* Oldest first, whatever the type: the type only decides billed or not */
+  it('draws the older line first, consignment or outright', () => {
     const shares = allocateSale(
       [
         layer({ docRef: 'INV-000250', docDate: '2026-06-01' }),
@@ -75,8 +75,8 @@ describe('allocateSale', () => {
   it('counts earlier months per owner', () => {
     const shares = allocateSale(
       [
-        layer({ arrangementId: 'own', invoiceType: 'outright', bottles: 6 }),
-        layer({ arrangementId: 'cc', docRef: 'INV-000310', bottles: 6 }),
+        layer({ arrangementId: 'cc', docRef: 'INV-000290', bottles: 6 }),
+        layer({ arrangementId: 'own', docRef: 'INV-000310', invoiceType: 'outright', bottles: 6 }),
       ],
       3,
       new Map([['cc', 6]]),
@@ -101,6 +101,23 @@ describe('allocateSale', () => {
 
     expect(shares).toEqual([
       expect.objectContaining({ arrangementId: 'cru', bottles: 8, short: false }),
+    ]);
+  });
+
+  /* Elio Grasso 2020, October: prepaid INV-000197 used up, so consignment INV-000314 */
+  it('moves on from a line earlier months used up, whatever its type', () => {
+    const shares = allocateSale(
+      [
+        layer({ arrangementId: 'cru', docRef: 'INV-000197', docDate: '2026-01-27', invoiceType: 'prepaid', bottles: 6 }),
+        layer({ arrangementId: 'cru', docRef: 'INV-000314', docDate: '2026-08-12', bottles: 6 }),
+      ],
+      4,
+      new Map([['cru', 6]]),
+      null,
+    );
+
+    expect(shares).toEqual([
+      expect.objectContaining({ arrangementId: 'cru', bottles: 4, short: false }),
     ]);
   });
 

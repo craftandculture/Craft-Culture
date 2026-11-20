@@ -85,7 +85,7 @@ describe('valueFifo', () => {
 });
 
 describe('valueFifo with the outlet’s own stock', () => {
-  it('draws prepaid stock first and bills nothing for it', () => {
+  it('draws the oldest line first, and bills nothing for prepaid stock', () => {
     const result = valueFifo(
       [
         { docDate: '2026-01-10', docRef: 'INV-000150', bottles: 6, pricePerBottle: 50, currency: 'USD' },
@@ -94,11 +94,44 @@ describe('valueFifo with the outlet’s own stock', () => {
       8,
     );
 
-    expect(result.unsettledBottles).toBe(6);
-    expect(result.value).toBe(100);
+    expect(result.unsettledBottles).toBe(2);
+    expect(result.value).toBe(300);
     expect(result.drawnFrom.map((row) => row.docRef)).toEqual([
-      'INV-000197',
       'INV-000150',
+      'INV-000197',
     ]);
+  });
+
+  /* Heitz Saint-Aubin 2018: consignment INV-000212 + INV-000260, not outright INV-000464 */
+  it('bills from older consignment lines before a newer outright one', () => {
+    const result = valueFifo(
+      [
+        { docDate: '2026-10-20', docRef: 'INV-000464', bottles: 12, pricePerBottle: 71.63, currency: 'USD', settles: false },
+        { docDate: '2026-05-20', docRef: 'INV-000212', bottles: 12, pricePerBottle: 71.63, currency: 'USD' },
+        { docDate: '2026-06-24', docRef: 'INV-000260', bottles: 12, pricePerBottle: 71.63, currency: 'USD' },
+      ],
+      8,
+      7,
+    );
+
+    expect(result.drawnFrom.map((row) => [row.docRef, row.bottles])).toEqual([
+      ['INV-000212', 5],
+      ['INV-000260', 3],
+    ]);
+    expect(result.unsettledBottles).toBe(0);
+  });
+
+  /* San Polo 2019 on INV-000176: the old airfreight line went first, in earlier months */
+  it('spends the dearer of two lines on one invoice first', () => {
+    const result = valueFifo(
+      [
+        { docDate: '2026-03-01', docRef: 'INV-000176', bottles: 3, pricePerBottle: 53.37, currency: 'USD' },
+        { docDate: '2026-03-01', docRef: 'INV-000176', bottles: 3, pricePerBottle: 207.35, currency: 'USD' },
+      ],
+      3,
+      3,
+    );
+
+    expect(result.value).toBeCloseTo(160.11, 2);
   });
 });

@@ -35,6 +35,7 @@ const EXCEPTION_LABELS: Record<string, string> = {
   oversold: 'Oversold',
   'no-cost': 'No cost',
   count: 'Bottle check',
+  price: 'Price check',
 };
 
 /**

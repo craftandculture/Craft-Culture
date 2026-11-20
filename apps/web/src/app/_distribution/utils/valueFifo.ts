@@ -63,18 +63,23 @@ const valueFifo = (
   bottlesSold: number,
   alreadyConsumed = 0,
 ): FifoResult => {
+  /*
+    Oldest invoice first, whatever its type: the line's type only decides
+    whether the bottle is billed or already billed (Sophie, 20 Nov 2026).
+    Two lines of one wine on one invoice go dearer first: INV-000176 carries
+    San Polo 2019 at the old airfreight price ($207.35) and again repriced at
+    $53.37, and the dear bottles were the ones sold before October.
+  */
   const ordered = [...layers].sort((a, b) => {
-    /* The outlet's own stock goes first, before anything it owes us for */
-    const own =
-      Number(a.settles ?? true) - Number(b.settles ?? true);
-
-    if (own !== 0) return own;
-
     const byDate = (a.docDate ?? '').localeCompare(b.docDate ?? '');
 
     if (byDate !== 0) return byDate;
 
-    return (a.docRef ?? '').localeCompare(b.docRef ?? '');
+    const byRef = (a.docRef ?? '').localeCompare(b.docRef ?? '');
+
+    if (byRef !== 0) return byRef;
+
+    return b.pricePerBottle - a.pricePerBottle;
   });
 
   let toSkip = alreadyConsumed;

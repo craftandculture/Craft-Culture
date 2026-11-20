@@ -126,6 +126,9 @@ const attributeOutletSales = async (input: {
     FROM cons_movements m
     JOIN cons_arrangements a ON a.id = m.arrangement_id
     WHERE a.outlet_id = ${input.outletId} AND m.kind = 'out'
+      -- A month's sales can only have come from wine invoiced by its last day:
+      -- October's San Polo was put on INV-000524, dated 18 November
+      AND m.doc_date < (${`${input.month}-01`}::date + INTERVAL '1 month')
   `;
 
   const register: RegisterCode[] = hasRegister
