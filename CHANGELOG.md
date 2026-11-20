@@ -1,3 +1,9 @@
+## [2.1.165](https://github.com/craftandculture/Craft-Culture/compare/v2.1.164...v2.1.165) (2026-11-20)
+
+### Bug Fixes
+
+* the City Drinks settlement applies the 10% cut to wines held under W-codes, prices wines that sold out before the Pricing Manager held a cost from the partner's sheet, and no longer lists C&C's own wine as owed to an owner ([b66c766](https://github.com/craftandculture/Craft-Culture/commit/b66c7660f278849b3f0b0005493b04a66bb233b0))
+
 ## [2.1.164](https://github.com/craftandculture/Craft-Culture/compare/v2.1.163...v2.1.164) (2026-11-20)
 
 ### Features
