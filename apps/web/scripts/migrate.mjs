@@ -2730,6 +2730,28 @@ const runMigrations = async () => {
       `);
     });
 
+    await dataFix('settlement: CD price cuts by W-code, Racines import price', async () => {
+      /* The cuts keyed on the W-code itself, which the lot carries */
+      await client.unsafe(`
+        INSERT INTO "cons_price_cuts" ("outlet_id","wine_key","label","pct_off","valid_from")
+        SELECT ou."id", UPPER(j."w_code"), j."note", j."pct_off", j."valid_from"
+        FROM "cons_cost_adjustments" j
+        CROSS JOIN "cons_outlets" ou
+        WHERE ou."slug" = 'city-drinks'
+        ON CONFLICT ("outlet_id","wine_key","valid_from") DO NOTHING
+      `);
+      /* Racines Sparkling: the price on the broken code, onto the code CD sell under */
+      await client.unsafe(`
+        UPDATE "wms_product_pricing" t
+        SET "import_price_per_bottle" = b."import_price_per_bottle", "updated_at" = now()
+        FROM "wms_product_pricing" b
+        WHERE t."lwin18" = '2150228-1000-06-00750'
+          AND b."lwin18" = 'rentW4301023-0000-06-00750'
+          AND COALESCE(t."import_price_per_bottle", 0) = 0
+          AND b."import_price_per_bottle" > 0
+      `);
+    });
+
     await dataFix('settlement: INV-000459 to Ihab, Racines price code, lock CD invoice history', async () => {
       /* INV-000459 is Ihab's wine on consignment (Sophie, 19 Nov 2026) */
       await client.unsafe(`

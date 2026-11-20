@@ -1,3 +1,4 @@
+import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
 import { client } from '@/database/client';
 
 import buildOwnerStatement from './buildOwnerStatement';
@@ -213,7 +214,7 @@ const buildMonthSettlement = async (input: {
         });
       }
 
-      if (owner.kind === 'outlet-own') continue;
+      if (owner.kind === 'outlet-own' || isCraftCultureOwner(owner.name)) continue;
 
       const owedBottles =
         line.bottlesSold - line.unsettledBottles - line.shortBottles;
@@ -242,7 +243,8 @@ const buildMonthSettlement = async (input: {
       });
     }
 
-    if (owner.kind === 'outlet-own') continue;
+    /* City Drinks' own stock and C&C's own wine are owed to nobody */
+    if (owner.kind === 'outlet-own' || isCraftCultureOwner(owner.name)) continue;
 
     const ownAdjustments = adjustments
       .filter((row) => row.ownerId === owner.id && row.ownerAmount)

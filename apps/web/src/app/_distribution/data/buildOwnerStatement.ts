@@ -282,6 +282,26 @@ const buildOwnerStatement = async (input: {
       ? await getPartnerPayoutCost(owner.partnerId, keys, aliases)
       : new Map<string, PartnerPayoutCost>();
 
+    const sheetCodes = [
+      ...new Set([...keys, ...[...aliases.values()].flatMap((set) => [...set])]),
+    ];
+    const sheet =
+      sheetCodes.length && (await tableReady('cons_owner_costs'))
+        ? await client<{ key: string; costPerBottle: number; tab: string | null }[]>`
+            SELECT DISTINCT ON (k.key) k.key, c.cost_per_bottle::float8 AS "costPerBottle", c.tab
+            FROM cons_owner_costs c
+            CROSS JOIN LATERAL (
+              SELECT UNNEST(ARRAY[
+                UPPER(REGEXP_REPLACE(COALESCE(c.wine_key, ''), '[^A-Za-z0-9]', '', 'g')),
+                UPPER(REGEXP_REPLACE(COALESCE(c.w_code, ''), '[^A-Za-z0-9]', '', 'g'))
+              ]) AS key
+            ) k
+            WHERE c.owner_id = ${input.ownerId}
+              AND k.key = ANY(${sheetCodes}::text[])
+            ORDER BY k.key, c.created_at DESC
+          `
+        : [];
+
     const costs = keys.map((key) => {
       const kept = remembered.find((row) => row.key === key);
       const lot = payout.get(key);
@@ -307,6 +327,26 @@ const buildOwnerStatement = async (input: {
 
       const chosen = now ?? kept ?? null;
 
+      /*
+        A wine that sold out before the Pricing Manager ever held a cost for it
+        (L'If, Leflaive Sigma, Heitz Arvelets, Marsannay 2022) has only the
+        partner's own price sheet. Used last, and said so on the line.
+      */
+      if (!chosen) {
+        const listed = sheet.find(
+          (row) => row.key === key || aliases.get(key)?.has(row.key),
+        );
+
+        if (listed) {
+          return {
+            key,
+            landedPerBottle: listed.costPerBottle,
+            shipmentNumber: `${listed.tab ?? 'Partner price sheet'} (no Pricing Manager cost)`,
+            ownLine: true,
+          };
+        }
+      }
+
       return {
         key,
         landedPerBottle: chosen?.landedPerBottle ?? null,
@@ -326,6 +366,14 @@ const buildOwnerStatement = async (input: {
       started in; the owner's side already carries it in the Pricing Manager.
     */
     const monthLast = `${input.month}-01`;
+    /* A lot's own W-code is another name for its wine, for cuts keyed on it */
+    for (const [key, lot] of payout) {
+      const set = aliases.get(key) ?? new Set<string>();
+
+      lot.codes.forEach((code) => set.add(code));
+      aliases.set(key, set);
+    }
+
     const allCodes = [
       ...new Set([...keys, ...[...aliases.values()].flatMap((set) => [...set])]),
     ];

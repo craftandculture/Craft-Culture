@@ -26,6 +26,8 @@ export interface PartnerPayoutCost {
   overridePerBottle: number;
   /** Where the figure came from, so a statement line can be traced */
   from: string;
+  /** The supplier codes the lot is held under (W-codes), for dated price cuts */
+  codes: string[];
 }
 
 /**
@@ -128,6 +130,9 @@ const getPartnerPayoutCost = async (
       logisticsPerBottle: priced.logistics,
       overridePerBottle,
       from: `Pricing Manager${raw.shipmentNumber ? ` (${raw.shipmentNumber})` : ''}`,
+      codes: [squash(raw.lwin18.split('-')[0]), squash(raw.supplierSku)].filter(
+        (code) => /^W\d+$/.test(code),
+      ),
     };
 
     /* Several packs of one wine: the dearest lot, so no owner is underpaid */
