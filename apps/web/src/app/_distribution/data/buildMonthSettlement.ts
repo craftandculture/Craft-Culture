@@ -165,6 +165,18 @@ const buildMonthSettlement = async (input: {
       `
     : [];
 
+  /* Dated cuts to City Drinks' price in force this month, for the page */
+  const priceCuts = (await tableReady('cons_price_cuts'))
+    ? await client<{ wineKey: string; label: string | null; pctOff: number; validFrom: string }[]>`
+        SELECT wine_key AS "wineKey", label, pct_off::float8 AS "pctOff",
+               valid_from::text AS "validFrom"
+        FROM cons_price_cuts
+        WHERE outlet_id = ${input.outletId}
+          AND valid_from < (${`${input.month}-01`}::date + INTERVAL '1 month')
+        ORDER BY valid_from, label
+      `
+    : [];
+
   const cdLines: SettlementCdLine[] = [];
   const alreadyBilled: SettlementAlreadyBilled[] = [];
   const exceptions: SettlementException[] = [];
@@ -339,6 +351,7 @@ const buildMonthSettlement = async (input: {
     ),
     alreadyBilled,
     adjustments,
+    priceCuts,
     payouts,
     exceptions,
     check: {
