@@ -4855,6 +4855,84 @@ const runMigrations = async () => {
     console.log('✅ Distributor warehouse updates ready');
 
     /*
+      A lot's own cost fields (Sophie, 23 Nov 2026: "lots must not share cost
+      fields"). One wine reaching us twice — by ocean at one price and by air
+      at another — was priced once per owner, so every bottle took one lot's
+      figure. Blank fields fall back to the Pricing Manager's row for the wine.
+      Keyed by owner, wine (pack-agnostic) and lot number.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "wms_lot_costs" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "owner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "pak_key" text NOT NULL,
+        "lot_number" text NOT NULL,
+        "import_price_per_bottle" numeric,
+        "logistics_per_bottle" numeric,
+        "cost_override_per_bottle" numeric,
+        "notes" text,
+        "updated_by" uuid,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "wms_lot_costs_unique" ON "wms_lot_costs"("owner_id","pak_key","lot_number")`,
+    );
+    console.log('✅ wms_lot_costs ready');
+
+    /*
+      Montille Chassagne-Montrachet 2022 (Crurated), Sophie's brief 19–23 Nov:
+      SHP-2026-0041 brought 21 bottles by air ($43.02 + $12.80 freight), all
+      sold on SO-00264, but the 18 sold as 6-packs were picked against the
+      ocean lot (HB-2026-0011, $63.97, no freight). The picks move onto the air
+      lot, and each lot gets its own cost.
+    */
+    await dataFix('Montille Chassagne 2022 split into its ocean and air lots', () =>
+      client.begin(async (tx) => {
+        const ocean = '64dcd3cd-a621-4e69-b9c7-88683118b385';
+        const air = '78f84f4a-676b-4440-815b-6733cac07c57';
+        const pakKey = '1063145-2022-00750';
+
+        const [lots] = await tx`
+          SELECT o.owner_id AS owner, o.lot_number AS "oceanLot",
+                 a.lot_number AS "airLot", a.shipment_id AS "airShipment"
+          FROM wms_stock o, wms_stock a
+          WHERE o.id = ${ocean} AND a.id = ${air}
+        `;
+
+        if (!lots) return;
+
+        await tx`
+          UPDATE wms_stock_movements m
+             SET stock_id = ${air}, lot_number = ${lots.airLot},
+                 shipment_id = ${lots.airShipment}
+            FROM zoho_sales_orders so
+           WHERE so.id = m.order_id AND so.salesorder_number = 'SO-00264'
+             AND m.movement_type = 'pick' AND m.stock_id = ${ocean}
+        `;
+
+        for (const [lot, importPrice, logistics] of [
+          [lots.oceanLot, 63.97, 0],
+          [lots.airLot, 43.02, 12.8],
+        ]) {
+          if (!lot) continue;
+
+          await tx`
+            INSERT INTO wms_lot_costs
+              (owner_id, pak_key, lot_number, import_price_per_bottle, logistics_per_bottle, notes)
+            VALUES (${lots.owner}, ${pakKey}, ${lot}, ${importPrice}, ${logistics},
+                    'Sophie, 23 Nov 2026: ocean and air lots costed apart')
+            ON CONFLICT (owner_id, pak_key, lot_number) DO UPDATE SET
+              import_price_per_bottle = EXCLUDED.import_price_per_bottle,
+              logistics_per_bottle = EXCLUDED.logistics_per_bottle,
+              updated_at = now()
+          `;
+        }
+      }),
+    );
+
+    /*
       Racines Sparkling Grand Reserve NV was received under a mistyped code,
       "rentW4301023-0000-06-00750", so its $51.72 cost sat where City Drinks'
       sales (2150228-1000-06-00750) never looked, and Crurated's statement read

@@ -1,5 +1,7 @@
 import { client } from '@/database/client';
 
+import getLotPayoutCosts from './getLotPayoutCosts';
+import type { LotPayoutCost } from './getLotPayoutCosts';
 import getPartnerPayoutCost from './getPartnerPayoutCost';
 import type { PartnerPayoutCost } from './getPartnerPayoutCost';
 import getPricingManagerLanded from './getPricingManagerLanded';
@@ -314,6 +316,15 @@ const buildOwnerStatement = async (input: {
       ? await getPartnerPayoutCost(owner.partnerId, keys, aliases)
       : new Map<string, PartnerPayoutCost>();
 
+    /* The lot actually picked for each invoice, costed on its own */
+    const lotCosts = owner?.partnerId
+      ? await getLotPayoutCosts(
+          owner.partnerId,
+          layers.map((layer) => layer.docRef).filter((ref): ref is string => Boolean(ref)),
+          payout,
+        )
+      : new Map<string, LotPayoutCost>();
+
     const sheetCodes = [
       ...new Set([...keys, ...[...aliases.values()].flatMap((set) => [...set])]),
     ];
@@ -514,9 +525,41 @@ const buildOwnerStatement = async (input: {
         `${input.month}-01` >= owner.recoveryFrom.slice(0, 7) + '-01'
           ? owner.recoveryPer75 * (sizeMl / 750)
           : 0;
+      /*
+        Where the invoice's picks name their lot, each billed bottle is owed at
+        its own lot's cost (a cost set by hand on the statement still wins).
+      */
+      const fromLots = (() => {
+        if (shareRule || costed?.shipmentNumber === 'Set by hand') return null;
+
+        let value = 0;
+        let bottles = 0;
+        let anyLot = false;
+        const lots = new Set<string>();
+
+        for (const draw of valued.drawnFrom) {
+          if (!draw.settles || draw.bottles <= 0) continue;
+
+          const lot = draw.docRef ? lotCosts.get(`${draw.docRef}|${key}`) : undefined;
+          const perBottle = lot?.perBottle ?? costed?.landedPerBottle ?? null;
+
+          if (perBottle === null) return null;
+          if (lot) {
+            anyLot = true;
+            lots.add(lot.from);
+          }
+
+          value += perBottle * draw.bottles;
+          bottles += draw.bottles;
+        }
+
+        return anyLot && bottles > 0
+          ? { perBottle: value / bottles, from: [...lots].join('; ') }
+          : null;
+      })();
       const landedUsd = shareRule
         ? Math.max(0, billedPerBottle * (owner!.sharePct! / 100) - recovery)
-        : (costed?.landedPerBottle ?? null);
+        : (fromLots?.perBottle ?? costed?.landedPerBottle ?? null);
       const inAed = valued.currency === 'AED';
       const costPerBottle =
         landedUsd === null
@@ -545,7 +588,7 @@ const buildOwnerStatement = async (input: {
         /** The shipment the landed cost came from, so a figure can be traced */
         costFrom: shareRule
           ? `${owner!.sharePct}% of the invoice price${recovery ? `, less $${recovery.toFixed(2)} freight` : ''}`
-          : (costed?.shipmentNumber ?? null),
+          : (fromLots?.from ?? costed?.shipmentNumber ?? null),
         /** False where the cost came from another owner's shipment line */
         costIsOwnLine: costed?.ownLine ?? false,
         billedToOutlet: valued.value,

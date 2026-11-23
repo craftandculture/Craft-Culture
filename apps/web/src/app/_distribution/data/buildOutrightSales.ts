@@ -1,6 +1,7 @@
 import isCraftCultureOwner from '@/app/_wms/utils/isCraftCultureOwner';
 import { client } from '@/database/client';
 
+import getLotPayoutCosts from './getLotPayoutCosts';
 import getPartnerPayoutCost from './getPartnerPayoutCost';
 import tableReady from '../utils/tableReady';
 import wineKey from '../utils/wineKey';
@@ -260,8 +261,21 @@ const buildOutrightSales = async (month: string) => {
   const owners = [...new Set(split.map((row) => row.ownerId).filter((id): id is string => !!id))];
   const costs = new Map<string, Awaited<ReturnType<typeof getPartnerPayoutCost>>>();
 
+  const lotCosts = new Map<string, Awaited<ReturnType<typeof getLotPayoutCosts>>>();
+
   for (const ownerId of owners) {
-    costs.set(ownerId, await getPartnerPayoutCost(ownerId, keys));
+    const wineCosts = await getPartnerPayoutCost(ownerId, keys);
+
+    costs.set(ownerId, wineCosts);
+    /* Each invoice line at the cost of the lot actually picked for it */
+    lotCosts.set(
+      ownerId,
+      await getLotPayoutCosts(
+        ownerId,
+        split.filter((row) => row.ownerId === ownerId).map((row) => row.invoiceNumber),
+        wineCosts,
+      ),
+    );
   }
 
   const lines: OutrightLine[] = [];
@@ -278,8 +292,12 @@ const buildOutrightSales = async (month: string) => {
     const rule = row.ownerId ? ruleOf.get(row.ownerId) : undefined;
     const lot = row.ownerId ? costs.get(row.ownerId)?.get(key) : undefined;
 
-    let costPerBottle: number | null = lot?.perBottle ?? null;
-    let costFrom: string | null = lot?.from ?? null;
+    const picked = row.ownerId
+      ? lotCosts.get(row.ownerId)?.get(`${row.invoiceNumber}|${key}`)
+      : undefined;
+
+    let costPerBottle: number | null = picked?.perBottle ?? lot?.perBottle ?? null;
+    let costFrom: string | null = picked?.from ?? lot?.from ?? null;
 
     if (rule?.payoutRule === 'invoice_share' && rule.sharePct != null) {
       const recovery =

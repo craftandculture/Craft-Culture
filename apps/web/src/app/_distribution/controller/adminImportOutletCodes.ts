@@ -18,8 +18,9 @@ import tableReady from '../utils/tableReady';
  * CULT, PS — so a label nobody recognises is reported now rather than
  * discovered as a wrong statement later.
  *
- * Replaces the outlet's register wholesale: the sheet is the record, kept by
- * the person who settles the account.
+ * Replaces the register's rows for the invoices the sheet lists: the sheet is
+ * the record for those, kept by the person who settles the account, and rows
+ * for other invoices stay.
  *
  * Its "Left (btl)" column is also the opening position: the bottles each
  * invoice line still held when the payment run was last settled (30 September
@@ -119,8 +120,23 @@ const adminImportOutletCodes = adminProcedure
       };
     });
 
+    /*
+      Each upload replaces only the invoices it lists. Replacing the whole
+      register dropped codes the tab never carried (the October invoices
+      INV-000398/399/402), and 28 October bottles fell out of matching.
+    */
+    const docRefs = JSON.stringify([
+      ...new Set(rows.map((row) => row.doc_ref).filter(Boolean)),
+    ]);
+    const hasUnreferenced = rows.some((row) => !row.doc_ref);
+
     await client`
-      DELETE FROM cons_outlet_codes WHERE outlet_id = ${input.outletId}
+      DELETE FROM cons_outlet_codes
+      WHERE outlet_id = ${input.outletId}
+        AND (
+          doc_ref IN (SELECT jsonb_array_elements_text(${docRefs}::jsonb))
+          ${hasUnreferenced ? client`OR doc_ref IS NULL` : client``}
+        )
     `;
     await client`INSERT INTO cons_outlet_codes ${client(rows)}`;
 
