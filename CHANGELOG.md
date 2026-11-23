@@ -1,3 +1,9 @@
+## [2.1.171](https://github.com/craftandculture/Craft-Culture/compare/v2.1.170...v2.1.171) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** the settlement starts each invoice line from the payment run's 30 September bottles left, as the sale attribution does, skips private client order invoices, and a Codes tab CSV keeps its accents ([ece145e](https://github.com/craftandculture/Craft-Culture/commit/ece145e17f367b7ed11b05c0f8604fb78d2c0414))
+
 ## [2.1.170](https://github.com/craftandculture/Craft-Culture/compare/v2.1.169...v2.1.170) (2026-11-23)
 
 ### Bug Fixes
