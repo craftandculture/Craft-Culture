@@ -1,3 +1,9 @@
+## [2.1.170](https://github.com/craftandculture/Craft-Culture/compare/v2.1.169...v2.1.170) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** City Drinks sales start from the payment run's 30 September bottles left, never match a private client order's invoice, every release needs its type chosen, Stock Explorer shows the lot import price, and Racines Sparkling moves to its correct code ([b70df61](https://github.com/craftandculture/Craft-Culture/commit/b70df61279e9ff1e644fab27d80c413e1ea75c49))
+
 ## [2.1.169](https://github.com/craftandculture/Craft-Culture/compare/v2.1.168...v2.1.169) (2026-11-20)
 
 ### Bug Fixes
