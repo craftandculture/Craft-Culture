@@ -15,16 +15,19 @@ describe('resolveReleaseType', () => {
     ).toBe('pco');
   });
 
-  it('treats other customers as outright', () => {
-    expect(
-      resolveReleaseType({ customerName: 'The Bottle Store', reference: null, isPco: false, stored: null }).type,
-    ).toBe('outright');
+  it('suggests outright for other customers but still asks', () => {
+    const result = resolveReleaseType({ customerName: 'The Bottle Store', reference: null, isPco: false, stored: null });
+
+    expect(result.type).toBeNull();
+    expect(result.suggested).toBe('outright');
+    expect(result.required).toBe(true);
   });
 
-  it('suggests consignment from a tag', () => {
-    expect(
-      resolveReleaseType({ customerName: 'City Drinks LLC', reference: 'CONSIGNMENT_CRURATED', isPco: false, stored: null }).type,
-    ).toBe('consignment');
+  it('suggests consignment from a tag but still asks', () => {
+    const result = resolveReleaseType({ customerName: 'City Drinks LLC', reference: 'CONSIGNMENT_CRURATED', isPco: false, stored: null });
+
+    expect(result.type).toBeNull();
+    expect(result.suggested).toBe('consignment');
   });
 
   it('asks for an untagged City Drinks order', () => {

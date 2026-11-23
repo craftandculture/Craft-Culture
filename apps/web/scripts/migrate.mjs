@@ -2376,6 +2376,20 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "cons_owners" ADD COLUMN IF NOT EXISTS "kind" text NOT NULL DEFAULT 'partner'`,
     );
+    /*
+      The bottles each invoice line still held at a month end, as the payment
+      run counted them (the Codes tab's "Left (btl)"). History, never billed:
+      later months draw down from it instead of from the invoice's full count.
+    */
+    await client.unsafe(
+      `ALTER TABLE "cons_outlet_codes" ADD COLUMN IF NOT EXISTS "bottles" numeric`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "cons_outlet_codes" ADD COLUMN IF NOT EXISTS "left_bottles" numeric`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "cons_outlet_codes" ADD COLUMN IF NOT EXISTS "opening_at" date`,
+    );
     console.log('✅ cons_outlet_codes ready');
 
     /*
@@ -4835,6 +4849,76 @@ const runMigrations = async () => {
       `CREATE INDEX IF NOT EXISTS "distributor_warehouse_updates_partner_idx" ON "distributor_warehouse_updates" ("partner_id", "created_at")`,
     );
     console.log('✅ Distributor warehouse updates ready');
+
+    /*
+      Racines Sparkling Grand Reserve NV was received under a mistyped code,
+      "rentW4301023-0000-06-00750", so its $51.72 cost sat where City Drinks'
+      sales (2150228-1000-06-00750) never looked, and Crurated's statement read
+      "no cost" (Sophie, re-test 20 Nov, item 11). The stock, its labels and
+      movements, and its pricing move to the right code in one transaction;
+      where the right code already has a pricing row, the broken one's figures
+      fill only its blanks.
+    */
+    await dataFix('Racines Sparkling moved off the mistyped rentW4301023 code', () =>
+      client.begin(async (tx) => {
+        const broken = 'rentW4301023-0000-06-00750';
+        const fixed = '2150228-1000-06-00750';
+        const brokenKey = 'rentW4301023-0000-00750';
+        const fixedKey = '2150228-1000-00750';
+
+        const [target] = await tx`
+          SELECT id FROM wms_product_pricing WHERE lwin18 = ${fixed}
+        `;
+
+        if (target) {
+          await tx`
+            UPDATE wms_product_pricing t SET
+              import_price_per_bottle = CASE WHEN COALESCE(t.import_price_per_bottle, 0) = 0
+                                             THEN b.import_price_per_bottle ELSE t.import_price_per_bottle END,
+              cost_override_per_bottle = COALESCE(t.cost_override_per_bottle, b.cost_override_per_bottle),
+              logistics_per_bottle = COALESCE(t.logistics_per_bottle, b.logistics_per_bottle),
+              transfer_price_per_bottle = COALESCE(t.transfer_price_per_bottle, b.transfer_price_per_bottle),
+              selling_price_per_bottle = COALESCE(t.selling_price_per_bottle, b.selling_price_per_bottle),
+              b2b_margin_pct = COALESCE(t.b2b_margin_pct, b.b2b_margin_pct),
+              pc_margin_pct = COALESCE(t.pc_margin_pct, b.pc_margin_pct),
+              updated_at = now()
+            FROM wms_product_pricing b
+            WHERE t.lwin18 = ${fixed} AND b.lwin18 = ${broken}
+          `;
+          await tx`DELETE FROM wms_product_pricing WHERE lwin18 = ${broken}`;
+        } else {
+          await tx`
+            UPDATE wms_product_pricing SET lwin18 = ${fixed}, updated_at = now()
+            WHERE lwin18 = ${broken}
+          `;
+        }
+
+        await tx`
+          UPDATE wms_owner_product_pricing o
+             SET lwin18 = ${fixed}, pak_key = ${fixedKey}, updated_at = now()
+           WHERE o.pak_key = ${brokenKey}
+             AND NOT EXISTS (
+               SELECT 1 FROM wms_owner_product_pricing x
+                WHERE x.owner_id = o.owner_id AND x.pak_key = ${fixedKey}
+             )
+        `;
+        await tx`DELETE FROM wms_owner_product_pricing WHERE pak_key = ${brokenKey}`;
+
+        await tx`
+          UPDATE wms_pricing_releases r SET lwin_key = ${fixedKey}
+           WHERE r.lwin_key = ${brokenKey}
+             AND NOT EXISTS (
+               SELECT 1 FROM wms_pricing_releases x
+                WHERE x.owner_id = r.owner_id AND x.lwin_key = ${fixedKey}
+             )
+        `;
+        await tx`DELETE FROM wms_pricing_releases WHERE lwin_key = ${brokenKey}`;
+
+        await tx`UPDATE wms_stock SET lwin18 = ${fixed}, updated_at = now() WHERE lwin18 = ${broken}`;
+        await tx`UPDATE wms_case_labels SET lwin18 = ${fixed} WHERE lwin18 = ${broken}`;
+        await tx`UPDATE wms_stock_movements SET lwin18 = ${fixed} WHERE lwin18 = ${broken}`;
+      }),
+    );
 
     await client.end();
     process.exit(0);

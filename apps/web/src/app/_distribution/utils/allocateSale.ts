@@ -1,6 +1,8 @@
 import type { InvoiceType } from './classifyInvoice';
 
 export interface SaleLayer {
+  /** The movement row, where the caller tracks each line's own bottles */
+  id?: string;
   arrangementId: string;
   lwin18: string | null;
   productName: string;

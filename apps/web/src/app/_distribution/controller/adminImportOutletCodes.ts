@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import openingReady from '../utils/openingReady';
 import parseOutletCodesSheet from '../utils/parseOutletCodesSheet';
 import resolveOwner from '../utils/resolveOwner';
 import type { OwnerRef } from '../utils/resolveOwner';
@@ -20,8 +21,14 @@ import tableReady from '../utils/tableReady';
  * Replaces the outlet's register wholesale: the sheet is the record, kept by
  * the person who settles the account.
  *
+ * Its "Left (btl)" column is also the opening position: the bottles each
+ * invoice line still held when the payment run was last settled (30 September
+ * 2026, Sophie 23 Nov). Months after that draw down from it, so history the
+ * platform never imported is used up the way City Drinks was billed and paid.
+ *
  * @param outletId - The outlet
  * @param file - The Codes tab exported as xlsx or csv, base64
+ * @param openingAt - The month end its "Left (btl)" counts are at
  * @returns What was read and which owner labels matched nobody
  */
 const adminImportOutletCodes = adminProcedure
@@ -29,6 +36,10 @@ const adminImportOutletCodes = adminProcedure
     z.object({
       outletId: z.string().uuid(),
       file: z.string().min(1),
+      openingAt: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .default('2026-09-30'),
     }),
   )
   .mutation(async ({ input }) => {
@@ -66,6 +77,8 @@ const adminImportOutletCodes = adminProcedure
     `;
 
     const unknownLabels = new Set<string>();
+    const withOpening = await openingReady();
+    const hasLeft = parsed.rows.some((row) => row.leftBottles !== null);
 
     const rows = parsed.rows.map((row) => {
       /*
@@ -96,6 +109,13 @@ const adminImportOutletCodes = adminProcedure
         case_config: row.caseConfig,
         is_consignment: row.isConsignment,
         source: 'codes-tab',
+        ...(withOpening
+          ? {
+              bottles: row.bottles,
+              left_bottles: row.leftBottles,
+              opening_at: hasLeft ? input.openingAt : null,
+            }
+          : {}),
       };
     });
 
@@ -111,6 +131,11 @@ const adminImportOutletCodes = adminProcedure
       withOwner: rows.filter((row) => row.owner_id).length,
       invoices: new Set(rows.map((row) => row.doc_ref).filter(Boolean)).size,
       unknownOwners: [...unknownLabels],
+      openingAt: withOpening && hasLeft ? input.openingAt : null,
+      bottlesLeft: rows.reduce(
+        (sum, row) => sum + (('left_bottles' in row ? row.left_bottles : 0) ?? 0),
+        0,
+      ),
     };
   });
 

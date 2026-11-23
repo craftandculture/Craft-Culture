@@ -35,23 +35,39 @@ const resolveReleaseType = (order: {
 }) => {
   const stored = RELEASE_TYPES.find((type) => type === order.stored);
 
-  if (stored) return { type: stored, required: false, reason: 'Set at release' };
+  if (stored) {
+    return { type: stored, suggested: stored, required: false, reason: 'Set at release' };
+  }
 
   if (order.isPco || /\bPCO[-\s]?\d/i.test(order.reference ?? '')) {
-    return { type: 'pco' as ReleaseType, required: false, reason: 'Private client order' };
+    return {
+      type: 'pco' as ReleaseType,
+      suggested: 'pco' as ReleaseType,
+      required: false,
+      reason: 'Private client order',
+    };
   }
 
+  /*
+    Every other release is chosen by a person (Sophie, 23 Nov 2026): the
+    customer and the Zoho tag only suggest. Guessing "outright" for anyone but
+    City Drinks settled a consigned case to The Bottle Store as sold.
+  */
   const consignmentCustomer = /city\s*drinks/i.test(order.customerName ?? '');
+  const suggested: ReleaseType | null = /CONSIGNMENT/i.test(order.reference ?? '')
+    ? 'consignment'
+    : consignmentCustomer
+      ? null
+      : 'outright';
 
-  if (!consignmentCustomer) {
-    return { type: 'outright' as ReleaseType, required: false, reason: 'Not a consignment customer' };
-  }
-
-  if (/CONSIGNMENT/i.test(order.reference ?? '')) {
-    return { type: 'consignment' as ReleaseType, required: false, reason: 'Tagged consignment in Zoho' };
-  }
-
-  return { type: null, required: true, reason: 'City Drinks order: choose consignment, outright or prepaid' };
+  return {
+    type: null,
+    suggested,
+    required: true,
+    reason: suggested
+      ? `Choose the type before release (suggested: ${RELEASE_TYPE_LABELS[suggested]})`
+      : 'Choose consignment, outright sale or prepaid before release',
+  };
 };
 
 export default resolveReleaseType;

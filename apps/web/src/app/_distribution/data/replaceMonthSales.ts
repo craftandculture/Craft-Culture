@@ -24,7 +24,7 @@ const replaceMonthSales = async (input: {
   lines: OutletSaleLine[];
   docRef: string;
 }) => {
-  const { sold, unmatched } = await attributeOutletSales(input);
+  const { sold, unmatched, opening } = await attributeOutletSales(input);
 
   const rows = sold.map((row) => ({
     arrangement_id: row.arrangementId,
@@ -108,6 +108,17 @@ const replaceMonthSales = async (input: {
         (line) =>
           `${line.outletCode} · ${line.productName} — ${line.bottles} btl · ${line.reason}`,
       ),
+    /* The payment run's history this month started from, and what it could not place */
+    opening: opening
+      ? {
+          at: opening.openingAt,
+          invoices: opening.invoices,
+          unplaced: opening.unplaced.map(
+            (row) =>
+              `${row.docRef ?? 'no invoice'} · ${row.wineName} — ${row.leftBottles} btl · ${row.reason}`,
+          ),
+        }
+      : null,
   };
 };
 
