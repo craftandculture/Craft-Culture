@@ -105,7 +105,19 @@ const readCount = (value: unknown) => {
  * @returns The rows, the sheet read, and how many were skipped
  */
 const parseOutletCodesSheet = (file: string) => {
-  const workbook = XLSX.read(file, { type: 'base64' });
+  /*
+    A CSV is read as UTF-8 text. Handed over as base64 it was decoded byte by
+    byte, so "Château" arrived as "ChÃ¢teau" and rows with no code could no
+    longer be found by name on their invoice. Workbooks (zip, or old BIFF)
+    are read as before.
+  */
+  const bytes = Buffer.from(file, 'base64');
+  const isWorkbook =
+    (bytes[0] === 0x50 && bytes[1] === 0x4b) ||
+    (bytes[0] === 0xd0 && bytes[1] === 0xcf);
+  const workbook = isWorkbook
+    ? XLSX.read(file, { type: 'base64' })
+    : XLSX.read(bytes.toString('utf8').replace(/^\uFEFF/, ''), { type: 'string' });
   const sheetName =
     workbook.SheetNames.find((name) => /^codes$/i.test(name.trim())) ??
     workbook.SheetNames[0];

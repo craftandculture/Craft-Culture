@@ -107,4 +107,15 @@ describe('parseOutletCodesSheet', () => {
 
     expect(parsed.rows).toHaveLength(1);
   });
+
+  it('reads accents in a CSV as written', () => {
+    const csv = [
+      HEADINGS.join(','),
+      '"Château Figeac 1990",C&C,INV-000312,01 Sep 2026,,1x75cl,1,1,1,Open,C&C,Yes,3,0,0,3',
+    ].join('\n');
+    const parsed = parseOutletCodesSheet(Buffer.from(csv, 'utf8').toString('base64'));
+
+    expect(parsed.rows[0]?.wineName).toBe('Château Figeac 1990');
+    expect(parsed.rows[0]?.leftBottles).toBe(3);
+  });
 });

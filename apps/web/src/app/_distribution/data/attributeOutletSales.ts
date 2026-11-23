@@ -199,6 +199,27 @@ const attributeOutletSales = async (input: {
       )
     : null;
 
+  /*
+    Each of our lines keeps the opening it was given, so the statement and the
+    settlement start every line exactly where this does.
+  */
+  if (placement) {
+    const ids = [...placement.available.keys()];
+    const bottles = ids.map((id) => placement.available.get(id) ?? 0);
+
+    await client`
+      UPDATE cons_movements m SET opening_bottles = NULL
+      FROM cons_arrangements a
+      WHERE a.id = m.arrangement_id AND a.outlet_id = ${input.outletId}
+        AND m.kind = 'out' AND m.opening_bottles IS NOT NULL
+    `;
+    await client`
+      UPDATE cons_movements m SET opening_bottles = v.bottles
+      FROM unnest(${ids}::uuid[], ${bottles}::numeric[]) AS v(id, bottles)
+      WHERE m.id = v.id
+    `;
+  }
+
   /* What each invoice line holds as this month starts */
   const keyOfLayer = (layer: SaleLayer) =>
     wineKey(layer.lwin18 ?? layer.productName);

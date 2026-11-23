@@ -4,6 +4,8 @@ import getPartnerPayoutCost from './getPartnerPayoutCost';
 import type { PartnerPayoutCost } from './getPartnerPayoutCost';
 import getPricingManagerLanded from './getPricingManagerLanded';
 import { settles } from '../utils/classifyInvoice';
+import openingReady from '../utils/openingReady';
+import startingLayerBottles from '../utils/startingLayerBottles';
 import tableReady from '../utils/tableReady';
 import valueFifo from '../utils/valueFifo';
 import type { OutLayer } from '../utils/valueFifo';
@@ -52,6 +54,9 @@ interface SoldRow {
 }
 
 interface LayerRow {
+  id: string;
+  /** Bottles the payment run left on it at the opening; null where it did not count it */
+  opening: number | null;
   lwin18: string | null;
   productName: string;
   docDate: string | null;
@@ -139,14 +144,33 @@ const buildOwnerStatement = async (input: {
       return { lines: [], summary: null, arrangement };
     }
 
+    /*
+      The payment run's opening (bottles left per line at 30 September), when
+      it is before this month: lines it counted start from it.
+    */
+    const withOpening = await openingReady();
+    const [opened] = withOpening
+      ? await client<{ openingAt: string | null }[]>`
+          SELECT MAX(opening_at)::text AS "openingAt"
+          FROM cons_outlet_codes
+          WHERE outlet_id = ${input.outletId}
+            AND opening_at < ${`${input.month}-01`}::date
+        `
+      : [];
+    const openingAt = opened?.openingAt ?? null;
+
     const layers = await client<LayerRow[]>`
-      SELECT m.lwin18, m.product_name AS "productName",
+      SELECT m.id::text AS id,
+             ${openingAt ? client`m.opening_bottles::float8` : client`NULL::float8`} AS opening,
+             m.lwin18, m.product_name AS "productName",
              m.doc_date::text AS "docDate", m.doc_ref AS "docRef",
              m.bottles::float8 AS bottles, m.unit_price AS "unitPrice",
              m.pack, m.currency,
              ${hasTypes ? client`m.invoice_type` : client`NULL::text`} AS "invoiceType"
       FROM cons_movements m
       WHERE m.arrangement_id = ${arrangement.id} AND m.kind = 'out'
+        -- A private client order's bottles went to its client, never into stock
+        ${hasTypes ? client`AND m.invoice_type IS DISTINCT FROM 'pco'` : client``}
         -- Only wine invoiced by the month's last day can have sold in it
         AND m.doc_date < (${`${input.month}-01`}::date + INTERVAL '1 month')
       ORDER BY m.doc_date, m.doc_ref
@@ -157,15 +181,21 @@ const buildOwnerStatement = async (input: {
       spent, so this month starts where the last one finished.
     */
     const earlier = await client<
-      { lwin18: string | null; productName: string; bottles: number }[]
+      {
+        lwin18: string | null;
+        productName: string;
+        afterOpening: boolean;
+        bottles: number;
+      }[]
     >`
       SELECT m.lwin18, MIN(m.product_name) AS "productName",
+             ${openingAt ? client`(m.doc_date > ${openingAt}::date)` : client`TRUE`} AS "afterOpening",
              SUM(m.bottles)::float8 AS bottles
       FROM cons_movements m
       WHERE m.arrangement_id = ${arrangement.id}
         AND m.kind = 'sold'
         AND TO_CHAR(m.doc_date, 'YYYY-MM') < ${input.month}
-      GROUP BY m.lwin18
+      GROUP BY 1, 3
     `;
 
     const lwins = sold
@@ -402,12 +432,15 @@ const buildOwnerStatement = async (input: {
     }
 
     const costByLwin = new Map(costs.map((row) => [row.key, row]));
-    const consumedByLwin = new Map<string, number>();
+    const earlierByKey = new Map<string, { bottles: number; afterOpening: boolean }[]>();
 
     for (const row of earlier) {
       const key = keyOf(row.lwin18, row.productName);
 
-      consumedByLwin.set(key, (consumedByLwin.get(key) ?? 0) + row.bottles);
+      earlierByKey.set(key, [
+        ...(earlierByKey.get(key) ?? []),
+        { bottles: row.bottles, afterOpening: row.afterOpening },
+      ]);
     }
 
     const lines: StatementLine[] = sold.map((row) => {
@@ -419,25 +452,27 @@ const buildOwnerStatement = async (input: {
         difference between a right and a threefold-wrong settlement.
       */
       /* The same wine only: a sale with no wine (blank key) matches no line */
-      const outLayers: OutLayer[] = layers
+      const ofWine = layers
         .filter((layer) => key !== '' && keyOf(layer.lwin18, layer.productName) === key)
         .map((layer) => ({
-          docDate: layer.docDate,
-          docRef: layer.docRef,
-          bottles: layer.bottles,
+          ...layer,
           pricePerBottle:
             layer.unitPrice && layer.pack && layer.pack > 0
               ? layer.unitPrice / layer.pack
               : (layer.unitPrice ?? 0),
-          currency: layer.currency,
-          settles: settles(layer.invoiceType),
         }));
+      /* What each line still holds as the month starts, from the opening on */
+      const left = startingLayerBottles(ofWine, earlierByKey.get(key) ?? []);
+      const outLayers: OutLayer[] = ofWine.map((layer) => ({
+        docDate: layer.docDate,
+        docRef: layer.docRef,
+        bottles: left.get(layer.id) ?? layer.bottles,
+        pricePerBottle: layer.pricePerBottle,
+        currency: layer.currency,
+        settles: settles(layer.invoiceType),
+      }));
 
-      const fifo = valueFifo(
-        outLayers,
-        row.bottles,
-        consumedByLwin.get(key) ?? 0,
-      );
+      const fifo = valueFifo(outLayers, row.bottles, 0);
       const cutPct = cutByKey.get(key) ?? null;
       const keep = cutPct ? 1 - cutPct / 100 : 1;
       const valued = cutPct

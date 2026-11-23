@@ -2390,6 +2390,10 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "cons_outlet_codes" ADD COLUMN IF NOT EXISTS "opening_at" date`,
     );
+    /* The opening as placed on each of our invoice lines, so every screen starts from it */
+    await client.unsafe(
+      `ALTER TABLE "cons_movements" ADD COLUMN IF NOT EXISTS "opening_bottles" numeric`,
+    );
     console.log('✅ cons_outlet_codes ready');
 
     /*

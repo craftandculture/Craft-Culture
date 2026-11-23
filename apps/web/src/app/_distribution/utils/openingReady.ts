@@ -9,7 +9,7 @@ let ready: boolean | null = null;
  * they exist the register is written and read without them. Only a positive
  * answer is remembered, so the columns are picked up once they appear.
  *
- * @returns True once `cons_outlet_codes.left_bottles` exists
+ * @returns True once the register and invoice lines can hold an opening
  */
 const openingReady = async () => {
   if (ready) return ready;
@@ -18,6 +18,9 @@ const openingReady = async () => {
     SELECT EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_name = 'cons_outlet_codes' AND column_name = 'opening_at'
+    ) AND EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'cons_movements' AND column_name = 'opening_bottles'
     ) AS present
   `;
 
