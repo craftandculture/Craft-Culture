@@ -204,8 +204,10 @@ const attributeOutletSales = async (input: {
     settlement start every line exactly where this does.
   */
   if (placement) {
-    const ids = [...placement.available.keys()];
-    const bottles = ids.map((id) => placement.available.get(id) ?? 0);
+    /* As one JSON text: the driver cannot send an array parameter here */
+    const openings = JSON.stringify(
+      [...placement.available].map(([id, bottles]) => ({ id, bottles })),
+    );
 
     await client`
       UPDATE cons_movements m SET opening_bottles = NULL
@@ -215,7 +217,7 @@ const attributeOutletSales = async (input: {
     `;
     await client`
       UPDATE cons_movements m SET opening_bottles = v.bottles
-      FROM unnest(${ids}::uuid[], ${bottles}::numeric[]) AS v(id, bottles)
+      FROM jsonb_to_recordset(${openings}::jsonb) AS v(id uuid, bottles numeric)
       WHERE m.id = v.id
     `;
   }
