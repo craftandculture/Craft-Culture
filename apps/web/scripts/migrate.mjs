@@ -4933,6 +4933,18 @@ const runMigrations = async () => {
     );
 
     /*
+      Montille's two lots carry no cost override: Sophie's figures are the
+      lot's import plus its own freight ($63.97 ocean, $55.82 air), and the
+      wine's +$21.01 override was being added on top of both.
+    */
+    await dataFix('Montille Chassagne 2022 lots carry no cost override', () =>
+      client`
+        UPDATE wms_lot_costs SET cost_override_per_bottle = 0, updated_at = now()
+        WHERE pak_key = '1063145-2022-00750' AND cost_override_per_bottle IS NULL
+      `,
+    );
+
+    /*
       Racines Sparkling Grand Reserve NV was received under a mistyped code,
       "rentW4301023-0000-06-00750", so its $51.72 cost sat where City Drinks'
       sales (2150228-1000-06-00750) never looked, and Crurated's statement read
