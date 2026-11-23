@@ -320,7 +320,9 @@ const buildOwnerStatement = async (input: {
     const lotCosts = owner?.partnerId
       ? await getLotPayoutCosts(
           owner.partnerId,
-          layers.map((layer) => layer.docRef).filter((ref): ref is string => Boolean(ref)),
+          layers
+            .filter((layer) => layer.docRef)
+            .map((layer) => ({ docRef: layer.docRef!, docDate: layer.docDate })),
           payout,
         )
       : new Map<string, LotPayoutCost>();

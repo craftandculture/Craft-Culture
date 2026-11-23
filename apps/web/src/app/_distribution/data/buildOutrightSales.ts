@@ -272,7 +272,9 @@ const buildOutrightSales = async (month: string) => {
       ownerId,
       await getLotPayoutCosts(
         ownerId,
-        split.filter((row) => row.ownerId === ownerId).map((row) => row.invoiceNumber),
+        split
+          .filter((row) => row.ownerId === ownerId)
+          .map((row) => ({ docRef: row.invoiceNumber, docDate: row.invoiceDate })),
         wineCosts,
       ),
     );

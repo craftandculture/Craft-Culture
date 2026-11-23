@@ -35,26 +35,30 @@ interface PickedLot {
  * on its own: the lot's own cost fields where set (`wms_lot_costs`), then its
  * shipment line's import, then the Pricing Manager's figure for the wine.
  *
+ * Where an invoice's picks cannot be traced (stock released before picks named
+ * their lot), a wine whose lots carry their own costs takes the lot that was
+ * in stock when the invoice was raised: the newest received on or before it.
+ *
  * @example
  *   const byLine = await getLotPayoutCosts(partnerId, ['INV-000329'], payout);
  *   byLine.get('INV-000329|1063145202200750')?.perBottle; // 63.97
  *
  * @param partnerId - The owner's partner record
- * @param docRefs - The invoices to trace
+ * @param docs - The invoices to trace, with their dates
  * @param wineCosts - The owner's per-wine Pricing Manager costs, keyed by wine key
  * @returns Cost per bottle per invoice and wine (`docRef|wineKey`)
  */
 const getLotPayoutCosts = async (
   partnerId: string,
-  docRefs: string[],
+  docs: { docRef: string; docDate: string | null }[],
   wineCosts: Map<string, PartnerPayoutCost>,
 ) => {
   const result = new Map<string, LotPayoutCost>();
 
-  if (docRefs.length === 0) return result;
+  if (docs.length === 0) return result;
 
   const hasLotCosts = await tableReady('wms_lot_costs');
-  const refs = JSON.stringify([...new Set(docRefs)]);
+  const refs = JSON.stringify([...new Set(docs.map((doc) => doc.docRef))]);
 
   const picked = await client<PickedLot[]>`
     SELECT so.invoice_number AS "docRef",
@@ -125,8 +129,63 @@ const getLotPayoutCosts = async (
     result.set(line, {
       perBottle: total.value / total.bottles,
       bottles: total.bottles,
-      from: `Lot ${[...total.lots].join(', ')}`,
+      from: `Picked from ${[...total.lots].join(', ')}`,
     });
+  }
+
+  if (!hasLotCosts) return result;
+
+  /* Untraced invoices of a wine whose lots are costed apart: the lot in stock then */
+  const costedLots = await client<
+    {
+      pakKey: string;
+      lotNumber: string;
+      lotImport: number | null;
+      lotLogistics: number | null;
+      lotOverride: number | null;
+      receivedAt: string | null;
+    }[]
+  >`
+    SELECT lc.pak_key AS "pakKey", lc.lot_number AS "lotNumber",
+           lc.import_price_per_bottle::float8 AS "lotImport",
+           lc.logistics_per_bottle::float8 AS "lotLogistics",
+           lc.cost_override_per_bottle::float8 AS "lotOverride",
+           MIN(s.received_at)::date::text AS "receivedAt"
+    FROM wms_lot_costs lc
+    LEFT JOIN wms_stock s
+      ON s.owner_id = lc.owner_id AND s.lot_number = lc.lot_number
+     AND split_part(s.lwin18, '-', 1) || '-' || split_part(s.lwin18, '-', 2) || '-' || split_part(s.lwin18, '-', 4) = lc.pak_key
+    WHERE lc.owner_id = ${partnerId}
+    GROUP BY 1, 2, 3, 4, 5
+  `;
+
+  for (const doc of docs) {
+    for (const lot of costedLots) {
+      const key = wineKey(lot.pakKey.replace(/-/g, ''));
+      const line = `${doc.docRef}|${key}`;
+
+      if (result.has(line) && result.get(line)?.from.startsWith('Picked')) continue;
+      if (!lot.receivedAt || !doc.docDate || lot.receivedAt > doc.docDate) continue;
+
+      const current = result.get(line);
+      const currentReceived = current?.from.match(/received (\S+)\)/)?.[1] ?? '';
+
+      if (current && currentReceived >= lot.receivedAt) continue;
+
+      const wine = wineCosts.get(key);
+      const importCost = lot.lotImport ?? wine?.importPerBottle ?? null;
+
+      if (importCost === null) continue;
+
+      result.set(line, {
+        perBottle:
+          importCost +
+          (lot.lotLogistics ?? wine?.logisticsPerBottle ?? 0) +
+          (lot.lotOverride ?? wine?.overridePerBottle ?? 0),
+        bottles: 0,
+        from: `Lot ${lot.lotNumber} (in stock when invoiced, received ${lot.receivedAt})`,
+      });
+    }
   }
 
   return result;
