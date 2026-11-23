@@ -1,3 +1,9 @@
+## [2.1.174](https://github.com/craftandculture/Craft-Culture/compare/v2.1.173...v2.1.174) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** an invoice whose picks name no lot is owed at the cost of the lot in stock when it was raised, so Montille's September consignment pays the ocean price ([0b4c1ce](https://github.com/craftandculture/Craft-Culture/commit/0b4c1ce472ca45208ca13abde442967705c136d9))
+
 ## [2.1.173](https://github.com/craftandculture/Craft-Culture/compare/v2.1.172...v2.1.173) (2026-11-23)
 
 ### Features
