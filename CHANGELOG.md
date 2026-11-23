@@ -1,3 +1,9 @@
+## [2.1.175](https://github.com/craftandculture/Craft-Culture/compare/v2.1.174...v2.1.175) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** a pick that names no lot no longer counts as tracing the lot, so the lot in stock when invoiced applies ([ce06011](https://github.com/craftandculture/Craft-Culture/commit/ce060118f427c7dd028828d56bb2b6ca815e0de1))
+
 ## [2.1.174](https://github.com/craftandculture/Craft-Culture/compare/v2.1.173...v2.1.174) (2026-11-23)
 
 ### Bug Fixes
