@@ -1,3 +1,9 @@
+## [2.1.173](https://github.com/craftandculture/Craft-Culture/compare/v2.1.172...v2.1.173) (2026-11-23)
+
+### Features
+
+* **distribution:** partners are owed each bottle at the cost of the lot it was picked from, Montille Chassagne 2022's ocean and air lots are costed apart, and a Codes tab upload only replaces the invoices it lists ([114ad94](https://github.com/craftandculture/Craft-Culture/commit/114ad94f2d5e6cb319fd045f0a48c296f08067d9))
+
 ## [2.1.172](https://github.com/craftandculture/Craft-Culture/compare/v2.1.171...v2.1.172) (2026-11-23)
 
 ### Bug Fixes
