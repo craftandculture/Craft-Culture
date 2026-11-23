@@ -104,6 +104,8 @@ const getLotPayoutCosts = async (
 
   for (const lot of picked) {
     if (!lot.lwin18 || lot.bottles <= 0) continue;
+    /* A pick that names no lot says nothing about which lot: leave it untraced */
+    if (!lot.lotNumber && !lot.shipmentNumber) continue;
 
     const key = wineKey(lot.lwin18);
     const wine = wineCosts.get(key);
