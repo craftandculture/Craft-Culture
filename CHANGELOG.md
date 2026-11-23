@@ -1,3 +1,9 @@
+## [2.1.172](https://github.com/craftandculture/Craft-Culture/compare/v2.1.171...v2.1.172) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** re-running a month no longer fails while saving each invoice line's opening bottles ([dbe64a5](https://github.com/craftandculture/Craft-Culture/commit/dbe64a59f1cdffde232b1967b3fcb74f80bc5b21))
+
 ## [2.1.171](https://github.com/craftandculture/Craft-Culture/compare/v2.1.170...v2.1.171) (2026-11-23)
 
 ### Bug Fixes
