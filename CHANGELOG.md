@@ -1,3 +1,9 @@
+## [2.1.176](https://github.com/craftandculture/Craft-Culture/compare/v2.1.175...v2.1.176) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** Montille Chassagne 2022's lots carry no cost override, so Crurated is owed $63.97 ocean and $55.82 air ([3c66df7](https://github.com/craftandculture/Craft-Culture/commit/3c66df7692703646352c59e6600b3a8eccabd504))
+
 ## [2.1.175](https://github.com/craftandculture/Craft-Culture/compare/v2.1.174...v2.1.175) (2026-11-23)
 
 ### Bug Fixes
