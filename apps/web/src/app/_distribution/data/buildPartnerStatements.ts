@@ -1,5 +1,8 @@
+import { client } from '@/database/client';
+
 import buildMonthSettlement from './buildMonthSettlement';
 import buildOutrightSales from './buildOutrightSales';
+import tableReady from '../utils/tableReady';
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
@@ -25,9 +28,25 @@ const buildPartnerStatements = async (input: {
   outletId: string;
   month: string;
 }) => {
-  const [settlement, outright] = await Promise.all([
+  const [settlement, outright, adjustments] = await Promise.all([
     buildMonthSettlement(input),
     buildOutrightSales(input.month),
+    (async () =>
+      (await tableReady('cons_partner_adjustments'))
+        ? client<
+            {
+              id: string;
+              payee: string;
+              partnerId: string | null;
+              description: string;
+              amount: number;
+            }[]
+          >`
+            SELECT id, payee, partner_id AS "partnerId", description, amount::float8 AS amount
+            FROM cons_partner_adjustments WHERE month = ${input.month}
+            ORDER BY created_at
+          `
+        : [])(),
   ]);
 
   const partners = new Map<
@@ -39,6 +58,8 @@ const buildPartnerStatements = async (input: {
       consignmentOwed: number;
       outrightBottles: number;
       outrightOwed: number;
+      /** One-off lines on the statement this month */
+      adjustments: number;
       withoutCost: number;
       toConfirm: number;
     }
@@ -57,6 +78,7 @@ const buildPartnerStatements = async (input: {
       consignmentOwed: 0,
       outrightBottles: 0,
       outrightOwed: 0,
+      adjustments: 0,
       withoutCost: 0,
       toConfirm: 0,
     };
@@ -90,12 +112,25 @@ const buildPartnerStatements = async (input: {
     if (line.needsConfirm) row.toConfirm += 1;
   }
 
+  /* One-off lines, on the partner's row when it is one, else by name */
+  for (const adjustment of adjustments) {
+    const byName = [...partners.values()].find(
+      (row) => row.name.toLowerCase() === adjustment.payee.toLowerCase(),
+    );
+    const row = adjustment.partnerId
+      ? rowFor(adjustment.partnerId, byName?.name ?? adjustment.payee)
+      : (byName ?? rowFor(null, adjustment.payee));
+
+    row.adjustments += adjustment.amount;
+  }
+
   const rows = [...partners.values()]
     .map((row) => ({
       ...row,
       consignmentOwed: round2(row.consignmentOwed),
       outrightOwed: round2(row.outrightOwed),
-      totalOwed: round2(row.consignmentOwed + row.outrightOwed),
+      adjustments: round2(row.adjustments),
+      totalOwed: round2(row.consignmentOwed + row.outrightOwed + row.adjustments),
     }))
     .sort((a, b) => b.totalOwed - a.totalOwed);
 
@@ -104,9 +139,11 @@ const buildPartnerStatements = async (input: {
     rows,
     outright: outright.lines,
     payouts: settlement.payouts,
+    adjustments,
     totals: {
       consignmentOwed: round2(rows.reduce((sum, row) => sum + row.consignmentOwed, 0)),
       outrightOwed: round2(rows.reduce((sum, row) => sum + row.outrightOwed, 0)),
+      adjustments: round2(rows.reduce((sum, row) => sum + row.adjustments, 0)),
       totalOwed: round2(rows.reduce((sum, row) => sum + row.totalOwed, 0)),
       toConfirm: outright.lines.filter((line) => line.needsConfirm).length,
       withoutCost: rows.reduce((sum, row) => sum + row.withoutCost, 0),

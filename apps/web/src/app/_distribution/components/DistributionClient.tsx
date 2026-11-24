@@ -63,7 +63,16 @@ const formatWhen = (value: Date | string | null) => {
  * still needs the owner's bill. Showing that as zero would read as nothing
  * having been billed, which is a different claim from not yet knowing.
  */
-const DistributionClient = () => {
+export interface DistributionClientProps {
+  /**
+   * The monthly run, or the setup it rests on (Sophie, 24 Nov 2026: the
+   * monthly page is upload, settlement, partner statements and exports; codes,
+   * owners, invoice types and the stock check live on their own page)
+   */
+  page?: 'month' | 'setup';
+}
+
+const DistributionClient = ({ page = 'month' }: DistributionClientProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -318,6 +327,18 @@ const DistributionClient = () => {
               ))}
             </select>
           </label>
+          {page === 'month' ? (
+            <label className="flex flex-col gap-1">
+              <span className="text-text-muted text-xs">Month</span>
+              <input
+                type="month"
+                value={statementMonth}
+                onChange={(event) => event.target.value && setStatementMonth(event.target.value)}
+                className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-full rounded-md border px-2 text-sm lg:w-auto"
+              />
+            </label>
+          ) : (
+            <>
           <label className="flex flex-col gap-1">
             <span className="text-text-muted text-xs">Owner</span>
             <select
@@ -363,6 +384,8 @@ const DistributionClient = () => {
               className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-full rounded-md border px-2 text-sm lg:w-56"
             />
           </label>
+            </>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <Button
@@ -373,18 +396,28 @@ const DistributionClient = () => {
           >
             {syncOut.isPending ? 'Reading Zoho…' : 'Read invoices'}
           </Button>
-          <Button
-            colorRole="brand"
-            size="sm"
-            isDisabled={pull.isPending}
-            onClick={() => pull.mutate({})}
-          >
-            {pull.isPending ? 'Pulling…' : 'Pull their stock'}
-          </Button>
+          {page === 'setup' ? (
+            <Button
+              colorRole="brand"
+              size="sm"
+              isDisabled={pull.isPending}
+              onClick={() => pull.mutate({})}
+              title="The stock check: run it quarterly"
+            >
+              {pull.isPending ? 'Pulling…' : 'Pull their stock'}
+            </Button>
+          ) : (
+            <a
+              href="/platform/admin/distribution/setup"
+              className="border-border-primary hover:bg-fill-muted flex min-h-8 items-center justify-center rounded-md border px-3 text-xs font-medium"
+            >
+              Setup
+            </a>
+          )}
         </div>
       </div>
 
-      {outlet ? (
+      {page === 'setup' && outlet ? (
         <div className="border-border-primary space-y-3 rounded-xl border px-4 py-3">
           <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
             <span className="flex items-center gap-2">
@@ -501,32 +534,41 @@ const DistributionClient = () => {
         </div>
       ) : null}
 
-      <div>
-        <Typography variant="labelSm" asChild>
-          <h2 className="mb-2">The month</h2>
-        </Typography>
-        {/*
-          Upload then statement, in that order and numbered. A statement read
-          before the month is loaded is empty, which reads as nothing having
-          sold rather than as nothing having been uploaded.
-        */}
-        <div className="grid gap-4 lg:grid-cols-2">
+      {page === 'month' ? (
+        <>
+          {/* The monthly run, in Sophie's order: upload, settle, statements, export */}
           <div className="relative">
             <span className="bg-text-primary text-surface-primary absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
               1
             </span>
-            <div className="space-y-4">
-              <SalesUpload outletId={outletId} onImported={invalidate} />
-              <CodesRegisterUpload outletId={outletId} month={statementMonth} />
-              <OwnerCostsUpload
-                outletId={outletId}
-                owners={setup.data?.owners ?? []}
-              />
-            </div>
+            <SalesUpload outletId={outletId} onImported={invalidate} />
           </div>
-          <div className="relative">
+
+          <div className="relative space-y-4">
             <span className="bg-text-primary text-surface-primary absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
               2
+            </span>
+            <SettlementPanel
+              outletId={outletId}
+              month={statementMonth}
+              owners={(setup.data?.owners ?? []).map((row) => ({
+                id: row.id,
+                name: row.name,
+              }))}
+            />
+            <UnmatchedLinesPanel outletId={outletId} month={statementMonth} />
+          </div>
+
+          <div className="relative">
+            <span className="bg-text-primary text-surface-primary absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
+              3
+            </span>
+            <PartnerStatementsPanel outletId={outletId} month={statementMonth} />
+          </div>
+
+          <div className="relative">
+            <span className="bg-text-primary text-surface-primary absolute -left-1 -top-2 z-10 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
+              4
             </span>
             <StatementPanel
               outletId={outletId}
@@ -536,36 +578,28 @@ const DistributionClient = () => {
               onMonthChange={setStatementMonth}
             />
           </div>
-        </div>
-      </div>
+        </>
+      ) : (
+        <>
+          {/*
+            Setup feeds the monthly numbers (codes, owners, costs, invoice
+            types, merges), but is done once and kept, not redone each month.
+          */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <CodesRegisterUpload outletId={outletId} month={statementMonth} />
+            <OwnerCostsUpload outletId={outletId} owners={setup.data?.owners ?? []} />
+          </div>
 
-      {/*
-        The month before the wines. What City Drinks owe us and what we owe
-        each partner is the question the page exists to answer; the per-wine
-        position below is how it is checked.
-      */}
-      <SettlementPanel
-        outletId={outletId}
-        month={statementMonth}
-        owners={(setup.data?.owners ?? []).map((row) => ({
-          id: row.id,
-          name: row.name,
-        }))}
-      />
+          <InvoiceTypesPanel outletId={outletId} owners={setup.data?.owners ?? []} />
 
-      <PartnerStatementsPanel outletId={outletId} month={statementMonth} />
+          <SameWinePanel outletId={outletId} />
 
-      <UnmatchedLinesPanel outletId={outletId} month={statementMonth} />
+          <CodeLinkPanel outletId={outletId} onLinked={invalidate} />
+        </>
+      )}
 
-      <InvoiceTypesPanel
-        outletId={outletId}
-        owners={setup.data?.owners ?? []}
-      />
-
-      <SameWinePanel outletId={outletId} />
-
-      <CodeLinkPanel outletId={outletId} onLinked={invalidate} />
-
+      {page === 'setup' ? (
+        <>
       <div className="space-y-2">
         <Typography variant="labelSm" asChild>
           <h2>Every wine</h2>
@@ -1045,6 +1079,8 @@ const DistributionClient = () => {
             still needs their report, or two snapshots differenced.
           </span>
         </div>
+      ) : null}
+        </>
       ) : null}
     </div>
   );

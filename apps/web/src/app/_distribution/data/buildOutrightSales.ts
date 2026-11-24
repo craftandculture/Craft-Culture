@@ -3,6 +3,7 @@ import { client } from '@/database/client';
 
 import getLotPayoutCosts from './getLotPayoutCosts';
 import getPartnerPayoutCost from './getPartnerPayoutCost';
+import canonicalWineCode from '../utils/canonicalWineCode';
 import paidOnReady from '../utils/paidOnReady';
 import tableReady from '../utils/tableReady';
 import wineKey from '../utils/wineKey';
@@ -17,12 +18,17 @@ interface InvoiceLineRow {
   sku: string | null;
   name: string;
   quantity: number;
+  /** The Zoho unit, when the line states one: cases or bottles */
+  unit: string | null;
   rate: number;
   salesOrderId: string | null;
   salesOrderNumber: string | null;
   /** The private client order the line belongs to, and the partner who raised it */
   pcoNumber: string | null;
   pcoPartnerId: string | null;
+  /** Who the PCO is for: a member raising from their own cellar through C&C */
+  pcoClientName: string | null;
+  pcoClientEmail: string | null;
   /** A City Drinks consignment invoice, here for owners paid on dispatch */
   consignment: boolean;
 }
@@ -41,7 +47,7 @@ export interface OutrightLine {
   ownerPartnerId: string | null;
   ownerName: string | null;
   /** How the owner was found */
-  ownerSource: 'picked' | 'confirmed' | 'oldest lot' | 'unknown';
+  ownerSource: 'picked' | 'confirmed' | 'oldest lot' | 'unknown' | 'brand';
   /** Two or more partners hold this wine and nobody has confirmed whose it was */
   needsConfirm: boolean;
   /** Every partner holding this wine, for the confirm buttons */
@@ -59,14 +65,26 @@ export interface OutrightLine {
   paidThroughPco: string | null;
 }
 
-/** The pack from an 18-digit LWIN: 1012781-2014-06-00750 is a case of 6 */
-const packOf = (lwin: string | null) => {
-  const digits = (lwin ?? '').replace(/\D/g, '');
+/**
+ * The pack a code states: 1012781-2014-06-00750 is a case of 6, and so is a
+ * Crurated W-code ending -06-00750 (W12008024-2021-06-00750). Sophie, 24 Nov
+ * 2026: reading only 18-digit LWINs counted W-code cases as bottles, leaving
+ * Crurated short 17 bottles on INV-419 alone.
+ */
+const packOf = (code: string | null) => {
+  const digits = (code ?? '').replace(/\D/g, '');
 
-  if (digits.length !== 18) return 1;
+  if (digits.length === 18) return Number(digits.slice(11, 13)) || 1;
 
-  return Number(digits.slice(11, 13)) || 1;
+  const tail = /-(\d{2})-(\d{5})$/.exec(code ?? '');
+  const pack = tail ? Number(tail[1]) : 0;
+
+  return pack >= 1 && pack <= 24 ? pack : 1;
 };
+
+/** Squashed for comparing a client with a partner: case, spaces, punctuation */
+const squashName = (value: string | null | undefined) =>
+  (value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 /** The bottle size in ml from an 18-digit LWIN */
 const sizeOf = (lwin: string | null) => {
@@ -122,12 +140,37 @@ const buildOutrightSales = async (month: string) => {
     ? client`ow.consignment_paid_on = 'dispatch'`
     : client`false`;
 
+  /*
+    Brands C&C distributes are paid on every invoice they appear on, City
+    Drinks consignment included (Sophie, 24 Nov 2026).
+  */
+  const brands = (await tableReady('cons_brand_payees'))
+    ? await client<
+        { name: string; words: string; rule: string; amount: number; note: string | null }[]
+      >`
+        SELECT name, match_words AS words, cost_rule AS rule, amount::float8 AS amount, note
+        FROM cons_brand_payees ORDER BY name
+      `
+    : [];
+  const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const brandPatterns = brands.map((brand) => ({
+    ...brand,
+    pattern: new RegExp(`\\b${escape(brand.words)}\\b`, 'i'),
+  }));
+  const brandOf = (name: string) =>
+    brandPatterns.find((brand) => brand.pattern.test(name)) ?? null;
+  const brandLine = brands.length
+    ? client`l.name ~* ${brands.map((brand) => `\\m${escape(brand.words)}\\M`).join('|')}`
+    : client`false`;
+
   const rows = await client<InvoiceLineRow[]>`
     SELECT l.id AS "lineId", i.invoice_number AS "invoiceNumber",
            i.invoice_date::text AS "invoiceDate", i.customer_name AS "customerName",
-           l.sku, l.name, l.quantity::float8 AS quantity, l.rate::float8 AS rate,
+           l.sku, l.name, l.quantity::float8 AS quantity, NULLIF(l.unit, '') AS unit,
+           l.rate::float8 AS rate,
            so.id AS "salesOrderId", so.salesorder_number AS "salesOrderNumber",
            pco.order_number AS "pcoNumber", pco.partner_id AS "pcoPartnerId",
+           pco.client_name AS "pcoClientName", pco.client_email AS "pcoClientEmail",
            EXISTS (SELECT 1 FROM cons_movements m WHERE ${consignmentOut}) AS consignment
     FROM zoho_invoices i
     JOIN zoho_invoice_line_items l ON l.zoho_invoice_id = i.zoho_invoice_id
@@ -138,6 +181,8 @@ const buildOutrightSales = async (month: string) => {
       AND COALESCE(l.item_type, '') NOT ILIKE '%header%'
       AND l.quantity > 0
       AND COALESCE(l.sku, '') <> ''
+      /* A service such as repacking is not wine (Sophie, 24 Nov 2026: INV-374) */
+      AND l.sku ~ '[0-9]'
       AND COALESCE(i.reference_number, '') !~* '^SETTLEMENT'
       /*
         Consignment and prepaid stock at City Drinks is owed when City Drinks
@@ -153,11 +198,28 @@ const buildOutrightSales = async (month: string) => {
           JOIN cons_owners ow ON ow.id = a.owner_id
           WHERE ${consignmentOut} AND ${dispatchOwner}
         )
+        OR ${brandLine}
       )
     ORDER BY i.invoice_date, i.invoice_number, l.line_order
   `;
 
   if (rows.length === 0) return { month, lines: [] as OutrightLine[] };
+
+  /*
+    A code merged into another wine reads as that wine here too, so a mistyped
+    or broken code (Cervaro -07500, "rentW4301023…") lands on its owner.
+  */
+  if (await tableReady('cons_wine_aliases')) {
+    const aliasRows = await client<{ fromKey: string; lwin18: string }[]>`
+      SELECT DISTINCT ON (from_key) from_key AS "fromKey", to_lwin18 AS lwin18
+      FROM cons_wine_aliases ORDER BY from_key, created_at DESC
+    `;
+    const aliases = new Map(aliasRows.map((row) => [row.fromKey, { lwin18: row.lwin18 }]));
+
+    for (const row of rows) {
+      if (aliases.has(wineKey(row.sku))) row.sku = canonicalWineCode(row.sku, aliases).code;
+    }
+  }
 
   const orderIds = [
     ...new Set(rows.map((row) => row.salesOrderId).filter((id): id is string => !!id)),
@@ -236,6 +298,32 @@ const buildOutrightSales = async (month: string) => {
     pickPool.set(poolKey, pool);
   }
 
+  /* Bottles picked per order and wine, to tell a case line from a bottle line */
+  const pickedTotal = new Map<string, number>();
+
+  for (const [poolKey, pool] of pickPool) {
+    pickedTotal.set(poolKey, pool.reduce((sum, lot) => sum + lot.bottles, 0));
+  }
+
+  /*
+    A line's bottles: a unit of bottles is bottles, whatever the code says;
+    otherwise the code's pack, unless the warehouse picked exactly the
+    quantity as bottles, which settles it the other way.
+  */
+  const bottlesOf = (row: InvoiceLineRow) => {
+    const pack = packOf(row.sku);
+
+    if (pack === 1 || /b(o?t)?tle|btl/i.test(row.unit ?? '')) return row.quantity;
+
+    const picked = row.salesOrderId
+      ? pickedTotal.get(`${row.salesOrderId}|${wineKey(row.sku)}`)
+      : undefined;
+
+    if (picked === row.quantity) return row.quantity;
+
+    return row.quantity * pack;
+  };
+
   /* A line split across two owners' lots becomes one line per owner */
   const split: (InvoiceLineRow & {
     bottles: number;
@@ -245,7 +333,7 @@ const buildOutrightSales = async (month: string) => {
 
   for (const row of rows) {
     const key = wineKey(row.sku);
-    const bottles = row.quantity * packOf(row.sku);
+    const bottles = bottlesOf(row);
     const confirmedOwner = confirmedOf.get(row.lineId);
 
     if (confirmedOwner) {
@@ -323,11 +411,85 @@ const buildOutrightSales = async (month: string) => {
     );
   }
 
+  /* The owners' names and emails, to know a PCO raised for their own wine */
+  const partnerRows = owners.length
+    ? await client<{ id: string; name: string; email: string | null }[]>`
+        SELECT id, business_name AS name, business_email AS email
+        FROM partners WHERE id = ANY(${owners}::uuid[])
+      `
+    : [];
+  const partnerOf = new Map(partnerRows.map((row) => [row.id, row]));
+
+  /* What a brand's bottles cost: the Pricing Manager import price */
+  const brandKeys = [
+    ...new Set(rows.filter((row) => brandOf(row.name)).map((row) => wineKey(row.sku))),
+  ];
+  const importRows = brandKeys.length
+    ? await client<{ key: string; importPrice: number }[]>`
+        SELECT DISTINCT ON (k.key) k.key, p.import_price_per_bottle::float8 AS "importPrice"
+        FROM wms_product_pricing p
+        JOIN LATERAL (
+          SELECT CASE
+                   WHEN UPPER(REGEXP_REPLACE(p.lwin18, '[^A-Za-z0-9]', '', 'g')) ~ '^[0-9]{18}$'
+                   THEN SUBSTR(REGEXP_REPLACE(p.lwin18, '[^0-9]', '', 'g'), 1, 11)
+                        || SUBSTR(REGEXP_REPLACE(p.lwin18, '[^0-9]', '', 'g'), 14, 5)
+                   ELSE UPPER(REGEXP_REPLACE(p.lwin18, '[^A-Za-z0-9]', '', 'g'))
+                 END AS key
+        ) k ON true
+        WHERE k.key = ANY(${brandKeys}::text[]) AND p.import_price_per_bottle > 0
+        ORDER BY k.key, p.updated_at DESC NULLS LAST
+      `
+    : [];
+  const importOf = new Map(importRows.map((row) => [row.key, row.importPrice]));
+
   const lines: OutrightLine[] = [];
 
   for (const row of split) {
     const key = wineKey(row.sku);
     const ownerName = row.ownerId ? (nameOf.get(row.ownerId) ?? null) : null;
+
+    /*
+      A brand C&C distributes is paid at its agreed cost wherever it sold,
+      before C&C's own wine is set aside as owed to nobody.
+    */
+    const brand =
+      !row.ownerId || isCraftCultureOwner(ownerName) ? brandOf(row.name) : null;
+
+    if (brand) {
+      const importPrice = importOf.get(key) ?? null;
+      const brandCost =
+        brand.rule === 'fixed'
+          ? brand.amount
+          : importPrice === null
+            ? null
+            : importPrice + brand.amount;
+
+      lines.push({
+        lineId: row.lineId,
+        invoiceNumber: row.invoiceNumber,
+        invoiceDate: row.invoiceDate,
+        customerName: row.customerName,
+        salesOrderNumber: row.salesOrderNumber,
+        productName: row.name,
+        lwin18: row.sku,
+        bottles: row.bottles,
+        soldPerBottle: round2((row.rate * row.quantity) / bottlesOf(row)),
+        ownerPartnerId: null,
+        ownerName: brand.name,
+        ownerSource: 'brand',
+        needsConfirm: false,
+        holders: [],
+        costPerBottle: brandCost === null ? null : round2(brandCost),
+        owed: brandCost === null ? null : round2(brandCost * row.bottles),
+        costFrom:
+          brand.rule === 'fixed'
+            ? `Agreed $${brand.amount.toFixed(2)}/btl`
+            : (brand.note ?? 'Import price'),
+        basis: row.pcoNumber ? 'pco' : 'outright',
+        paidThroughPco: null,
+      });
+      continue;
+    }
 
     /* C&C's own wine is owed to nobody */
     if (isCraftCultureOwner(ownerName)) continue;
@@ -341,12 +503,24 @@ const buildOutrightSales = async (month: string) => {
     if (row.consignment && rule?.paidOn !== 'dispatch') continue;
 
     const holders = holdersByKey.get(key) ?? [];
-    const soldPerBottle = row.rate / packOf(row.sku);
-    /* The PCO's partner payment already pays the partner who raised it */
-    const paidThroughPco =
-      row.pcoNumber && row.ownerId && row.ownerId === row.pcoPartnerId
-        ? row.pcoNumber
-        : null;
+    /* The line's price over its bottles, whether it was billed by case or bottle */
+    const soldPerBottle = (row.rate * row.quantity) / bottlesOf(row);
+    /*
+      The PCO already pays for its own wine: the partner who raised it, or the
+      member C&C raised it for from their own cellar (Sophie, 24 Nov 2026:
+      Ihab's PCO-102 and PCO-104 are owed nothing here).
+    */
+    const owner = row.ownerId ? partnerOf.get(row.ownerId) : undefined;
+    const ownWine =
+      !!row.ownerId &&
+      (row.ownerId === row.pcoPartnerId ||
+        (!!owner &&
+          ((squashName(row.pcoClientName) !== '' &&
+            squashName(row.pcoClientName) === squashName(owner.name)) ||
+            (!!row.pcoClientEmail &&
+              !!owner.email &&
+              row.pcoClientEmail.trim().toLowerCase() === owner.email.trim().toLowerCase()))));
+    const paidThroughPco = row.pcoNumber && ownWine ? row.pcoNumber : null;
     const lot = row.ownerId ? costs.get(row.ownerId)?.get(key) : undefined;
 
     const picked = row.ownerId

@@ -33,6 +33,9 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
   const api = useTRPC();
   const queryClient = useQueryClient();
   const [showAll, setShowAll] = useState(false);
+  const [payee, setPayee] = useState('');
+  const [adjustmentNote, setAdjustmentNote] = useState('');
+  const [adjustmentAmount, setAdjustmentAmount] = useState('');
 
   const statements = useQuery({
     ...api.distribution.admin.getPartnerStatements.queryOptions({
@@ -54,11 +57,40 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
     }),
   );
 
+  const refreshStatements = () =>
+    queryClient.invalidateQueries({
+      queryKey: api.distribution.admin.getPartnerStatements.queryKey(),
+    });
+
+  const addAdjustment = useMutation(
+    api.distribution.admin.addPartnerAdjustment.mutationOptions({
+      onSuccess: () => {
+        setAdjustmentNote('');
+        setAdjustmentAmount('');
+        toast.success('Statement line added');
+        void refreshStatements();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const removeAdjustment = useMutation(
+    api.distribution.admin.removePartnerAdjustment.mutationOptions({
+      onSuccess: () => {
+        toast.success('Statement line removed');
+        void refreshStatements();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
   if (!outletId) return null;
 
   const data = statements.data;
   const flagged = data?.outright.filter((line) => line.needsConfirm) ?? [];
   const shown = showAll ? (data?.outright ?? []) : flagged;
+  const hasAdjustments = (data?.adjustments.length ?? 0) > 0;
+  const chosenRow = data?.rows.find((row) => row.name === payee);
 
   return (
     <div className="border-border-primary space-y-4 rounded-xl border p-4">
@@ -88,6 +120,9 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
                 <th className="py-1 pr-3 text-left font-medium">Partner</th>
                 <th className="py-1 pr-3 text-right font-medium">Consignment</th>
                 <th className="py-1 pr-3 text-right font-medium">Outright</th>
+                {hasAdjustments ? (
+                  <th className="py-1 pr-3 text-right font-medium">Adjustments</th>
+                ) : null}
                 <th className="py-1 pr-3 text-right font-medium">Total owed</th>
               </tr>
             </thead>
@@ -115,6 +150,11 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
                     {money(row.outrightOwed)}
                     <span className="text-text-muted ml-1 text-xs">{row.outrightBottles} btl</span>
                   </td>
+                  {hasAdjustments ? (
+                    <td className="py-1.5 pr-3 text-right tabular-nums">
+                      {row.adjustments ? money(row.adjustments) : ''}
+                    </td>
+                  ) : null}
                   <td className="py-1.5 pr-3 text-right font-medium tabular-nums">
                     {money(row.totalOwed)}
                   </td>
@@ -124,10 +164,87 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
                 <td className="py-1.5 pr-3">Total</td>
                 <td className="py-1.5 pr-3 text-right tabular-nums">{money(data.totals.consignmentOwed)}</td>
                 <td className="py-1.5 pr-3 text-right tabular-nums">{money(data.totals.outrightOwed)}</td>
+                {hasAdjustments ? (
+                  <td className="py-1.5 pr-3 text-right tabular-nums">{money(data.totals.adjustments)}</td>
+                ) : null}
                 <td className="py-1.5 pr-3 text-right tabular-nums">{money(data.totals.totalOwed)}</td>
               </tr>
             </tbody>
           </table>
+
+          <div className="space-y-2">
+            <Typography variant="labelXs" asChild>
+              <h3>One-off lines</h3>
+            </Typography>
+            {data.adjustments.map((adjustment) => (
+              <div key={adjustment.id} className="flex items-center gap-3 text-xs">
+                <span className="font-medium">{adjustment.payee}</span>
+                <span className="text-text-muted flex-1">{adjustment.description}</span>
+                <span className="tabular-nums">{money(adjustment.amount)}</span>
+                <button
+                  type="button"
+                  disabled={removeAdjustment.isPending}
+                  onClick={() => removeAdjustment.mutate({ id: adjustment.id })}
+                  className="text-text-muted underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <form
+              className="flex flex-wrap items-center gap-2 text-xs"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const amount = Number(adjustmentAmount);
+
+                if (!payee.trim() || !adjustmentNote.trim() || !Number.isFinite(amount) || amount === 0) {
+                  toast.error('Name the partner, say what the line is for, and give an amount');
+                  return;
+                }
+
+                addAdjustment.mutate({
+                  month,
+                  payee: payee.trim(),
+                  partnerId: chosenRow?.partnerId ?? null,
+                  description: adjustmentNote.trim(),
+                  amount,
+                });
+              }}
+            >
+              <input
+                list="statement-payees"
+                value={payee}
+                onChange={(event) => setPayee(event.target.value)}
+                placeholder="Partner or brand"
+                className="border-border-primary rounded-lg border px-2 py-1"
+              />
+              <datalist id="statement-payees">
+                {data.rows.map((row) => (
+                  <option key={row.partnerId ?? row.name} value={row.name} />
+                ))}
+              </datalist>
+              <input
+                value={adjustmentNote}
+                onChange={(event) => setAdjustmentNote(event.target.value)}
+                placeholder="What it is for, e.g. 10% on the Super Cellar order"
+                className="border-border-primary min-w-64 flex-1 rounded-lg border px-2 py-1"
+              />
+              <input
+                value={adjustmentAmount}
+                onChange={(event) => setAdjustmentAmount(event.target.value)}
+                inputMode="decimal"
+                placeholder="Amount $ (− to take off)"
+                className="border-border-primary w-40 rounded-lg border px-2 py-1"
+              />
+              <button
+                type="submit"
+                disabled={addAdjustment.isPending}
+                className="rounded-lg bg-neutral-900 px-3 py-1 font-medium text-white disabled:opacity-50"
+              >
+                Add line
+              </button>
+            </form>
+          </div>
 
           <div>
             <div className="mb-1 flex items-center justify-between">

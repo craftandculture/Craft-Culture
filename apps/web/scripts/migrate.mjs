@@ -5030,6 +5030,51 @@ const runMigrations = async () => {
       `;
     });
 
+    /*
+      Brands C&C distributes and pays on the month's invoices at an agreed
+      cost (Sophie, 24 Nov 2026), and one-off lines on a partner's statement
+      such as the Compass Box 10% on the Super Cellar order.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_brand_payees" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "name" text NOT NULL UNIQUE,
+        "match_words" text NOT NULL,
+        "cost_rule" text NOT NULL DEFAULT 'fixed',
+        "amount" numeric(12, 2) NOT NULL DEFAULT 0,
+        "note" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_partner_adjustments" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "month" text NOT NULL,
+        "payee" text NOT NULL,
+        "partner_id" uuid,
+        "description" text NOT NULL,
+        "amount" numeric(12, 2) NOT NULL,
+        "created_by" uuid,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cons_partner_adjustments_month" ON "cons_partner_adjustments"("month")`,
+    );
+    await dataFix('Brand payees agreed 24 Nov 2026', async () => {
+      await client`
+        INSERT INTO "cons_brand_payees" ("name", "match_words", "cost_rule", "amount", "note") VALUES
+          ('Compass Box', 'Compass Box', 'import', 0, 'CIF list price; the Pricing Manager import price stands in'),
+          ('Bandida', 'Bandida', 'import', 0.67, 'EXW (Pricing Manager import) + $0.67'),
+          ('Altamura', 'Altamura', 'fixed', 13.46, null),
+          ('Crossfire', 'Crossfire', 'fixed', 15.63, null),
+          ('Tidal', 'Tidal', 'import', 0, 'Import price'),
+          ('HAMA', 'HAMA', 'import', 0, 'Import price'),
+          ('Roebuck', 'Roebuck', 'fixed', 20.25, null)
+        ON CONFLICT ("name") DO NOTHING
+      `;
+    });
+
     await client.end();
     process.exit(0);
   } catch (error) {
