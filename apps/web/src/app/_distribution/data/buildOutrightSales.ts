@@ -18,6 +18,8 @@ interface InvoiceLineRow {
   sku: string | null;
   name: string;
   quantity: number;
+  /** The code as invoiced, before any merge: what the warehouse may know it by */
+  rawSku?: string | null;
   /** The Zoho unit, when the line states one: cases or bottles */
   unit: string | null;
   rate: number;
@@ -217,7 +219,10 @@ const buildOutrightSales = async (month: string) => {
     const aliases = new Map(aliasRows.map((row) => [row.fromKey, { lwin18: row.lwin18 }]));
 
     for (const row of rows) {
-      if (aliases.has(wineKey(row.sku))) row.sku = canonicalWineCode(row.sku, aliases).code;
+      if (aliases.has(wineKey(row.sku))) {
+        row.rawSku = row.sku;
+        row.sku = canonicalWineCode(row.sku, aliases).code;
+      }
     }
   }
 
@@ -240,7 +245,11 @@ const buildOutrightSales = async (month: string) => {
       `
     : [];
 
-  const keys = [...new Set(rows.map((row) => wineKey(row.sku)).filter(Boolean))];
+  const keys = [
+    ...new Set(
+      rows.flatMap((row) => [wineKey(row.sku), wineKey(row.rawSku)]).filter(Boolean),
+    ),
+  ];
 
   /* Every partner who holds or held each wine, oldest lot first */
   const holdings = keys.length
@@ -282,6 +291,20 @@ const buildOutrightSales = async (month: string) => {
     holdersByKey.set(row.key, list);
   }
 
+  /*
+    The key a line is looked up by: its merged code where the warehouse holds
+    that, else the code as invoiced. Merging Thienpont's Crurated W-code into
+    its LWIN must not lose the owner whose lot still carries the W-code.
+  */
+  const keyOf = (row: InvoiceLineRow) => {
+    const merged = wineKey(row.sku);
+    const invoiced = wineKey(row.rawSku);
+
+    if (!invoiced || holdersByKey.has(merged)) return merged;
+
+    return holdersByKey.has(invoiced) ? invoiced : merged;
+  };
+
   const nameOf = new Map(holdings.map((row) => [row.ownerId, row.ownerName]));
   const confirmedOf = new Map(confirmed.map((row) => [row.lineId, row.ownerId]));
 
@@ -316,7 +339,7 @@ const buildOutrightSales = async (month: string) => {
     if (pack === 1 || /b(o?t)?tle|btl/i.test(row.unit ?? '')) return row.quantity;
 
     const picked = row.salesOrderId
-      ? pickedTotal.get(`${row.salesOrderId}|${wineKey(row.sku)}`)
+      ? pickedTotal.get(`${row.salesOrderId}|${keyOf(row)}`)
       : undefined;
 
     if (picked === row.quantity) return row.quantity;
@@ -332,7 +355,7 @@ const buildOutrightSales = async (month: string) => {
   })[] = [];
 
   for (const row of rows) {
-    const key = wineKey(row.sku);
+    const key = keyOf(row);
     const bottles = bottlesOf(row);
     const confirmedOwner = confirmedOf.get(row.lineId);
 
@@ -422,7 +445,7 @@ const buildOutrightSales = async (month: string) => {
 
   /* What a brand's bottles cost: the Pricing Manager import price */
   const brandKeys = [
-    ...new Set(rows.filter((row) => brandOf(row.name)).map((row) => wineKey(row.sku))),
+    ...new Set(rows.filter((row) => brandOf(row.name)).map((row) => keyOf(row))),
   ];
   const importRows = brandKeys.length
     ? await client<{ key: string; importPrice: number }[]>`
@@ -445,7 +468,7 @@ const buildOutrightSales = async (month: string) => {
   const lines: OutrightLine[] = [];
 
   for (const row of split) {
-    const key = wineKey(row.sku);
+    const key = keyOf(row);
     const ownerName = row.ownerId ? (nameOf.get(row.ownerId) ?? null) : null;
 
     /*
