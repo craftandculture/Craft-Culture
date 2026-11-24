@@ -1,3 +1,9 @@
+## [2.1.177](https://github.com/craftandculture/Craft-Culture/compare/v2.1.176...v2.1.177) (2026-11-24)
+
+### Features
+
+* partner stock API for wine partners' own stock, movements, sales and reservations ([5a4e171](https://github.com/craftandculture/Craft-Culture/commit/5a4e171216712cfe4ca23b3f4fd330f82e5b083c))
+
 ## [2.1.176](https://github.com/craftandculture/Craft-Culture/compare/v2.1.175...v2.1.176) (2026-11-23)
 
 ### Bug Fixes
