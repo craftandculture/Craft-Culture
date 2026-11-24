@@ -1,3 +1,9 @@
+## [2.1.181](https://github.com/craftandculture/Craft-Culture/compare/v2.1.180...v2.1.181) (2026-11-24)
+
+### Features
+
+* **distribution:** invoices dated by 30 September that the Codes tab does not count are used up, City Drinks sales beyond the consignment stock left are their own stock and never charged, partner statements count every customer including private client orders, and Strasky and Alain are paid on dispatch to City Drinks ([6e42d08](https://github.com/craftandculture/Craft-Culture/commit/6e42d0824d659eb04ab3cb85da3cf849dfd1d90d))
+
 ## [2.1.180](https://github.com/craftandculture/Craft-Culture/compare/v2.1.179...v2.1.180) (2026-11-24)
 
 ### Bug Fixes
