@@ -2,7 +2,7 @@
 
 Your stock held by Craft & Culture, available to your own systems: what you hold, everything that happened to it, what has sold and what is held for orders. It is the same information as the **Stock** and **Activity** pages in your partner portal, in a form your ERP, stock system or spreadsheet can read automatically.
 
-The full technical reference, with every field, is at **https://wine.craftculture.xyz/docs/api#account**. A machine-readable description (OpenAPI 3.1) for generating a client or loading into Postman is at **https://wine.craftculture.xyz/api/v1/openapi.json**.
+The full technical reference, with every field, is at **https://wine.craftculture.xyz/docs/stock-api**. A machine-readable description (OpenAPI 3.1) for generating a client or loading into Postman is at **https://wine.craftculture.xyz/api/v1/account/openapi.json**.
 
 ---
 

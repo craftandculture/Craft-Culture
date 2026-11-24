@@ -395,7 +395,12 @@ const DistributorsPage = () => {
             <>
               <Link href="/docs/api" target="_blank">
                 <Button variant="outline">
-                  <ButtonContent iconRight={IconExternalLink}>API Docs</ButtonContent>
+                  <ButtonContent iconRight={IconExternalLink}>Catalogue API Docs</ButtonContent>
+                </Button>
+              </Link>
+              <Link href="/docs/stock-api" target="_blank">
+                <Button variant="outline">
+                  <ButtonContent iconRight={IconExternalLink}>Stock API Docs</ButtonContent>
                 </Button>
               </Link>
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

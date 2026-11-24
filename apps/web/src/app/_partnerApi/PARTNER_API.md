@@ -2,9 +2,9 @@
 
 Read-only API giving a wine partner (Cru Wine, Crurated, …) their own stock, movements, sales and reservations, so their systems can sync from ours.
 
-- Public docs: `/docs/api#account` (`app/(routes)/(public)/docs/api/page.tsx`)
+- Public docs: `/docs/stock-api` (`app/(routes)/(public)/docs/stock-api/page.tsx`). Its own page, deliberately not linked to or from the catalogue docs at `/docs/api`: each audience is sent only its own integration.
 - Partner guide: `docs/partner-guide/09-stock-api.md`
-- OpenAPI: `/api/v1/openapi.json`. The account section lives in `openapi/accountApiSpec.ts`; update it in the same change as any field.
+- OpenAPI: `/api/v1/account/openapi.json`, built from `openapi/accountApiSpec.ts`; update it in the same change as any field. The catalogue spec (`/api/v1/openapi.json`) does not include these endpoints.
 
 ## Endpoints
 
@@ -30,7 +30,9 @@ Routes go through `api/v1/_utils/withPartnerKey.ts`: key → permission → rate
 
 ## Issuing access
 
-Admin → Partners → API key → tick **read:own_stock**. `feed:partner` is always added (catalogue restriction); it does not affect `/account/*`.
+Index → **Wine Partners** → the partner's card → **Stock API** → **Generate key** (`WinePartnerApiKeys.tsx`). Those keys carry only `read:own_stock`, so a wine partner cannot read the catalogue feed. Distributors get catalogue keys from **Licensed Distributors** (the read:own_stock box is there too, for a distributor that also holds stock). `feed:partner` is always added; it does not affect `/account/*`.
+
+Docs are split by audience and never cross-linked: distributors get `/docs/api` + `/api/v1/openapi.json`; wine partners get `/docs/stock-api` + `/api/v1/account/openapi.json`. Both pages are `noindex`.
 
 ## Tests
 

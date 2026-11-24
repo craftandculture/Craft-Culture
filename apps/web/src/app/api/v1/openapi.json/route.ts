@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-import accountApiSpec from '@/app/_partnerApi/openapi/accountApiSpec';
-
 /**
  * GET /api/v1/openapi.json
  *
@@ -15,17 +13,15 @@ const SPEC = {
   openapi: '3.1.0',
   info: {
     title: 'Craft & Culture Partner API',
-    version: '1.1.0',
+    version: '1.0.1',
     description:
       'Live availability and trade pricing for everything Craft & Culture holds. ' +
-      'Prices are USD, in bond, exclusive of duty, tax and delivery. ' +
-      'The /account endpoints return the key holder\'s own stock, movements, sales and reservations.',
+      'Prices are USD, in bond, exclusive of duty, tax and delivery.',
     contact: { email: 'partners@craftculture.xyz' },
   },
   servers: [{ url: 'https://wine.craftculture.xyz/api/v1' }],
   security: [{ bearerAuth: [] }],
   paths: {
-    ...accountApiSpec.paths,
     '/catalogue': {
       get: {
         summary: 'Everything we hold, one row per wine',
@@ -135,7 +131,6 @@ const SPEC = {
       },
     },
     schemas: {
-      ...accountApiSpec.schemas,
       CatalogueResponse: {
         type: 'object',
         required: ['data', 'meta'],
