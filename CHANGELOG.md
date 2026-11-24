@@ -1,3 +1,9 @@
+## [2.1.184](https://github.com/craftandculture/Craft-Culture/compare/v2.1.183...v2.1.184) (2026-11-24)
+
+### Bug Fixes
+
+* **distribution:** a merged wine code keeps the owner the warehouse knows it by ([dac95e1](https://github.com/craftandculture/Craft-Culture/commit/dac95e1097bfbaa10666a72dc4f79aba1769ab31))
+
 ## [2.1.183](https://github.com/craftandculture/Craft-Culture/compare/v2.1.182...v2.1.183) (2026-11-24)
 
 ### Bug Fixes
