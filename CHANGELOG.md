@@ -1,3 +1,9 @@
+## [2.1.180](https://github.com/craftandculture/Craft-Culture/compare/v2.1.179...v2.1.180) (2026-11-24)
+
+### Bug Fixes
+
+* spacing and page title on the Stock API guide ([aa31ab5](https://github.com/craftandculture/Craft-Culture/commit/aa31ab594c1df11c2ba0c9b4582f39b908c65340))
+
 ## [2.1.179](https://github.com/craftandculture/Craft-Culture/compare/v2.1.178...v2.1.179) (2026-11-24)
 
 ### Features
