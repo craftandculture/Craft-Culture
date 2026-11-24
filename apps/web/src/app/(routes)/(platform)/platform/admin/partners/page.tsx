@@ -117,7 +117,7 @@ const DistributorsPage = () => {
   // Form state for creating API key
   const [newApiKey, setNewApiKey] = useState({
     name: '',
-    permissions: ['read:inventory'] as ('read:inventory' | 'feed:partner')[],
+    permissions: ['read:inventory'] as ('read:inventory' | 'read:own_stock' | 'feed:partner')[],
   });
 
   // Edit partner dialog state
@@ -1550,6 +1550,22 @@ const DistributorsPage = () => {
                         className="rounded"
                       />
                       <span className="text-sm">read:inventory - Access product catalog</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={newApiKey.permissions.includes('read:own_stock')}
+                        onChange={(e) => {
+                          const perms: typeof newApiKey.permissions = e.target.checked
+                            ? [...newApiKey.permissions, 'read:own_stock']
+                            : newApiKey.permissions.filter((p) => p !== 'read:own_stock');
+                          setNewApiKey({ ...newApiKey, permissions: perms });
+                        }}
+                        className="rounded"
+                      />
+                      <span className="text-sm">
+                        read:own_stock - This partner&apos;s own stock, movements, sales and reservations
+                      </span>
                     </label>
                   </div>
                 </div>

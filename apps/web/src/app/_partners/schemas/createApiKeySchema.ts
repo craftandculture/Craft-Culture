@@ -23,6 +23,15 @@ export const PARTNER_FEED_PERMISSION = 'feed:partner';
 export const UNRESTRICTED_FEED_PERMISSION = 'feed:unrestricted';
 
 /**
+ * The key holder's OWN stock: holdings, movements, sales and reservations
+ *
+ * Every answer under `/api/v1/account/*` is scoped to the partner the key was
+ * issued to, server-side, from the key itself. There is no parameter that
+ * names an owner, so no key can ask for anyone else's wine.
+ */
+export const OWN_STOCK_PERMISSION = 'read:own_stock';
+
+/**
  * The only permissions a key minted from the Partners screen may carry.
  *
  * Anything else — `feed:unrestricted` included, or a typo that some future
@@ -31,6 +40,7 @@ export const UNRESTRICTED_FEED_PERMISSION = 'feed:unrestricted';
  */
 export const GRANTABLE_PERMISSIONS = [
   'read:inventory',
+  OWN_STOCK_PERMISSION,
   PARTNER_FEED_PERMISSION,
 ] as const;
 

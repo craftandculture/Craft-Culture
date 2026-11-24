@@ -17,6 +17,7 @@ Welcome to the Craft & Culture Partner Portal. This guide covers everything you 
 | [Inventory](./06-inventory.md) | View local UAE stock for faster delivery |
 | [Troubleshooting](./07-troubleshooting.md) | Common issues and solutions |
 | [FAQ](./08-faq.md) | Frequently asked questions |
+| [Stock API](./09-stock-api.md) | Connect your own system to your stock, sales and movements |
 
 ## Need Help?
 
