@@ -68,8 +68,10 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
         </Typography>
         <Typography variant="bodyXs" colorRole="muted" asChild>
           <p className="mt-1 max-w-2xl">
-            Consignment sales at City Drinks and outright sales to customers,
-            each at the partner&rsquo;s agreed price.
+            Every bottle from each partner&rsquo;s lot sold this month, to any
+            customer: consignment at City Drinks (on the CD sale, or on dispatch
+            where the owner is paid that way), outright sales and private client
+            orders, each at the partner&rsquo;s agreed price.
           </p>
         </Typography>
       </div>
@@ -164,7 +166,14 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
                     <tr key={`${line.lineId}-${line.ownerPartnerId}`} className="border-border-muted border-b align-top">
                       <td className="py-1 pr-2">
                         {line.invoiceNumber}
-                        <span className="text-text-muted block">{line.customerName}</span>
+                        <span className="text-text-muted block">
+                          {line.customerName}
+                          {line.basis === 'dispatch'
+                            ? ' · consignment, paid on dispatch'
+                            : line.basis === 'pco'
+                              ? ' · private client order'
+                              : ''}
+                        </span>
                       </td>
                       <td className="py-1 pr-2">{line.productName}</td>
                       <td className="py-1 pr-2 text-right tabular-nums">{line.bottles}</td>
@@ -192,7 +201,15 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
                           </span>
                         ) : null}
                       </td>
-                      <td className="py-1 pr-2 text-right tabular-nums">{money(line.owed)}</td>
+                      <td className="py-1 pr-2 text-right tabular-nums">
+                        {line.paidThroughPco ? (
+                          <span className="text-text-muted" title="The order's partner payment already covers these bottles">
+                            Paid in {line.paidThroughPco}
+                          </span>
+                        ) : (
+                          money(line.owed)
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -93,6 +93,9 @@ const keyOf = (lwin18: string | null | undefined, name?: string | null) =>
  * @param input - Whose, where and which month
  * @returns The lines, their totals, and the arrangement they belong to
  */
+/** Where bottles sold beyond our stock came from, once an opening applies */
+export const CD_OWN_STOCK = 'CD own stock';
+
 const buildOwnerStatement = async (input: {
   ownerId: string;
   outletId: string;
@@ -475,7 +478,11 @@ const buildOwnerStatement = async (input: {
               : (layer.unitPrice ?? 0),
         }));
       /* What each line still holds as the month starts, from the opening on */
-      const left = startingLayerBottles(ofWine, earlierByKey.get(key) ?? []);
+      const left = startingLayerBottles(
+        ofWine,
+        earlierByKey.get(key) ?? [],
+        openingAt,
+      );
       const outLayers: OutLayer[] = ofWine.map((layer) => ({
         docDate: layer.docDate,
         docRef: layer.docRef,
@@ -485,7 +492,31 @@ const buildOwnerStatement = async (input: {
         settles: settles(layer.invoiceType),
       }));
 
-      const fifo = valueFifo(outLayers, row.bottles, 0);
+      const counted = valueFifo(outLayers, row.bottles, 0);
+      /*
+        From the opening on, bottles City Drinks sell beyond the consignment
+        stock left are their own stock (Sophie, 24 Nov 2026): already billed,
+        not charged, and not an exception. The sale attribution puts them here.
+      */
+      const fifo =
+        owedToNobody && openingAt && counted.shortBottles > 0
+          ? {
+              ...counted,
+              bottles: counted.bottles + counted.shortBottles,
+              unsettledBottles: counted.unsettledBottles + counted.shortBottles,
+              shortBottles: 0,
+              drawnFrom: [
+                ...counted.drawnFrom,
+                {
+                  docRef: CD_OWN_STOCK,
+                  bottles: counted.shortBottles,
+                  value: 0,
+                  pricePerBottle: 0,
+                  settles: false,
+                },
+              ],
+            }
+          : counted;
       const cutPct = cutByKey.get(key) ?? null;
       const keep = cutPct ? 1 - cutPct / 100 : 1;
       const valued = cutPct

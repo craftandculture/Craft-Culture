@@ -30,4 +30,24 @@ describe('startingLayerBottles', () => {
     expect(left.get('outright')).toBe(4);
     expect(left.get('new')).toBe(6);
   });
+
+  describe('with the 30 September opening', () => {
+    it('counts an uncounted line invoiced by then as used up, and a later one full', () => {
+      const left = startingLayerBottles(layers, [], '2026-09-30');
+
+      expect(left.get('outright')).toBe(0);
+      expect(left.get('new')).toBe(6);
+    });
+
+    it('takes nothing off for sales up to the opening: they are inside it', () => {
+      const left = startingLayerBottles(
+        layers,
+        [{ bottles: 4, afterOpening: false }],
+        '2026-09-30',
+      );
+
+      expect(left.get('mid')).toBe(1);
+      expect(left.get('new')).toBe(6);
+    });
+  });
 });

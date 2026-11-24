@@ -29,14 +29,37 @@ export const startingOrder = (a: StartingLayer, b: StartingLayer) => {
 };
 
 /**
+ * What a line holds at the opening: the payment run's count where it counted
+ * the line, nothing where the line was invoiced by then and not counted (used
+ * up), and the whole line otherwise
+ *
+ * @param layer - The invoice line
+ * @param openingAt - The opening date (YYYY-MM-DD), where one applies
+ * @returns Bottles on the line as the opening starts
+ */
+export const openingBottles = (
+  layer: Pick<StartingLayer, 'opening' | 'bottles' | 'docDate'>,
+  openingAt: string | null,
+) => {
+  if (layer.opening !== null) return layer.opening;
+  if (openingAt && (layer.docDate ?? '') <= openingAt) return 0;
+
+  return layer.bottles;
+};
+
+/**
  * What each of one owner's invoice lines of one wine still holds as a month
  * starts
  *
  * A line the payment run counted starts from its opening (bottles left at 30
- * September) and only later months' sales come off it; a line it did not count
- * starts full and every earlier month's sales come off it. Sales come off the
- * oldest line first. Used by the sale attribution and the statement alike, so
- * the two draw the same bottles from the same lines.
+ * September) and only later months' sales come off it. A line it did not count
+ * but invoiced by the opening date was used up by then (Sophie, 24 Nov 2026:
+ * INV-000141, 171, 174, 197, 237, 308 and 311 are outright stock City Drinks
+ * had sold through), so it starts empty; a line invoiced after it starts full.
+ * Sales up to the opening are inside it, so only later sales come off, oldest
+ * line first. With no opening, every line starts full and every earlier sale
+ * comes off. Used by the sale attribution and the statement alike, so the two
+ * draw the same bottles from the same lines.
  *
  * @example
  *   startingLayerBottles(
@@ -46,14 +69,16 @@ export const startingOrder = (a: StartingLayer, b: StartingLayer) => {
  *
  * @param layers - The owner's lines of the wine
  * @param earlier - Its sales in earlier months
+ * @param openingAt - The opening date (YYYY-MM-DD), where one applies
  * @returns Bottles left on each line, by id
  */
 const startingLayerBottles = (
   layers: StartingLayer[],
   earlier: EarlierSales[],
+  openingAt: string | null = null,
 ) => {
   const remaining = new Map(
-    layers.map((layer) => [layer.id, layer.opening ?? layer.bottles]),
+    layers.map((layer) => [layer.id, openingBottles(layer, openingAt)]),
   );
   const ordered = [...layers].sort(startingOrder);
 
@@ -72,6 +97,8 @@ const startingLayerBottles = (
   };
 
   for (const sale of earlier) {
+    if (openingAt && !sale.afterOpening) continue;
+
     drawDown(
       sale.bottles,
       sale.afterOpening ? () => true : (layer) => layer.opening === null,

@@ -194,6 +194,17 @@ const DistributionClient = () => {
     }),
   );
 
+  const setPaidOn = useMutation(
+    api.distribution.admin.setOwnerPaidOn.mutationOptions({
+      onSuccess: async () => {
+        toast.success('Saved: statements use it from now on');
+        await invalidate();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+  const chosenOwner = setup.data?.owners.find((row) => row.id === ownerId);
+
   const setOwner = useMutation(
     api.distribution.admin.setWineOwner.mutationOptions({
       onSuccess: async () => {
@@ -323,6 +334,26 @@ const DistributionClient = () => {
               ))}
             </select>
           </label>
+          {chosenOwner ? (
+            <label className="flex flex-col gap-1">
+              <span className="text-text-muted text-xs">Consignment paid on</span>
+              <select
+                value={chosenOwner.consignmentPaidOn}
+                disabled={setPaidOn.isPending}
+                onChange={(event) =>
+                  setPaidOn.mutate({
+                    ownerId: chosenOwner.id,
+                    paidOn: event.target.value === 'dispatch' ? 'dispatch' : 'sale',
+                  })
+                }
+                title="When this owner is paid for consignment at City Drinks"
+                className="border-border-primary bg-fill-primary text-text-primary min-h-9 w-full rounded-md border px-2 text-sm lg:w-auto"
+              >
+                <option value="sale">CD sale</option>
+                <option value="dispatch">Dispatch to CD</option>
+              </select>
+            </label>
+          ) : null}
           <label className="flex flex-col gap-1">
             <span className="text-text-muted text-xs">Find a wine</span>
             <input

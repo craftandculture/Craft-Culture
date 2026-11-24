@@ -7,6 +7,10 @@ const round2 = (value: number) => Math.round(value * 100) / 100;
  * One statement per partner for a month: consignment sales at the outlet and
  * outright sales to customers, side by side, and the total owed
  *
+ * Every bottle from a partner's lot sold that month counts, whoever bought it
+ * (Sophie, 24 Nov 2026). Consignment is owed on the City Drinks sale, or on
+ * dispatch to City Drinks for the owners paid that way (Strasky, Alain).
+ *
  * Both halves are built by the functions the rest of the page reads, so a
  * partner's statement always agrees with the month's settlement and with the
  * outright list beneath it.
@@ -73,8 +77,15 @@ const buildPartnerStatements = async (input: {
   for (const line of outright.lines) {
     const row = rowFor(line.ownerPartnerId, line.ownerName ?? 'Owner unknown');
 
-    row.outrightBottles += line.bottles;
-    row.outrightOwed += line.owed ?? 0;
+    /* Consignment owed on dispatch sits with the partner's consignment */
+    if (line.basis === 'dispatch') {
+      row.consignmentBottles += line.bottles;
+      row.consignmentOwed += line.owed ?? 0;
+    } else {
+      row.outrightBottles += line.bottles;
+      row.outrightOwed += line.owed ?? 0;
+    }
+
     if (line.owed === null) row.withoutCost += 1;
     if (line.needsConfirm) row.toConfirm += 1;
   }

@@ -16,6 +16,7 @@ import {
 import matchSaleLine from '../utils/matchSaleLine';
 import type { RegisterCode } from '../utils/matchSaleLine';
 import openingReady from '../utils/openingReady';
+import { openingBottles } from '../utils/startingLayerBottles';
 import tableReady from '../utils/tableReady';
 import wineKey from '../utils/wineKey';
 
@@ -228,7 +229,14 @@ const attributeOutletSales = async (input: {
   const remaining = new Map<string, number>(
     layers.map((layer) => [
       layer.id ?? '',
-      placement?.available.get(layer.id ?? '') ?? layer.bottles,
+      openingBottles(
+        {
+          opening: placement?.available.get(layer.id ?? '') ?? null,
+          bottles: layer.bottles,
+          docDate: layer.docDate,
+        },
+        openingAt,
+      ),
     ]),
   );
   const fromOpening = (layer: SaleLayer) =>
@@ -283,6 +291,9 @@ const attributeOutletSales = async (input: {
     they come off the other lines only; later sales come off any line.
   */
   for (const row of earlier) {
+    /* With an opening, every line it dates from already has them taken off */
+    if (openingAt && !row.afterOpening) continue;
+
     const key = wineKey(row.lwin18 ?? row.productName);
     const candidates = layers.filter(
       (layer) =>
@@ -411,15 +422,23 @@ const attributeOutletSales = async (input: {
     );
 
     for (const share of shares) {
+      /*
+        From the opening on, more sold than the consignment stock left is City
+        Drinks' own stock (Sophie, 24 Nov 2026): already billed, never charged.
+      */
+      const ownStock = share.short && openingAt !== null && outletOwn;
+
       if (!share.short) drawDown(drawable, share.arrangementId, share.bottles);
       sold.push({
-        arrangementId: share.arrangementId,
+        arrangementId: ownStock ? outletOwn.id : share.arrangementId,
         lwin18: share.lwin18,
         productName: share.productName || line.productName,
         outletCode: line.outletCode,
         bottles: share.bottles,
-        short: share.short,
-        via: match.via,
+        short: ownStock ? false : share.short,
+        via: ownStock
+          ? 'More sold than the consignment stock left: City Drinks’ own stock'
+          : match.via,
       });
     }
   }

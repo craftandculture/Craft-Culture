@@ -3,6 +3,7 @@ import { client } from '@/database/client';
 
 import getLotPayoutCosts from './getLotPayoutCosts';
 import getPartnerPayoutCost from './getPartnerPayoutCost';
+import paidOnReady from '../utils/paidOnReady';
 import tableReady from '../utils/tableReady';
 import wineKey from '../utils/wineKey';
 
@@ -19,6 +20,11 @@ interface InvoiceLineRow {
   rate: number;
   salesOrderId: string | null;
   salesOrderNumber: string | null;
+  /** The private client order the line belongs to, and the partner who raised it */
+  pcoNumber: string | null;
+  pcoPartnerId: string | null;
+  /** A City Drinks consignment invoice, here for owners paid on dispatch */
+  consignment: boolean;
 }
 
 export interface OutrightLine {
@@ -44,6 +50,13 @@ export interface OutrightLine {
   costPerBottle: number | null;
   owed: number | null;
   costFrom: string | null;
+  /**
+   * Why the line is owed this month: an outright sale, a City Drinks
+   * consignment owed on dispatch, or a private client order
+   */
+  basis: 'outright' | 'dispatch' | 'pco';
+  /** The PCO already pays its partner for this bottle: counted, not owed again */
+  paidThroughPco: string | null;
 }
 
 /** The pack from an 18-digit LWIN: 1012781-2014-06-00750 is a case of 6 */
@@ -69,9 +82,14 @@ const sizeOf = (lwin: string | null) => {
  * distributor (Centaurus, Super Cellar, The Bottle Store, or City Drinks
  * buying), which is not consignment but still owed to the partner whose wine
  * it was. Every non-void invoice dated in the month is read line by line,
- * leaving out consignment and prepaid invoices to City Drinks (the first job),
- * private client orders (settled when the client pays) and our own monthly
- * settlement invoices.
+ * whoever the customer (Sophie, 24 Nov 2026: City Drinks, TBS, Centaurus,
+ * Super Cellar and private client orders alike), leaving out our own monthly
+ * settlement invoices and consignment and prepaid invoices to City Drinks,
+ * which are owed when City Drinks sell (the first job). The exception is an
+ * owner paid on dispatch (Strasky, Alain): their bottles on a consignment
+ * invoice are owed in the month it is raised. A private client order's bottles
+ * are counted; where the order's own partner owned them, its partner payment
+ * already pays for them, so they are not owed a second time here.
  *
  * The owner is the lot the warehouse actually picked for the sales order,
  * from its pick movements, with no tagging in Zoho. Where no pick was
@@ -89,29 +107,52 @@ const sizeOf = (lwin: string | null) => {
 const buildOutrightSales = async (month: string) => {
   const hasTypes = await tableReady('cons_invoice_types');
   const hasConfirms = await tableReady('cons_outright_owners');
+  const hasPaidOn = await paidOnReady();
+
+  /*
+    A City Drinks consignment invoice is owed when City Drinks sell, except to
+    the owners paid when it goes out to them (Strasky and Alain: Sophie, 24 Nov
+    2026), whose share of it is owed in the month it is raised.
+  */
+  const consignmentOut = hasTypes
+    ? client`m.kind = 'out' AND m.doc_ref = i.invoice_number
+             AND COALESCE(m.invoice_type, 'consignment') NOT IN ('outright', 'pco')`
+    : client`m.kind = 'out' AND m.doc_ref = i.invoice_number`;
+  const dispatchOwner = hasPaidOn
+    ? client`ow.consignment_paid_on = 'dispatch'`
+    : client`false`;
 
   const rows = await client<InvoiceLineRow[]>`
     SELECT l.id AS "lineId", i.invoice_number AS "invoiceNumber",
            i.invoice_date::text AS "invoiceDate", i.customer_name AS "customerName",
            l.sku, l.name, l.quantity::float8 AS quantity, l.rate::float8 AS rate,
-           so.id AS "salesOrderId", so.salesorder_number AS "salesOrderNumber"
+           so.id AS "salesOrderId", so.salesorder_number AS "salesOrderNumber",
+           pco.order_number AS "pcoNumber", pco.partner_id AS "pcoPartnerId",
+           EXISTS (SELECT 1 FROM cons_movements m WHERE ${consignmentOut}) AS consignment
     FROM zoho_invoices i
     JOIN zoho_invoice_line_items l ON l.zoho_invoice_id = i.zoho_invoice_id
     LEFT JOIN zoho_sales_orders so ON so.zoho_salesorder_id = l.zoho_salesorder_id
+    LEFT JOIN private_client_orders pco ON pco.id = so.private_client_order_id
     WHERE TO_CHAR(i.invoice_date, 'YYYY-MM') = ${month}
       AND i.status NOT IN ('void', 'draft')
       AND COALESCE(l.item_type, '') NOT ILIKE '%header%'
       AND l.quantity > 0
       AND COALESCE(l.sku, '') <> ''
       AND COALESCE(i.reference_number, '') !~* '^SETTLEMENT'
-      -- Private client orders are settled when the client pays, not here
-      AND so.private_client_order_id IS NULL
-      AND COALESCE(i.reference_number, '') || ' ' || COALESCE(i.subject, '') !~* 'PCO-[0-9]'
-      -- Consignment and prepaid stock at City Drinks is the first job
-      AND NOT EXISTS (
-        SELECT 1 FROM cons_movements m
-        WHERE m.kind = 'out' AND m.doc_ref = i.invoice_number
-          ${hasTypes ? client`AND COALESCE(m.invoice_type, 'consignment') <> 'outright'` : client``}
+      /*
+        Consignment and prepaid stock at City Drinks is owed when City Drinks
+        sell it (the first job), unless an owner on the invoice is paid on
+        dispatch. Private client orders are in (Sophie, 24 Nov 2026: every
+        customer counts).
+      */
+      AND (
+        NOT EXISTS (SELECT 1 FROM cons_movements m WHERE ${consignmentOut})
+        OR EXISTS (
+          SELECT 1 FROM cons_movements m
+          JOIN cons_arrangements a ON a.id = m.arrangement_id
+          JOIN cons_owners ow ON ow.id = a.owner_id
+          WHERE ${consignmentOut} AND ${dispatchOwner}
+        )
       )
     ORDER BY i.invoice_date, i.invoice_number, l.line_order
   `;
@@ -247,9 +288,11 @@ const buildOutrightSales = async (month: string) => {
       sharePct: number | null;
       recoveryPer75: number | null;
       recoveryFrom: string | null;
+      paidOn: string | null;
     }[]
   >`
     SELECT partner_id AS "partnerId",
+           ${hasPaidOn ? client`consignment_paid_on` : client`'sale'::text`} AS "paidOn",
            ${hasRules ? client`payout_rule` : client`'landed'::text`} AS "payoutRule",
            ${hasRules ? client`payout_share_pct::float8` : client`NULL::float8`} AS "sharePct",
            ${hasRules ? client`freight_recovery_per_75cl::float8` : client`NULL::float8`} AS "recoveryPer75",
@@ -289,9 +332,21 @@ const buildOutrightSales = async (month: string) => {
     /* C&C's own wine is owed to nobody */
     if (isCraftCultureOwner(ownerName)) continue;
 
+    /*
+      On a City Drinks consignment invoice, only the owners paid on dispatch
+      are owed now; everyone else's bottles are owed when City Drinks sell.
+    */
+    const rule = row.ownerId ? ruleOf.get(row.ownerId) : undefined;
+
+    if (row.consignment && rule?.paidOn !== 'dispatch') continue;
+
     const holders = holdersByKey.get(key) ?? [];
     const soldPerBottle = row.rate / packOf(row.sku);
-    const rule = row.ownerId ? ruleOf.get(row.ownerId) : undefined;
+    /* The PCO's partner payment already pays the partner who raised it */
+    const paidThroughPco =
+      row.pcoNumber && row.ownerId && row.ownerId === row.pcoPartnerId
+        ? row.pcoNumber
+        : null;
     const lot = row.ownerId ? costs.get(row.ownerId)?.get(key) : undefined;
 
     const picked = row.ownerId
@@ -329,8 +384,14 @@ const buildOutrightSales = async (month: string) => {
         (holders.length > 1 || row.source === 'unknown'),
       holders,
       costPerBottle: costPerBottle === null ? null : round2(costPerBottle),
-      owed: costPerBottle === null ? null : round2(costPerBottle * row.bottles),
-      costFrom,
+      owed: paidThroughPco
+        ? 0
+        : costPerBottle === null
+          ? null
+          : round2(costPerBottle * row.bottles),
+      costFrom: paidThroughPco ? `Paid through ${paidThroughPco}` : costFrom,
+      basis: row.consignment ? 'dispatch' : row.pcoNumber ? 'pco' : 'outright',
+      paidThroughPco,
     });
   }
 

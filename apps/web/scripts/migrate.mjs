@@ -5014,6 +5014,22 @@ const runMigrations = async () => {
       }),
     );
 
+    /*
+      When a City Drinks consignment owner is paid (Sophie, 24 Nov 2026): most
+      when City Drinks sell the bottle ('sale'); Strasky and Alain when it goes
+      out to City Drinks ('dispatch'), so their consignment invoices are owed in
+      the month they are raised and their CD sales owe them nothing more.
+    */
+    await client.unsafe(
+      `ALTER TABLE "cons_owners" ADD COLUMN IF NOT EXISTS "consignment_paid_on" text NOT NULL DEFAULT 'sale'`,
+    );
+    await dataFix('Strasky and Alain paid on dispatch to City Drinks', async () => {
+      await client`
+        UPDATE "cons_owners" SET "consignment_paid_on" = 'dispatch'
+        WHERE "slug" IN ('philipp-strasky', 'alain-brahamcha')
+      `;
+    });
+
     await client.end();
     process.exit(0);
   } catch (error) {

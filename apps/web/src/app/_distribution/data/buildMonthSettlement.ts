@@ -4,11 +4,18 @@ import { client } from '@/database/client';
 import buildOwnerStatement from './buildOwnerStatement';
 import checkSettlementPrices from '../utils/checkSettlementPrices';
 import type { PricedLine } from '../utils/checkSettlementPrices';
+import paidOnReady from '../utils/paidOnReady';
 import tableReady from '../utils/tableReady';
 import unmatchedReady from '../utils/unmatchedReady';
 import wineKey from '../utils/wineKey';
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
+
+/** Owners a City Drinks sale pays nothing to */
+const owedToNobodyOnSale = (owner: { kind: string | null; name: string; paidOn: string }) =>
+  owner.kind === 'outlet-own' ||
+  isCraftCultureOwner(owner.name) ||
+  owner.paidOn === 'dispatch';
 
 export interface SettlementCdLine {
   outletCode: string | null;
@@ -85,10 +92,18 @@ const buildMonthSettlement = async (input: {
   outletId: string;
   month: string;
 }) => {
+  const hasPaidOn = await paidOnReady();
   const owners = await client<
-    { id: string; name: string; kind: string | null; partnerId: string | null }[]
+    {
+      id: string;
+      name: string;
+      kind: string | null;
+      partnerId: string | null;
+      paidOn: string;
+    }[]
   >`
-    SELECT DISTINCT ow.id, ow.name, ow.kind, ow.partner_id AS "partnerId"
+    SELECT DISTINCT ow.id, ow.name, ow.kind, ow.partner_id AS "partnerId",
+           ${hasPaidOn ? client`ow.consignment_paid_on` : client`'sale'::text`} AS "paidOn"
     FROM cons_arrangements a
     JOIN cons_owners ow ON ow.id = a.owner_id
     WHERE a.outlet_id = ${input.outletId} AND a.is_active
@@ -265,7 +280,7 @@ const buildMonthSettlement = async (input: {
         });
       }
 
-      if (owner.kind === 'outlet-own' || isCraftCultureOwner(owner.name)) continue;
+      if (owedToNobodyOnSale(owner)) continue;
 
       const owedBottles =
         line.bottlesSold - line.unsettledBottles - line.shortBottles;
@@ -294,8 +309,12 @@ const buildMonthSettlement = async (input: {
       });
     }
 
-    /* City Drinks' own stock and C&C's own wine are owed to nobody */
-    if (owner.kind === 'outlet-own' || isCraftCultureOwner(owner.name)) continue;
+    /*
+      City Drinks' own stock and C&C's own wine are owed to nobody, and an
+      owner paid on dispatch was owed when the invoice went out (Partner
+      statements), so nothing more on the sale.
+    */
+    if (owedToNobodyOnSale(owner)) continue;
 
     const ownAdjustments = adjustments
       .filter((row) => row.ownerId === owner.id && row.ownerAmount)
