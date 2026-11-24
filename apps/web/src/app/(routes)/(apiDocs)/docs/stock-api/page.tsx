@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Stock API · Craft & Culture',
+  title: 'Stock API',
   description: 'Integration guide for wine partners: your stock, movements, sales and reservations held by Craft & Culture.',
   robots: { index: false, follow: false },
 };
@@ -207,7 +207,7 @@ const StockApiDocsPage = () => {
               <li>Responses are JSON. Times are ISO 8601 in UTC.</li>
               <li>
                 Each wine is identified by its <C>lwin18</C> in dashed form, for example{' '}
-                <C>1010279-2015-06-00750</C>: the wine, vintage, bottles per case and bottle size in millilitres.
+                <C>1010279-2015-06-00750</C>: the wine, vintage, bottles per case and bottle size in millilitres.{' '}
                 <C>lwin11</C> is provided for matching to market data.
               </li>
               <li>Quantities are given in both cases and bottles.</li>
