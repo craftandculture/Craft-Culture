@@ -1,3 +1,9 @@
+## [2.1.182](https://github.com/craftandculture/Craft-Culture/compare/v2.1.181...v2.1.182) (2026-11-24)
+
+### Bug Fixes
+
+* **distribution:** the settlement price check no longer compares City Drinks' price with a private client order's ([aaddc96](https://github.com/craftandculture/Craft-Culture/commit/aaddc9667bccbfa575bcfe2d5b976e24afcf4fbe))
+
 ## [2.1.181](https://github.com/craftandculture/Craft-Culture/compare/v2.1.180...v2.1.181) (2026-11-24)
 
 ### Features
