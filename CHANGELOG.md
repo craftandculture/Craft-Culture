@@ -1,3 +1,9 @@
+## [2.1.178](https://github.com/craftandculture/Craft-Culture/compare/v2.1.177...v2.1.178) (2026-11-24)
+
+### Features
+
+* separate API docs per audience and stock API keys for wine partners ([01d56bd](https://github.com/craftandculture/Craft-Culture/commit/01d56bd2d90f6de18eae2a6914a5300504b7adb0))
+
 ## [2.1.177](https://github.com/craftandculture/Craft-Culture/compare/v2.1.176...v2.1.177) (2026-11-24)
 
 ### Features
