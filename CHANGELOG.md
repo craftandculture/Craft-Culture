@@ -1,3 +1,9 @@
+## [2.1.179](https://github.com/craftandculture/Craft-Culture/compare/v2.1.178...v2.1.179) (2026-11-24)
+
+### Features
+
+* Stock API guide in the C&C document style ([74a16e1](https://github.com/craftandculture/Craft-Culture/commit/74a16e184d619d52ce3c66a777d2f97c30301d44))
+
 ## [2.1.178](https://github.com/craftandculture/Craft-Culture/compare/v2.1.177...v2.1.178) (2026-11-24)
 
 ### Features
