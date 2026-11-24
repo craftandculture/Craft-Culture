@@ -210,6 +210,8 @@ const buildMonthSettlement = async (input: {
     WHERE a.outlet_id = ${input.outletId}
       AND m.kind = 'out'
       AND m.unit_price IS NOT NULL
+      -- A private client order's price is the client's, not City Drinks'
+      ${(await tableReady('cons_invoice_types')) ? client`AND m.invoice_type IS DISTINCT FROM 'pco'` : client``}
       AND m.doc_date >= (${`${input.month}-01`}::date - INTERVAL '3 months')
       AND m.doc_date < ${`${input.month}-01`}::date
     ORDER BY m.doc_date DESC, m.doc_ref DESC
