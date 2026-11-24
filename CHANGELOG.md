@@ -1,3 +1,9 @@
+## [2.1.183](https://github.com/craftandculture/Craft-Culture/compare/v2.1.182...v2.1.183) (2026-11-24)
+
+### Bug Fixes
+
+* **distribution:** partner statements count W-code cases, pay brands, and the monthly page splits from setup ([a3866f6](https://github.com/craftandculture/Craft-Culture/commit/a3866f62ec97ca91bba8e2a9c0ea99cc33e78ac5))
+
 ## [2.1.182](https://github.com/craftandculture/Craft-Culture/compare/v2.1.181...v2.1.182) (2026-11-24)
 
 ### Bug Fixes
