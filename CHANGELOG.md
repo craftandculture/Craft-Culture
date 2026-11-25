@@ -1,3 +1,9 @@
+## [2.1.185](https://github.com/craftandculture/Craft-Culture/compare/v2.1.184...v2.1.185) (2026-11-25)
+
+### Features
+
+* **distribution:** Strasky and Ihab are paid the import price only, and an outright line can be split between owners ([04d9fca](https://github.com/craftandculture/Craft-Culture/commit/04d9fcae23e1e41b5f15b534a3776aed6f327742))
+
 ## [2.1.184](https://github.com/craftandculture/Craft-Culture/compare/v2.1.183...v2.1.184) (2026-11-24)
 
 ### Bug Fixes
