@@ -49,7 +49,7 @@ export interface OutrightLine {
   ownerPartnerId: string | null;
   ownerName: string | null;
   /** How the owner was found */
-  ownerSource: 'picked' | 'confirmed' | 'oldest lot' | 'unknown' | 'brand';
+  ownerSource: 'picked' | 'confirmed' | 'split' | 'oldest lot' | 'unknown' | 'brand';
   /** Two or more partners hold this wine and nobody has confirmed whose it was */
   needsConfirm: boolean;
   /** Every partner holding this wine, for the confirm buttons */
@@ -282,6 +282,29 @@ const buildOutrightSales = async (month: string) => {
       `
     : [];
 
+  /*
+    One line shared by two owners (Sophie, 25 Nov 2026: INV-411's 12 Montille
+    are 6 Crurated and 6 Ihab, though all 12 were picked from Crurated's lot).
+    Bottles not covered by a split go the usual way.
+  */
+  const splits = (await tableReady('cons_outright_splits'))
+    ? await client<{ lineId: string; ownerId: string; bottles: number }[]>`
+        SELECT invoice_line_id AS "lineId", owner_partner_id AS "ownerId",
+               bottles::float8 AS bottles
+        FROM cons_outright_splits
+        WHERE invoice_line_id = ANY(${rows.map((row) => row.lineId)}::uuid[])
+        ORDER BY created_at
+      `
+    : [];
+  const splitsOf = new Map<string, { ownerId: string; bottles: number }[]>();
+
+  for (const part of splits) {
+    const list = splitsOf.get(part.lineId) ?? [];
+
+    list.push(part);
+    splitsOf.set(part.lineId, list);
+  }
+
   const holdersByKey = new Map<string, { partnerId: string; name: string }[]>();
 
   for (const row of holdings) {
@@ -356,7 +379,19 @@ const buildOutrightSales = async (month: string) => {
 
   for (const row of rows) {
     const key = keyOf(row);
-    const bottles = bottlesOf(row);
+    let bottles = bottlesOf(row);
+
+    for (const part of splitsOf.get(row.lineId) ?? []) {
+      const take = Math.min(part.bottles, bottles);
+
+      if (take <= 0) continue;
+
+      bottles -= take;
+      split.push({ ...row, bottles: take, ownerId: part.ownerId, source: 'split' });
+    }
+
+    if (bottles <= 0) continue;
+
     const confirmedOwner = confirmedOf.get(row.lineId);
 
     if (confirmedOwner) {
@@ -418,7 +453,8 @@ const buildOutrightSales = async (month: string) => {
   const lotCosts = new Map<string, Awaited<ReturnType<typeof getLotPayoutCosts>>>();
 
   for (const ownerId of owners) {
-    const wineCosts = await getPartnerPayoutCost(ownerId, keys);
+    const importOnly = ruleOf.get(ownerId)?.payoutRule === 'import';
+    const wineCosts = await getPartnerPayoutCost(ownerId, keys, new Map(), { importOnly });
 
     costs.set(ownerId, wineCosts);
     /* Each invoice line at the cost of the lot actually picked for it */
@@ -430,6 +466,7 @@ const buildOutrightSales = async (month: string) => {
           .filter((row) => row.ownerId === ownerId)
           .map((row) => ({ docRef: row.invoiceNumber, docDate: row.invoiceDate })),
         wineCosts,
+        importOnly,
       ),
     );
   }
@@ -578,6 +615,7 @@ const buildOutrightSales = async (month: string) => {
       ownerSource: row.source,
       needsConfirm:
         row.source !== 'confirmed' &&
+        row.source !== 'split' &&
         (holders.length > 1 || row.source === 'unknown'),
       holders,
       costPerBottle: costPerBottle === null ? null : round2(costPerBottle),

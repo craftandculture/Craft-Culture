@@ -5061,6 +5061,36 @@ const runMigrations = async () => {
     await client.unsafe(
       `CREATE INDEX IF NOT EXISTS "cons_partner_adjustments_month" ON "cons_partner_adjustments"("month")`,
     );
+    /*
+      One outright invoice line shared by two owners, bottles each (INV-411:
+      12 Montille, 6 Crurated and 6 Ihab, all picked from Crurated's lot).
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_outright_splits" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "invoice_line_id" uuid NOT NULL,
+        "owner_partner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "bottles" numeric NOT NULL,
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        UNIQUE ("invoice_line_id", "owner_partner_id")
+      )
+    `);
+    console.log('✅ cons_outright_splits ready');
+
+    /* Strasky and Ihab price with costs baked in: paid import alone (Sophie, 25 Nov 2026) */
+    await dataFix('Strasky and Ihab paid the import price only', async () => {
+      await client`
+        UPDATE "cons_owners" SET "payout_rule" = 'import'
+        WHERE "slug" IN ('philipp-strasky', 'ihab-toma') AND "payout_rule" = 'landed'
+      `;
+      await client`
+        UPDATE "cons_brand_payees"
+        SET "note" = 'Pricing Manager import price (the agreed CIF price)'
+        WHERE "name" = 'Compass Box'
+      `;
+    });
+
     await dataFix('Brand payees agreed 24 Nov 2026', async () => {
       await client`
         INSERT INTO "cons_brand_payees" ("name", "match_words", "cost_rule", "amount", "note") VALUES

@@ -315,8 +315,10 @@ const buildOwnerStatement = async (input: {
       }
     }
 
+    /* Strasky and Ihab: the import price alone (Sophie, 25 Nov 2026) */
+    const importOnly = owner?.payoutRule === 'import';
     const payout = owner?.partnerId
-      ? await getPartnerPayoutCost(owner.partnerId, keys, aliases)
+      ? await getPartnerPayoutCost(owner.partnerId, keys, aliases, { importOnly })
       : new Map<string, PartnerPayoutCost>();
 
     /* The lot actually picked for each invoice, costed on its own */
@@ -327,6 +329,7 @@ const buildOwnerStatement = async (input: {
             .filter((layer) => layer.docRef)
             .map((layer) => ({ docRef: layer.docRef!, docDate: layer.docDate })),
           payout,
+          importOnly,
         )
       : new Map<string, LotPayoutCost>();
 
@@ -373,7 +376,8 @@ const buildOwnerStatement = async (input: {
         };
       }
 
-      const chosen = now ?? kept ?? null;
+      /* The live and remembered figures are landed: no use to an import-only owner */
+      const chosen = importOnly ? null : (now ?? kept ?? null);
 
       /*
         A wine that sold out before the Pricing Manager ever held a cost for it

@@ -46,13 +46,19 @@ interface PickedLot {
  * @param partnerId - The owner's partner record
  * @param docs - The invoices to trace, with their dates
  * @param wineCosts - The owner's per-wine Pricing Manager costs, keyed by wine key
+ * @param importOnly - The owner is paid the import price alone (Strasky, Ihab)
  * @returns Cost per bottle per invoice and wine (`docRef|wineKey`)
  */
 const getLotPayoutCosts = async (
   partnerId: string,
   docs: { docRef: string; docDate: string | null }[],
   wineCosts: Map<string, PartnerPayoutCost>,
+  importOnly = false,
 ) => {
+  /* Freight and override on top of import, unless the owner is paid import alone */
+  const extras = (logistics: number | null | undefined, override: number | null | undefined) =>
+    importOnly ? 0 : (logistics ?? 0) + (override ?? 0);
+
   const result = new Map<string, LotPayoutCost>();
 
   if (docs.length === 0) return result;
@@ -116,8 +122,10 @@ const getLotPayoutCosts = async (
 
     const perBottle =
       importCost +
-      (lot.lotLogistics ?? wine?.logisticsPerBottle ?? 0) +
-      (lot.lotOverride ?? wine?.overridePerBottle ?? 0);
+      extras(
+        lot.lotLogistics ?? wine?.logisticsPerBottle,
+        lot.lotOverride ?? wine?.overridePerBottle,
+      );
     const line = `${lot.docRef}|${key}`;
     const total = totals.get(line) ?? { value: 0, bottles: 0, lots: new Set<string>() };
 
@@ -182,8 +190,10 @@ const getLotPayoutCosts = async (
       result.set(line, {
         perBottle:
           importCost +
-          (lot.lotLogistics ?? wine?.logisticsPerBottle ?? 0) +
-          (lot.lotOverride ?? wine?.overridePerBottle ?? 0),
+          extras(
+            lot.lotLogistics ?? wine?.logisticsPerBottle,
+            lot.lotOverride ?? wine?.overridePerBottle,
+          ),
         bottles: 0,
         from: `Lot ${lot.lotNumber} (in stock when invoiced, received ${lot.receivedAt})`,
       });

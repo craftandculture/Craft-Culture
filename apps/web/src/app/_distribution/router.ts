@@ -39,6 +39,7 @@ import adminSetWineBought from './controller/adminSetWineBought';
 import adminSetWineClosed from './controller/adminSetWineClosed';
 import adminSetWineLanded from './controller/adminSetWineLanded';
 import adminSetWineOwner from './controller/adminSetWineOwner';
+import adminSplitOutrightLine from './controller/adminSplitOutrightLine';
 import adminSyncBills from './controller/adminSyncBills';
 import adminSyncOutFromZoho from './controller/adminSyncOutFromZoho';
 import staffGetDailySales from './controller/staffGetDailySales';
@@ -67,6 +68,7 @@ const distributionRouter = createTRPCRouter({
     approveMonth: adminApproveMonth,
     autoLinkCodes: adminAutoLinkCodes,
     confirmOutrightOwner: adminConfirmOutrightOwner,
+    splitOutrightLine: adminSplitOutrightLine,
     getPartnerStatements: adminGetPartnerStatements,
     exportSettlement: adminExportSettlement,
     getSettlement: adminGetSettlement,

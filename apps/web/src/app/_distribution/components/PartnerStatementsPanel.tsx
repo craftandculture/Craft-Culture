@@ -36,6 +36,9 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
   const [payee, setPayee] = useState('');
   const [adjustmentNote, setAdjustmentNote] = useState('');
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
+  /* The line being shared between owners, and the bottles typed for each */
+  const [splitting, setSplitting] = useState<string | null>(null);
+  const [splitBottles, setSplitBottles] = useState<Record<string, string>>({});
 
   const statements = useQuery({
     ...api.distribution.admin.getPartnerStatements.queryOptions({
@@ -49,6 +52,19 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
     api.distribution.admin.confirmOutrightOwner.mutationOptions({
       onSuccess: () => {
         toast.success('Owner confirmed');
+        void queryClient.invalidateQueries({
+          queryKey: api.distribution.admin.getPartnerStatements.queryKey(),
+        });
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const splitLine = useMutation(
+    api.distribution.admin.splitOutrightLine.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.saved ? 'Line split' : 'Split taken off');
+        setSplitting(null);
         void queryClient.invalidateQueries({
           queryKey: api.distribution.admin.getPartnerStatements.queryKey(),
         });
@@ -297,6 +313,87 @@ const PartnerStatementsPanel = ({ outletId, month }: PartnerStatementsPanelProps
                       <td className="py-1 pr-2">
                         {line.ownerName ?? 'Unknown'}
                         <span className="text-text-muted ml-1">({line.ownerSource})</span>
+                        {line.holders.length > 1 && splitting !== line.lineId ? (
+                          <button
+                            type="button"
+                            className="text-text-muted ml-2 underline"
+                            onClick={() => {
+                              const onLine = data.outright.filter((other) => other.lineId === line.lineId);
+
+                              setSplitBottles(
+                                Object.fromEntries(
+                                  line.holders.map((holder) => [
+                                    holder.partnerId,
+                                    String(
+                                      onLine
+                                        .filter((other) => other.ownerPartnerId === holder.partnerId)
+                                        .reduce((sum, other) => sum + other.bottles, 0) || '',
+                                    ),
+                                  ]),
+                                ),
+                              );
+                              setSplitting(line.lineId);
+                            }}
+                          >
+                            Split
+                          </button>
+                        ) : null}
+                        {splitting === line.lineId ? (
+                          <form
+                            className="mt-1 flex flex-wrap items-center gap-1"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              const total = data.outright
+                                .filter((other) => other.lineId === line.lineId)
+                                .reduce((sum, other) => sum + other.bottles, 0);
+                              const parts = line.holders
+                                .map((holder) => ({
+                                  ownerPartnerId: holder.partnerId,
+                                  bottles: Number(splitBottles[holder.partnerId] || 0),
+                                }))
+                                .filter((part) => part.bottles > 0);
+                              const given = parts.reduce((sum, part) => sum + part.bottles, 0);
+
+                              if (given > total) {
+                                toast.error(`The line has ${total} btl; the split gives ${given}`);
+                                return;
+                              }
+
+                              splitLine.mutate({ invoiceLineId: line.lineId, parts });
+                            }}
+                          >
+                            {line.holders.map((holder) => (
+                              <label key={holder.partnerId} className="flex items-center gap-1">
+                                {holder.name}
+                                <input
+                                  value={splitBottles[holder.partnerId] ?? ''}
+                                  onChange={(event) =>
+                                    setSplitBottles((current) => ({
+                                      ...current,
+                                      [holder.partnerId]: event.target.value,
+                                    }))
+                                  }
+                                  inputMode="decimal"
+                                  className="border-border-primary w-12 rounded border px-1 py-0.5 text-right"
+                                />
+                              </label>
+                            ))}
+                            <button
+                              type="submit"
+                              disabled={splitLine.isPending}
+                              className="rounded bg-neutral-900 px-2 py-0.5 font-medium text-white disabled:opacity-50"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              className="text-text-muted underline"
+                              onClick={() => setSplitting(null)}
+                            >
+                              Cancel
+                            </button>
+                          </form>
+                        ) : null}
                         {line.needsConfirm ? (
                           <span className="mt-1 flex flex-wrap gap-1">
                             {line.holders.map((holder) => (
