@@ -29,6 +29,8 @@ const MONTHS = [
  * @param outletId - The outlet
  * @param month - YYYY-MM
  * @param draft - Export even with blockers, marked DRAFT
+ * @param forOutlet - The version that goes to the outlet: the CD statement
+ *   only, with no owners, owner costs or margin (Sophie, 24 Nov 2026)
  * @returns The workbook, base64, and its filename
  */
 const adminExportSettlement = adminProcedure
@@ -37,6 +39,7 @@ const adminExportSettlement = adminProcedure
       outletId: z.string().uuid(),
       month: z.string().regex(/^\d{4}-\d{2}$/, 'Expected a YYYY-MM month'),
       draft: z.boolean().default(false),
+      forOutlet: z.boolean().default(false),
     }),
   )
   .mutation(async ({ input }) => {
@@ -50,7 +53,7 @@ const adminExportSettlement = adminProcedure
 
     const [settlement, outright] = await Promise.all([
       buildMonthSettlement(input),
-      buildOutrightSales(input.month),
+      input.forOutlet ? Promise.resolve({ lines: [] }) : buildOutrightSales(input.month),
     ]);
 
     if (settlement.blockers.length > 0 && !input.draft) {
@@ -242,6 +245,18 @@ const adminExportSettlement = adminProcedure
     const book = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(cd), 'CD statement');
+
+    /* The outlet's copy stops here: nothing about owners, costs or margin */
+    if (input.forOutlet) {
+      return {
+        base64: XLSX.write(book, { type: 'base64', bookType: 'xlsx' }) as string,
+        filename: `${outlet.name} statement ${input.month}${draftMark ? ' DRAFT' : ''}.xlsx`.replace(
+          /[/\\?%*:|"<>]/g,
+          '-',
+        ),
+      };
+    }
+
     XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(payouts), 'Owner payouts');
     XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(margin), 'Margin');
 

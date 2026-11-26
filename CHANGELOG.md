@@ -1,3 +1,111 @@
+## [2.1.187](https://github.com/craftandculture/Craft-Culture/compare/v2.1.186...v2.1.187) (2026-11-26)
+
+### Features
+
+* the partner stock API balances per wine code, says who placed each order, and reports returns against the sale ([9a7eef1](https://github.com/craftandculture/Craft-Culture/commit/9a7eef1957eb783644ee9ed2365d7749072df2e9))
+
+## [2.1.186](https://github.com/craftandculture/Craft-Culture/compare/v2.1.185...v2.1.186) (2026-11-26)
+
+### Bug Fixes
+
+* daily sales no longer values a case price as a bottle price ([6d68f45](https://github.com/craftandculture/Craft-Culture/commit/6d68f45e8ea2f818f8cb7afa6d3ab1428e7795e6))
+
+## [2.1.185](https://github.com/craftandculture/Craft-Culture/compare/v2.1.184...v2.1.185) (2026-11-25)
+
+### Features
+
+* **distribution:** Strasky and Ihab are paid the import price only, and an outright line can be split between owners ([04d9fca](https://github.com/craftandculture/Craft-Culture/commit/04d9fcae23e1e41b5f15b534a3776aed6f327742))
+
+## [2.1.184](https://github.com/craftandculture/Craft-Culture/compare/v2.1.183...v2.1.184) (2026-11-24)
+
+### Bug Fixes
+
+* **distribution:** a merged wine code keeps the owner the warehouse knows it by ([dac95e1](https://github.com/craftandculture/Craft-Culture/commit/dac95e1097bfbaa10666a72dc4f79aba1769ab31))
+
+## [2.1.183](https://github.com/craftandculture/Craft-Culture/compare/v2.1.182...v2.1.183) (2026-11-24)
+
+### Bug Fixes
+
+* **distribution:** partner statements count W-code cases, pay brands, and the monthly page splits from setup ([a3866f6](https://github.com/craftandculture/Craft-Culture/commit/a3866f62ec97ca91bba8e2a9c0ea99cc33e78ac5))
+
+## [2.1.182](https://github.com/craftandculture/Craft-Culture/compare/v2.1.181...v2.1.182) (2026-11-24)
+
+### Bug Fixes
+
+* **distribution:** the settlement price check no longer compares City Drinks' price with a private client order's ([aaddc96](https://github.com/craftandculture/Craft-Culture/commit/aaddc9667bccbfa575bcfe2d5b976e24afcf4fbe))
+
+## [2.1.181](https://github.com/craftandculture/Craft-Culture/compare/v2.1.180...v2.1.181) (2026-11-24)
+
+### Features
+
+* **distribution:** invoices dated by 30 September that the Codes tab does not count are used up, City Drinks sales beyond the consignment stock left are their own stock and never charged, partner statements count every customer including private client orders, and Strasky and Alain are paid on dispatch to City Drinks ([6e42d08](https://github.com/craftandculture/Craft-Culture/commit/6e42d0824d659eb04ab3cb85da3cf849dfd1d90d))
+
+## [2.1.180](https://github.com/craftandculture/Craft-Culture/compare/v2.1.179...v2.1.180) (2026-11-24)
+
+### Bug Fixes
+
+* spacing and page title on the Stock API guide ([aa31ab5](https://github.com/craftandculture/Craft-Culture/commit/aa31ab594c1df11c2ba0c9b4582f39b908c65340))
+
+## [2.1.179](https://github.com/craftandculture/Craft-Culture/compare/v2.1.178...v2.1.179) (2026-11-24)
+
+### Features
+
+* Stock API guide in the C&C document style ([74a16e1](https://github.com/craftandculture/Craft-Culture/commit/74a16e184d619d52ce3c66a777d2f97c30301d44))
+
+## [2.1.178](https://github.com/craftandculture/Craft-Culture/compare/v2.1.177...v2.1.178) (2026-11-24)
+
+### Features
+
+* separate API docs per audience and stock API keys for wine partners ([01d56bd](https://github.com/craftandculture/Craft-Culture/commit/01d56bd2d90f6de18eae2a6914a5300504b7adb0))
+
+## [2.1.177](https://github.com/craftandculture/Craft-Culture/compare/v2.1.176...v2.1.177) (2026-11-24)
+
+### Features
+
+* partner stock API for wine partners' own stock, movements, sales and reservations ([5a4e171](https://github.com/craftandculture/Craft-Culture/commit/5a4e171216712cfe4ca23b3f4fd330f82e5b083c))
+
+## [2.1.176](https://github.com/craftandculture/Craft-Culture/compare/v2.1.175...v2.1.176) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** Montille Chassagne 2022's lots carry no cost override, so Crurated is owed $63.97 ocean and $55.82 air ([3c66df7](https://github.com/craftandculture/Craft-Culture/commit/3c66df7692703646352c59e6600b3a8eccabd504))
+
+## [2.1.175](https://github.com/craftandculture/Craft-Culture/compare/v2.1.174...v2.1.175) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** a pick that names no lot no longer counts as tracing the lot, so the lot in stock when invoiced applies ([ce06011](https://github.com/craftandculture/Craft-Culture/commit/ce060118f427c7dd028828d56bb2b6ca815e0de1))
+
+## [2.1.174](https://github.com/craftandculture/Craft-Culture/compare/v2.1.173...v2.1.174) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** an invoice whose picks name no lot is owed at the cost of the lot in stock when it was raised, so Montille's September consignment pays the ocean price ([0b4c1ce](https://github.com/craftandculture/Craft-Culture/commit/0b4c1ce472ca45208ca13abde442967705c136d9))
+
+## [2.1.173](https://github.com/craftandculture/Craft-Culture/compare/v2.1.172...v2.1.173) (2026-11-23)
+
+### Features
+
+* **distribution:** partners are owed each bottle at the cost of the lot it was picked from, Montille Chassagne 2022's ocean and air lots are costed apart, and a Codes tab upload only replaces the invoices it lists ([114ad94](https://github.com/craftandculture/Craft-Culture/commit/114ad94f2d5e6cb319fd045f0a48c296f08067d9))
+
+## [2.1.172](https://github.com/craftandculture/Craft-Culture/compare/v2.1.171...v2.1.172) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** re-running a month no longer fails while saving each invoice line's opening bottles ([dbe64a5](https://github.com/craftandculture/Craft-Culture/commit/dbe64a59f1cdffde232b1967b3fcb74f80bc5b21))
+
+## [2.1.171](https://github.com/craftandculture/Craft-Culture/compare/v2.1.170...v2.1.171) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** the settlement starts each invoice line from the payment run's 30 September bottles left, as the sale attribution does, skips private client order invoices, and a Codes tab CSV keeps its accents ([ece145e](https://github.com/craftandculture/Craft-Culture/commit/ece145e17f367b7ed11b05c0f8604fb78d2c0414))
+
+## [2.1.170](https://github.com/craftandculture/Craft-Culture/compare/v2.1.169...v2.1.170) (2026-11-23)
+
+### Bug Fixes
+
+* **distribution:** City Drinks sales start from the payment run's 30 September bottles left, never match a private client order's invoice, every release needs its type chosen, Stock Explorer shows the lot import price, and Racines Sparkling moves to its correct code ([b70df61](https://github.com/craftandculture/Craft-Culture/commit/b70df61279e9ff1e644fab27d80c413e1ea75c49))
+
 ## [2.1.169](https://github.com/craftandculture/Craft-Culture/compare/v2.1.168...v2.1.169) (2026-11-20)
 
 ### Bug Fixes

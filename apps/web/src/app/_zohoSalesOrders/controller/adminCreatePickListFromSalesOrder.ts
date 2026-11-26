@@ -26,6 +26,8 @@ import { wmsOperatorProcedure } from '@/lib/trpc/procedures';
 import logger from '@/utils/logger';
 
 import resolvePickQuantities from '../../_wms/utils/resolvePickQuantities';
+import getReleaseTypes from '../data/getReleaseTypes';
+import recordReleaseType from '../data/recordReleaseType';
 
 /**
  * Convert a raw SKU (18 digits, no dashes) to LWIN18 format (with dashes)
@@ -41,7 +43,7 @@ const formatSkuAsLwin18 = (sku: string) => {
 
 const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
   .input(z.object({ salesOrderId: z.string().uuid() }))
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     const { salesOrderId } = input;
 
     // Get the sales order
@@ -72,6 +74,18 @@ const adminCreatePickListFromSalesOrder = wmsOperatorProcedure
         message: 'Pick list already exists for this order',
       });
     }
+
+    /* The same rule as the release screen: no type, no release */
+    const [releaseType] = await getReleaseTypes([salesOrderId]);
+
+    if (!releaseType?.type) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: `${order.salesOrderNumber}: choose consignment, outright sale or prepaid for this order before releasing it.`,
+      });
+    }
+
+    await recordReleaseType(salesOrderId, releaseType.type, ctx.user.id);
 
     // Get order items
     const orderItems = await db

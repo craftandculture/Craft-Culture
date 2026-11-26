@@ -1,9 +1,13 @@
 import { client } from '@/database/client';
 
+import getLotPayoutCosts from './getLotPayoutCosts';
+import type { LotPayoutCost } from './getLotPayoutCosts';
 import getPartnerPayoutCost from './getPartnerPayoutCost';
 import type { PartnerPayoutCost } from './getPartnerPayoutCost';
 import getPricingManagerLanded from './getPricingManagerLanded';
 import { settles } from '../utils/classifyInvoice';
+import openingReady from '../utils/openingReady';
+import startingLayerBottles from '../utils/startingLayerBottles';
 import tableReady from '../utils/tableReady';
 import valueFifo from '../utils/valueFifo';
 import type { OutLayer } from '../utils/valueFifo';
@@ -52,6 +56,9 @@ interface SoldRow {
 }
 
 interface LayerRow {
+  id: string;
+  /** Bottles the payment run left on it at the opening; null where it did not count it */
+  opening: number | null;
   lwin18: string | null;
   productName: string;
   docDate: string | null;
@@ -86,6 +93,9 @@ const keyOf = (lwin18: string | null | undefined, name?: string | null) =>
  * @param input - Whose, where and which month
  * @returns The lines, their totals, and the arrangement they belong to
  */
+/** Where bottles sold beyond our stock came from, once an opening applies */
+export const CD_OWN_STOCK = 'CD own stock';
+
 const buildOwnerStatement = async (input: {
   ownerId: string;
   outletId: string;
@@ -139,14 +149,33 @@ const buildOwnerStatement = async (input: {
       return { lines: [], summary: null, arrangement };
     }
 
+    /*
+      The payment run's opening (bottles left per line at 30 September), when
+      it is before this month: lines it counted start from it.
+    */
+    const withOpening = await openingReady();
+    const [opened] = withOpening
+      ? await client<{ openingAt: string | null }[]>`
+          SELECT MAX(opening_at)::text AS "openingAt"
+          FROM cons_outlet_codes
+          WHERE outlet_id = ${input.outletId}
+            AND opening_at < ${`${input.month}-01`}::date
+        `
+      : [];
+    const openingAt = opened?.openingAt ?? null;
+
     const layers = await client<LayerRow[]>`
-      SELECT m.lwin18, m.product_name AS "productName",
+      SELECT m.id::text AS id,
+             ${openingAt ? client`m.opening_bottles::float8` : client`NULL::float8`} AS opening,
+             m.lwin18, m.product_name AS "productName",
              m.doc_date::text AS "docDate", m.doc_ref AS "docRef",
              m.bottles::float8 AS bottles, m.unit_price AS "unitPrice",
              m.pack, m.currency,
              ${hasTypes ? client`m.invoice_type` : client`NULL::text`} AS "invoiceType"
       FROM cons_movements m
       WHERE m.arrangement_id = ${arrangement.id} AND m.kind = 'out'
+        -- A private client order's bottles went to its client, never into stock
+        ${hasTypes ? client`AND m.invoice_type IS DISTINCT FROM 'pco'` : client``}
         -- Only wine invoiced by the month's last day can have sold in it
         AND m.doc_date < (${`${input.month}-01`}::date + INTERVAL '1 month')
       ORDER BY m.doc_date, m.doc_ref
@@ -157,15 +186,21 @@ const buildOwnerStatement = async (input: {
       spent, so this month starts where the last one finished.
     */
     const earlier = await client<
-      { lwin18: string | null; productName: string; bottles: number }[]
+      {
+        lwin18: string | null;
+        productName: string;
+        afterOpening: boolean;
+        bottles: number;
+      }[]
     >`
       SELECT m.lwin18, MIN(m.product_name) AS "productName",
+             ${openingAt ? client`(m.doc_date > ${openingAt}::date)` : client`TRUE`} AS "afterOpening",
              SUM(m.bottles)::float8 AS bottles
       FROM cons_movements m
       WHERE m.arrangement_id = ${arrangement.id}
         AND m.kind = 'sold'
         AND TO_CHAR(m.doc_date, 'YYYY-MM') < ${input.month}
-      GROUP BY m.lwin18
+      GROUP BY 1, 3
     `;
 
     const lwins = sold
@@ -280,9 +315,23 @@ const buildOwnerStatement = async (input: {
       }
     }
 
+    /* Strasky and Ihab: the import price alone (Sophie, 25 Nov 2026) */
+    const importOnly = owner?.payoutRule === 'import';
     const payout = owner?.partnerId
-      ? await getPartnerPayoutCost(owner.partnerId, keys, aliases)
+      ? await getPartnerPayoutCost(owner.partnerId, keys, aliases, { importOnly })
       : new Map<string, PartnerPayoutCost>();
+
+    /* The lot actually picked for each invoice, costed on its own */
+    const lotCosts = owner?.partnerId
+      ? await getLotPayoutCosts(
+          owner.partnerId,
+          layers
+            .filter((layer) => layer.docRef)
+            .map((layer) => ({ docRef: layer.docRef!, docDate: layer.docDate })),
+          payout,
+          importOnly,
+        )
+      : new Map<string, LotPayoutCost>();
 
     const sheetCodes = [
       ...new Set([...keys, ...[...aliases.values()].flatMap((set) => [...set])]),
@@ -327,7 +376,8 @@ const buildOwnerStatement = async (input: {
         };
       }
 
-      const chosen = now ?? kept ?? null;
+      /* The live and remembered figures are landed: no use to an import-only owner */
+      const chosen = importOnly ? null : (now ?? kept ?? null);
 
       /*
         A wine that sold out before the Pricing Manager ever held a cost for it
@@ -402,12 +452,15 @@ const buildOwnerStatement = async (input: {
     }
 
     const costByLwin = new Map(costs.map((row) => [row.key, row]));
-    const consumedByLwin = new Map<string, number>();
+    const earlierByKey = new Map<string, { bottles: number; afterOpening: boolean }[]>();
 
     for (const row of earlier) {
       const key = keyOf(row.lwin18, row.productName);
 
-      consumedByLwin.set(key, (consumedByLwin.get(key) ?? 0) + row.bottles);
+      earlierByKey.set(key, [
+        ...(earlierByKey.get(key) ?? []),
+        { bottles: row.bottles, afterOpening: row.afterOpening },
+      ]);
     }
 
     const lines: StatementLine[] = sold.map((row) => {
@@ -419,25 +472,55 @@ const buildOwnerStatement = async (input: {
         difference between a right and a threefold-wrong settlement.
       */
       /* The same wine only: a sale with no wine (blank key) matches no line */
-      const outLayers: OutLayer[] = layers
+      const ofWine = layers
         .filter((layer) => key !== '' && keyOf(layer.lwin18, layer.productName) === key)
         .map((layer) => ({
-          docDate: layer.docDate,
-          docRef: layer.docRef,
-          bottles: layer.bottles,
+          ...layer,
           pricePerBottle:
             layer.unitPrice && layer.pack && layer.pack > 0
               ? layer.unitPrice / layer.pack
               : (layer.unitPrice ?? 0),
-          currency: layer.currency,
-          settles: settles(layer.invoiceType),
         }));
-
-      const fifo = valueFifo(
-        outLayers,
-        row.bottles,
-        consumedByLwin.get(key) ?? 0,
+      /* What each line still holds as the month starts, from the opening on */
+      const left = startingLayerBottles(
+        ofWine,
+        earlierByKey.get(key) ?? [],
+        openingAt,
       );
+      const outLayers: OutLayer[] = ofWine.map((layer) => ({
+        docDate: layer.docDate,
+        docRef: layer.docRef,
+        bottles: left.get(layer.id) ?? layer.bottles,
+        pricePerBottle: layer.pricePerBottle,
+        currency: layer.currency,
+        settles: settles(layer.invoiceType),
+      }));
+
+      const counted = valueFifo(outLayers, row.bottles, 0);
+      /*
+        From the opening on, bottles City Drinks sell beyond the consignment
+        stock left are their own stock (Sophie, 24 Nov 2026): already billed,
+        not charged, and not an exception. The sale attribution puts them here.
+      */
+      const fifo =
+        owedToNobody && openingAt && counted.shortBottles > 0
+          ? {
+              ...counted,
+              bottles: counted.bottles + counted.shortBottles,
+              unsettledBottles: counted.unsettledBottles + counted.shortBottles,
+              shortBottles: 0,
+              drawnFrom: [
+                ...counted.drawnFrom,
+                {
+                  docRef: CD_OWN_STOCK,
+                  bottles: counted.shortBottles,
+                  value: 0,
+                  pricePerBottle: 0,
+                  settles: false,
+                },
+              ],
+            }
+          : counted;
       const cutPct = cutByKey.get(key) ?? null;
       const keep = cutPct ? 1 - cutPct / 100 : 1;
       const valued = cutPct
@@ -479,9 +562,41 @@ const buildOwnerStatement = async (input: {
         `${input.month}-01` >= owner.recoveryFrom.slice(0, 7) + '-01'
           ? owner.recoveryPer75 * (sizeMl / 750)
           : 0;
+      /*
+        Where the invoice's picks name their lot, each billed bottle is owed at
+        its own lot's cost (a cost set by hand on the statement still wins).
+      */
+      const fromLots = (() => {
+        if (shareRule || costed?.shipmentNumber === 'Set by hand') return null;
+
+        let value = 0;
+        let bottles = 0;
+        let anyLot = false;
+        const lots = new Set<string>();
+
+        for (const draw of valued.drawnFrom) {
+          if (!draw.settles || draw.bottles <= 0) continue;
+
+          const lot = draw.docRef ? lotCosts.get(`${draw.docRef}|${key}`) : undefined;
+          const perBottle = lot?.perBottle ?? costed?.landedPerBottle ?? null;
+
+          if (perBottle === null) return null;
+          if (lot) {
+            anyLot = true;
+            lots.add(lot.from);
+          }
+
+          value += perBottle * draw.bottles;
+          bottles += draw.bottles;
+        }
+
+        return anyLot && bottles > 0
+          ? { perBottle: value / bottles, from: [...lots].join('; ') }
+          : null;
+      })();
       const landedUsd = shareRule
         ? Math.max(0, billedPerBottle * (owner!.sharePct! / 100) - recovery)
-        : (costed?.landedPerBottle ?? null);
+        : (fromLots?.perBottle ?? costed?.landedPerBottle ?? null);
       const inAed = valued.currency === 'AED';
       const costPerBottle =
         landedUsd === null
@@ -510,7 +625,7 @@ const buildOwnerStatement = async (input: {
         /** The shipment the landed cost came from, so a figure can be traced */
         costFrom: shareRule
           ? `${owner!.sharePct}% of the invoice price${recovery ? `, less $${recovery.toFixed(2)} freight` : ''}`
-          : (costed?.shipmentNumber ?? null),
+          : (fromLots?.from ?? costed?.shipmentNumber ?? null),
         /** False where the cost came from another owner's shipment line */
         costIsOwnLine: costed?.ownLine ?? false,
         billedToOutlet: valued.value,

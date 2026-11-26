@@ -40,6 +40,8 @@ export interface PairRow {
   delivered: number;
   bottlePrice: number | null;
   currency: string | null;
+  /** The invoice or sales order the price was taken from */
+  priceRef?: string | null;
   ownerName: string | null;
 }
 
@@ -56,6 +58,8 @@ export interface DailySaleLine {
   heldAfter: number;
   value: number | null;
   currency: string | null;
+  /** The invoice or sales order the value was priced from */
+  priceRef?: string | null;
 }
 
 export interface DailySalesDay {
@@ -282,6 +286,7 @@ const buildDailySales = (rows: PairRow[]) => {
       heldAfter: row.heldTo,
       value,
       currency: row.currency,
+      priceRef: row.priceRef ?? null,
     });
   }
 

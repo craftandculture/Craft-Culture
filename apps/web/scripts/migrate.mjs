@@ -2376,6 +2376,24 @@ const runMigrations = async () => {
     await client.unsafe(
       `ALTER TABLE "cons_owners" ADD COLUMN IF NOT EXISTS "kind" text NOT NULL DEFAULT 'partner'`,
     );
+    /*
+      The bottles each invoice line still held at a month end, as the payment
+      run counted them (the Codes tab's "Left (btl)"). History, never billed:
+      later months draw down from it instead of from the invoice's full count.
+    */
+    await client.unsafe(
+      `ALTER TABLE "cons_outlet_codes" ADD COLUMN IF NOT EXISTS "bottles" numeric`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "cons_outlet_codes" ADD COLUMN IF NOT EXISTS "left_bottles" numeric`,
+    );
+    await client.unsafe(
+      `ALTER TABLE "cons_outlet_codes" ADD COLUMN IF NOT EXISTS "opening_at" date`,
+    );
+    /* The opening as placed on each of our invoice lines, so every screen starts from it */
+    await client.unsafe(
+      `ALTER TABLE "cons_movements" ADD COLUMN IF NOT EXISTS "opening_bottles" numeric`,
+    );
     console.log('✅ cons_outlet_codes ready');
 
     /*
@@ -4835,6 +4853,268 @@ const runMigrations = async () => {
       `CREATE INDEX IF NOT EXISTS "distributor_warehouse_updates_partner_idx" ON "distributor_warehouse_updates" ("partner_id", "created_at")`,
     );
     console.log('✅ Distributor warehouse updates ready');
+
+    /*
+      A lot's own cost fields (Sophie, 23 Nov 2026: "lots must not share cost
+      fields"). One wine reaching us twice — by ocean at one price and by air
+      at another — was priced once per owner, so every bottle took one lot's
+      figure. Blank fields fall back to the Pricing Manager's row for the wine.
+      Keyed by owner, wine (pack-agnostic) and lot number.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "wms_lot_costs" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "owner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "pak_key" text NOT NULL,
+        "lot_number" text NOT NULL,
+        "import_price_per_bottle" numeric,
+        "logistics_per_bottle" numeric,
+        "cost_override_per_bottle" numeric,
+        "notes" text,
+        "updated_by" uuid,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "wms_lot_costs_unique" ON "wms_lot_costs"("owner_id","pak_key","lot_number")`,
+    );
+    console.log('✅ wms_lot_costs ready');
+
+    /*
+      Montille Chassagne-Montrachet 2022 (Crurated), Sophie's brief 19–23 Nov:
+      SHP-2026-0041 brought 21 bottles by air ($43.02 + $12.80 freight), all
+      sold on SO-00264, but the 18 sold as 6-packs were picked against the
+      ocean lot (HB-2026-0011, $63.97, no freight). The picks move onto the air
+      lot, and each lot gets its own cost.
+    */
+    await dataFix('Montille Chassagne 2022 split into its ocean and air lots', () =>
+      client.begin(async (tx) => {
+        const ocean = '64dcd3cd-a621-4e69-b9c7-88683118b385';
+        const air = '78f84f4a-676b-4440-815b-6733cac07c57';
+        const pakKey = '1063145-2022-00750';
+
+        const [lots] = await tx`
+          SELECT o.owner_id AS owner, o.lot_number AS "oceanLot",
+                 a.lot_number AS "airLot", a.shipment_id AS "airShipment"
+          FROM wms_stock o, wms_stock a
+          WHERE o.id = ${ocean} AND a.id = ${air}
+        `;
+
+        if (!lots) return;
+
+        await tx`
+          UPDATE wms_stock_movements m
+             SET stock_id = ${air}, lot_number = ${lots.airLot},
+                 shipment_id = ${lots.airShipment}
+            FROM zoho_sales_orders so
+           WHERE so.id = m.order_id AND so.salesorder_number = 'SO-00264'
+             AND m.movement_type = 'pick' AND m.stock_id = ${ocean}
+        `;
+
+        for (const [lot, importPrice, logistics] of [
+          [lots.oceanLot, 63.97, 0],
+          [lots.airLot, 43.02, 12.8],
+        ]) {
+          if (!lot) continue;
+
+          await tx`
+            INSERT INTO wms_lot_costs
+              (owner_id, pak_key, lot_number, import_price_per_bottle, logistics_per_bottle, notes)
+            VALUES (${lots.owner}, ${pakKey}, ${lot}, ${importPrice}, ${logistics},
+                    'Sophie, 23 Nov 2026: ocean and air lots costed apart')
+            ON CONFLICT (owner_id, pak_key, lot_number) DO UPDATE SET
+              import_price_per_bottle = EXCLUDED.import_price_per_bottle,
+              logistics_per_bottle = EXCLUDED.logistics_per_bottle,
+              updated_at = now()
+          `;
+        }
+      }),
+    );
+
+    /*
+      Montille's two lots carry no cost override: Sophie's figures are the
+      lot's import plus its own freight ($63.97 ocean, $55.82 air), and the
+      wine's +$21.01 override was being added on top of both.
+    */
+    await dataFix('Montille Chassagne 2022 lots carry no cost override', () =>
+      client`
+        UPDATE wms_lot_costs SET cost_override_per_bottle = 0, updated_at = now()
+        WHERE pak_key = '1063145-2022-00750' AND cost_override_per_bottle IS NULL
+      `,
+    );
+
+    /*
+      Racines Sparkling Grand Reserve NV was received under a mistyped code,
+      "rentW4301023-0000-06-00750", so its $51.72 cost sat where City Drinks'
+      sales (2150228-1000-06-00750) never looked, and Crurated's statement read
+      "no cost" (Sophie, re-test 20 Nov, item 11). The stock, its labels and
+      movements, and its pricing move to the right code in one transaction;
+      where the right code already has a pricing row, the broken one's figures
+      fill only its blanks.
+    */
+    await dataFix('Racines Sparkling moved off the mistyped rentW4301023 code', () =>
+      client.begin(async (tx) => {
+        const broken = 'rentW4301023-0000-06-00750';
+        const fixed = '2150228-1000-06-00750';
+        const brokenKey = 'rentW4301023-0000-00750';
+        const fixedKey = '2150228-1000-00750';
+
+        const [target] = await tx`
+          SELECT id FROM wms_product_pricing WHERE lwin18 = ${fixed}
+        `;
+
+        if (target) {
+          await tx`
+            UPDATE wms_product_pricing t SET
+              import_price_per_bottle = CASE WHEN COALESCE(t.import_price_per_bottle, 0) = 0
+                                             THEN b.import_price_per_bottle ELSE t.import_price_per_bottle END,
+              cost_override_per_bottle = COALESCE(t.cost_override_per_bottle, b.cost_override_per_bottle),
+              logistics_per_bottle = COALESCE(t.logistics_per_bottle, b.logistics_per_bottle),
+              transfer_price_per_bottle = COALESCE(t.transfer_price_per_bottle, b.transfer_price_per_bottle),
+              selling_price_per_bottle = COALESCE(t.selling_price_per_bottle, b.selling_price_per_bottle),
+              b2b_margin_pct = COALESCE(t.b2b_margin_pct, b.b2b_margin_pct),
+              pc_margin_pct = COALESCE(t.pc_margin_pct, b.pc_margin_pct),
+              updated_at = now()
+            FROM wms_product_pricing b
+            WHERE t.lwin18 = ${fixed} AND b.lwin18 = ${broken}
+          `;
+          await tx`DELETE FROM wms_product_pricing WHERE lwin18 = ${broken}`;
+        } else {
+          await tx`
+            UPDATE wms_product_pricing SET lwin18 = ${fixed}, updated_at = now()
+            WHERE lwin18 = ${broken}
+          `;
+        }
+
+        await tx`
+          UPDATE wms_owner_product_pricing o
+             SET lwin18 = ${fixed}, pak_key = ${fixedKey}, updated_at = now()
+           WHERE o.pak_key = ${brokenKey}
+             AND NOT EXISTS (
+               SELECT 1 FROM wms_owner_product_pricing x
+                WHERE x.owner_id = o.owner_id AND x.pak_key = ${fixedKey}
+             )
+        `;
+        await tx`DELETE FROM wms_owner_product_pricing WHERE pak_key = ${brokenKey}`;
+
+        await tx`
+          UPDATE wms_pricing_releases r SET lwin_key = ${fixedKey}
+           WHERE r.lwin_key = ${brokenKey}
+             AND NOT EXISTS (
+               SELECT 1 FROM wms_pricing_releases x
+                WHERE x.owner_id = r.owner_id AND x.lwin_key = ${fixedKey}
+             )
+        `;
+        await tx`DELETE FROM wms_pricing_releases WHERE lwin_key = ${brokenKey}`;
+
+        await tx`UPDATE wms_stock SET lwin18 = ${fixed}, updated_at = now() WHERE lwin18 = ${broken}`;
+        await tx`UPDATE wms_case_labels SET lwin18 = ${fixed} WHERE lwin18 = ${broken}`;
+        await tx`UPDATE wms_stock_movements SET lwin18 = ${fixed} WHERE lwin18 = ${broken}`;
+      }),
+    );
+
+    /*
+      When a City Drinks consignment owner is paid (Sophie, 24 Nov 2026): most
+      when City Drinks sell the bottle ('sale'); Strasky and Alain when it goes
+      out to City Drinks ('dispatch'), so their consignment invoices are owed in
+      the month they are raised and their CD sales owe them nothing more.
+    */
+    await client.unsafe(
+      `ALTER TABLE "cons_owners" ADD COLUMN IF NOT EXISTS "consignment_paid_on" text NOT NULL DEFAULT 'sale'`,
+    );
+    await dataFix('Strasky and Alain paid on dispatch to City Drinks', async () => {
+      await client`
+        UPDATE "cons_owners" SET "consignment_paid_on" = 'dispatch'
+        WHERE "slug" IN ('philipp-strasky', 'alain-brahamcha')
+      `;
+    });
+
+    /*
+      Brands C&C distributes and pays on the month's invoices at an agreed
+      cost (Sophie, 24 Nov 2026), and one-off lines on a partner's statement
+      such as the Compass Box 10% on the Super Cellar order.
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_brand_payees" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "name" text NOT NULL UNIQUE,
+        "match_words" text NOT NULL,
+        "cost_rule" text NOT NULL DEFAULT 'fixed',
+        "amount" numeric(12, 2) NOT NULL DEFAULT 0,
+        "note" text,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_partner_adjustments" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "month" text NOT NULL,
+        "payee" text NOT NULL,
+        "partner_id" uuid,
+        "description" text NOT NULL,
+        "amount" numeric(12, 2) NOT NULL,
+        "created_by" uuid,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await client.unsafe(
+      `CREATE INDEX IF NOT EXISTS "cons_partner_adjustments_month" ON "cons_partner_adjustments"("month")`,
+    );
+    /*
+      One outright invoice line shared by two owners, bottles each (INV-411:
+      12 Montille, 6 Crurated and 6 Ihab, all picked from Crurated's lot).
+    */
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS "cons_outright_splits" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "invoice_line_id" uuid NOT NULL,
+        "owner_partner_id" uuid NOT NULL REFERENCES "partners"("id") ON DELETE CASCADE,
+        "bottles" numeric NOT NULL,
+        "set_by" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        UNIQUE ("invoice_line_id", "owner_partner_id")
+      )
+    `);
+    console.log('✅ cons_outright_splits ready');
+
+    /* Strasky and Ihab price with costs baked in: paid import alone (Sophie, 25 Nov 2026) */
+    await dataFix('Strasky and Ihab paid the import price only', async () => {
+      await client`
+        UPDATE "cons_owners" SET "payout_rule" = 'import'
+        WHERE "slug" IN ('philipp-strasky', 'ihab-toma') AND "payout_rule" = 'landed'
+      `;
+      await client`
+        UPDATE "cons_brand_payees"
+        SET "note" = 'Pricing Manager import price (the agreed CIF price)'
+        WHERE "name" = 'Compass Box'
+      `;
+    });
+
+    await dataFix('Brand payees agreed 24 Nov 2026', async () => {
+      await client`
+        INSERT INTO "cons_brand_payees" ("name", "match_words", "cost_rule", "amount", "note") VALUES
+          ('Compass Box', 'Compass Box', 'import', 0, 'CIF list price; the Pricing Manager import price stands in'),
+          ('Bandida', 'Bandida', 'import', 0.67, 'EXW (Pricing Manager import) + $0.67'),
+          ('Altamura', 'Altamura', 'fixed', 13.46, null),
+          ('Crossfire', 'Crossfire', 'fixed', 15.63, null),
+          ('Tidal', 'Tidal', 'import', 0, 'Import price'),
+          ('HAMA', 'HAMA', 'import', 0, 'Import price'),
+          ('Roebuck', 'Roebuck', 'fixed', 20.25, null)
+        ON CONFLICT ("name") DO NOTHING
+      `;
+    });
+
+    /*
+      The partner's own reference on a PCO (26 Nov 2026). Cru Wine raise a sales
+      order of their own for each PCO and need it back on the stock API's sale
+      events to tell their orders from ours. Added on its own first: nothing
+      reads or writes it until it is confirmed in production.
+    */
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "partner_reference" text`,
+    );
+    console.log('✅ private_client_orders.partner_reference ready');
 
     await client.end();
     process.exit(0);

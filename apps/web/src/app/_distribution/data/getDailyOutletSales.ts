@@ -87,7 +87,7 @@ const getDailyOutletSales = async (
     outs AS (
       SELECT ${packAgnostic(squashed)} AS code,
              m.doc_date, m.bottles, m.unit_price, m.source_qty, m.currency,
-             a.owner_id
+             m.doc_ref, a.owner_id
       FROM cons_movements m
       JOIN cons_arrangements a ON a.id = m.arrangement_id
       WHERE a.outlet_id = ${outletId} AND m.kind = 'out'
@@ -131,22 +131,31 @@ const getDailyOutletSales = async (
     /*
       What we sold them outright, from our Zoho sales orders to this customer.
       Consignment movements only cover consigned wine, so without this a wine
-      they bought has no price of ours at all. The SKU is the pack sold, so a
-      case rate is divided by the pack in its LWIN unless the unit is a bottle;
-      a pack outside 1-24 is corrupt data and gives no price rather than a
-      wrong one.
+      they bought has no price of ours at all.
+
+      The rate is for the item sold, so a case rate is divided by the pack.
+      The pack is read from the item's name first ("… (6x75cl)"), because
+      every item made since the October code clean-up states it there, and
+      from the SKU's pack digits after that. Items from before the clean-up
+      could carry a single-bottle SKU while priced as a case: Opus One 2018
+      came out at USD 2,212 a bottle on 22 Nov 2026 that way. A unit of
+      "bottle" means the rate is already per bottle. A pack outside 1-24 is
+      corrupt data and gives no price rather than a wrong one.
     */
-    outright AS (
+    outright_lines AS (
       SELECT ${packAgnostic(
                () => client`UPPER(REGEXP_REPLACE(i.sku, '[^A-Za-z0-9]', '', 'g'))`,
              )} AS code,
              so.order_date AS doc_date,
+             so.salesorder_number AS doc_ref,
+             i.rate,
+             LOWER(COALESCE(i.unit, '')) AS unit,
+             NULLIF(SUBSTRING(COALESCE(i.name, '') || ' ' || COALESCE(i.description, '')
+                              FROM '([0-9]{1,2})[[:space:]]*[xX×][[:space:]]*[0-9]'), '')::int AS name_pack,
              (CASE
-               WHEN LOWER(COALESCE(i.unit, '')) LIKE 'bottle%' THEN i.rate
                WHEN REGEXP_REPLACE(i.sku, '[^0-9]', '', 'g') ~ '^[0-9]{18}$'
-                    AND SUBSTR(REGEXP_REPLACE(i.sku, '[^0-9]', '', 'g'), 12, 2)::int BETWEEN 1 AND 24
-                 THEN i.rate / SUBSTR(REGEXP_REPLACE(i.sku, '[^0-9]', '', 'g'), 12, 2)::int
-             END)::float8 AS bottle_price,
+                 THEN SUBSTR(REGEXP_REPLACE(i.sku, '[^0-9]', '', 'g'), 12, 2)::int
+             END) AS sku_pack,
              so.currency_code AS currency
       FROM zoho_sales_order_items i
       JOIN zoho_sales_orders so ON so.id = i.sales_order_id
@@ -156,20 +165,59 @@ const getDailyOutletSales = async (
         AND NULLIF(TRIM(i.sku), '') IS NOT NULL
         AND i.rate > 0
     ),
-    /* What it is worth: our latest invoice price per bottle, either route */
-    price_of AS (
-      SELECT DISTINCT ON (code) code, bottle_price, currency
+    outright AS (
+      SELECT code, doc_date, doc_ref, currency,
+             (CASE
+               WHEN unit LIKE 'bottle%' THEN rate
+               WHEN COALESCE(name_pack, sku_pack) BETWEEN 1 AND 24
+                 THEN rate / COALESCE(name_pack, sku_pack)
+             END)::float8 AS bottle_price
+      FROM outright_lines
+    ),
+    /* Every price we have charged them for each wine, per bottle, either route */
+    price_obs AS (
+      SELECT ROW_NUMBER() OVER () AS id, code, doc_date, doc_ref, bottle_price, currency
       FROM (
-        SELECT o.code, o.doc_date,
+        SELECT o.code, o.doc_date, o.doc_ref,
                (o.unit_price * o.source_qty / NULLIF(o.bottles, 0))::float8 AS bottle_price,
                o.currency
         FROM outs o
         WHERE o.unit_price IS NOT NULL AND o.bottles > 0
         UNION ALL
-        SELECT code, doc_date, bottle_price, currency FROM outright
+        SELECT code, doc_date, doc_ref, bottle_price, currency FROM outright
         WHERE bottle_price IS NOT NULL
       ) prices
-      ORDER BY code, doc_date DESC NULLS LAST
+      WHERE bottle_price > 0
+    ),
+    /*
+      What it is worth: our latest invoice price per bottle — unless that
+      price is three times or more out of line with what we charged for the
+      same wine on the other lines. That is a case price read as a bottle
+      price (or the reverse), not a real change of price, and the next most
+      recent sensible line is used instead. Compared within one currency, as
+      AED is itself 3.67 times USD. With only two lines that disagree, each
+      is out of line with the other; the lower is taken, because a case
+      price read as a bottle price is the mistake that actually happens and
+      an understated day is the safer error. A wine invoiced once has
+      nothing to compare against and keeps its one price.
+    */
+    price_of AS (
+      SELECT DISTINCT ON (p.code) p.code, p.bottle_price, p.currency, p.doc_ref
+      FROM price_obs p
+      LEFT JOIN LATERAL (
+        SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY q.bottle_price) AS median
+        FROM price_obs q
+        WHERE q.code = p.code AND q.id <> p.id
+          AND q.currency IS NOT DISTINCT FROM p.currency
+      ) others ON true
+      ORDER BY p.code,
+               (CASE
+                 WHEN others.median IS NULL THEN 0
+                 WHEN p.bottle_price >= others.median * 3 THEN 2
+                 WHEN p.bottle_price <= others.median / 3 THEN 1
+                 ELSE 0
+               END) ASC,
+               p.doc_date DESC NULLS LAST
     )
     SELECT p.closed_at AS "closedAt", p.opened_at AS "openedAt",
            TO_CHAR((p.opened_at AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Dubai', 'YYYY-MM-DD')
@@ -189,6 +237,7 @@ const getDailyOutletSales = async (
            COALESCE(d.bottles, 0) AS delivered,
            pr.bottle_price AS "bottlePrice",
            pr.currency,
+           pr.doc_ref AS "priceRef",
            ow.owner_name AS "ownerName"
     FROM pairs p
     LEFT JOIN pos o ON o.taken_at = p.opened_at AND o.outlet_code = p.outlet_code

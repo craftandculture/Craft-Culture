@@ -532,6 +532,7 @@ const NewPickListPage = () => {
                               <ReleaseTypePicker
                                 salesOrderId={order.id}
                                 type={releaseTypeOf.get(order.id)!.type}
+                                suggested={releaseTypeOf.get(order.id)!.suggested}
                                 required={releaseTypeOf.get(order.id)!.required}
                                 reason={releaseTypeOf.get(order.id)!.reason}
                               />

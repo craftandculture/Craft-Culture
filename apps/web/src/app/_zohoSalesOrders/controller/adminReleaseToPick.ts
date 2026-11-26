@@ -67,16 +67,16 @@ const adminReleaseToPick = wmsOperatorProcedure
 
     /*
       Consignment, outright, PCO or prepaid is decided here, when the goods go
-      out (Sophie, 19 Nov 2026). Most orders answer themselves; a City Drinks
-      order with no consignment tag has to be told, because the two settle in
-      opposite directions and nothing on the order says which.
+      out (Sophie, 19 Nov 2026), and chosen by a person on every release that is
+      not a private client order (23 Nov): the customer and Zoho tag only
+      suggest, because the types settle in opposite directions.
     */
     const [releaseType] = await getReleaseTypes([salesOrderId]);
 
     if (!releaseType?.type) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: `${order.salesOrderNumber}: choose whether this City Drinks order is consignment, an outright sale or prepaid before releasing it.`,
+        message: `${order.salesOrderNumber}: choose consignment, outright sale or prepaid for this order before releasing it.`,
       });
     }
 

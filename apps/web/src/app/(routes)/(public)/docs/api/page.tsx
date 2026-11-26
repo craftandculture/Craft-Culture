@@ -2,96 +2,16 @@ import type { Metadata } from 'next';
 
 import Typography from '@/app/_ui/components/Typography/Typography';
 
+import CodeBlock from '../_components/CodeBlock';
+import Endpoint from '../_components/Endpoint';
+import Row from '../_components/Row';
+import Table from '../_components/Table';
+
 export const metadata: Metadata = {
   title: 'Partner API Documentation | Craft & Culture',
   description: 'API documentation for Craft & Culture trade partners',
+  robots: { index: false, follow: false },
 };
-
-const CodeBlock = ({
-  children,
-  title,
-}: {
-  children: string;
-  title?: string;
-}) => (
-  <div className="border-border-muted bg-background-secondary overflow-hidden rounded-lg border">
-    {title && (
-      <div className="border-border-muted bg-fill-secondary border-b px-4 py-2">
-        <Typography variant="bodySm" className="text-text-muted font-mono">
-          {title}
-        </Typography>
-      </div>
-    )}
-    <pre className="overflow-x-auto p-4">
-      <code className="text-text-primary font-mono text-sm">{children}</code>
-    </pre>
-  </div>
-);
-
-const Endpoint = ({
-  method,
-  path,
-  description,
-}: {
-  method: string;
-  path: string;
-  description: string;
-}) => (
-  <div className="border-border-muted dark:bg-background-secondary flex items-start gap-3 rounded-lg border bg-surface-primary p-4">
-    <span className="rounded bg-green-100 px-2 py-1 text-xs font-bold text-green-700 dark:bg-green-900/30 dark:text-green-400">
-      {method}
-    </span>
-    <div>
-      <Typography variant="bodySm" className="font-mono font-medium">
-        {path}
-      </Typography>
-      <Typography variant="bodyXs" colorRole="muted" className="mt-1">
-        {description}
-      </Typography>
-    </div>
-  </div>
-);
-
-const Row = ({
-  name,
-  type,
-  children,
-}: {
-  name: string;
-  type: string;
-  children: React.ReactNode;
-}) => (
-  <tr className="border-border-muted border-t align-top">
-    <td className="whitespace-nowrap px-4 py-3 font-mono text-sm">{name}</td>
-    <td className="text-text-muted whitespace-nowrap px-4 py-3 font-mono text-sm">
-      {type}
-    </td>
-    <td className="px-4 py-3 text-sm">{children}</td>
-  </tr>
-);
-
-const Table = ({
-  head,
-  children,
-}: {
-  head: string[];
-  children: React.ReactNode;
-}) => (
-  <div className="border-border-muted overflow-x-auto rounded-lg border">
-    <table className="w-full">
-      <thead className="bg-fill-secondary">
-        <tr>
-          {head.map((h) => (
-            <th key={h} className="px-4 py-3 text-left text-sm font-medium">
-              {h}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>{children}</tbody>
-    </table>
-  </div>
-);
 
 const ApiDocsPage = () => {
   return (
@@ -522,7 +442,7 @@ const ApiDocsPage = () => {
             .
           </Typography>
           <Typography variant="bodyXs" colorRole="muted" className="mt-8">
-            Last updated: September 2026
+            Last updated: November 2026
           </Typography>
         </section>
       </div>

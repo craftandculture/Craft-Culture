@@ -51,6 +51,7 @@ const SettlementPanel = ({ outletId, month, owners }: SettlementPanelProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
   const [showLines, setShowLines] = useState(false);
+  const [addingAdjustment, setAddingAdjustment] = useState(false);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [ownerId, setOwnerId] = useState('');
@@ -168,8 +169,19 @@ const SettlementPanel = ({ outletId, month, owners }: SettlementPanelProps) => {
             {exportMonth.isPending
               ? 'Building…'
               : blocked
-                ? 'Export draft'
-                : 'Export month'}
+                ? 'Export draft (internal)'
+                : 'Export month (internal)'}
+          </button>
+          <button
+            type="button"
+            disabled={exportMonth.isPending || !data}
+            title="The City Drinks statement only: no owners, owner costs or margin"
+            onClick={() =>
+              exportMonth.mutate({ outletId, month, draft: blocked, forOutlet: true })
+            }
+            className="border-border-primary hover:bg-fill-muted rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+          >
+            {blocked ? 'CD statement draft' : 'CD statement'}
           </button>
           {!locked ? (
             <button
@@ -315,13 +327,23 @@ const SettlementPanel = ({ outletId, month, owners }: SettlementPanelProps) => {
             </table>
           </div>
 
+          {/* Adjustments show only when there is one; adding one is a click away */}
+          {data.adjustments.length === 0 && !addingAdjustment ? (
+            !locked ? (
+              <button
+                type="button"
+                className="text-text-muted text-xs underline"
+                onClick={() => setAddingAdjustment(true)}
+              >
+                Add an adjustment
+              </button>
+            ) : null
+          ) : (
           <div>
             <Typography variant="labelXs" asChild>
               <h3 className="mb-1">Adjustments</h3>
             </Typography>
-            {data.adjustments.length === 0 ? (
-              <p className="text-text-muted text-xs">None this month.</p>
-            ) : (
+            {data.adjustments.length === 0 ? null : (
               <ul className="space-y-1 text-xs">
                 {data.adjustments.map((row) => (
                   <li key={row.id} className="flex items-start justify-between gap-3">
@@ -408,16 +430,16 @@ const SettlementPanel = ({ outletId, month, owners }: SettlementPanelProps) => {
               </form>
             ) : null}
           </div>
+          )}
 
+          {/* Collapsed, but kept: City Drinks still need to see it */}
           {data.alreadyBilled.length > 0 ? (
-            <div>
-              <Typography variant="labelXs" asChild>
-                <h3 className="mb-1">
-                  Already billed, not charged ({data.check.alreadyBilledBottles} btl,{' '}
-                  {money(data.totals.alreadyBilledValue)})
-                </h3>
-              </Typography>
-              <table className="w-full text-xs">
+            <details>
+              <summary className="cursor-pointer text-xs font-medium">
+                Already billed, not charged ({data.check.alreadyBilledBottles} btl,{' '}
+                {money(data.totals.alreadyBilledValue)})
+              </summary>
+              <table className="mt-2 w-full text-xs">
                 <tbody>
                   {data.alreadyBilled.map((row, index) => (
                     <tr key={`${row.outletCode}-${row.docRef}-${index}`} className="border-border-muted border-b">
@@ -430,7 +452,7 @@ const SettlementPanel = ({ outletId, month, owners }: SettlementPanelProps) => {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </details>
           ) : null}
 
           <div>

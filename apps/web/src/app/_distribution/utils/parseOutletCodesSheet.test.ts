@@ -6,7 +6,8 @@ import parseOutletCodesSheet from './parseOutletCodesSheet';
 const HEADINGS = [
   'Wine', 'Owner', 'Invoice Number', 'Invoice Date', 'CD Code', 'Case Config',
   'Qty (Cases)', 'Price per Case (USD)', 'Price per Bottle (USD)',
-  'Payment Status', 'Owner', 'Consignment (Zoho tagged)',
+  'Payment Status', 'Owner', 'Consignment (Zoho tagged)', 'Bottles',
+  'Sold Dec–Aug (btl)', 'Sold Sep (btl)', 'Left (btl)',
 ];
 
 const toFile = (rows: unknown[][], sheetName = 'Codes') => {
@@ -29,7 +30,7 @@ describe('parseOutletCodesSheet', () => {
         [
           'San Polo Brunello di Montalcino 2019', 'Crurated', 'INV-000176',
           '17 Dec 2025', 'CDR8413460587', '3x75cl', '2', '622.05', '207.35',
-          'Partially Paid', 'Crurated', 'Yes',
+          'Partially Paid', 'Crurated', 'Yes', '6', '3', '1', '2',
         ],
       ]),
     );
@@ -43,6 +44,8 @@ describe('parseOutletCodesSheet', () => {
         docDate: '2025-12-17',
         caseConfig: '3x75cl',
         isConsignment: true,
+        bottles: 6,
+        leftBottles: 2,
       },
     ]);
   });
@@ -103,5 +106,16 @@ describe('parseOutletCodesSheet', () => {
     );
 
     expect(parsed.rows).toHaveLength(1);
+  });
+
+  it('reads accents in a CSV as written', () => {
+    const csv = [
+      HEADINGS.join(','),
+      '"Château Figeac 1990",C&C,INV-000312,01 Sep 2026,,1x75cl,1,1,1,Open,C&C,Yes,3,0,0,3',
+    ].join('\n');
+    const parsed = parseOutletCodesSheet(Buffer.from(csv, 'utf8').toString('base64'));
+
+    expect(parsed.rows[0]?.wineName).toBe('Château Figeac 1990');
+    expect(parsed.rows[0]?.leftBottles).toBe(3);
   });
 });

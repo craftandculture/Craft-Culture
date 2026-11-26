@@ -208,7 +208,7 @@ const adminApproveMonth = adminProcedure
     }
 
     for (const line of outright.lines) {
-      if (!line.ownerPartnerId || line.owed === null) continue;
+      if (!line.ownerPartnerId || line.owed === null || line.paidThroughPco) continue;
 
       const entry = billOwners.get(line.ownerPartnerId) ?? {
         ownerName: line.ownerName ?? 'Owner',
@@ -219,7 +219,9 @@ const adminApproveMonth = adminProcedure
 
       entry.lines.push({
         name: line.productName.slice(0, 100),
-        description: ['Outright', line.invoiceNumber, line.customerName, line.costFrom].filter(Boolean).join(' · '),
+        description: [
+          line.basis === 'dispatch' ? 'Consignment, on dispatch' : line.basis === 'pco' ? 'Private client order' : 'Outright',
+          line.invoiceNumber, line.customerName, line.costFrom].filter(Boolean).join(' · '),
         quantity: line.bottles,
         rate: line.costPerBottle ?? 0,
       });

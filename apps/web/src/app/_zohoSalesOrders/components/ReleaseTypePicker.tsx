@@ -11,6 +11,8 @@ import type { ReleaseType } from '../utils/resolveReleaseType';
 export interface ReleaseTypePickerProps {
   salesOrderId: string;
   type: ReleaseType | null;
+  /** What the customer or Zoho tag points to, shown but never chosen for them */
+  suggested?: ReleaseType | null;
   required: boolean;
   reason: string;
 }
@@ -24,7 +26,13 @@ const CHOICES: ReleaseType[] = ['consignment', 'outright', 'prepaid'];
  * PCO, a non-consignment customer, a tagged consignment order) show their
  * type as a quiet label instead.
  */
-const ReleaseTypePicker = ({ salesOrderId, type, required, reason }: ReleaseTypePickerProps) => {
+const ReleaseTypePicker = ({
+  salesOrderId,
+  type,
+  suggested,
+  required,
+  reason,
+}: ReleaseTypePickerProps) => {
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -38,9 +46,8 @@ const ReleaseTypePicker = ({ salesOrderId, type, required, reason }: ReleaseType
     }),
   );
 
-  if (!required && type && reason !== 'Set at release' && reason !== 'Tagged consignment in Zoho') {
-    return null;
-  }
+  /* A private client order is one by definition; nothing to choose */
+  if (type === 'pco') return null;
 
   return (
     <select
@@ -56,7 +63,7 @@ const ReleaseTypePicker = ({ salesOrderId, type, required, reason }: ReleaseType
         });
       }}
       className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-        type
+        type || !required
           ? 'bg-fill-secondary text-text-muted'
           : 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300'
       }`}
@@ -65,6 +72,7 @@ const ReleaseTypePicker = ({ salesOrderId, type, required, reason }: ReleaseType
       {CHOICES.map((choice) => (
         <option key={choice} value={choice}>
           {RELEASE_TYPE_LABELS[choice]}
+          {!type && choice === suggested ? ' (suggested)' : ''}
         </option>
       ))}
     </select>

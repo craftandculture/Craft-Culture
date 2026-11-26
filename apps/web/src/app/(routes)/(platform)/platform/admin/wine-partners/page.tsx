@@ -32,6 +32,7 @@ import Typography from '@/app/_ui/components/Typography/Typography';
 import useTRPC from '@/lib/trpc/browser';
 
 import PartnerContactsSection from './PartnerContactsSection';
+import WinePartnerApiKeys from './WinePartnerApiKeys';
 
 type PartnerStatus = 'active' | 'inactive' | 'suspended';
 
@@ -487,6 +488,12 @@ const WinePartnersPage = () => {
                       }}
                     />
                   </div>
+                  <WinePartnerApiKeys
+                    partnerId={partner.id}
+                    partnerName={partner.businessName}
+                    apiKeys={partner.apiKeys}
+                    onChanged={() => void refetch()}
+                  />
                 </CardContent>
               </Card>
             ))}

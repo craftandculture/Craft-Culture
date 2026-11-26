@@ -1,6 +1,7 @@
 import { createTRPCRouter } from '@/lib/trpc/trpc';
 
 import adminAddAdjustment from './controller/adminAddAdjustment';
+import adminAddPartnerAdjustment from './controller/adminAddPartnerAdjustment';
 import adminApproveMonth from './controller/adminApproveMonth';
 import adminAutoLinkCodes from './controller/adminAutoLinkCodes';
 import adminConfirmOutrightOwner from './controller/adminConfirmOutrightOwner';
@@ -28,14 +29,17 @@ import adminMergeWine from './controller/adminMergeWine';
 import adminPullOutletStock from './controller/adminPullOutletStock';
 import adminReattributeMonth from './controller/adminReattributeMonth';
 import adminRemoveAdjustment from './controller/adminRemoveAdjustment';
+import adminRemovePartnerAdjustment from './controller/adminRemovePartnerAdjustment';
 import adminSearchWines from './controller/adminSearchWines';
 import adminSetInvoiceOwner from './controller/adminSetInvoiceOwner';
 import adminSetInvoiceType from './controller/adminSetInvoiceType';
+import adminSetOwnerPaidOn from './controller/adminSetOwnerPaidOn';
 import adminSetOwnerPartner from './controller/adminSetOwnerPartner';
 import adminSetWineBought from './controller/adminSetWineBought';
 import adminSetWineClosed from './controller/adminSetWineClosed';
 import adminSetWineLanded from './controller/adminSetWineLanded';
 import adminSetWineOwner from './controller/adminSetWineOwner';
+import adminSplitOutrightLine from './controller/adminSplitOutrightLine';
 import adminSyncBills from './controller/adminSyncBills';
 import adminSyncOutFromZoho from './controller/adminSyncOutFromZoho';
 import staffGetDailySales from './controller/staffGetDailySales';
@@ -64,6 +68,7 @@ const distributionRouter = createTRPCRouter({
     approveMonth: adminApproveMonth,
     autoLinkCodes: adminAutoLinkCodes,
     confirmOutrightOwner: adminConfirmOutrightOwner,
+    splitOutrightLine: adminSplitOutrightLine,
     getPartnerStatements: adminGetPartnerStatements,
     exportSettlement: adminExportSettlement,
     getSettlement: adminGetSettlement,
@@ -95,6 +100,9 @@ const distributionRouter = createTRPCRouter({
     setWineLanded: adminSetWineLanded,
     setWineClosed: adminSetWineClosed,
     setWineOwner: adminSetWineOwner,
+    setOwnerPaidOn: adminSetOwnerPaidOn,
+    addPartnerAdjustment: adminAddPartnerAdjustment,
+    removePartnerAdjustment: adminRemovePartnerAdjustment,
     setOwnerPartner: adminSetOwnerPartner,
     syncBills: adminSyncBills,
     syncOutFromZoho: adminSyncOutFromZoho,

@@ -12,6 +12,10 @@ export interface OutletCodeRow {
   docDate: string | null;
   caseConfig: string | null;
   isConsignment: boolean | null;
+  /** Bottles the invoice line carried */
+  bottles: number | null;
+  /** Bottles still on it at the run's cut-off ("Left (btl)"), when the tab has it */
+  leftBottles: number | null;
 }
 
 export interface ParsedOutletCodes {
@@ -70,6 +74,17 @@ const readInvoice = (value: unknown) => {
   return `INV-${found[1]!.padStart(6, '0')}`;
 };
 
+/** A bottle count written as 12, "12" or "1,200"; blank is null */
+const readCount = (value: unknown) => {
+  const cleaned = text(value).replace(/,/g, '');
+
+  if (!cleaned) return null;
+
+  const count = Number(cleaned);
+
+  return Number.isFinite(count) ? count : null;
+};
+
 /**
  * Read the Codes tab of the "CD x C&C Payment Run" sheet
  *
@@ -90,7 +105,19 @@ const readInvoice = (value: unknown) => {
  * @returns The rows, the sheet read, and how many were skipped
  */
 const parseOutletCodesSheet = (file: string) => {
-  const workbook = XLSX.read(file, { type: 'base64' });
+  /*
+    A CSV is read as UTF-8 text. Handed over as base64 it was decoded byte by
+    byte, so "Château" arrived as "ChÃ¢teau" and rows with no code could no
+    longer be found by name on their invoice. Workbooks (zip, or old BIFF)
+    are read as before.
+  */
+  const bytes = Buffer.from(file, 'base64');
+  const isWorkbook =
+    (bytes[0] === 0x50 && bytes[1] === 0x4b) ||
+    (bytes[0] === 0xd0 && bytes[1] === 0xcf);
+  const workbook = isWorkbook
+    ? XLSX.read(file, { type: 'base64' })
+    : XLSX.read(bytes.toString('utf8').replace(/^\uFEFF/, ''), { type: 'string' });
   const sheetName =
     workbook.SheetNames.find((name) => /^codes$/i.test(name.trim())) ??
     workbook.SheetNames[0];
@@ -124,6 +151,8 @@ const parseOutletCodesSheet = (file: string) => {
     code: column(/^(cd|cdr)\s*code$/),
     pack: column(/^case\s*config/),
     consignment: column(/^consignment/),
+    bottles: column(/^bottles$/),
+    left: column(/^left\b/),
   };
 
   if (at.wine < 0 || at.owner < 0) {
@@ -156,6 +185,8 @@ const parseOutletCodesSheet = (file: string) => {
         : /^n/i.test(consignment)
           ? false
           : null,
+      bottles: at.bottles >= 0 ? readCount(row[at.bottles]) : null,
+      leftBottles: at.left >= 0 ? readCount(row[at.left]) : null,
     });
   }
 

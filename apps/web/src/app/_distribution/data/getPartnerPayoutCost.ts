@@ -49,12 +49,17 @@ export interface PartnerPayoutCost {
  * @param partnerId - The owner's partner record (wms_stock.owner_id)
  * @param keys - Wine keys from wineKey()
  * @param aliases - Other codes each key answers to (W-codes, merged codes)
+ * @param options.importOnly - Pay the import price alone. Strasky and Ihab
+ *   price with their costs baked in, so they are paid the Pricing Manager
+ *   import price and nothing for logistics, freight or override (Sophie, 25 Nov
+ *   2026). The Pricing Manager itself is left as it is for selling prices.
  * @returns One cost per key that has a costed lot
  */
 const getPartnerPayoutCost = async (
   partnerId: string,
   keys: string[],
   aliases: Map<string, Set<string>> = new Map(),
+  options: { importOnly?: boolean } = {},
 ) => {
   const result = new Map<string, PartnerPayoutCost>();
 
@@ -123,8 +128,12 @@ const getPartnerPayoutCost = async (
 
     const importPerBottle = input.importPricePerBottle ?? null;
     const overridePerBottle = input.costOverridePerBottle ?? 0;
-    const perBottle =
-      Math.round((priced.landed - priced.transfer) * 100) / 100;
+
+    if (options.importOnly && importPerBottle === null) continue;
+
+    const perBottle = options.importOnly
+      ? Math.round(importPerBottle! * 100) / 100
+      : Math.round((priced.landed - priced.transfer) * 100) / 100;
 
     const candidate: PartnerPayoutCost = {
       key,
@@ -132,7 +141,7 @@ const getPartnerPayoutCost = async (
       importPerBottle,
       logisticsPerBottle: priced.logistics,
       overridePerBottle,
-      from: `Pricing Manager${raw.shipmentNumber ? ` (${raw.shipmentNumber})` : ''}`,
+      from: `Pricing Manager${options.importOnly ? ' import price' : ''}${raw.shipmentNumber ? ` (${raw.shipmentNumber})` : ''}`,
       codes: [squash(raw.lwin18.split('-')[0]), embedded, squash(raw.supplierSku)].filter(
         (code) => /^W\d+$/.test(code),
       ),

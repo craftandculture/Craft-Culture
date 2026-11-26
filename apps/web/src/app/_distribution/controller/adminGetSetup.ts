@@ -1,6 +1,7 @@
 import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
+import paidOnReady from '../utils/paidOnReady';
 import tableReady from '../utils/tableReady';
 
 export interface DistributionOutlet {
@@ -42,6 +43,8 @@ export interface DistributionOwner {
   /** The partner account this owner is; null until linked, and then its statements reach no portal */
   partnerId: string | null;
   partnerName: string | null;
+  /** When its City Drinks consignment is paid: on the CD sale, or on dispatch */
+  consignmentPaidOn: 'sale' | 'dispatch';
 }
 
 export interface DistributionPartnerOption {
@@ -119,6 +122,7 @@ const adminGetSetup = adminProcedure.query(async () => {
     ORDER BY month DESC
   `;
 
+  const hasPaidOn = await paidOnReady();
   const owners = await client<DistributionOwner[]>`
     SELECT ow.id, ow.name, ow.consignment_tag AS "consignmentTag",
            ow.takes_unattributed AS "takesUnattributed",
@@ -128,13 +132,14 @@ const adminGetSetup = adminProcedure.query(async () => {
                ${hasTypes ? client`AND COALESCE(m.invoice_type, 'consignment') = 'consignment'` : client``}
            ), 0)::float8
              AS "outBottles",
-           ow.partner_id AS "partnerId", pt.business_name AS "partnerName"
+           ow.partner_id AS "partnerId", pt.business_name AS "partnerName",
+           ${hasPaidOn ? client`ow.consignment_paid_on` : client`'sale'::text`} AS "consignmentPaidOn"
     FROM cons_owners ow
     LEFT JOIN partners pt ON pt.id = ow.partner_id
     LEFT JOIN cons_arrangements a ON a.owner_id = ow.id
     LEFT JOIN cons_movements m ON m.arrangement_id = a.id
     WHERE ow.is_active
-    GROUP BY ow.id, ow.name, ow.consignment_tag, ow.takes_unattributed, a.terms_days, ow.partner_id, pt.business_name
+    GROUP BY ow.id, ow.name, ow.consignment_tag, ow.takes_unattributed, a.terms_days, ow.partner_id, pt.business_name, "consignmentPaidOn"
     ORDER BY ow.name
   `;
 

@@ -13,7 +13,7 @@ const SPEC = {
   openapi: '3.1.0',
   info: {
     title: 'Craft & Culture Partner API',
-    version: '1.0.0',
+    version: '1.0.1',
     description:
       'Live availability and trade pricing for everything Craft & Culture holds. ' +
       'Prices are USD, in bond, exclusive of duty, tax and delivery.',

@@ -1,12 +1,22 @@
-import { and, desc, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import db from '@/database/client';
-import { logisticsShipmentItems, wmsProductPricing } from '@/database/schema';
+import {
+  logisticsShipmentItems,
+  wmsOwnerPricingSettings,
+  wmsProductPricing,
+  wmsStock,
+} from '@/database/schema';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { getBulkPricingSchema } from '../schemas/pricingSchema';
+import lotShipmentCost from '../utils/lotShipmentCost';
 import lwinPakKey from '../utils/lwinPakKey';
+import ownerPricingJoin from '../utils/ownerPricingJoin';
+import ownerPricingReady from '../utils/ownerPricingReady';
 import pakKeyOf from '../utils/pakKeyOf';
+import stockPricingInput from '../utils/stockPricingInput';
+import stockPricingSelect from '../utils/stockPricingSelect';
 
 /**
  * Get import prices for an array of LWIN18s (used for table column display)
@@ -42,10 +52,70 @@ const adminGetBulkPricing = adminProcedure
       {
         importPricePerBottle: number;
         importPriceSource: string;
+        /** Each owner's own lot cost, where owners differ */
+        byOwner?: Record<string, number>;
       }
     > = {};
 
     if (keysWanted.length === 0) return priceMap;
+
+    /*
+      0. The lot cost the Pricing Manager prices each owner's row from: the
+         newest lot's own invoice line, then a typed price, then the shipment.
+         Stock Explorer read only the typed price, so lots costed from their
+         shipment invoice (Le Petit Cheval, Maison Wineted on SHP-2026-0034)
+         showed $0 here while the Pricing Manager had their cost (Sophie,
+         20 Nov). Where owners' lots cost differently, the highest shows, as
+         on the price list, and each owner's is returned beside it.
+    */
+    const lotRows = await db
+      .select({
+        key: sql<string>`${lwinPakKey(wmsStock.lwin18)}`,
+        ownerId: wmsStock.ownerId,
+        ...stockPricingSelect,
+      })
+      .from(wmsStock)
+      .leftJoin(
+        wmsProductPricing,
+        sql`${lwinPakKey(wmsProductPricing.lwin18)} = ${lwinPakKey(wmsStock.lwin18)}`,
+      )
+      .leftJoin(ownerPricingJoin(await ownerPricingReady()), sql`true`)
+      .leftJoin(lotShipmentCost, sql`true`)
+      .leftJoin(
+        wmsOwnerPricingSettings,
+        eq(wmsOwnerPricingSettings.ownerId, wmsStock.ownerId),
+      )
+      .where(inArray(lwinPakKey(wmsStock.lwin18), keysWanted))
+      .groupBy(lwinPakKey(wmsStock.lwin18), wmsStock.ownerId);
+
+    const lotByKey = new Map<string, Record<string, number>>();
+
+    for (const raw of lotRows) {
+      const { importPricePerBottle } = stockPricingInput(raw);
+
+      if (importPricePerBottle == null || importPricePerBottle <= 0) continue;
+
+      const owners = lotByKey.get(raw.key) ?? {};
+
+      owners[raw.ownerId] = importPricePerBottle;
+      lotByKey.set(raw.key, owners);
+    }
+
+    const byKey = new Map<
+      string,
+      { price: number; source: string; byOwner?: Record<string, number> }
+    >();
+
+    for (const [key, owners] of lotByKey) {
+      const prices = Object.values(owners);
+      const distinct = new Set(prices.map((price) => price.toFixed(2)));
+
+      byKey.set(key, {
+        price: Math.max(...prices),
+        source: 'lot',
+        ...(distinct.size > 1 ? { byOwner: owners } : {}),
+      });
+    }
 
     // 1. Stored import prices, by wine rather than by pack
     const storedRows = await db
@@ -56,8 +126,6 @@ const adminGetBulkPricing = adminProcedure
       })
       .from(wmsProductPricing)
       .where(inArray(lwinPakKey(wmsProductPricing.lwin18), keysWanted));
-
-    const byKey = new Map<string, { price: number; source: string }>();
 
     for (const row of storedRows) {
       if (row.importPricePerBottle == null) continue;
@@ -108,6 +176,7 @@ const adminGetBulkPricing = adminProcedure
       priceMap[lwin18] = {
         importPricePerBottle: found.price,
         importPriceSource: found.source,
+        ...(found.byOwner ? { byOwner: found.byOwner } : {}),
       };
     }
 
