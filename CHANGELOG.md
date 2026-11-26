@@ -1,3 +1,9 @@
+## [2.1.187](https://github.com/craftandculture/Craft-Culture/compare/v2.1.186...v2.1.187) (2026-11-26)
+
+### Features
+
+* the partner stock API balances per wine code, says who placed each order, and reports returns against the sale ([9a7eef1](https://github.com/craftandculture/Craft-Culture/commit/9a7eef1957eb783644ee9ed2365d7749072df2e9))
+
 ## [2.1.186](https://github.com/craftandculture/Craft-Culture/compare/v2.1.185...v2.1.186) (2026-11-26)
 
 ### Bug Fixes
