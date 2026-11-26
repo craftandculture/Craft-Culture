@@ -1,3 +1,9 @@
+## [2.1.186](https://github.com/craftandculture/Craft-Culture/compare/v2.1.185...v2.1.186) (2026-11-26)
+
+### Bug Fixes
+
+* daily sales no longer values a case price as a bottle price ([6d68f45](https://github.com/craftandculture/Craft-Culture/commit/6d68f45e8ea2f818f8cb7afa6d3ab1428e7795e6))
+
 ## [2.1.185](https://github.com/craftandculture/Craft-Culture/compare/v2.1.184...v2.1.185) (2026-11-25)
 
 ### Features
