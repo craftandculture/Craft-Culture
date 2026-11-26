@@ -934,6 +934,11 @@ const DailySalesClient = () => {
                       <td className="text-text-muted py-2 pr-3 text-right tabular-nums">{line.heldAfter}</td>
                       <td className="text-text-muted py-2 pr-4 text-right tabular-nums">
                         {line.value !== null ? show(line.value, line.currency) : '—'}
+                        {line.value !== null && line.priceRef ? (
+                          <div className="text-text-muted text-xs font-normal">
+                            priced from {line.priceRef}
+                          </div>
+                        ) : null}
                       </td>
                     </tr>
                     {linking === `fix-${line.outletCode}` ? (
