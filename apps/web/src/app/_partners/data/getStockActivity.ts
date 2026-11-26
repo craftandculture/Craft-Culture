@@ -152,6 +152,9 @@ const getStockActivity = async ({
       const reason = row.reasonCode.slice('stock_out:'.length) as keyof typeof STOCK_OUT_REASONS;
       return { title: STOCK_OUT_REASONS[reason]?.ownerSees ?? 'Taken out of stock', kind: 'out' as const };
     }
+    if (row.reasonCode === 'order_return') {
+      return { title: 'Returned to stock from an order', kind: 'in' as const };
+    }
     if (row.movementType === 'ownership_transfer') {
       if (row.toOwnerId && ccIds.has(row.toOwnerId) && row.fromOwnerId === partnerId) {
         return { title: 'Sold to Craft & Culture', kind: 'out' as const };
@@ -219,7 +222,9 @@ const getStockActivity = async ({
   */
   const isCorrection = (row: (typeof rows)[number]) =>
     row.movementType === 'count' ||
-    (row.movementType === 'adjust' && !row.reasonCode?.startsWith('stock_out:'));
+    (row.movementType === 'adjust' &&
+      !row.reasonCode?.startsWith('stock_out:') &&
+      row.reasonCode !== 'order_return');
   const dubaiDay = (at: Date) => new Date(at.getTime() + 4 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const corrections = new Map<string, { ids: string[]; net: number }>();
   for (const row of rows) {

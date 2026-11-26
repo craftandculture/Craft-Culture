@@ -41,9 +41,54 @@ describe('classifyPartnerMovement', () => {
     expect(event).toMatchObject({ outcome: 'own_delivery', channel: null });
   });
 
-  it('uses the bottle count of a split-case pick', () => {
+  it('a bottle picked from an opened case: 1 bottle sold, 0 cases, the whole case off the case code', () => {
+    // Guidalberto 2020 6x75cl: one bottle for a PCO cracks a case
+    const pick = classifyPartnerMovement(movement({ quantityCases: 1, quantityBottles: 1 }), ME, { ...NO_ORDER, isPrivateClient: true }, false);
+    expect(pick).toMatchObject({ cases: 0, bottles: 1, balanceChangeCases: -1, balanceChangeBottles: -6 });
+
+    // ...and the other 5 arrive on the single-bottle code: net -1 across the two
+    const singles = classifyPartnerMovement(
+      movement({ movementType: 'repack_in', reasonCode: 'split_case', lwin18: '1010279-2015-01-00750', quantityCases: 5, quantityBottles: 5 }),
+      ME,
+      NO_ORDER,
+      false,
+    );
+    expect(singles).toMatchObject({ type: 'repacked_in', cases: 5, bottles: 5, balanceChangeBottles: 5 });
+    expect(pick.balanceChangeBottles + singles.balanceChangeBottles).toBe(-1);
+  });
+
+  it('bottles taken from already-loose stock leave the case code alone', () => {
     const event = classifyPartnerMovement(movement({ quantityCases: 0, quantityBottles: 2 }), ME, NO_ORDER, false);
-    expect(event).toMatchObject({ cases: 0, bottles: 2, balanceChangeBottles: -2 });
+    expect(event).toMatchObject({ cases: 0, bottles: 2, balanceChangeBottles: 0 });
+  });
+
+  it('8 bottles from 6-packs are 1 whole case sold', () => {
+    const event = classifyPartnerMovement(movement({ quantityCases: 2, quantityBottles: 8 }), ME, NO_ORDER, false);
+    expect(event).toMatchObject({ cases: 1, bottles: 8, balanceChangeBottles: -12 });
+  });
+
+  it('says who placed the order', () => {
+    const theirs = classifyPartnerMovement(movement({}), ME, { ...NO_ORDER, isPrivateClient: true, isPartnersOwnOrder: true }, false);
+    expect(theirs.placedBy).toBe('you');
+
+    const ours = classifyPartnerMovement(movement({}), ME, { ...NO_ORDER, isPrivateClient: true }, false);
+    expect(ours.placedBy).toBe('craft_and_culture');
+
+    const toDistributor = classifyPartnerMovement(movement({}), ME, { ...NO_ORDER, isTradeOrder: true }, false);
+    expect(toDistributor.placedBy).toBe('craft_and_culture');
+
+    const received = classifyPartnerMovement(movement({ movementType: 'receive' }), ME, NO_ORDER, false);
+    expect(received.placedBy).toBeNull();
+  });
+
+  it('a return comes back in on the same channel as the sale', () => {
+    const event = classifyPartnerMovement(
+      movement({ movementType: 'adjust', reasonCode: 'order_return', quantityCases: 1, quantityBottles: 6 }),
+      ME,
+      { ...NO_ORDER, isPrivateClient: true, isPartnersOwnOrder: false },
+      false,
+    );
+    expect(event).toMatchObject({ type: 'returned', outcome: 'returned', channel: 'private_client', placedBy: 'craft_and_culture', direction: 'in', cases: 1, bottles: 6, balanceChangeBottles: 6 });
   });
 
   it('a transfer to C&C is a sale to Craft & Culture; to anyone else, a transfer', () => {

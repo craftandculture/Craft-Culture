@@ -83,7 +83,7 @@ const accountApiSpec = {
       get: {
         summary: 'Your wine sold out of our warehouse',
         description:
-          'The same events and cursor as /account/movements, sales only. A page can hold fewer rows than limit; keep paging while meta.hasMore is true.',
+          'The same events and cursor as /account/movements: sales, and returns of them (type returned, same orderReference as the sale, to credit it). A page can hold fewer rows than limit; keep paging while meta.hasMore is true.',
         parameters: movementParams,
         responses: {
           200: {
@@ -182,28 +182,45 @@ const accountApiSpec = {
           enum: [
             'received', 'put_away', 'moved_bay', 'picked', 'dispatched', 'repacked_in',
             'repacked_out', 'adjusted', 'taken_out_of_stock', 'count_correction',
-            'transferred_in', 'transferred_out',
+            'transferred_in', 'transferred_out', 'returned',
           ],
         },
         direction: { type: 'string', enum: ['in', 'out', 'none'] },
         outcome: {
           type: ['string', 'null'],
-          enum: ['sale', 'own_delivery', 'collected', 'loss_reimbursed', 'transfer', 'correction', null],
+          enum: ['sale', 'own_delivery', 'collected', 'loss_reimbursed', 'transfer', 'correction', 'returned', null],
         },
         channel: {
           type: ['string', 'null'],
           enum: ['distributor', 'private_client', 'craft_and_culture', 'other', null],
-          description: 'Kind of buyer, for sales. Buyers are never named.',
+          description: 'Kind of buyer, for sales and returns. Buyers are never named.',
+        },
+        placedBy: {
+          type: ['string', 'null'],
+          enum: ['you', 'craft_and_culture', null],
+          description:
+            'Who placed the order, on picks, returns and sales: "you" for an order your team placed with us (your PCOs, including subscriptions), "craft_and_culture" for our sale of your stock.',
         },
         description: { type: 'string', example: 'Picked · sold to a distributor' },
-        cases: { type: 'integer', description: 'Cases moved, unsigned' },
-        bottles: { type: 'integer', description: 'Bottles moved, unsigned' },
-        balanceChangeCases: { type: 'integer', description: 'Signed effect on your holding' },
-        balanceChangeBottles: { type: 'integer', description: 'Signed effect on your holding' },
+        cases: {
+          type: 'integer',
+          description: 'Whole cases in this event, unsigned. One bottle from a 6-pack is 0 cases, 1 bottle.',
+        },
+        bottles: { type: 'integer', description: 'Bottles in this event, unsigned. Use this as the quantity sold.' },
+        balanceChangeCases: {
+          type: 'integer',
+          description: 'Signed effect on this wine code\'s holding, in cases',
+        },
+        balanceChangeBottles: {
+          type: 'integer',
+          description:
+            'Signed effect on this wine code\'s holding, in bottles. Opening a case to pick single bottles takes the whole case off the case code (-6 for a 6-pack); the bottles left over arrive on the single-bottle code (…-01-…) as a repacked_in event. Summed per lwin18, these match /account/stock.',
+        },
         wine: { $ref: '#/components/schemas/Wine' },
         orderReference: {
           type: ['string', 'null'],
-          description: 'Your PCO number, or our sales order number, on picks and dispatches',
+          description:
+            'Your PCO number, or our sales order number, on picks, dispatches and returns. A PCO fulfilled through one of our sales orders carries the PCO number.',
         },
       },
     },

@@ -13,7 +13,8 @@ export type PartnerEventType =
   | 'taken_out_of_stock'
   | 'count_correction'
   | 'transferred_in'
-  | 'transferred_out';
+  | 'transferred_out'
+  | 'returned';
 
 /** What became of bottles that left the partner's holding */
 export type PartnerEventOutcome =
@@ -22,7 +23,8 @@ export type PartnerEventOutcome =
   | 'collected'
   | 'loss_reimbursed'
   | 'transfer'
-  | 'correction';
+  | 'correction'
+  | 'returned';
 
 /** Who bought, by kind only — never a name */
 export type PartnerSaleChannel =
@@ -50,7 +52,19 @@ export interface MovementOrderFacts {
   isPrivateClient: boolean;
   /** The order was a Zoho sales order to a distributor or trade buyer */
   isTradeOrder: boolean;
+  /**
+   * The partner placed the order themselves: their own PCO, or our sales
+   * order raised to fulfil it. Their own sales are theirs to invoice; ours of
+   * their stock are what they bill us for.
+   */
+  isPartnersOwnOrder?: boolean;
 }
+
+/** Who placed the order behind an event: the partner, or Craft & Culture */
+export type PartnerOrderPlacedBy = 'you' | 'craft_and_culture';
+
+/** Reason code written by the warehouse's "Return to stock" action */
+export const RETURN_REASON_CODE = 'order_return';
 
 /**
  * Sign of each movement type in the stock ledger, from the partner's side
@@ -71,6 +85,10 @@ const LEDGER_SIGN: Record<string, 1 | -1 | 0> = {
   transfer: 0,
   dispatch: 0,
 };
+
+/** The buyer kind an order stands for (null when it is neither) */
+const saleChannel = (order: MovementOrderFacts): PartnerSaleChannel | null =>
+  order.isPrivateClient ? 'private_client' : order.isTradeOrder ? 'distributor' : null;
 
 /** Bottles per case from a dashed LWIN18 (`1010279-2015-06-00750` → 6) */
 const packOf = (lwin18: string) => {
@@ -104,9 +122,20 @@ const classifyPartnerMovement = (
   toCraftAndCulture: boolean,
 ) => {
   const pack = packOf(movement.lwin18);
-  const cases = Math.abs(movement.quantityCases);
+  // What physically moved: the bottles, and how many whole cases they make.
+  // A single bottle cracked from a 6-pack is 1 bottle and 0 cases.
   const bottles = Math.abs(movement.quantityBottles ?? movement.quantityCases * pack);
-  const rawBottles = movement.quantityBottles ?? movement.quantityCases * pack;
+  const cases = Math.floor(bottles / pack);
+  /*
+    The balance moves with the CASE ledger, in bottles: every stock code holds
+    whole packs. Opening a 6-pack to pick one bottle takes the whole case off
+    the 6-pack code (-6) and the 5 left over arrive on the single-bottle code
+    as a separate repacked_in event (+5): net -1, and each code's running
+    total matches /account/stock. Counting only the 1 bottle on the 6-pack
+    code left it 5 too high for every case ever opened.
+  */
+  const ledgerBottles = movement.quantityCases * pack;
+  const ledgerCases = movement.quantityCases;
 
   let type: PartnerEventType;
   let outcome: PartnerEventOutcome | null = null;
@@ -119,8 +148,8 @@ const classifyPartnerMovement = (
     const incoming = movement.toOwnerId === partnerId;
     const sign = incoming ? 1 : -1;
     type = incoming ? 'transferred_in' : 'transferred_out';
-    balanceChangeBottles = sign * bottles;
-    balanceChangeCases = sign * cases;
+    balanceChangeBottles = sign * Math.abs(ledgerBottles);
+    balanceChangeCases = sign * Math.abs(ledgerCases);
 
     if (!incoming && toCraftAndCulture) {
       outcome = 'sale';
@@ -135,8 +164,8 @@ const classifyPartnerMovement = (
     const reason = STOCK_OUT_REASONS[key];
     type = 'taken_out_of_stock';
     // Always a removal, however the movement happened to be signed
-    balanceChangeBottles = -bottles;
-    balanceChangeCases = -cases;
+    balanceChangeBottles = -Math.abs(ledgerBottles);
+    balanceChangeCases = -Math.abs(ledgerCases);
     description = reason?.ownerSees ?? 'Taken out of stock';
 
     switch (reason?.settlement) {
@@ -157,10 +186,18 @@ const classifyPartnerMovement = (
       default:
         outcome = 'correction';
     }
+  } else if (movement.reasonCode === RETURN_REASON_CODE) {
+    // Wine back from an order: the reverse of the pick, on the same order
+    type = 'returned';
+    outcome = 'returned';
+    channel = saleChannel(order);
+    balanceChangeBottles = Math.abs(ledgerBottles);
+    balanceChangeCases = Math.abs(ledgerCases);
+    description = 'Returned to stock from an order';
   } else {
     const sign = LEDGER_SIGN[movement.movementType] ?? 0;
-    balanceChangeBottles = sign * rawBottles;
-    balanceChangeCases = sign * movement.quantityCases;
+    balanceChangeBottles = sign * ledgerBottles;
+    balanceChangeCases = sign * ledgerCases;
 
     switch (movement.movementType) {
       case 'receive':
@@ -181,7 +218,10 @@ const classifyPartnerMovement = (
         break;
       case 'repack_in':
         type = 'repacked_in';
-        description = 'Repacked';
+        description =
+          movement.reasonCode === 'split_case'
+            ? 'Bottles from an opened case, now held as single bottles'
+            : 'Repacked';
         break;
       case 'repack_out':
         type = 'repacked_out';
@@ -219,16 +259,29 @@ const classifyPartnerMovement = (
   const direction =
     balanceChangeBottles > 0 ? 'in' : balanceChangeBottles < 0 ? 'out' : 'none';
 
+  /*
+    Who placed the order: set on anything that came from an order or was a
+    sale. A sale to C&C itself (a transfer or take-out) was C&C's doing.
+  */
+  const placedBy: PartnerOrderPlacedBy | null =
+    type === 'picked' || type === 'returned' || outcome === 'sale'
+      ? order.isPartnersOwnOrder && channel !== 'craft_and_culture'
+        ? 'you'
+        : 'craft_and_culture'
+      : null;
+
   return {
     type,
     direction,
     outcome,
     channel,
+    placedBy,
     description,
     cases,
     bottles,
-    balanceChangeCases,
-    balanceChangeBottles,
+    // `|| 0` turns -0 (a sign times nothing) into a plain 0
+    balanceChangeCases: balanceChangeCases || 0,
+    balanceChangeBottles: balanceChangeBottles || 0,
   } as const;
 };
 

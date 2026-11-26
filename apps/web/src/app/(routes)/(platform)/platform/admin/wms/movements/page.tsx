@@ -27,6 +27,7 @@ import LocationBadge from '@/app/_wms/components/LocationBadge';
 import MovementTypeBadge from '@/app/_wms/components/MovementTypeBadge';
 import PackBadge from '@/app/_wms/components/PackBadge';
 import RecordCorrectionAsTakeOut from '@/app/_wms/components/RecordCorrectionAsTakeOut';
+import ReturnPickToStock from '@/app/_wms/components/ReturnPickToStock';
 import useTRPC from '@/lib/trpc/browser';
 
 type MovementType =
@@ -343,6 +344,16 @@ const WMSMovementsPage = () => {
                               movement.quantityCases < 0 &&
                               !movement.reasonCode?.startsWith('stock_out:'))) && (
                             <RecordCorrectionAsTakeOut movementId={movement.id} />
+                          )}
+                          {movement.movementType === 'pick' && (
+                            <ReturnPickToStock
+                              movementId={movement.id}
+                              pickedBottles={Math.abs(
+                                movement.quantityBottles ??
+                                  movement.quantityCases *
+                                    (packFromLwin18(movement.lwin18)?.pack ?? 1),
+                              )}
+                            />
                           )}
                         </td>
                         <td className="whitespace-nowrap px-3 py-1.5 font-mono text-xs">

@@ -1,4 +1,5 @@
-import { and, asc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lt, or, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import getOwnerDeliveryOwners from '@/app/_cellar/data/getOwnerDeliveryOwners';
 import getCraftCultureOwnerIds from '@/app/_partners/data/getCraftCultureOwnerIds';
@@ -31,8 +32,15 @@ const PARTNER_MOVEMENT_TYPES = [
   'ownership_transfer',
 ] as const;
 
-/** The only types that can be a sale: a pick, a transfer to C&C, a take-out */
+/** The only types that can be a sale: a pick, a transfer to C&C, a take-out (or a return of one) */
 const SALE_CANDIDATE_TYPES = ['pick', 'ownership_transfer', 'adjust'] as const;
+
+/**
+ * The PCO a Zoho sales order was raised to fulfil. Picks against that SO carry
+ * the SO's id, not the PCO's, so without this a partner's own PCO showed our
+ * SO number and could not be told from our own sales.
+ */
+const pcoViaSalesOrder = alias(privateClientOrders, 'pco_via_so');
 
 export interface PartnerMovementQuery {
   /** Opaque cursor from the previous page's `nextCursor` */
@@ -95,14 +103,27 @@ const getPartnerMovementEvents = async (partnerId: string, query: PartnerMovemen
       performedAt: wmsStockMovements.performedAt,
       // Full precision, for the cursor (a Date keeps only milliseconds)
       performedAtText: sql<string>`${wmsStockMovements.performedAt}::text`,
-      pcoNumber: privateClientOrders.orderNumber,
-      pcoPartnerId: privateClientOrders.partnerId,
+      pcoNumber: sql<string | null>`COALESCE(${privateClientOrders.orderNumber}, ${pcoViaSalesOrder.orderNumber})`,
+      pcoPartnerId: sql<string | null>`COALESCE(${privateClientOrders.partnerId}, ${pcoViaSalesOrder.partnerId})::text`,
       salesOrderNumber: zohoSalesOrders.salesOrderNumber,
       soForPco: sql<string | null>`COALESCE(${zohoSalesOrders.privateClientOrderId}::text, substring(${zohoSalesOrders.referenceNumber} from 'PCO-[0-9]{4}-[0-9]+'))`,
     })
     .from(wmsStockMovements)
     .leftJoin(privateClientOrders, eq(wmsStockMovements.orderId, privateClientOrders.id))
     .leftJoin(zohoSalesOrders, eq(wmsStockMovements.orderId, zohoSalesOrders.id))
+    .leftJoin(
+      pcoViaSalesOrder,
+      or(
+        eq(pcoViaSalesOrder.id, zohoSalesOrders.privateClientOrderId),
+        and(
+          sql`${zohoSalesOrders.privateClientOrderId} IS NULL`,
+          eq(
+            pcoViaSalesOrder.orderNumber,
+            sql`substring(${zohoSalesOrders.referenceNumber} from 'PCO-[0-9]{4}-[0-9]+')`,
+          ),
+        ),
+      ),
+    )
     .where(
       and(
         scope.condition,
@@ -135,13 +156,15 @@ const getPartnerMovementEvents = async (partnerId: string, query: PartnerMovemen
   const events = page.map((row) => {
     const delivery = row.orderId ? deliveries.get(row.orderId) : undefined;
     const isPrivateClient = Boolean(row.pcoNumber || row.soForPco);
+    const isOwnDelivery = delivery?.ownerId === partnerId;
     const event = classifyPartnerMovement(
       row,
       partnerId,
       {
-        isOwnDelivery: delivery?.ownerId === partnerId,
+        isOwnDelivery,
         isPrivateClient,
         isTradeOrder: Boolean(row.salesOrderNumber) && !isPrivateClient,
+        isPartnersOwnOrder: isOwnDelivery || (Boolean(row.pcoNumber) && row.pcoPartnerId === partnerId),
       },
       Boolean(row.toOwnerId && ccIds.has(row.toOwnerId)),
     );
@@ -164,12 +187,18 @@ const getPartnerMovementEvents = async (partnerId: string, query: PartnerMovemen
       occurredAt: row.performedAt.toISOString(),
       ...event,
       wine: wineFromLwin(row.lwin18, row.productName),
-      orderReference: event.type === 'picked' || event.type === 'dispatched' ? orderReference : null,
+      orderReference:
+        event.type === 'picked' || event.type === 'dispatched' || event.type === 'returned'
+          ? orderReference
+          : null,
     };
   });
 
   const last = page.at(-1);
-  const data = query.salesOnly ? events.filter((event) => event.outcome === 'sale') : events;
+  // Returns travel with sales, so a sale can be credited from the same feed
+  const data = query.salesOnly
+    ? events.filter((event) => event.outcome === 'sale' || event.type === 'returned')
+    : events;
 
   return {
     data,

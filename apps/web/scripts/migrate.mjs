@@ -5105,6 +5105,17 @@ const runMigrations = async () => {
       `;
     });
 
+    /*
+      The partner's own reference on a PCO (26 Nov 2026). Cru Wine raise a sales
+      order of their own for each PCO and need it back on the stock API's sale
+      events to tell their orders from ours. Added on its own first: nothing
+      reads or writes it until it is confirmed in production.
+    */
+    await client.unsafe(
+      `ALTER TABLE "private_client_orders" ADD COLUMN IF NOT EXISTS "partner_reference" text`,
+    );
+    console.log('✅ private_client_orders.partner_reference ready');
+
     await client.end();
     process.exit(0);
   } catch (error) {

@@ -51,10 +51,11 @@ Polling every 15 minutes is plenty. The limit is 60 requests a minute per key.
 |---|---|
 | `type` | What happened: `received`, `picked`, `dispatched`, `transferred_in`, `transferred_out`, `taken_out_of_stock`, `count_correction`, `adjusted`, `repacked_in`, `repacked_out`, `put_away`, `moved_bay` |
 | `outcome` | For stock leaving you: `sale`, `own_delivery`, `collected`, `loss_reimbursed`, `transfer` or `correction` |
-| `channel` | For sales, the kind of buyer: `distributor`, `private_client`, `craft_and_culture` or `other`. Buyers are never named. |
+| `channel` | For sales and returns, the kind of buyer: `distributor`, `private_client`, `craft_and_culture` or `other`. Buyers are never named. |
+| `placedBy` | On picks, returns and sales: `you` for an order your team placed with us (your PCOs, including subscriptions), `craft_and_culture` for our sale of your stock |
 | `cases`, `bottles` | How much moved |
-| `balanceChangeCases`, `balanceChangeBottles` | The signed effect on your holding (negative = left you) |
-| `orderReference` | Your PCO number, or our sales order number, on picks and dispatches |
+| `balanceChangeCases`, `balanceChangeBottles` | The signed effect on the holding of this wine code (negative = left you). Opening a case to pick single bottles takes the whole case off the case code; the bottles left over arrive on the single-bottle code (`…-01-…`) as `repacked_in`. |
+| `orderReference` | Your PCO number, or our sales order number, on picks, dispatches and returns. A PCO fulfilled through one of our sales orders carries the PCO number. |
 | `wine` | LWIN-18, LWIN-11, name, vintage, case size, bottle size |
 
 A wine leaves your balance when it is **picked**. The later **dispatched** event records the truck leaving and changes nothing, so it is never counted twice.
@@ -109,3 +110,7 @@ curl -H "Authorization: Bearer $CC_API_KEY" \
 - **Errors.** `400` names the parameter that is wrong. `401` means the key is missing, revoked or expired. `403` means the key lacks `read:own_stock`. `429` means slow down; wait for the `Retry-After` seconds.
 
 Questions: **partners@craftculture.xyz**
+
+## Returns
+
+Wine that comes back from an order after it was picked appears as a `returned` event, in both `/account/movements` and `/account/sales`, with the same `orderReference`, `channel` and `placedBy` as the pick. Use it to credit the sale. An order cancelled before it is picked never appears as a sale.

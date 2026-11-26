@@ -13,6 +13,11 @@ interface MoveBottlesParams {
   performedBy: string;
   /** When, if not now: a take-out recorded after the event is dated when it happened */
   performedAt?: Date;
+  /**
+   * Write the split_case arrival on the ledger (default). A caller that
+   * records the bottles' arrival itself, as a return does, passes false.
+   */
+  recordMovement?: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
 }
@@ -50,6 +55,7 @@ const moveBottlesToSingles = async ({
   bottles,
   performedBy,
   performedAt = new Date(),
+  recordMovement = true,
   db,
 }: MoveBottlesParams) => {
   if (bottles <= 0) return null;
@@ -90,6 +96,7 @@ const moveBottlesToSingles = async ({
   // The ledger has to see these bottles arrive. Without a movement they are an
   // "orphan" stock record — and the reconciliation's auto-fix DELETES those.
   const recordArrival = async () => {
+    if (!recordMovement) return;
     await db.insert(wmsStockMovements).values({
       movementNumber: await generateMovementNumber(db),
       movementType: 'repack_in' as const,

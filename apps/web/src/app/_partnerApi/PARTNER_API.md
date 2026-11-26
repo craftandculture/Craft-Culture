@@ -12,7 +12,7 @@ Read-only API giving a wine partner (Cru Wine, Crurated, …) their own stock, m
 |---|---|---|
 | `GET /account/stock` | `data/getPartnerHoldings.ts` | `wms_stock` on `owner_id`, grouped per wine and `heldAt` (warehouse / distributor = `consignment` location) |
 | `GET /account/movements` | `data/getPartnerMovementEvents.ts` | Oldest first, cursor on `(performed_at, id)` |
-| `GET /account/sales` | same, `salesOnly` | Pre-filters to pick / ownership_transfer / adjust, then keeps `outcome = 'sale'` |
+| `GET /account/sales` | same, `salesOnly` | Pre-filters to pick / ownership_transfer / adjust, then keeps `outcome = 'sale'` and `type = 'returned'` |
 | `GET /account/reservations` | `data/getPartnerReservations.ts` | `owner_id`, or the stock row's owner for older unstamped holds |
 
 Routes go through `api/v1/_utils/withPartnerKey.ts`: key → permission → rate limit → handler → request log, `Cache-Control: private, no-store`. Do not hand-roll a keyed route.
@@ -37,6 +37,10 @@ Docs are split by audience and never cross-linked: distributors get `/docs/api` 
 ## Tests
 
 `utils/classifyPartnerMovement.test.ts`, `utils/movementCursor.test.ts` (vitest; on this Mac set `ESBUILD_BINARY_PATH` to an arm64 esbuild).
+
+9. **Balance = the case ledger in bottles** (`quantityCases × pack`), never `quantityBottles`. A cracked case leaves its code whole; the remainder arrives on the `-01-` code as a `split_case` repack_in. Counting the picked bottles instead overstated the case code by the remainder (Cru Wine, 26 Nov 2026: 51 of 230 codes off). `bottles`/`cases` on the event are what was sold.
+10. **placedBy** is `you` for the partner's own PCO, found directly or through the Zoho SO raised for it (`pco_via_so` alias), and for own deliveries; `craft_and_culture` otherwise.
+11. **Returns** are written by `wms.admin.stock.returnPickToStock` (Movements → pick row → Return to stock): `adjust`, reason `order_return`, same `orderId`, note `RETURN of <pick MOV>:`.
 
 ## Not built yet
 

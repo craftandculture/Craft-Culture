@@ -284,13 +284,18 @@ const StockApiDocsPage = () => {
                 ['direction', 'string', <><C>in</C>, <C>out</C> or <C>none</C></>],
                 ['outcome', 'string | null', <>
                   For stock leaving you: <C>sale</C>, <C>own_delivery</C>, <C>collected</C>,{' '}
-                  <C>loss_reimbursed</C>, <C>transfer</C> or <C>correction</C>
+                  <C>loss_reimbursed</C>, <C>transfer</C> or <C>correction</C>; <C>returned</C> for wine back from an order
                 </>],
-                ['channel', 'string | null', 'For sales: the kind of buyer (section 4.3)'],
-                ['cases, bottles', 'integer', 'Quantity moved, unsigned'],
-                ['balanceChangeCases, balanceChangeBottles', 'integer', 'Signed effect on your holding'],
+                ['channel', 'string | null', 'For sales and returns: the kind of buyer (section 4.3)'],
+                ['placedBy', 'string | null', <>
+                  On picks, returns and sales: <C>you</C> for an order your team placed with us (your PCOs, including
+                  subscriptions), <C>craft_and_culture</C> for our sale of your stock
+                </>],
+                ['bottles', 'integer', 'Bottles in the event, unsigned. Use this as the quantity sold.'],
+                ['cases', 'integer', 'Whole cases in the event, unsigned. One bottle from a 6-pack is 0 cases and 1 bottle.'],
+                ['balanceChangeCases, balanceChangeBottles', 'integer', 'Signed effect on the holding of this wine code (section 06)'],
                 ['wine', 'object', 'lwin18, lwin11, name, vintage, caseSize, bottleSizeMl'],
-                ['orderReference', 'string | null', 'Your PCO number, or our sales order number, on picks and dispatches'],
+                ['orderReference', 'string | null', 'Your PCO number, or our sales order number, on picks, dispatches and returns. A PCO fulfilled through one of our sales orders carries the PCO number.'],
                 ['description', 'string', 'A short plain-English summary of the event'],
               ]}
             />
@@ -300,13 +305,14 @@ const StockApiDocsPage = () => {
               rows={[
                 ['received', '+', 'Arrived and booked into the warehouse'],
                 ['picked', '−', <>Picked for an order. <C>outcome</C> shows whether it was a sale or your own delivery.</>],
+                ['returned', '+', <>Back in stock from an order. Same <C>orderReference</C>, <C>channel</C> and <C>placedBy</C> as the pick.</>],
                 ['dispatched', '0', 'Left the building. Already deducted when picked, so it is never counted twice.'],
                 ['transferred_in', '+', 'Ownership passed to you'],
                 ['transferred_out', '−', 'Ownership passed from you. A transfer to Craft & Culture is a sale.'],
                 ['taken_out_of_stock', '−', 'Removed by hand: sold, samples, collected by you, or damaged or lost in our care and reimbursed'],
                 ['count_correction', '±', 'Adjusted after a stock count'],
                 ['adjusted', '±', 'A correction to the record'],
-                ['repacked_in / repacked_out', '±', 'Moved into a different case size. Bottles are unchanged.'],
+                ['repacked_in / repacked_out', '±', 'Moved into a different case size, including the bottles left over when a case is opened to pick single bottles'],
                 ['put_away / moved_bay', '0', 'Moved within the warehouse'],
               ]}
             />
@@ -318,6 +324,7 @@ const StockApiDocsPage = () => {
   "direction": "out",
   "outcome": "sale",
   "channel": "distributor",
+  "placedBy": "craft_and_culture",
   "description": "Picked · sold to a distributor",
   "cases": 2,
   "bottles": 12,
@@ -337,9 +344,15 @@ const StockApiDocsPage = () => {
 
           <Section id="sales" n="4.3" title="Sales">
             <p>
-              <C>GET /account/sales</C> returns only the events that are sales of your wine, with the same fields,
-              parameters and cursor as Movements. Because other events are filtered out, a page may contain fewer
-              rows than <C>limit</C>; continue while <C>meta.hasMore</C> is true.
+              <C>GET /account/sales</C> returns only the events that are sales of your wine, and returns of them, with
+              the same fields, parameters and cursor as Movements. Because other events are filtered out, a page may
+              contain fewer rows than <C>limit</C>; continue while <C>meta.hasMore</C> is true.
+            </p>
+            <p>
+              <C>placedBy</C> separates the two kinds of sale. <C>you</C> is an order your team placed with us, which
+              you invoice your own client for. <C>craft_and_culture</C> is our sale of your stock, which you invoice
+              us for. A <C>returned</C> event carries the same <C>orderReference</C> as the sale it reverses, so it
+              can be credited. An order cancelled before it is picked never appears here.
             </p>
             <Fields
               head={['Channel', '', 'Meaning']}
@@ -408,8 +421,14 @@ curl "${BASE}/account/movements?cursor=$LAST_CURSOR&limit=500" \\
           <Section id="reconciling" n="06" title="Reconciling your balance">
             <p>
               The sum of <C>balanceChangeBottles</C> across your events should equal <C>totalBottles</C> in{' '}
-              <C>/account/stock</C>. Stock leaves your balance when it is picked; dispatch and moves within the
-              warehouse do not change it.
+              <C>/account/stock</C>, per <C>lwin18</C> as well as in total. Stock leaves your balance when it is
+              picked; dispatch and moves within the warehouse do not change it.
+            </p>
+            <p>
+              Every wine code holds whole packs. When we open a case to pick single bottles, the whole case leaves the
+              case code (<C>balanceChangeBottles</C> −6 for a 6-pack) and the bottles left over arrive on the
+              single-bottle code (<C>…-01-…</C>) as a <C>repacked_in</C> event (+5). The sale itself is the{' '}
+              <C>bottles</C> figure on the pick (1).
             </p>
             <p>
               Where another owner also holds some of the same wine, history that cannot be attributed to you is

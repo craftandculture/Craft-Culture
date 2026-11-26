@@ -114,6 +114,7 @@ import adminReserveStock from './controller/adminReserveStock';
 import adminResolvePartnerRequest from './controller/adminResolvePartnerRequest';
 import adminResolvePcoOrder from './controller/adminResolvePcoOrder';
 import adminResyncPickList from './controller/adminResyncPickList';
+import adminReturnPickToStock from './controller/adminReturnPickToStock';
 import adminReverseRepack from './controller/adminReverseRepack';
 import adminSaveReceivingDraft from './controller/adminSaveReceivingDraft';
 import adminSealPallet from './controller/adminSealPallet';
@@ -263,6 +264,8 @@ const stockRouter = createTRPCRouter({
   takeOut: adminTakeOutOfStock,
   changeTakeOutReason: adminChangeTakeOutReason,
   recordCorrectionAsTakeOut: adminRecordCorrectionAsTakeOut,
+  // Wine back from an order, recorded against the pick it left on
+  returnPickToStock: adminReturnPickToStock,
   // A pick booked to the wrong owner's row, moved to the bottles that left
   correctPickSource: adminCorrectPickSource,
   // Reserved and available back in line with the holds that exist
