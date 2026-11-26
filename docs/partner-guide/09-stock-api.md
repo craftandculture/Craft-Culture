@@ -56,6 +56,7 @@ Polling every 15 minutes is plenty. The limit is 60 requests a minute per key.
 | `cases`, `bottles` | How much moved |
 | `balanceChangeCases`, `balanceChangeBottles` | The signed effect on the holding of this wine code (negative = left you). Opening a case to pick single bottles takes the whole case off the case code; the bottles left over arrive on the single-bottle code (`…-01-…`) as `repacked_in`. |
 | `orderReference` | Your PCO number, or our sales order number, on picks, dispatches and returns. A PCO fulfilled through one of our sales orders carries the PCO number. |
+| `yourReference` | Your own reference for the order, such as your sales order number. Add it under **Your reference** when placing a PCO, or on the order page at any time. |
 | `wine` | LWIN-18, LWIN-11, name, vintage, case size, bottle size |
 
 A wine leaves your balance when it is **picked**. The later **dispatched** event records the truck leaving and changes nothing, so it is never counted twice.

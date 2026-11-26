@@ -12,6 +12,8 @@ const createOrderSchema = z.object({
   clientAddress: z.string().optional(),
   deliveryNotes: z.string().optional(),
   partnerNotes: z.string().optional(),
+  /** The partner's own reference, such as their sales order number */
+  partnerReference: z.string().trim().max(100).optional(),
 });
 
 export default createOrderSchema;

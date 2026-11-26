@@ -222,6 +222,11 @@ const accountApiSpec = {
           description:
             'Your PCO number, or our sales order number, on picks, dispatches and returns. A PCO fulfilled through one of our sales orders carries the PCO number.',
         },
+        yourReference: {
+          type: ['string', 'null'],
+          description:
+            'Your own reference for the order (for example your sales order number), when you have added it to the PCO. On picks, dispatches and returns of your own orders.',
+        },
       },
     },
     EventsResponse: {

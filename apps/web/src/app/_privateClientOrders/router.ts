@@ -83,6 +83,7 @@ import ordersPartnerReinitiateVerification from './controller/ordersPartnerReini
 import ordersPartnerVerification from './controller/ordersPartnerVerification';
 import ordersRequestRevision from './controller/ordersRequestRevision';
 import ordersScheduleDelivery from './controller/ordersScheduleDelivery';
+import ordersSetPartnerReference from './controller/ordersSetPartnerReference';
 import ordersSetSubscriptionBox from './controller/ordersSetSubscriptionBox';
 import ordersSubmit from './controller/ordersSubmit';
 import ordersSubscriptionAccess from './controller/ordersSubscriptionAccess';
@@ -110,6 +111,7 @@ const privateClientOrdersRouter = createTRPCRouter({
   clone: ordersClone,
   clonePreview: ordersClonePreview,
   setSubscriptionBox: ordersSetSubscriptionBox,
+  setPartnerReference: ordersSetPartnerReference,
   getSubscriptionBoxes: ordersGetSubscriptionBoxes,
 
   // Line item management (wine partner)

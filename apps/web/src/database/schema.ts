@@ -1177,6 +1177,10 @@ export const privateClientOrders = pgTable(
     itemCount: integer('item_count').notNull().default(0),
     caseCount: integer('case_count').notNull().default(0),
 
+    // The partner's own reference for the order (their SO number), returned
+    // on the partner stock API's sale events
+    partnerReference: text('partner_reference'),
+
     // Notes from each party
     partnerNotes: text('partner_notes'),
     ccNotes: text('cc_notes'),

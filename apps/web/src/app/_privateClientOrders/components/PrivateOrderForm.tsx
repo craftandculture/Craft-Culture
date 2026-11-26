@@ -120,6 +120,7 @@ const PrivateOrderForm = () => {
   const [clientAddress, setClientAddress] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [partnerNotes, setPartnerNotes] = useState('');
+  const [partnerReference, setPartnerReference] = useState('');
 
   // Line items state
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -194,6 +195,7 @@ const PrivateOrderForm = () => {
       clientAddress?: string;
       deliveryNotes?: string;
       partnerNotes?: string;
+      partnerReference?: string;
     }) => {
       return trpcClient.privateClientOrders.create.mutate(data);
     },
@@ -492,6 +494,7 @@ const PrivateOrderForm = () => {
         clientAddress: effectiveClientAddress || undefined,
         deliveryNotes: deliveryNotes || undefined,
         partnerNotes: partnerNotes || undefined,
+        partnerReference: partnerReference.trim() || undefined,
       });
 
       if (!order) {
@@ -969,6 +972,19 @@ const PrivateOrderForm = () => {
               placeholder="For your own reference, for example the client's request"
               value={partnerNotes}
               onChange={(e) => setPartnerNotes(e.target.value)}
+              size="sm"
+            />
+          </div>
+
+          <div>
+            <Typography variant="bodyXs" colorRole="muted" className="mb-1">
+              Your reference (optional)
+            </Typography>
+            <Input
+              aria-label="Your reference"
+              placeholder="Your own order number, for example your sales order. You can add it later."
+              value={partnerReference}
+              onChange={(e) => setPartnerReference(e.target.value)}
               size="sm"
             />
           </div>
