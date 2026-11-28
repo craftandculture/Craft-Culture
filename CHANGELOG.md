@@ -1,3 +1,9 @@
+## [2.1.189](https://github.com/craftandculture/Craft-Culture/compare/v2.1.188...v2.1.189) (2026-11-28)
+
+### Bug Fixes
+
+* the 5-minute order sync no longer asks Zoho about the same held orders every run, which used up the 10,000 daily API calls ([7bf012d](https://github.com/craftandculture/Craft-Culture/commit/7bf012da977df755c5f67566ab5ba91063b70d94))
+
 ## [2.1.188](https://github.com/craftandculture/Craft-Culture/compare/v2.1.187...v2.1.188) (2026-11-26)
 
 ### Features
