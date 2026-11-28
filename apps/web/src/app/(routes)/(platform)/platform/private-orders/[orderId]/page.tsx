@@ -31,6 +31,7 @@ import { toast } from 'sonner';
 import ActivityTimeline from '@/app/_privateClientOrders/components/ActivityTimeline';
 import CloneOrderDialog from '@/app/_privateClientOrders/components/CloneOrderDialog';
 import OrderNoteComposer from '@/app/_privateClientOrders/components/OrderNoteComposer';
+import PartnerReferenceField from '@/app/_privateClientOrders/components/PartnerReferenceField';
 import PaymentTracker from '@/app/_privateClientOrders/components/PaymentTracker';
 import PrivateOrderStatusBadge from '@/app/_privateClientOrders/components/PrivateOrderStatusBadge';
 import ProductPicker from '@/app/_privateClientOrders/components/ProductPicker';
@@ -1652,11 +1653,15 @@ const PrivateOrderDetailPage = () => {
           </CardContent>
         </Card>
 
-        {/* Notes - if present */}
-        {(order.partnerNotes || order.deliveryNotes || order.clientAddress) && (
-          <Card>
+        {/* Notes, and the partner's own reference (always shown, so it can be added) */}
+        <Card>
             <CardContent className="p-4">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <PartnerReferenceField
+                  orderId={order.id}
+                  value={order.partnerReference}
+                  onSaved={() => void refetch()}
+                />
                 {order.clientAddress && (
                   <div>
                     <Typography variant="labelSm" colorRole="muted" className="mb-1">
@@ -1684,7 +1689,6 @@ const PrivateOrderDetailPage = () => {
               </div>
             </CardContent>
           </Card>
-        )}
       </div>
     </div>
   );

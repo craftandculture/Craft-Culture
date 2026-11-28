@@ -290,7 +290,7 @@ const AdminPrivateOrderDetailPage = () => {
 
   /* The note being edited, and its draft text */
   const [editingNote, setEditingNote] = useState<{
-    key: 'partnerNotes' | 'deliveryNotes';
+    key: 'partnerNotes' | 'deliveryNotes' | 'partnerReference';
     text: string;
   } | null>(null);
 
@@ -2068,6 +2068,7 @@ const AdminPrivateOrderDetailPage = () => {
                 [
                   { key: 'partnerNotes', label: 'Partner Notes', value: order.partnerNotes },
                   { key: 'deliveryNotes', label: 'Delivery Notes', value: order.deliveryNotes },
+                  { key: 'partnerReference', label: "Partner's Reference", value: order.partnerReference },
                 ] as const
               ).map(({ key, label, value }) => (
                 <div key={key}>

@@ -296,6 +296,7 @@ const StockApiDocsPage = () => {
                 ['balanceChangeCases, balanceChangeBottles', 'integer', 'Signed effect on the holding of this wine code (section 06)'],
                 ['wine', 'object', 'lwin18, lwin11, name, vintage, caseSize, bottleSizeMl'],
                 ['orderReference', 'string | null', 'Your PCO number, or our sales order number, on picks, dispatches and returns. A PCO fulfilled through one of our sales orders carries the PCO number.'],
+                ['yourReference', 'string | null', 'Your own reference for the order (for example your sales order number), when you have added it to the PCO'],
                 ['description', 'string', 'A short plain-English summary of the event'],
               ]}
             />

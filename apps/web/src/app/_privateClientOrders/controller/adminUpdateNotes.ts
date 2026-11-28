@@ -23,6 +23,7 @@ const adminUpdateNotes = wmsOperatorProcedure
       orderId: z.string().uuid(),
       partnerNotes: z.string().max(5000).optional(),
       deliveryNotes: z.string().max(5000).optional(),
+      partnerReference: z.string().max(100).optional(),
     }),
   )
   .mutation(async ({ ctx, input }) => {
@@ -30,6 +31,7 @@ const adminUpdateNotes = wmsOperatorProcedure
       .select({
         partnerNotes: privateClientOrders.partnerNotes,
         deliveryNotes: privateClientOrders.deliveryNotes,
+        partnerReference: privateClientOrders.partnerReference,
       })
       .from(privateClientOrders)
       .where(eq(privateClientOrders.id, input.orderId))
@@ -44,6 +46,7 @@ const adminUpdateNotes = wmsOperatorProcedure
 
     const partnerNotes = tidy(input.partnerNotes);
     const deliveryNotes = tidy(input.deliveryNotes);
+    const partnerReference = tidy(input.partnerReference);
 
     const changes = [
       partnerNotes !== undefined && partnerNotes !== order.partnerNotes
@@ -51,6 +54,9 @@ const adminUpdateNotes = wmsOperatorProcedure
         : null,
       deliveryNotes !== undefined && deliveryNotes !== order.deliveryNotes
         ? { field: 'Delivery notes', before: order.deliveryNotes, after: deliveryNotes }
+        : null,
+      partnerReference !== undefined && partnerReference !== order.partnerReference
+        ? { field: "Partner's reference", before: order.partnerReference, after: partnerReference }
         : null,
     ].filter((change) => change !== null);
 
@@ -62,6 +68,7 @@ const adminUpdateNotes = wmsOperatorProcedure
         .set({
           ...(partnerNotes !== undefined ? { partnerNotes } : {}),
           ...(deliveryNotes !== undefined ? { deliveryNotes } : {}),
+          ...(partnerReference !== undefined ? { partnerReference } : {}),
           updatedAt: new Date(),
         })
         .where(eq(privateClientOrders.id, input.orderId));

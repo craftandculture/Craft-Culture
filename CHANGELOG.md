@@ -1,3 +1,9 @@
+## [2.1.188](https://github.com/craftandculture/Craft-Culture/compare/v2.1.187...v2.1.188) (2026-11-26)
+
+### Features
+
+* partners can add their own reference to a PCO, at ordering or later, and the stock API returns it on their sales as yourReference ([33080e5](https://github.com/craftandculture/Craft-Culture/commit/33080e5d113a11adca38f3879d47dfffdd2bf975))
+
 ## [2.1.187](https://github.com/craftandculture/Craft-Culture/compare/v2.1.186...v2.1.187) (2026-11-26)
 
 ### Features

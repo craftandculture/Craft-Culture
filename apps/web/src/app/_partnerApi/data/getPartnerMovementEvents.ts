@@ -105,6 +105,7 @@ const getPartnerMovementEvents = async (partnerId: string, query: PartnerMovemen
       performedAtText: sql<string>`${wmsStockMovements.performedAt}::text`,
       pcoNumber: sql<string | null>`COALESCE(${privateClientOrders.orderNumber}, ${pcoViaSalesOrder.orderNumber})`,
       pcoPartnerId: sql<string | null>`COALESCE(${privateClientOrders.partnerId}, ${pcoViaSalesOrder.partnerId})::text`,
+      pcoPartnerReference: sql<string | null>`COALESCE(${privateClientOrders.partnerReference}, ${pcoViaSalesOrder.partnerReference})`,
       salesOrderNumber: zohoSalesOrders.salesOrderNumber,
       soForPco: sql<string | null>`COALESCE(${zohoSalesOrders.privateClientOrderId}::text, substring(${zohoSalesOrders.referenceNumber} from 'PCO-[0-9]{4}-[0-9]+'))`,
     })
@@ -174,6 +175,9 @@ const getPartnerMovementEvents = async (partnerId: string, query: PartnerMovemen
       sales order reference (which names no buyer). Another partner's PCO
       number is never shown.
     */
+    const onOrder =
+      event.type === 'picked' || event.type === 'dispatched' || event.type === 'returned';
+
     const orderReference =
       row.pcoNumber && row.pcoPartnerId === partnerId
         ? row.pcoNumber
@@ -187,9 +191,11 @@ const getPartnerMovementEvents = async (partnerId: string, query: PartnerMovemen
       occurredAt: row.performedAt.toISOString(),
       ...event,
       wine: wineFromLwin(row.lwin18, row.productName),
-      orderReference:
-        event.type === 'picked' || event.type === 'dispatched' || event.type === 'returned'
-          ? orderReference
+      orderReference: onOrder ? orderReference : null,
+      // The partner's own reference (their SO number), on their own orders only
+      yourReference:
+        onOrder && row.pcoNumber && row.pcoPartnerId === partnerId
+          ? (row.pcoPartnerReference ?? null)
           : null,
     };
   });

@@ -105,6 +105,7 @@ const ordersCreate = winePartnerProcedure
               ...clientDetails,
               deliveryNotes: input.deliveryNotes || null,
               partnerNotes: input.partnerNotes || null,
+              partnerReference: input.partnerReference || null,
               status: 'draft',
             })
             .returning();
