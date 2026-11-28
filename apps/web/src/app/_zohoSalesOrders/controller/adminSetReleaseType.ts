@@ -1,8 +1,8 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import { client } from '@/database/client';
 import tableReady from '@/app/_distribution/utils/tableReady';
+import { client } from '@/database/client';
 import { adminProcedure } from '@/lib/trpc/procedures';
 
 import { RELEASE_TYPES } from '../utils/resolveReleaseType';
