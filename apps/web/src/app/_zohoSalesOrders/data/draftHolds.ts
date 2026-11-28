@@ -11,7 +11,7 @@ import {
   zohoSalesOrderItems,
   zohoSalesOrders,
 } from '@/database/schema';
-import { getSalesOrder } from '@/lib/zoho/salesOrders';
+import { getSalesOrder, listAllSalesOrdersByStatus } from '@/lib/zoho/salesOrders';
 import type { ZohoSalesOrder } from '@/lib/zoho/types';
 
 /*
@@ -227,9 +227,42 @@ export const releaseDraftHold = async ({ db, holdId, reason }: { db: Db; holdId:
 
 /** Bring every active draft hold up to date; one that fails is left for next time */
 export const refreshAllDraftHolds = async ({ db }: { db: Db }) => {
-  const active: { id: string }[] = await db.select({ id: zohoDraftHolds.id }).from(zohoDraftHolds).where(eq(zohoDraftHolds.status, 'active'));
+  const active: { id: string; zohoSalesOrderId: string; lastRefreshedAt: Date | null }[] = await db
+    .select({
+      id: zohoDraftHolds.id,
+      zohoSalesOrderId: zohoDraftHolds.zohoSalesOrderId,
+      lastRefreshedAt: zohoDraftHolds.lastRefreshedAt,
+    })
+    .from(zohoDraftHolds)
+    .where(eq(zohoDraftHolds.status, 'active'));
+
+  if (active.length === 0) return { refreshed: 0, active: 0 };
+
+  /*
+    One listing of Zoho's drafts instead of one fetch per held draft. Every
+    held draft was re-read on every 5-minute sync, changed or not: 18 drafts
+    on 28 Nov 2026, about 5,000 calls a day, which used up Zoho's 10,000 daily
+    limit and blocked the order desk. Now a draft is re-read only when Zoho
+    edited it since our last read, or when it has left the draft list
+    (confirmed, voided or deleted). Should the listing fail, nothing is
+    re-read this run; the next sync tries again.
+  */
+  let drafts: ZohoSalesOrder[];
+  try {
+    drafts = await listAllSalesOrdersByStatus('draft');
+  } catch {
+    return { refreshed: 0, active: active.length };
+  }
+  const draftById = new Map(drafts.map((draft) => [draft.salesorder_id, draft]));
+  const due = active.filter((hold) => {
+    const draft = draftById.get(hold.zohoSalesOrderId);
+    if (!draft) return true;
+    if (!hold.lastRefreshedAt) return true;
+    return new Date(draft.last_modified_time).getTime() > hold.lastRefreshedAt.getTime();
+  });
+
   let refreshed = 0;
-  for (const { id } of active) {
+  for (const { id } of due) {
     try {
       await refreshDraftHold({ db, holdId: id });
       refreshed += 1;

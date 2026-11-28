@@ -1,4 +1,4 @@
-import { and, eq, exists, notInArray, sql } from 'drizzle-orm';
+import { and, eq, exists, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
 
 import releaseStockReservations from '@/app/_wms/utils/releaseStockReservations';
 import isZohoOrderGone from '@/app/_zohoSalesOrders/utils/isZohoOrderGone';
@@ -14,6 +14,14 @@ interface ReleaseClosedOrderHoldsParams {
 
 /** Detail requests per run, to stay inside Zoho's rate limit */
 const MAX_CHECKED = 25;
+
+/**
+ * How long an order Zoho confirmed as still live is left alone before it is
+ * asked about again. Without it the same orders were fetched on every
+ * 5-minute sync: 18 of them on 28 Nov 2026, about 5,000 calls a day, which
+ * took Zoho's 10,000 daily limit and blocked the order desk (PCO-2026-00122).
+ */
+const RECHECK_AFTER_HOURS = 6;
 
 /**
  * Release stock held for sales orders that have been voided or deleted in Zoho
@@ -39,7 +47,7 @@ const releaseClosedOrderHolds = async ({
   db,
 }: ReleaseClosedOrderHoldsParams) => {
   // Nothing came back at all: that is an outage, not an empty Zoho
-  if (seenZohoIds.length === 0) return { checked: 0, released: [] };
+  if (seenZohoIds.length === 0) return { checked: 0, released: [], stillLive: [] };
 
   const candidates: {
     id: string;
@@ -61,6 +69,13 @@ const releaseClosedOrderHolds = async ({
     .where(
       and(
         notInArray(zohoSalesOrders.zohoSalesOrderId, seenZohoIds),
+        or(
+          isNull(zohoSalesOrders.lastSyncAt),
+          lt(
+            zohoSalesOrders.lastSyncAt,
+            new Date(Date.now() - RECHECK_AFTER_HOURS * 60 * 60 * 1000),
+          ),
+        ),
         exists(
           db
             .select({ one: sql`1` })
@@ -79,6 +94,8 @@ const releaseClosedOrderHolds = async ({
     .limit(MAX_CHECKED);
 
   const released: { salesOrderNumber: string; cases: number; status: string }[] = [];
+  /** Orders holding stock that Zoho says are still live, and their status */
+  const stillLive: { salesOrderNumber: string; status: string }[] = [];
 
   for (const candidate of candidates) {
     let status: string | undefined;
@@ -92,6 +109,12 @@ const releaseClosedOrderHolds = async ({
     }
 
     if (status !== 'void' && status !== 'draft' && status !== 'deleted') {
+      // Asked and answered: not again for RECHECK_AFTER_HOURS
+      await db
+        .update(zohoSalesOrders)
+        .set({ lastSyncAt: new Date() })
+        .where(eq(zohoSalesOrders.id, candidate.id));
+      stillLive.push({ salesOrderNumber: candidate.salesOrderNumber, status: status ?? 'unknown' });
       continue;
     }
 
@@ -111,7 +134,7 @@ const releaseClosedOrderHolds = async ({
     }
   }
 
-  return { checked: candidates.length, released };
+  return { checked: candidates.length, released, stillLive };
 };
 
 export default releaseClosedOrderHolds;

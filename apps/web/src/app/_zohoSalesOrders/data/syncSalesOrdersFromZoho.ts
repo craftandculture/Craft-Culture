@@ -335,7 +335,7 @@ const syncSalesOrdersFromZoho = async ({
     )
     .catch((error) => {
     console.error('Failed to release stock for closed orders', { error });
-    return { checked: 0, released: [] };
+    return { checked: 0, released: [], stillLive: [] };
   });
   // Which PCO each order fulfils, including ones raised by hand in Zoho
   await linkSalesOrdersToPcos({ db }).catch((error) => {
@@ -350,6 +350,11 @@ const syncSalesOrdersFromZoho = async ({
     updated: results.updated,
     errors: results.errors,
     invoicedListing: invoicedModifiedSince ? 'recent' : 'full',
+    // Held stock on orders outside the listing that Zoho says are still live
+    closedCheck: closed.checked,
+    heldOnUnlistedOrders: closed.stillLive
+      .map((order) => `${order.salesOrderNumber} (${order.status})`)
+      .join(', '),
     durationMs: Date.now() - startedAt,
   });
 
