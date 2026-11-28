@@ -1,3 +1,9 @@
+## [2.1.190](https://github.com/craftandculture/Craft-Culture/compare/v2.1.189...v2.1.190) (2026-11-28)
+
+### Bug Fixes
+
+* held Zoho drafts are re-read only when Zoho changed them, not all 18 on every 5-minute sync, which used up the 10,000 daily API calls ([149c8a2](https://github.com/craftandculture/Craft-Culture/commit/149c8a249519d32745c83ca853feb35dee115cb2))
+
 ## [2.1.189](https://github.com/craftandculture/Craft-Culture/compare/v2.1.188...v2.1.189) (2026-11-28)
 
 ### Bug Fixes
